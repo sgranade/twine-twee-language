@@ -1,0 +1,87 @@
+{
+	"name": "twine-chapbook",
+	"displayName": "Twine Chapbook",
+	"description": "Twine (Twee 3) Chapbook language support for VS Code",
+	"author": {
+		"name": "Stephen Granade",
+		"email": "stephen@granades.com",
+		"url": "https://github.com/sgranade"
+	},
+	"license": "MIT",
+	"version": "0.0.1",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/sgranade/twine-chapbook"
+	},
+	"publisher": "StephenGranade",
+	"categories": [
+		"Programming Languages",
+		"Linters",
+		"Snippets"
+	],
+	"keywords": [
+		"Twine",
+		"Twee",
+		"Chapbook",
+		"cyoa",
+		"interactive fiction"
+	],
+	"engines": {
+		"vscode": "^1.75.0"
+	},
+	"capabilities": {
+		"untrustedWorkspaces": {
+			"supported": true
+		},
+		"virtualWorkspaces": {
+			"supported": false,
+			"description": "Only works with local file paths."
+		}
+	},
+	"activationEvents": [
+		"workspaceContains:**/*.{tw,twee}"
+	],
+	"main": "./client/out/extension",
+	"contributes": {
+		"languages": [
+			{
+				"id": "twee3",
+				"aliases": [
+					"Twee3",
+					"twee3",
+					"tw"
+				],
+				"extensions": [
+					".tw",
+					".twee"
+				],
+				"configuration": "./language-configuration.json"
+			}
+		],
+		"configuration": {
+			"type": "object",
+			"title": "Twine Chapbook",
+			"properties": {}
+		}
+	},
+	"scripts": {
+		"vscode:prepublish": "npm run compile",
+		"compile": "tsc -b",
+		"watch": "tsc -b -w",
+		"test": "mocha",
+		"lint": "eslint ./client/src ./server/src --ext .ts,.tsx",
+		"postinstall": "cd client && npm install && cd ../server && npm install && cd .."
+	},
+	"devDependencies": {
+		"@types/chai": "^4.3.10",
+		"@types/mocha": "^10.0.6",
+		"@types/node": "^20.9.2",
+		"@typescript-eslint/eslint-plugin": "^7.1.1",
+		"@typescript-eslint/parser": "^7.1.1",
+		"chai": "^4.4.1",
+		"eslint": "^8.57.0",
+		"mocha": "^10.3.0",
+		"ts-node": "^10.9.2",
+		"typescript": "^5.3.3"
+	}
+}
