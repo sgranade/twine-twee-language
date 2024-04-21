@@ -33,8 +33,9 @@ export interface ProjectIndex {
 	/**
 	 * Set the project's story data.
 	 * @param data Story data.
+	 * @param sourceUri URI of the document that holds the story data.
 	 */
-	setStoryData(data: StoryData): void;
+	setStoryData(data: StoryData, sourceUri: string): void;
 	/**
 	 * Set the list of passages in a document.
 	 * @param uri URI to document whose index is to be updated.
@@ -66,13 +67,15 @@ export interface ProjectIndex {
  */
 export class Index implements ProjectIndex {
 	private _storyData?: StoryData;
+	private _storyDataUri?: string;
 	private _passages: Map<string, Passage[]>;
 
 	constructor() {
 		this._passages = new Map();
 	}
-	setStoryData(data: StoryData): void {
+	setStoryData(data: StoryData, sourceUri: string): void {
 		this._storyData = data;
+		this._storyDataUri = sourceUri;
 	}
 	setPassages(uri: string, newPassages: Passage[]): void {
 		this._passages.set(uri, [...newPassages]);
@@ -93,7 +96,9 @@ export class Index implements ProjectIndex {
 		return s;
 	}
 	removeDocument(uri: string): void {
-		// TODO handle deleting a document that has the story data
 		this._passages.delete(uri);
+		if (uri == this._storyDataUri) {
+			this._storyData = undefined;
+		}
 	}
 }

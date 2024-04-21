@@ -45,7 +45,7 @@ describe("Project Index", () => {
 				index.setStoryData({
 					ifid: "fake-ifid",
 					format: "Fake Format",
-				});
+				}, "fake-uri");
 	
 				const result = index.getStoryData();
 	
@@ -121,5 +121,53 @@ describe("Project Index", () => {
 			});
 		});
 
+		describe("Removing Documents", () => {
+			it("should remove passages from with a deleted document", () => {
+				const passages1 = [ 
+					buildPassage({ name: "F1 P1" }),
+					buildPassage({ name: "F1 P2" })
+				];
+				const passages2 = [ 
+					buildPassage({ name: "F2 P1" }),
+					buildPassage({ name: "F2 P2" })
+				];
+				const index = new uut.Index();
+				index.setPassages("file1", passages1);
+				index.setPassages("file2", passages2);
+
+				index.removeDocument("file1");
+				const result = index.getPassageNames();
+
+				expect(result).to.have.all.keys(
+					"F2 P1", "F2 P2"
+				);
+			});
+
+			it("should remove story data if a deleted document contained it", () => {
+				const index = new uut.Index();
+				index.setStoryData({
+					ifid: "fake-ifid",
+					format: "Fake Format",
+				}, "storydata-uri");
+
+				index.removeDocument("storydata-uri");
+				const result = index.getStoryData();
+
+				expect(result).to.be.undefined;
+			});
+
+			it("should leave story data alone if a deleted document didn't contain it", () => {
+				const index = new uut.Index();
+				index.setStoryData({
+					ifid: "fake-ifid",
+					format: "Fake Format",
+				}, "storydata-uri");
+
+				index.removeDocument("other-uri");
+				const result = index.getStoryData();
+
+				expect(result).not.to.be.undefined;
+			});
+		});
 	});
 });
