@@ -32,8 +32,14 @@ export function createDiagnostic(
 	return diagnostic;
 }
 
+/**
+ * Return contents of an iterable as pairs.
+ * 
+ * @param itr Iterable.
+ * @yields Contents of the iterable as pairs.
+ */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function *pairwise(itr: Iterable<any>) {
+export function *pairwise<T>(itr: Iterable<T>) {
 	let prevEntry;
 	for (const item of itr) {
 		if (prevEntry !== undefined) {

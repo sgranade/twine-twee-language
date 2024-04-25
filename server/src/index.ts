@@ -12,17 +12,21 @@ export interface StoryData {
 	zoom?: number
 }
 
+export interface PassageMetadata {
+	position?: string,
+	size?: string
+}
+
 /**
  * A Twee 3 passage.
  */
 export interface Passage {
 	name: string,
 	location: Location,
-	scope: Range,
 	isScript: boolean,
 	isStylesheet: boolean,
 	tags?: string[],
-	metadata?: Map<string, string>,
+	metadata?: PassageMetadata,
 	varsSection?: Range // Chapbook variables section
 }
 
