@@ -281,6 +281,28 @@ function parsePassageHeader(header: string, index: number, state: ParsingState):
 }
 
 /**
+ * Parse the StoryTitle passage.
+ * @param passageText Text of the StoryTitle passage.
+ * @param state Parsing state.
+ */
+function parseStoryTitlePassage(passageText: string, state: ParsingState): void {
+	state.callbacks.onStoryTitle(passageText);
+}
+
+/**
+ * Parse passage text.
+ * 
+ * @param passage Information about the passage.
+ * @param passageText Text of the passage.
+ * @param state Parsing state.
+ */
+function parsePassageText(passage: Passage, passageText: string, state: ParsingState): void {
+	if (passage.name === 'StoryTitle') {
+		parseStoryTitlePassage(passageText, state);
+	}
+}
+
+/**
  * Parse text from a Twee 3 document.
  * @param text Document text.
  * @param state Parsing state.
@@ -293,24 +315,22 @@ function parseTwee3(text: string, state: ParsingState): void {
 
 	// Call back on the passages, along with their contents
 	for (const [passage1, passage2] of pairwise(passages)) {
-		state.callbacks.onPassage(
-			passage1,
-			text.substring(
-				state.textDocument.offsetAt(passage1.location.range.end),
-				state.textDocument.offsetAt(passage2.location.range.start) - 1
-			)
+		const passageText = text.substring(
+			state.textDocument.offsetAt(passage1.location.range.end) + 1, // +1 to swallow the \n
+			state.textDocument.offsetAt(passage2.location.range.start) - 1
 		);
+		parsePassageText(passage1, passageText, state);
+		state.callbacks.onPassage(passage1, passageText);
 	}
 	
 	// Handle the final passage, if any
 	const lastPassage = passages.at(-1);
 	if (lastPassage !== undefined) {
-		state.callbacks.onPassage(
-			lastPassage,
-			text.substring(
-				state.textDocument.offsetAt(lastPassage.location.range.end)
-			)
+		const passageText = text.substring(
+			state.textDocument.offsetAt(lastPassage.location.range.end) + 1 // +1 to swallow the \n
 		);
+		parsePassageText(lastPassage, passageText, state);
+		state.callbacks.onPassage(lastPassage, passageText);
 	}
 }
 
