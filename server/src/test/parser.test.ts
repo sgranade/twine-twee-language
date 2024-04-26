@@ -40,18 +40,14 @@ function buildStoryData({
 	start = "Start",
 	tagColors = {"bar": "green"},
 	zoom = 1.0
-}): StoryData {
-	let tagColorMap: Map<string, string> | undefined = undefined;
-	if (tagColors) {
-		tagColorMap = new Map(Object.entries(tagColors));
-	}
+}) {
 	return {
-		ifid: ifid,
-		format: format,
-		formatVersion: formatVersion,
-		start: start,
-		tagColors: tagColorMap,
-		zoom: zoom
+		"ifid": ifid,
+		"format": format,
+		"format-version": formatVersion,
+		"start": start,
+		"tag-colors": tagColors,
+		"zoom": zoom
 	};
 }
 
@@ -271,26 +267,30 @@ describe("Parser", () => {
 				});
 				const doc = TextDocument.create(
 					"fake-uri", "", 0,
-					":: StoryData\n" + JSON.stringify(storyData,null, "\t")
+					":: StoryData\n" + JSON.stringify(storyData, null, "\t")
 				);
 
 				uut.parse(doc, callbacks);
 
-				expect(callbacks.storyData?.formatVersion).to.eql("17.2");
+				expect(callbacks.storyData?.start).to.eql("17.2");
 			});
 
 			it("should call back on StoryData with the tag colors included", () => {
 				const callbacks = new MockCallbacks();
-				const storyData = buildStoryData({});
-				storyData.tagColors = new Map([["tag-1", "black"]]);
+				const storyData = {
+					"ifid": "9F187C0A-AE64-465A-8B13-B30B9DE446E2",
+					"tag-colors": {
+						"tag-1": "black"
+					}
+				};
 				const doc = TextDocument.create(
 					"fake-uri", "", 0,
-					":: StoryData\n" + JSON.stringify(storyData,null, "\t")
+					":: StoryData\n" + JSON.stringify(storyData, null, "\t")
 				);
 
 				uut.parse(doc, callbacks);
 
-				expect(callbacks.storyData?.tagColors).to.eql(storyData.tagColors);
+				expect(callbacks.storyData?.tagColors).to.eql(new Map([["tag-1", "black"]]));
 			});
 
 			it("should call back on StoryData with the zoom level included", () => {
@@ -489,7 +489,7 @@ describe("Parser", () => {
 					const storyDataStr = [
 						"{",
 						'  "ifid": "62891577-8D8E-496F-B46C-9FF0194C0EAC",',
-						'  "nope": "nuh uh",',
+						'  "nope": "nuh uh"',
 						"}"
 					].join("\n");
 					const doc = TextDocument.create(
@@ -500,8 +500,8 @@ describe("Parser", () => {
 					uut.parse(doc, callbacks);
 	
 					expect(callbacks.errors.length).to.equal(1);
-					expect(callbacks.errors[0].message).to.include('"nope" is not a supported StoryData property');
-					expect(callbacks.errors[0].range).to.eql(Range.create(3, 2, 3, 8));
+					expect(callbacks.errors[0].message).to.include('Unsupported StoryData property');
+					expect(callbacks.errors[0].range).to.eql(Range.create(3, 3, 3, 7));
 				});
 
 				it("should flag StoryData with a missing IFID", () => {
@@ -537,7 +537,7 @@ describe("Parser", () => {
 					uut.parse(doc, callbacks);
 	
 					expect(callbacks.errors.length).to.equal(1);
-					expect(callbacks.errors[0].message).to.include('"ifid" must be a string');
+					expect(callbacks.errors[0].message).to.include('Must be a string');
 					expect(callbacks.errors[0].range).to.eql(Range.create(2, 10, 2, 12));
 				});
 
@@ -556,7 +556,7 @@ describe("Parser", () => {
 					uut.parse(doc, callbacks);
 	
 					expect(callbacks.errors.length).to.equal(1);
-					expect(callbacks.errors[0].message).to.include("The IFID isn't in the right format");
+					expect(callbacks.errors[0].message).to.include('"ifid" must be a version 4 UUID');
 					expect(callbacks.errors[0].range).to.eql(Range.create(2, 11, 2, 15));
 				});
 
@@ -576,7 +576,7 @@ describe("Parser", () => {
 					uut.parse(doc, callbacks);
 	
 					expect(callbacks.errors.length).to.equal(1);
-					expect(callbacks.errors[0].message).to.include('"format" must be a string');
+					expect(callbacks.errors[0].message).to.include('Must be a string');
 					expect(callbacks.errors[0].range).to.eql(Range.create(3, 12, 3, 14));
 				});
 
@@ -596,7 +596,7 @@ describe("Parser", () => {
 					uut.parse(doc, callbacks);
 	
 					expect(callbacks.errors.length).to.equal(1);
-					expect(callbacks.errors[0].message).to.include('"format-version" must be a string');
+					expect(callbacks.errors[0].message).to.include('Must be a string');
 					expect(callbacks.errors[0].range).to.eql(Range.create(3, 20, 3, 22));
 				});
 
@@ -616,7 +616,7 @@ describe("Parser", () => {
 					uut.parse(doc, callbacks);
 	
 					expect(callbacks.errors.length).to.equal(1);
-					expect(callbacks.errors[0].message).to.include('"start" must be a string');
+					expect(callbacks.errors[0].message).to.include('Must be a string');
 					expect(callbacks.errors[0].range).to.eql(Range.create(3, 11, 3, 13));
 				});
 
@@ -636,8 +636,8 @@ describe("Parser", () => {
 					uut.parse(doc, callbacks);
 	
 					expect(callbacks.errors.length).to.equal(1);
-					expect(callbacks.errors[0].message).to.include('"tag-colors" must be a JSON object of tag-name to color pairs, like {"tag": "color"}');
-					expect(callbacks.errors[0].range).to.eql(Range.create(3, 16, 3, 18));
+					expect(callbacks.errors[0].message).to.include('"tag-colors" must be a JSON object of tag name to color pairs');
+					expect(callbacks.errors[0].range).to.eql(Range.create(3, 2, 3, 14));
 				});
 
 				it("should flag StoryData with a non-number zoom property", () => {
@@ -656,8 +656,8 @@ describe("Parser", () => {
 					uut.parse(doc, callbacks);
 	
 					expect(callbacks.errors.length).to.equal(1);
-					expect(callbacks.errors[0].message).to.include('"zoom" must be a number');
-					expect(callbacks.errors[0].range).to.eql(Range.create(3, 10, 3, 16));
+					expect(callbacks.errors[0].message).to.include('Must be a number');
+					expect(callbacks.errors[0].range).to.eql(Range.create(3, 11, 3, 15));
 				});
 			});
 		});

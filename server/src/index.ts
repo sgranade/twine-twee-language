@@ -5,7 +5,7 @@ import { Location, Range } from 'vscode-languageserver';
  */
 export interface StoryData {
 	ifid: string,
-	format: string,
+	format?: string,
 	formatVersion?: string,
 	start?: string,
 	tagColors?: Map<string, string>,
