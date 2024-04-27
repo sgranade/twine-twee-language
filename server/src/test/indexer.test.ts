@@ -1,12 +1,6 @@
 import { expect } from "chai";
 import "mocha";
-import {
-    Diagnostic,
-    DiagnosticSeverity,
-    Location,
-    Position,
-    Range,
-} from "vscode-languageserver";
+import { DiagnosticSeverity, Position, Range } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { Passage, Index } from "../index";
