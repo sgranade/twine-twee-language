@@ -1,5 +1,33 @@
+import * as URI from 'urijs';
 import { Diagnostic, DiagnosticSeverity } from 'vscode-languageserver';
 import { TextDocument } from 'vscode-languageserver-textdocument';
+
+/**
+ * Return contents of an iterable as pairs.
+ * 
+ * @param itr Iterable.
+ * @yields Contents of the iterable as pairs.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function *pairwise<T>(itr: Iterable<T>) {
+	let prevEntry;
+	for (const item of itr) {
+		if (prevEntry !== undefined) {
+			yield [prevEntry, item];
+		}
+		prevEntry = item;
+	}
+}
+
+/**
+* Normalize a URI.
+* 
+* @param uriString URI to normalize.
+*/
+export function normalizeUri(uriString: string): string {
+	const uri = new URI(uriString);
+	return uri.normalize().toString();
+}
 
 /**
  * Generate a diagnostic message.
@@ -30,21 +58,4 @@ export function createDiagnostic(
 	};
 
 	return diagnostic;
-}
-
-/**
- * Return contents of an iterable as pairs.
- * 
- * @param itr Iterable.
- * @yields Contents of the iterable as pairs.
- */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function *pairwise<T>(itr: Iterable<T>) {
-	let prevEntry;
-	for (const item of itr) {
-		if (prevEntry !== undefined) {
-			yield [prevEntry, item];
-		}
-		prevEntry = item;
-	}
 }
