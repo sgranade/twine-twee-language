@@ -1,24 +1,27 @@
-import { expect } from 'chai';
-import 'mocha';
+import { expect } from "chai";
+import "mocha";
 
-import * as uut from '../utilities';
+import * as uut from "../utilities";
 
 describe("Utilities", () => {
-	describe("pairwise", () => {
-		it("should yield iterable items in pairs", () => {
-			const data = ["a", "b", "c"];
+    describe("pairwise", () => {
+        it("should yield iterable items in pairs", () => {
+            const data = ["a", "b", "c"];
 
-			const result = [...uut.pairwise(data)];
+            const result = [...uut.pairwise(data)];
 
-			expect(result).to.eql([["a", "b"], ["b", "c"]]);
-		});
+            expect(result).to.eql([
+                ["a", "b"],
+                ["b", "c"],
+            ]);
+        });
 
-		it("should yield nothing if passed no contents", () => {
-			const data: string[] = [];
+        it("should yield nothing if passed no contents", () => {
+            const data: string[] = [];
 
-			const result = [...uut.pairwise(data)];
+            const result = [...uut.pairwise(data)];
 
-			expect(result).to.be.empty;
-		});
-	});
+            expect(result).to.be.empty;
+        });
+    });
 });

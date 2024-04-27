@@ -1,261 +1,269 @@
-import { expect } from 'chai';
-import 'mocha';
-import { Diagnostic, Range } from 'vscode-languageserver';
+import { expect } from "chai";
+import "mocha";
+import { Diagnostic, Range } from "vscode-languageserver";
 
-import * as uut from '../index';
+import * as uut from "../index";
 
 function buildPassage({
-	name = "Passage",
-	location = {
-		uri: "fake-uri",
-		range: Range.create(1, 1, 2, 2)
-	},
-	isScript = false,
-	isStylesheet = false,
-	tags = undefined,
-	metadata = undefined,
-	varsSection = undefined
+    name = "Passage",
+    location = {
+        uri: "fake-uri",
+        range: Range.create(1, 1, 2, 2),
+    },
+    isScript = false,
+    isStylesheet = false,
+    tags = undefined,
+    metadata = undefined,
+    varsSection = undefined,
 }): uut.Passage {
-	return {
-		name: name,
-		location: location,
-		isScript: isScript,
-		isStylesheet: isStylesheet,
-		tags: tags,
-		metadata: metadata,
-		varsSection: varsSection
-	};
+    return {
+        name: name,
+        location: location,
+        isScript: isScript,
+        isStylesheet: isStylesheet,
+        tags: tags,
+        metadata: metadata,
+        varsSection: varsSection,
+    };
 }
 
 describe("Project Index", () => {
-	describe("Index", () => {
-		describe("Story Title", () => {
-			it("should return undefined if no story title has been set", () => {
-				const index = new uut.Index();
-	
-				const result = index.getStoryTitle();
-	
-				expect(result).to.be.undefined;
-			});
-			
-			it("should set the story title", () => {
-				const index = new uut.Index();
-				index.setStoryTitle("fake-uri", "Title!");
-	
-				const result = index.getStoryTitle();
-	
-				expect(result).to.equal("Title!");
-			});	
-		});
+    describe("Index", () => {
+        describe("Story Title", () => {
+            it("should return undefined if no story title has been set", () => {
+                const index = new uut.Index();
 
-		describe("Story Data", () => {
-			it("should return undefined if no story data has been set", () => {
-				const index = new uut.Index();
-	
-				const result = index.getStoryData();
-	
-				expect(result).to.be.undefined;
-			});
-			
-			it("should set the story data", () => {
-				const index = new uut.Index();
-				index.setStoryData("fake-uri", {
-					ifid: "fake-ifid",
-					format: "Fake Format",
-				});
-	
-				const result = index.getStoryData();
-	
-				expect(result).to.eql({
-					ifid: "fake-ifid",
-					format: "Fake Format",
-				});
-			});	
-		});
+                const result = index.getStoryTitle();
 
-		describe("Passages", () => {
-			it("should return undefined for unindexed files", () => {
-				const index = new uut.Index();
+                expect(result).to.be.undefined;
+            });
 
-				const result = index.getPassages("nopers");
+            it("should set the story title", () => {
+                const index = new uut.Index();
+                index.setStoryTitle("fake-uri", "Title!");
 
-				expect(result).to.be.undefined;
-			});
+                const result = index.getStoryTitle();
 
-			it("should return passages for indexed files", () => {
-				const passages = [ 
-					buildPassage({ name: "Passage 1" }),
-					buildPassage({ name: "Passage 2" })
-				];
-				const index = new uut.Index();
-				index.setPassages("fake-uri", passages);
+                expect(result).to.equal("Title!");
+            });
+        });
 
-				const result = index.getPassages("fake-uri");
+        describe("Story Data", () => {
+            it("should return undefined if no story data has been set", () => {
+                const index = new uut.Index();
 
-				expect(result).to.eql(passages);
-			});
-		});
+                const result = index.getStoryData();
 
-		describe("Parse Errors", () => {
-			it("should return an empty array for missing files", () => {
-				const index = new uut.Index();
+                expect(result).to.be.undefined;
+            });
 
-				const result = index.getParseErrors("nopers");
+            it("should set the story data", () => {
+                const index = new uut.Index();
+                index.setStoryData("fake-uri", {
+                    ifid: "fake-ifid",
+                    format: "Fake Format",
+                });
 
-				expect(result).to.be.empty;
-			});
+                const result = index.getStoryData();
 
-			it("should return errors for indexed files", () => {
-				const errors = [
-					Diagnostic.create(Range.create(1,1,2,2), "Problem 1"),
-					Diagnostic.create(Range.create(3,3,4,4), "Another problem")
-				];
-				const index = new uut.Index();
-				index.setParseErrors("fake-uri", errors);
+                expect(result).to.eql({
+                    ifid: "fake-ifid",
+                    format: "Fake Format",
+                });
+            });
+        });
 
-				const result = index.getParseErrors("fake-uri");
+        describe("Passages", () => {
+            it("should return undefined for unindexed files", () => {
+                const index = new uut.Index();
 
-				expect(result).to.eql(errors);
-			});
-		});
+                const result = index.getPassages("nopers");
 
-		describe("Passage Names", () => {
-			it("should return passage names across all indexed files", () => {
-				const passages1 = [ 
-					buildPassage({ name: "F1 P1" }),
-					buildPassage({ name: "F1 P2" })
-				];
-				const passages2 = [ 
-					buildPassage({ name: "F2 P1" }),
-					buildPassage({ name: "F2 P2" })
-				];
-				const index = new uut.Index();
-				index.setPassages("file1", passages1);
-				index.setPassages("file2", passages2);
+                expect(result).to.be.undefined;
+            });
 
-				const result = index.getPassageNames();
+            it("should return passages for indexed files", () => {
+                const passages = [
+                    buildPassage({ name: "Passage 1" }),
+                    buildPassage({ name: "Passage 2" }),
+                ];
+                const index = new uut.Index();
+                index.setPassages("fake-uri", passages);
 
-				expect(result).to.have.all.keys(
-					"F1 P1", "F1 P2", "F2 P1", "F2 P2"
-				);
-			});
+                const result = index.getPassages("fake-uri");
 
-			it("should return passage names with no duplicates", () => {
-				const passages1 = [ 
-					buildPassage({ name: "F1 P1" }),
-					buildPassage({ name: "spoiler" })
-				];
-				const passages2 = [ 
-					buildPassage({ name: "spoiler" }),
-					buildPassage({ name: "F2 P2" })
-				];
-				const index = new uut.Index();
-				index.setPassages("file1", passages1);
-				index.setPassages("file2", passages2);
+                expect(result).to.eql(passages);
+            });
+        });
 
-				const result = index.getPassageNames();
+        describe("Parse Errors", () => {
+            it("should return an empty array for missing files", () => {
+                const index = new uut.Index();
 
-				expect(result).to.have.all.keys(
-					"F1 P1", "spoiler", "F2 P2"
-				);
-			});
-		});
+                const result = index.getParseErrors("nopers");
 
-		describe("Removing Documents", () => {
-			it("should remove passages from with a deleted document", () => {
-				const passages1 = [ 
-					buildPassage({ name: "F1 P1" }),
-					buildPassage({ name: "F1 P2" })
-				];
-				const passages2 = [ 
-					buildPassage({ name: "F2 P1" }),
-					buildPassage({ name: "F2 P2" })
-				];
-				const index = new uut.Index();
-				index.setPassages("file1", passages1);
-				index.setPassages("file2", passages2);
+                expect(result).to.be.empty;
+            });
 
-				index.removeDocument("file1");
-				const result = index.getPassageNames();
+            it("should return errors for indexed files", () => {
+                const errors = [
+                    Diagnostic.create(Range.create(1, 1, 2, 2), "Problem 1"),
+                    Diagnostic.create(
+                        Range.create(3, 3, 4, 4),
+                        "Another problem"
+                    ),
+                ];
+                const index = new uut.Index();
+                index.setParseErrors("fake-uri", errors);
 
-				expect(result).to.have.all.keys(
-					"F2 P1", "F2 P2"
-				);
-			});
+                const result = index.getParseErrors("fake-uri");
 
-			it("should remove story title if a deleted document contained it", () => {
-				const index = new uut.Index();
-				index.setStoryTitle("storytitle-uri", "Title!");
+                expect(result).to.eql(errors);
+            });
+        });
 
-				index.removeDocument("storytitle-uri");
-				const result = index.getStoryTitle();
+        describe("Passage Names", () => {
+            it("should return passage names across all indexed files", () => {
+                const passages1 = [
+                    buildPassage({ name: "F1 P1" }),
+                    buildPassage({ name: "F1 P2" }),
+                ];
+                const passages2 = [
+                    buildPassage({ name: "F2 P1" }),
+                    buildPassage({ name: "F2 P2" }),
+                ];
+                const index = new uut.Index();
+                index.setPassages("file1", passages1);
+                index.setPassages("file2", passages2);
 
-				expect(result).to.be.undefined;
-			});
+                const result = index.getPassageNames();
 
-			it("should leave story title alone if a deleted document didn't contained it", () => {
-				const index = new uut.Index();
-				index.setStoryTitle("storytitle-uri", "Title!");
+                expect(result).to.have.all.keys(
+                    "F1 P1",
+                    "F1 P2",
+                    "F2 P1",
+                    "F2 P2"
+                );
+            });
 
-				index.removeDocument("other-uri");
-				const result = index.getStoryTitle();
+            it("should return passage names with no duplicates", () => {
+                const passages1 = [
+                    buildPassage({ name: "F1 P1" }),
+                    buildPassage({ name: "spoiler" }),
+                ];
+                const passages2 = [
+                    buildPassage({ name: "spoiler" }),
+                    buildPassage({ name: "F2 P2" }),
+                ];
+                const index = new uut.Index();
+                index.setPassages("file1", passages1);
+                index.setPassages("file2", passages2);
 
-				expect(result).to.equal("Title!");
-			});
+                const result = index.getPassageNames();
 
-			it("should remove story data if a deleted document contained it", () => {
-				const index = new uut.Index();
-				index.setStoryData("storydata-uri", {
-					ifid: "fake-ifid",
-					format: "Fake Format",
-				});
+                expect(result).to.have.all.keys("F1 P1", "spoiler", "F2 P2");
+            });
+        });
 
-				index.removeDocument("storydata-uri");
-				const result = index.getStoryData();
+        describe("Removing Documents", () => {
+            it("should remove passages from with a deleted document", () => {
+                const passages1 = [
+                    buildPassage({ name: "F1 P1" }),
+                    buildPassage({ name: "F1 P2" }),
+                ];
+                const passages2 = [
+                    buildPassage({ name: "F2 P1" }),
+                    buildPassage({ name: "F2 P2" }),
+                ];
+                const index = new uut.Index();
+                index.setPassages("file1", passages1);
+                index.setPassages("file2", passages2);
 
-				expect(result).to.be.undefined;
-			});
+                index.removeDocument("file1");
+                const result = index.getPassageNames();
 
-			it("should leave story data alone if a deleted document didn't contain it", () => {
-				const index = new uut.Index();
-				index.setStoryData("storydata-uri", {
-					ifid: "fake-ifid",
-					format: "Fake Format",
-				});
+                expect(result).to.have.all.keys("F2 P1", "F2 P2");
+            });
 
-				index.removeDocument("other-uri");
-				const result = index.getStoryData();
+            it("should remove story title if a deleted document contained it", () => {
+                const index = new uut.Index();
+                index.setStoryTitle("storytitle-uri", "Title!");
 
-				expect(result).not.to.be.undefined;
-			});
+                index.removeDocument("storytitle-uri");
+                const result = index.getStoryTitle();
 
-			it("should remove parse errors for a deleted document", () => {
-				const errors = [
-					Diagnostic.create(Range.create(1,1,2,2), "Problem 1"),
-					Diagnostic.create(Range.create(3,3,4,4), "Another problem")
-				];
-				const index = new uut.Index();
-				index.setParseErrors("storytitle-uri", errors);
+                expect(result).to.be.undefined;
+            });
 
-				index.removeDocument("storytitle-uri");
-				const result = index.getParseErrors("storytitle-uri");
+            it("should leave story title alone if a deleted document didn't contained it", () => {
+                const index = new uut.Index();
+                index.setStoryTitle("storytitle-uri", "Title!");
 
-				expect(result).to.be.empty;
-			});
+                index.removeDocument("other-uri");
+                const result = index.getStoryTitle();
 
-			it("should leave parse errors alone for a not-deleted document", () => {
-				const errors = [
-					Diagnostic.create(Range.create(1,1,2,2), "Problem 1"),
-					Diagnostic.create(Range.create(3,3,4,4), "Another problem")
-				];
-				const index = new uut.Index();
-				index.setParseErrors("storytitle-uri", errors);
+                expect(result).to.equal("Title!");
+            });
 
-				index.removeDocument("other-uri");
-				const result = index.getParseErrors("storytitle-uri");
+            it("should remove story data if a deleted document contained it", () => {
+                const index = new uut.Index();
+                index.setStoryData("storydata-uri", {
+                    ifid: "fake-ifid",
+                    format: "Fake Format",
+                });
 
-				expect(result).to.eql(errors);
-			});
-		});
-	});
+                index.removeDocument("storydata-uri");
+                const result = index.getStoryData();
+
+                expect(result).to.be.undefined;
+            });
+
+            it("should leave story data alone if a deleted document didn't contain it", () => {
+                const index = new uut.Index();
+                index.setStoryData("storydata-uri", {
+                    ifid: "fake-ifid",
+                    format: "Fake Format",
+                });
+
+                index.removeDocument("other-uri");
+                const result = index.getStoryData();
+
+                expect(result).not.to.be.undefined;
+            });
+
+            it("should remove parse errors for a deleted document", () => {
+                const errors = [
+                    Diagnostic.create(Range.create(1, 1, 2, 2), "Problem 1"),
+                    Diagnostic.create(
+                        Range.create(3, 3, 4, 4),
+                        "Another problem"
+                    ),
+                ];
+                const index = new uut.Index();
+                index.setParseErrors("storytitle-uri", errors);
+
+                index.removeDocument("storytitle-uri");
+                const result = index.getParseErrors("storytitle-uri");
+
+                expect(result).to.be.empty;
+            });
+
+            it("should leave parse errors alone for a not-deleted document", () => {
+                const errors = [
+                    Diagnostic.create(Range.create(1, 1, 2, 2), "Problem 1"),
+                    Diagnostic.create(
+                        Range.create(3, 3, 4, 4),
+                        "Another problem"
+                    ),
+                ];
+                const index = new uut.Index();
+                index.setParseErrors("storytitle-uri", errors);
+
+                index.removeDocument("other-uri");
+                const result = index.getParseErrors("storytitle-uri");
+
+                expect(result).to.eql(errors);
+            });
+        });
+    });
 });
