@@ -309,11 +309,12 @@ function parseStoryTitlePassage(
     textIndex: number,
     state: ParsingState
 ): void {
+    const trimmedPassageText = passageText.trimEnd();
     state.callbacks.onStoryTitle(
-        passageText,
+        trimmedPassageText,
         Range.create(
             state.textDocument.positionAt(textIndex),
-            state.textDocument.positionAt(textIndex + passageText.length)
+            state.textDocument.positionAt(textIndex + trimmedPassageText.length)
         )
     );
 }
@@ -507,11 +508,12 @@ function parseStoryDataPassage(
         );
     }
 
+    const trimmedPassageText = passageText.trimEnd();
     state.callbacks.onStoryData(
         storyData,
         Range.create(
             state.textDocument.positionAt(textIndex),
-            state.textDocument.positionAt(textIndex + passageText.length)
+            state.textDocument.positionAt(textIndex + trimmedPassageText.length)
         )
     );
 }

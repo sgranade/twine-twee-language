@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import "mocha";
-import { Diagnostic, Location, Range, Position } from "vscode-languageserver";
+import { Diagnostic, Range, Position } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { Passage, StoryData } from "../index";
@@ -242,7 +242,7 @@ describe("Parser", () => {
                     "fake-uri",
                     "",
                     0,
-                    ":: StoryTitle\nSweet title!"
+                    ":: StoryTitle\nSweet title!\n"
                 );
 
                 uut.parse(doc, callbacks);
@@ -278,7 +278,9 @@ describe("Parser", () => {
                     "fake-uri",
                     "",
                     0,
-                    ":: StoryData\n" + JSON.stringify(storyData, null, "\t")
+                    ":: StoryData\n" +
+                        JSON.stringify(storyData, null, "\t") +
+                        "\n"
                 );
 
                 uut.parse(doc, callbacks);
