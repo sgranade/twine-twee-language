@@ -1,6 +1,6 @@
 import { expect } from 'chai';
 import 'mocha';
-import { Range } from 'vscode-languageserver';
+import { Diagnostic, Range } from 'vscode-languageserver';
 
 import * as uut from '../index';
 
@@ -29,6 +29,25 @@ function buildPassage({
 
 describe("Project Index", () => {
 	describe("Index", () => {
+		describe("Story Title", () => {
+			it("should return undefined if no story title has been set", () => {
+				const index = new uut.Index();
+	
+				const result = index.getStoryTitle();
+	
+				expect(result).to.be.undefined;
+			});
+			
+			it("should set the story title", () => {
+				const index = new uut.Index();
+				index.setStoryTitle("fake-uri", "Title!");
+	
+				const result = index.getStoryTitle();
+	
+				expect(result).to.equal("Title!");
+			});	
+		});
+
 		describe("Story Data", () => {
 			it("should return undefined if no story data has been set", () => {
 				const index = new uut.Index();
@@ -40,10 +59,10 @@ describe("Project Index", () => {
 			
 			it("should set the story data", () => {
 				const index = new uut.Index();
-				index.setStoryData({
+				index.setStoryData("fake-uri", {
 					ifid: "fake-ifid",
 					format: "Fake Format",
-				}, "fake-uri");
+				});
 	
 				const result = index.getStoryData();
 	
@@ -74,6 +93,29 @@ describe("Project Index", () => {
 				const result = index.getPassages("fake-uri");
 
 				expect(result).to.eql(passages);
+			});
+		});
+
+		describe("Parse Errors", () => {
+			it("should return an empty array for missing files", () => {
+				const index = new uut.Index();
+
+				const result = index.getParseErrors("nopers");
+
+				expect(result).to.be.empty;
+			});
+
+			it("should return errors for indexed files", () => {
+				const errors = [
+					Diagnostic.create(Range.create(1,1,2,2), "Problem 1"),
+					Diagnostic.create(Range.create(3,3,4,4), "Another problem")
+				];
+				const index = new uut.Index();
+				index.setParseErrors("fake-uri", errors);
+
+				const result = index.getParseErrors("fake-uri");
+
+				expect(result).to.eql(errors);
 			});
 		});
 
@@ -141,12 +183,32 @@ describe("Project Index", () => {
 				);
 			});
 
+			it("should remove story title if a deleted document contained it", () => {
+				const index = new uut.Index();
+				index.setStoryTitle("storytitle-uri", "Title!");
+
+				index.removeDocument("storytitle-uri");
+				const result = index.getStoryTitle();
+
+				expect(result).to.be.undefined;
+			});
+
+			it("should leave story title alone if a deleted document didn't contained it", () => {
+				const index = new uut.Index();
+				index.setStoryTitle("storytitle-uri", "Title!");
+
+				index.removeDocument("other-uri");
+				const result = index.getStoryTitle();
+
+				expect(result).to.equal("Title!");
+			});
+
 			it("should remove story data if a deleted document contained it", () => {
 				const index = new uut.Index();
-				index.setStoryData({
+				index.setStoryData("storydata-uri", {
 					ifid: "fake-ifid",
 					format: "Fake Format",
-				}, "storydata-uri");
+				});
 
 				index.removeDocument("storydata-uri");
 				const result = index.getStoryData();
@@ -156,15 +218,43 @@ describe("Project Index", () => {
 
 			it("should leave story data alone if a deleted document didn't contain it", () => {
 				const index = new uut.Index();
-				index.setStoryData({
+				index.setStoryData("storydata-uri", {
 					ifid: "fake-ifid",
 					format: "Fake Format",
-				}, "storydata-uri");
+				});
 
 				index.removeDocument("other-uri");
 				const result = index.getStoryData();
 
 				expect(result).not.to.be.undefined;
+			});
+
+			it("should remove parse errors for a deleted document", () => {
+				const errors = [
+					Diagnostic.create(Range.create(1,1,2,2), "Problem 1"),
+					Diagnostic.create(Range.create(3,3,4,4), "Another problem")
+				];
+				const index = new uut.Index();
+				index.setParseErrors("storytitle-uri", errors);
+
+				index.removeDocument("storytitle-uri");
+				const result = index.getParseErrors("storytitle-uri");
+
+				expect(result).to.be.empty;
+			});
+
+			it("should leave parse errors alone for a not-deleted document", () => {
+				const errors = [
+					Diagnostic.create(Range.create(1,1,2,2), "Problem 1"),
+					Diagnostic.create(Range.create(3,3,4,4), "Another problem")
+				];
+				const index = new uut.Index();
+				index.setParseErrors("storytitle-uri", errors);
+
+				index.removeDocument("other-uri");
+				const result = index.getParseErrors("storytitle-uri");
+
+				expect(result).to.eql(errors);
 			});
 		});
 	});
