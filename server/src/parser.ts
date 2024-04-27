@@ -6,8 +6,8 @@ import { createDiagnostic, pairwise } from './utilities';
 
 export interface ParserCallbacks {
 	onPassage(passage: Passage, contents: string): void;
-	onStoryTitle(title: string): void;
-	onStoryData(data: StoryData): void;
+	onStoryTitle(title: string, range: Range): void;
+	onStoryData(data: StoryData, range: Range): void;
 	onParseError(error: Diagnostic): void;
 }
 
@@ -276,10 +276,17 @@ function parsePassageHeader(header: string, index: number, state: ParsingState):
 /**
  * Parse the StoryTitle passage.
  * @param passageText Text of the StoryTitle passage.
+ * @param textIndex Index in the document where the passage text begins (zero-based).
  * @param state Parsing state.
  */
-function parseStoryTitlePassage(passageText: string, state: ParsingState): void {
-	state.callbacks.onStoryTitle(passageText);
+function parseStoryTitlePassage(passageText: string, textIndex: number, state: ParsingState): void {
+	state.callbacks.onStoryTitle(
+		passageText,
+		Range.create(
+			state.textDocument.positionAt(textIndex),
+			state.textDocument.positionAt(textIndex + passageText.length)
+		)
+	);
 }
 
 /**
@@ -454,7 +461,13 @@ function parseStoryDataPassage(passageText: string, textIndex: number, state: Pa
 		);
 	}
 
-	state.callbacks.onStoryData(storyData);
+	state.callbacks.onStoryData(
+		storyData,
+		Range.create(
+			state.textDocument.positionAt(textIndex),
+			state.textDocument.positionAt(textIndex + passageText.length)
+		)
+	);
 }
 
 /**
@@ -467,7 +480,7 @@ function parseStoryDataPassage(passageText: string, textIndex: number, state: Pa
  */
 function parsePassageText(passage: Passage, passageText: string, textIndex: number, state: ParsingState): void {
 	if (passage.name === 'StoryTitle') {
-		parseStoryTitlePassage(passageText, state);
+		parseStoryTitlePassage(passageText, textIndex, state);
 	}
 	else if (passage.name === 'StoryData') {
 		parseStoryDataPassage(passageText, textIndex, state);

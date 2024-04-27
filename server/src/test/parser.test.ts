@@ -10,7 +10,9 @@ class MockCallbacks implements uut.ParserCallbacks {
 	public passages: Passage[];
 	public passageContents: string[];
 	public storyTitle?: string;
+	public storyTitleRange?: Range;
 	public storyData?: StoryData;
+	public storyDataRange?: Range;
 	public errors: Diagnostic[];
 
 	constructor() {
@@ -22,11 +24,13 @@ class MockCallbacks implements uut.ParserCallbacks {
 		this.passages.push(passage);
 		this.passageContents.push(contents);
 	}
-	onStoryTitle(title: string): void {
+	onStoryTitle(title: string, range: Range): void {
 		this.storyTitle = title;
+		this.storyTitleRange = range;
 	}
-	onStoryData(data: StoryData): void {
+	onStoryData(data: StoryData, range: Range): void {
 		this.storyData = data;
+		this.storyDataRange = range;
 	}
 	onParseError(error: Diagnostic): void {
 		this.errors.push(error);
@@ -213,6 +217,35 @@ describe("Parser", () => {
 				uut.parse(doc, callbacks);
 
 				expect(callbacks.storyTitle).to.eql("Sweet title!");
+			});
+
+			it("should call back on StoryTitle with the title's range", () => {
+				const callbacks = new MockCallbacks();
+				const doc = TextDocument.create(
+					"fake-uri", "", 0,
+					":: StoryTitle\nSweet title!"
+				);
+
+				uut.parse(doc, callbacks);
+
+				expect(callbacks.storyTitleRange?.start).to.eql(Position.create(1, 0));
+				expect(callbacks.storyTitleRange?.end).to.eql(Position.create(1, 12));
+			});
+
+			it("should call back on StoryData with the data's range", () => {
+				const callbacks = new MockCallbacks();
+				const storyData = buildStoryData({
+					ifid: "62891577-8D8E-496F-B46C-9FF0194C0EAC"
+				});
+				const doc = TextDocument.create(
+					"fake-uri", "", 0,
+					":: StoryData\n" + JSON.stringify(storyData,null, "\t")
+				);
+
+				uut.parse(doc, callbacks);
+
+				expect(callbacks.storyDataRange?.start).to.eql(Position.create(1, 0));
+				expect(callbacks.storyDataRange?.end).to.eql(Position.create(10, 1));
 			});
 
 			it("should call back on StoryData with the IFID included", () => {
