@@ -40,11 +40,20 @@ describe("Project Index", () => {
 
             it("should set the story title", () => {
                 const index = new uut.Index();
-                index.setStoryTitle("fake-uri", "Title!");
+                index.setStoryTitle("Title!", "fake-uri");
 
                 const result = index.getStoryTitle();
 
                 expect(result).to.equal("Title!");
+            });
+
+            it("should set the story title's URI", () => {
+                const index = new uut.Index();
+                index.setStoryTitle("Title!", "fake-uri");
+
+                const result = index.getStoryTitleUri();
+
+                expect(result).to.equal("fake-uri");
             });
         });
 
@@ -59,10 +68,13 @@ describe("Project Index", () => {
 
             it("should set the story data", () => {
                 const index = new uut.Index();
-                index.setStoryData("fake-uri", {
-                    ifid: "fake-ifid",
-                    format: "Fake Format",
-                });
+                index.setStoryData(
+                    {
+                        ifid: "fake-ifid",
+                        format: "Fake Format",
+                    },
+                    "fake-uri"
+                );
 
                 const result = index.getStoryData();
 
@@ -70,6 +82,21 @@ describe("Project Index", () => {
                     ifid: "fake-ifid",
                     format: "Fake Format",
                 });
+            });
+
+            it("should set the story data's URI", () => {
+                const index = new uut.Index();
+                index.setStoryData(
+                    {
+                        ifid: "fake-ifid",
+                        format: "Fake Format",
+                    },
+                    "fake-uri"
+                );
+
+                const result = index.getStoryDataUri();
+
+                expect(result).to.equal("fake-uri");
             });
         });
 
@@ -187,7 +214,7 @@ describe("Project Index", () => {
 
             it("should remove story title if a deleted document contained it", () => {
                 const index = new uut.Index();
-                index.setStoryTitle("storytitle-uri", "Title!");
+                index.setStoryTitle("Title!", "storytitle-uri");
 
                 index.removeDocument("storytitle-uri");
                 const result = index.getStoryTitle();
@@ -197,7 +224,7 @@ describe("Project Index", () => {
 
             it("should leave story title alone if a deleted document didn't contained it", () => {
                 const index = new uut.Index();
-                index.setStoryTitle("storytitle-uri", "Title!");
+                index.setStoryTitle("Title!", "storytitle-uri");
 
                 index.removeDocument("other-uri");
                 const result = index.getStoryTitle();
@@ -207,10 +234,13 @@ describe("Project Index", () => {
 
             it("should remove story data if a deleted document contained it", () => {
                 const index = new uut.Index();
-                index.setStoryData("storydata-uri", {
-                    ifid: "fake-ifid",
-                    format: "Fake Format",
-                });
+                index.setStoryData(
+                    {
+                        ifid: "fake-ifid",
+                        format: "Fake Format",
+                    },
+                    "storydata-uri"
+                );
 
                 index.removeDocument("storydata-uri");
                 const result = index.getStoryData();
@@ -220,10 +250,13 @@ describe("Project Index", () => {
 
             it("should leave story data alone if a deleted document didn't contain it", () => {
                 const index = new uut.Index();
-                index.setStoryData("storydata-uri", {
-                    ifid: "fake-ifid",
-                    format: "Fake Format",
-                });
+                index.setStoryData(
+                    {
+                        ifid: "fake-ifid",
+                        format: "Fake Format",
+                    },
+                    "storydata-uri"
+                );
 
                 index.removeDocument("other-uri");
                 const result = index.getStoryData();

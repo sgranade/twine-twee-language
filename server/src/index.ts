@@ -36,16 +36,16 @@ export interface Passage {
 export interface ProjectIndex {
     /**
      * Set the project's story title.
-     * @param uri URI of the document that holds the story title.
      * @param title Story title.
+     * @param uri URI of the document that holds the story title.
      */
-    setStoryTitle(uri: string, title: string): void;
+    setStoryTitle(title: string, uri: string): void;
     /**
      * Set the project's story data.
-     * @param uri URI of the document that holds the story data.
      * @param data Story data.
+     * @param uri URI of the document that holds the story data.
      */
-    setStoryData(uri: string, data: StoryData): void;
+    setStoryData(data: StoryData, uri: string): void;
     /**
      * Set the list of passages in a document.
      * @param uri URI to document whose index is to be updated.
@@ -63,9 +63,17 @@ export interface ProjectIndex {
      */
     getStoryTitle(): string | undefined;
     /**
+     * Get the URI where the project's story title lives, if known.
+     */
+    getStoryTitleUri(): string | undefined;
+    /**
      * Get the project's story data, if known.
      */
     getStoryData(): StoryData | undefined;
+    /**
+     * Get the URI where the project's story title lives, if known.
+     */
+    getStoryDataUri(): string | undefined;
     /**
      * Get the list of passages in a document, if indexed.
      * @param uri URI to document.
@@ -102,11 +110,11 @@ export class Index implements ProjectIndex {
         this._passages = new Map();
         this._parseErrors = new Map();
     }
-    setStoryTitle(uri: string, title: string): void {
+    setStoryTitle(title: string, uri: string): void {
         this._storyTitle = title;
         this._storyTitleUri = uri;
     }
-    setStoryData(uri: string, data: StoryData): void {
+    setStoryData(data: StoryData, uri: string): void {
         this._storyData = data;
         this._storyDataUri = uri;
     }
@@ -119,8 +127,14 @@ export class Index implements ProjectIndex {
     getStoryTitle(): string | undefined {
         return this._storyTitle;
     }
+    getStoryTitleUri(): string | undefined {
+        return this._storyTitleUri;
+    }
     getStoryData(): StoryData | undefined {
         return this._storyData;
+    }
+    getStoryDataUri(): string | undefined {
+        return this._storyDataUri;
     }
     getPassages(uri: string): Passage[] | undefined {
         return this._passages.get(uri);

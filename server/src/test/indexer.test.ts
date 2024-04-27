@@ -80,11 +80,41 @@ describe("Indexer", () => {
             expect(result).to.eql("Title!");
         });
 
+        it("should not update the story title when another one comes along", () => {
+            const doc = buildDocument({
+                uri: "test-uri",
+                content: "::StoryTitle\nTitle!\n\n::StoryTitle\nOther Title!\n",
+            });
+            const index = new Index();
+
+            uut.updateProjectIndex(doc, index);
+            const result = index.getStoryTitle();
+
+            expect(result).to.equal("Title!");
+        });
+
         it("should add the story data to the index", () => {
             const doc = buildDocument({
                 uri: "test-uri",
                 content:
                     '::StoryData\n{ "ifid": "11111111-DEFA-4F70-B7A2-27742230C0FC" }\n',
+            });
+            const index = new Index();
+
+            uut.updateProjectIndex(doc, index);
+            const result = index.getStoryData();
+
+            expect(result).to.eql({
+                ifid: "11111111-DEFA-4F70-B7A2-27742230C0FC",
+            });
+        });
+
+        it("should not update the story data when another one comes along", () => {
+            const doc = buildDocument({
+                uri: "test-uri",
+                content:
+                    '::StoryData\n{ "ifid": "11111111-DEFA-4F70-B7A2-27742230C0FC" }\n\n' +
+                    '::StoryData\n{ "ifid": "22222222-DEFA-4F70-B7A2-27742230C0FC" }\n\n',
             });
             const index = new Index();
 
@@ -134,6 +164,20 @@ describe("Indexer", () => {
             );
         });
 
+        it("should not warn about changing StoryTitle when re-parsing", () => {
+            const doc = buildDocument({
+                uri: "test-uri",
+                content: "::StoryTitle\nOriginal title\n",
+            });
+            const index = new Index();
+
+            uut.updateProjectIndex(doc, index);
+            uut.updateProjectIndex(doc, index);
+            const result = index.getParseErrors("test-uri");
+
+            expect(result.length).to.equal(0);
+        });
+
         it("should warn if StoryData is changed", () => {
             const doc = buildDocument({
                 uri: "test-uri",
@@ -152,6 +196,21 @@ describe("Indexer", () => {
             expect(result[0].message).to.include(
                 "This replaces existing StoryData. Is that intentional?"
             );
+        });
+
+        it("should not warn about updating StoryData when re-parsing", () => {
+            const doc = buildDocument({
+                uri: "test-uri",
+                content:
+                    '::StoryData\n{ "ifid": "11111111-DEFA-4F70-B7A2-27742230C0FC" }\n',
+            });
+            const index = new Index();
+
+            uut.updateProjectIndex(doc, index);
+            uut.updateProjectIndex(doc, index);
+            const result = index.getParseErrors("test-uri");
+
+            expect(result.length).to.equal(0);
         });
     });
 });

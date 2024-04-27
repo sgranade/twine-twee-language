@@ -36,6 +36,7 @@ export function updateProjectIndex(
 ): void {
     const indexingState = new IndexingState(textDocument);
     const uri = normalizeUri(textDocument.uri);
+    index.removeDocument(uri);
 
     const callbacks: ParserCallbacks = {
         onPassage: function (passage: Passage, contents: string): void {
@@ -50,8 +51,9 @@ export function updateProjectIndex(
                         DiagnosticSeverity.Warning
                     )
                 );
+            } else {
+                index.setStoryTitle(title, uri);
             }
-            index.setStoryTitle(uri, title);
         },
         onStoryData: function (data: StoryData, range: Range): void {
             if (index.getStoryData() !== undefined) {
@@ -62,8 +64,9 @@ export function updateProjectIndex(
                         DiagnosticSeverity.Warning
                     )
                 );
+            } else {
+                index.setStoryData(data, uri);
             }
-            index.setStoryData(uri, data);
         },
         onParseError: function (error: Diagnostic): void {
             indexingState.parseErrors.push(error);
