@@ -2,7 +2,6 @@ import {
     createConnection,
     TextDocuments,
     Diagnostic,
-    DiagnosticSeverity,
     ProposedFeatures,
     InitializeParams,
     DidChangeConfigurationNotification,
@@ -12,14 +11,19 @@ import {
     TextDocumentSyncKind,
     InitializeResult,
     DocumentDiagnosticReportKind,
-    type DocumentDiagnosticReport,
+    DocumentDiagnosticReport,
 } from "vscode-languageserver/node";
-
 import { TextDocument } from "vscode-languageserver-textdocument";
+
+import { Index } from "./index";
+import { updateProjectIndex } from "./indexer";
+import { generateDiagnostics } from "./validator";
 
 const connection = createConnection(ProposedFeatures.all);
 
 const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
+
+const projectIndex = new Index();
 
 let hasConfigurationCapability = false;
 let hasDiagnosticRelatedInformationCapability = false;
@@ -51,7 +55,11 @@ connection.onInitialize((params: InitializeParams) => {
                 // TODO create a resolve provider
                 resolveProvider: false,
             },
-            // TODO implement definitionProvider, referencesProvider, renameProvider, documentSymbolProvider, diagnosticProvider
+            diagnosticProvider: {
+                interFileDependencies: false,
+                workspaceDiagnostics: false,
+            },
+            // TODO implement definitionProvider, referencesProvider, renameProvider, documentSymbolProvider,
         },
     };
     return result;
@@ -71,53 +79,50 @@ connection.onDidChangeConfiguration((change) => {
     // TODO implement later -- lsp demo has an example
 });
 
-// The content of a text document has changed. This event is emitted
-// when the text document first opened or when its content has changed.
+connection.languages.diagnostics.on(async (params) => {
+    const document = documents.get(params.textDocument.uri);
+    if (document !== undefined) {
+        return {
+            kind: DocumentDiagnosticReportKind.Full,
+            items: await validateTextDocument(document),
+        } satisfies DocumentDiagnosticReport;
+    } else {
+        // We don't know the document. We can either try to read it from disk
+        // or we don't report problems for it.
+        return {
+            kind: DocumentDiagnosticReportKind.Full,
+            items: [],
+        } satisfies DocumentDiagnosticReport;
+    }
+});
+
+connection.languages.diagnostics.on(async (params) => {
+    const document = documents.get(params.textDocument.uri);
+    if (document !== undefined) {
+        return {
+            kind: DocumentDiagnosticReportKind.Full,
+            items: await validateTextDocument(document),
+        } satisfies DocumentDiagnosticReport;
+    } else {
+        // We don't know the document. We can either try to read it from disk
+        // or we don't report problems for it.
+        return {
+            kind: DocumentDiagnosticReportKind.Full,
+            items: [],
+        } satisfies DocumentDiagnosticReport;
+    }
+});
+
 documents.onDidChangeContent((change) => {
+    processChangedDocument(change.document);
     validateTextDocument(change.document);
 });
 
 async function validateTextDocument(
     textDocument: TextDocument
 ): Promise<Diagnostic[]> {
-    // The validator creates diagnostics for all uppercase words length 2 and more
-    const text = textDocument.getText();
-    const pattern = /\b[A-Z]{2,}\b/g;
-    let m: RegExpExecArray | null;
+    const diagnostics = await generateDiagnostics(textDocument, projectIndex);
 
-    let problems = 0;
-    const diagnostics: Diagnostic[] = [];
-    while ((m = pattern.exec(text)) && problems < 1000) {
-        problems++;
-        const diagnostic: Diagnostic = {
-            severity: DiagnosticSeverity.Warning,
-            range: {
-                start: textDocument.positionAt(m.index),
-                end: textDocument.positionAt(m.index + m[0].length),
-            },
-            message: `${m[0]} is all uppercase.`,
-            source: "ex",
-        };
-        if (hasDiagnosticRelatedInformationCapability) {
-            diagnostic.relatedInformation = [
-                {
-                    location: {
-                        uri: textDocument.uri,
-                        range: Object.assign({}, diagnostic.range),
-                    },
-                    message: "Spelling matters",
-                },
-                {
-                    location: {
-                        uri: textDocument.uri,
-                        range: Object.assign({}, diagnostic.range),
-                    },
-                    message: "Particularly for names",
-                },
-            ];
-        }
-        diagnostics.push(diagnostic);
-    }
     return diagnostics;
 }
 
@@ -125,6 +130,13 @@ connection.onDidChangeWatchedFiles((_change) => {
     // TODO Monitored files have changed in VSCode
     connection.console.log("We received a file change event");
 });
+
+/**
+ * Process a document whose content has changed.
+ */
+function processChangedDocument(document: TextDocument) {
+    updateProjectIndex(document, projectIndex);
+}
 
 // This handler provides the initial list of the completion items.
 connection.onCompletion(
