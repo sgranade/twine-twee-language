@@ -7,7 +7,7 @@ import {
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { Passage, PassageMetadata, StoryData } from "./index";
-import { createDiagnostic, pairwise } from "./utilities";
+import { createDiagnostic, nextLineIndex, pairwise } from "./utilities";
 
 export interface ParserCallbacks {
     onPassage(passage: Passage, contents: string): void;
@@ -540,11 +540,48 @@ function parsePassageText(
 }
 
 /**
+ * Extract a passage's text and the index in the document where it occurs.
+ *
+ * @param text Full text of the document.
+ * @param passage Passage whose text we should find.
+ * @param followingPassage The passage after the one we're interested in, if any.
+ * @param state Parsing state.
+ * @returns The text of the passage's content and the index where the content begins.
+ */
+function passageTextAndIndex(
+    text: string,
+    passage: Passage,
+    followingPassage: Passage | undefined,
+    state: ParsingState
+): [string, number] {
+    const passageContentsStartIndex = nextLineIndex(
+        text,
+        state.textDocument.offsetAt(passage.location.range.end)
+    );
+    const passageContentsEndIndex =
+        followingPassage !== undefined
+            ? nextLineIndex(
+                  text,
+                  state.textDocument.offsetAt(
+                      followingPassage.location.range.start
+                  ) - 1
+              )
+            : undefined;
+    const passageText = text.substring(
+        passageContentsStartIndex,
+        passageContentsEndIndex
+    );
+
+    return [passageText, passageContentsStartIndex];
+}
+
+/**
  * Parse text from a Twee 3 document.
- * @param text Document text.
  * @param state Parsing state.
  */
-function parseTwee3(text: string, state: ParsingState): void {
+function parseTwee3(state: ParsingState): void {
+    const text = state.textDocument.getText();
+
     // Generate all passages
     const passages = [...text.matchAll(/^::([^:].*?|)$/gm)].map((m) =>
         parsePassageHeader(m[1], m.index, state)
@@ -552,23 +589,26 @@ function parseTwee3(text: string, state: ParsingState): void {
 
     // Call back on the passages, along with their contents
     for (const [passage1, passage2] of pairwise(passages)) {
-        const passageTextIndex =
-            state.textDocument.offsetAt(passage1.location.range.end) + 1; // +1 to swallow the \n
-        const passageText = text.substring(
-            passageTextIndex,
-            state.textDocument.offsetAt(passage2.location.range.start) - 1
+        const [passageText, passageContentsIndex] = passageTextAndIndex(
+            text,
+            passage1,
+            passage2,
+            state
         );
-        parsePassageText(passage1, passageText, passageTextIndex, state);
+        parsePassageText(passage1, passageText, passageContentsIndex, state);
         state.callbacks.onPassage(passage1, passageText);
     }
 
     // Handle the final passage, if any
     const lastPassage = passages.at(-1);
     if (lastPassage !== undefined) {
-        const passageTextIndex =
-            state.textDocument.offsetAt(lastPassage.location.range.end) + 1; // +1 to swallow the \n
-        const passageText = text.substring(passageTextIndex);
-        parsePassageText(lastPassage, passageText, passageTextIndex, state);
+        const [passageText, passageContentsIndex] = passageTextAndIndex(
+            text,
+            lastPassage,
+            undefined,
+            state
+        );
+        parsePassageText(lastPassage, passageText, passageContentsIndex, state);
         state.callbacks.onPassage(lastPassage, passageText);
     }
 }
@@ -584,7 +624,6 @@ export function parse(
     callbacks: ParserCallbacks
 ): void {
     const state = new ParsingState(textDocument, callbacks);
-    const text = textDocument.getText();
 
-    parseTwee3(text, state);
+    parseTwee3(state);
 }

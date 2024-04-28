@@ -269,6 +269,25 @@ describe("Parser", () => {
                 );
             });
 
+            it("should call back on StoryTitle with the title's range, even on Windows", () => {
+                const callbacks = new MockCallbacks();
+                const doc = TextDocument.create(
+                    "fake-uri",
+                    "",
+                    0,
+                    ":: StoryTitle\r\nSweet title!"
+                );
+
+                uut.parse(doc, callbacks);
+
+                expect(callbacks.storyTitleRange?.start).to.eql(
+                    Position.create(1, 0)
+                );
+                expect(callbacks.storyTitleRange?.end).to.eql(
+                    Position.create(1, 12)
+                );
+            });
+
             it("should call back on StoryData with the data's range", () => {
                 const callbacks = new MockCallbacks();
                 const storyData = buildStoryData({
@@ -279,8 +298,9 @@ describe("Parser", () => {
                     "",
                     0,
                     ":: StoryData\n" +
-                        JSON.stringify(storyData, null, "\t") +
-                        "\n"
+                        "{\n" +
+                        '\t"ifid": "62891577-8D8E-496F-B46C-9FF0194C0EAC"\n' +
+                        "}\n"
                 );
 
                 uut.parse(doc, callbacks);
@@ -289,7 +309,32 @@ describe("Parser", () => {
                     Position.create(1, 0)
                 );
                 expect(callbacks.storyDataRange?.end).to.eql(
-                    Position.create(10, 1)
+                    Position.create(3, 1)
+                );
+            });
+
+            it("should call back on StoryData with the data's range, even on Windows", () => {
+                const callbacks = new MockCallbacks();
+                const storyData = buildStoryData({
+                    ifid: "62891577-8D8E-496F-B46C-9FF0194C0EAC",
+                });
+                const doc = TextDocument.create(
+                    "fake-uri",
+                    "",
+                    0,
+                    ":: StoryData\r\n" +
+                        "{\r\n" +
+                        '\t"ifid": "62891577-8D8E-496F-B46C-9FF0194C0EAC"\r\n' +
+                        "}\r\n"
+                );
+
+                uut.parse(doc, callbacks);
+
+                expect(callbacks.storyDataRange?.start).to.eql(
+                    Position.create(1, 0)
+                );
+                expect(callbacks.storyDataRange?.end).to.eql(
+                    Position.create(3, 1)
                 );
             });
 
