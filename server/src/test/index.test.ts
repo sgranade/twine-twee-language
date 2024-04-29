@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import "mocha";
-import { Diagnostic, Range } from "vscode-languageserver";
+import { Diagnostic, Position, Range } from "vscode-languageserver";
 
 import * as uut from "../index";
 
@@ -10,20 +10,20 @@ function buildPassage({
         uri: "fake-uri",
         range: Range.create(1, 1, 2, 2),
     },
+    scope = Range.create(3, 3, 4, 4),
     isScript = false,
     isStylesheet = false,
     tags = undefined,
     metadata = undefined,
-    varsSection = undefined,
 }): uut.Passage {
     return {
         name: name,
         location: location,
+        scope: scope,
         isScript: isScript,
         isStylesheet: isStylesheet,
         tags: tags,
         metadata: metadata,
-        varsSection: varsSection,
     };
 }
 

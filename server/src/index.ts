@@ -23,11 +23,11 @@ export interface PassageMetadata {
 export interface Passage {
     name: string;
     location: Location;
+    scope: Range;
     isScript: boolean;
     isStylesheet: boolean;
     tags?: string[];
     metadata?: PassageMetadata;
-    varsSection?: Range; // Chapbook variables section
 }
 
 /**

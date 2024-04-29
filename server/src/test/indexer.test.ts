@@ -19,9 +19,10 @@ function buildDocument({
 function buildPassage({
     name = "Passage",
     location = {
-        uri: "test-uri",
+        uri: "fake-uri",
         range: Range.create(1, 1, 2, 2),
     },
+    scope = Range.create(3, 3, 4, 4),
     isScript = false,
     isStylesheet = false,
     tags = undefined,
@@ -30,6 +31,7 @@ function buildPassage({
     return {
         name: name,
         location: location,
+        scope: scope,
         isScript: isScript,
         isStylesheet: isStylesheet,
         tags: tags,
@@ -42,7 +44,8 @@ describe("Indexer", () => {
         it("should add passages to the index", () => {
             const doc = buildDocument({
                 uri: "test-uri",
-                content: "::Passage 1\nYup\n\n::Passage 2\nYupyup\n",
+                content:
+                    "::Passage 1\nYup\n\n::Passage 2\nYupyup\n:: Passage 3",
             });
             const index = new Index();
 
@@ -56,6 +59,7 @@ describe("Indexer", () => {
                         uri: "test-uri",
                         range: Range.create(0, 0, 0, 11),
                     },
+                    scope: Range.create(0, 0, 2, 0),
                 }),
                 buildPassage({
                     name: "Passage 2",
@@ -63,6 +67,15 @@ describe("Indexer", () => {
                         uri: "test-uri",
                         range: Range.create(3, 0, 3, 11),
                     },
+                    scope: Range.create(3, 0, 4, 6),
+                }),
+                buildPassage({
+                    name: "Passage 3",
+                    location: {
+                        uri: "test-uri",
+                        range: Range.create(5, 0, 5, 12),
+                    },
+                    scope: Range.create(5, 0, 5, 12),
                 }),
             ]);
         });

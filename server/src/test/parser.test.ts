@@ -210,28 +210,79 @@ describe("Parser", () => {
                 );
 
                 uut.parse(doc, callbacks);
+                const result = callbacks.passages[0];
 
-                expect(callbacks.passages[0].metadata).to.eql({
+                expect(result.metadata).to.eql({
                     position: "600,400",
                     size: "100,200",
                 });
+            });
 
-                it("should call back with both the passage's tags and metadata", () => {
-                    const callbacks = new MockCallbacks();
-                    const doc = TextDocument.create(
-                        "fake-uri",
-                        "",
-                        0,
-                        ':: Passage 1 [tag-1] {"position":"600,400"}\nP1 contents'
-                    );
+            it("should call back with both the passage's tags and metadata", () => {
+                const callbacks = new MockCallbacks();
+                const doc = TextDocument.create(
+                    "fake-uri",
+                    "",
+                    0,
+                    ':: Passage 1 [tag-1] {"position":"600,400"}\nP1 contents'
+                );
 
-                    uut.parse(doc, callbacks);
+                uut.parse(doc, callbacks);
+                const result = callbacks.passages[0];
 
-                    expect(callbacks.passages[0].tags).to.eql(["tag-1"]);
-                    expect(callbacks.passages[0].metadata).to.eql({
-                        position: "600,400",
-                    });
+                expect(result.tags).to.eql(["tag-1"]);
+                expect(result.metadata).to.eql({
+                    position: "600,400",
+                    size: undefined,
                 });
+            });
+
+            it("should call back with the passage's scope", () => {
+                const callbacks = new MockCallbacks();
+                const doc = TextDocument.create(
+                    "fake-uri",
+                    "",
+                    0,
+                    ":: Passage 1 \nP1 contents"
+                );
+
+                uut.parse(doc, callbacks);
+                const result = callbacks.passages[0].scope;
+
+                expect(result.start).to.eql(Position.create(0, 0));
+                expect(result.end).to.eql(Position.create(1, 11));
+            });
+
+            it("should set a passage's scope to end before the next one", () => {
+                const callbacks = new MockCallbacks();
+                const doc = TextDocument.create(
+                    "fake-uri",
+                    "",
+                    0,
+                    ":: Passage 1 \nP1 contents\n:: Passage 2"
+                );
+
+                uut.parse(doc, callbacks);
+                const result = callbacks.passages[0].scope;
+
+                expect(result.start).to.eql(Position.create(0, 0));
+                expect(result.end).to.eql(Position.create(1, 11));
+            });
+
+            it("should set a passage's scope to end before the next one, even on Windows", () => {
+                const callbacks = new MockCallbacks();
+                const doc = TextDocument.create(
+                    "fake-uri",
+                    "",
+                    0,
+                    ":: Passage 1 \r\nP1 contents\r\n:: Passage 2"
+                );
+
+                uut.parse(doc, callbacks);
+                const result = callbacks.passages[0].scope;
+
+                expect(result.start).to.eql(Position.create(0, 0));
+                expect(result.end).to.eql(Position.create(1, 11));
             });
         });
 

@@ -180,6 +180,8 @@ const headerMetaCharPattern = /(?<!\\)(\{|\[)/;
 /**
  * Parse a passage header.
  *
+ * The returned passage's scope will only encompass the header line.
+ *
  * @param header Text of the header line, without the leading "::" start token.
  * @param index Passage's location in the document, including the "::" token (zero-based index).
  * @param state Parsing state.
@@ -291,6 +293,7 @@ function parsePassageHeader(
     return {
         name: name.replace(/\\(.)/g, "$1").trim(), // Remove escape characters
         location: location,
+        scope: Range.create(location.range.start, location.range.end),
         isScript: tags?.includes("script") || false,
         isStylesheet: tags?.includes("stylesheet") || false,
         tags: tags,
@@ -540,20 +543,21 @@ function parsePassageText(
 }
 
 /**
- * Extract a passage's text and the index in the document where it occurs.
+ * Find a passage's contents, update the passage's scope to include it, and parse the contents.
  *
  * @param text Full text of the document.
- * @param passage Passage whose text we should find.
- * @param followingPassage The passage after the one we're interested in, if any.
+ * @param passage Passage whose contents we should find and parse.
+ * @param followingPassage The passage after the one to be processed, if any.
  * @param state Parsing state.
- * @returns The text of the passage's content and the index where the content begins.
+ * @returns The text of the passage's contents.
  */
-function passageTextAndIndex(
+function findAndParsePassageContents(
     text: string,
     passage: Passage,
     followingPassage: Passage | undefined,
     state: ParsingState
-): [string, number] {
+): string {
+    // Find the passage's contents
     const passageContentsStartIndex = nextLineIndex(
         text,
         state.textDocument.offsetAt(passage.location.range.end)
@@ -572,7 +576,15 @@ function passageTextAndIndex(
         passageContentsEndIndex
     );
 
-    return [passageText, passageContentsStartIndex];
+    // Update the passage's scope to encompass the contents, not counting
+    // any ending \r or \n
+    passage.scope.end = state.textDocument.positionAt(
+        passageContentsStartIndex + passageText.replace(/\r?\n$/g, "").length
+    );
+
+    parsePassageText(passage, passageText, passageContentsStartIndex, state);
+
+    return passageText;
 }
 
 /**
@@ -587,28 +599,27 @@ function parseTwee3(state: ParsingState): void {
         parsePassageHeader(m[1], m.index, state)
     );
 
-    // Call back on the passages, along with their contents
+    // Call back on the passages, along with their contents.
+    // This will cover every passage except the last one in the array.
     for (const [passage1, passage2] of pairwise(passages)) {
-        const [passageText, passageContentsIndex] = passageTextAndIndex(
+        const passageText = findAndParsePassageContents(
             text,
             passage1,
             passage2,
             state
         );
-        parsePassageText(passage1, passageText, passageContentsIndex, state);
         state.callbacks.onPassage(passage1, passageText);
     }
 
     // Handle the final passage, if any
     const lastPassage = passages.at(-1);
     if (lastPassage !== undefined) {
-        const [passageText, passageContentsIndex] = passageTextAndIndex(
+        const passageText = findAndParsePassageContents(
             text,
             lastPassage,
             undefined,
             state
         );
-        parsePassageText(lastPassage, passageText, passageContentsIndex, state);
         state.callbacks.onPassage(lastPassage, passageText);
     }
 }

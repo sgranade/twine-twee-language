@@ -18,8 +18,6 @@ export function* pairwise<T>(itr: Iterable<T>) {
     }
 }
 
-const whitespaceRegex = /\s*?\r?\n/;
-
 /**
  * Scan a document's text to find the end of the current line.
  *
