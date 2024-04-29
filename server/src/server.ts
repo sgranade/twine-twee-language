@@ -12,11 +12,14 @@ import {
     InitializeResult,
     DocumentDiagnosticReportKind,
     DocumentDiagnosticReport,
+    DocumentSymbolParams,
+    DocumentSymbol,
 } from "vscode-languageserver/node";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { Index } from "./index";
 import { updateProjectIndex } from "./indexer";
+import { generateSymbols } from "./structure";
 import { generateDiagnostics } from "./validator";
 
 const connection = createConnection(ProposedFeatures.all);
@@ -59,7 +62,8 @@ connection.onInitialize((params: InitializeParams) => {
                 interFileDependencies: false,
                 workspaceDiagnostics: false,
             },
-            // TODO implement definitionProvider, referencesProvider, renameProvider, documentSymbolProvider,
+            documentSymbolProvider: true,
+            // TODO implement definitionProvider, referencesProvider, renameProvider
         },
     };
     return result;
@@ -115,7 +119,6 @@ connection.languages.diagnostics.on(async (params) => {
 
 documents.onDidChangeContent((change) => {
     processChangedDocument(change.document);
-    validateTextDocument(change.document);
 });
 
 async function validateTextDocument(
@@ -171,6 +174,12 @@ connection.onCompletionResolve((item: CompletionItem): CompletionItem => {
     }
     return item;
 });
+
+connection.onDocumentSymbol(
+    (params: DocumentSymbolParams): DocumentSymbol[] | null => {
+        return generateSymbols(params.textDocument.uri, projectIndex);
+    }
+);
 
 // Make the text document manager listen on the connection
 // for open, change and close text document events
