@@ -24,7 +24,7 @@ describe("Structure", () => {
             expect(result).to.be.null;
         });
 
-        it("should generate namespaces for passages", () => {
+        it("should generate class symbols for passages", () => {
             const index = new Index();
             const passages = [
                 buildPassage({
@@ -53,14 +53,14 @@ describe("Structure", () => {
                 DocumentSymbol.create(
                     "Passage 1",
                     undefined,
-                    SymbolKind.Namespace,
+                    SymbolKind.Class,
                     Range.create(0, 0, 7, 17),
                     Range.create(0, 0, 0, 12)
                 ),
                 DocumentSymbol.create(
                     "Passage 2",
                     undefined,
-                    SymbolKind.Namespace,
+                    SymbolKind.Class,
                     Range.create(8, 0, 8, 9),
                     Range.create(8, 0, 8, 9)
                 ),

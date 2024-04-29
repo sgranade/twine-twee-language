@@ -28,7 +28,7 @@ export function generateSymbols(
         return DocumentSymbol.create(
             passage.name.label,
             undefined,
-            SymbolKind.Namespace,
+            SymbolKind.Class,
             passage.name.scope || passage.name.location.range,
             passage.name.location.range
         );
