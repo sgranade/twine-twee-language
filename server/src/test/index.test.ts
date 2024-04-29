@@ -1,31 +1,10 @@
 import { expect } from "chai";
 import "mocha";
-import { Diagnostic, Position, Range } from "vscode-languageserver";
+import { Diagnostic, Range } from "vscode-languageserver";
+
+import { buildPassage } from "./builders";
 
 import * as uut from "../index";
-
-function buildPassage({
-    name = "Passage",
-    location = {
-        uri: "fake-uri",
-        range: Range.create(1, 1, 2, 2),
-    },
-    scope = Range.create(3, 3, 4, 4),
-    isScript = false,
-    isStylesheet = false,
-    tags = undefined,
-    metadata = undefined,
-}): uut.Passage {
-    return {
-        name: name,
-        location: location,
-        scope: scope,
-        isScript: isScript,
-        isStylesheet: isStylesheet,
-        tags: tags,
-        metadata: metadata,
-    };
-}
 
 describe("Project Index", () => {
     describe("Index", () => {
@@ -111,8 +90,8 @@ describe("Project Index", () => {
 
             it("should return passages for indexed files", () => {
                 const passages = [
-                    buildPassage({ name: "Passage 1" }),
-                    buildPassage({ name: "Passage 2" }),
+                    buildPassage({ label: "Passage 1" }),
+                    buildPassage({ label: "Passage 2" }),
                 ];
                 const index = new uut.Index();
                 index.setPassages("fake-uri", passages);
@@ -152,12 +131,12 @@ describe("Project Index", () => {
         describe("Passage Names", () => {
             it("should return passage names across all indexed files", () => {
                 const passages1 = [
-                    buildPassage({ name: "F1 P1" }),
-                    buildPassage({ name: "F1 P2" }),
+                    buildPassage({ label: "F1 P1" }),
+                    buildPassage({ label: "F1 P2" }),
                 ];
                 const passages2 = [
-                    buildPassage({ name: "F2 P1" }),
-                    buildPassage({ name: "F2 P2" }),
+                    buildPassage({ label: "F2 P1" }),
+                    buildPassage({ label: "F2 P2" }),
                 ];
                 const index = new uut.Index();
                 index.setPassages("file1", passages1);
@@ -175,12 +154,12 @@ describe("Project Index", () => {
 
             it("should return passage names with no duplicates", () => {
                 const passages1 = [
-                    buildPassage({ name: "F1 P1" }),
-                    buildPassage({ name: "spoiler" }),
+                    buildPassage({ label: "F1 P1" }),
+                    buildPassage({ label: "spoiler" }),
                 ];
                 const passages2 = [
-                    buildPassage({ name: "spoiler" }),
-                    buildPassage({ name: "F2 P2" }),
+                    buildPassage({ label: "spoiler" }),
+                    buildPassage({ label: "F2 P2" }),
                 ];
                 const index = new uut.Index();
                 index.setPassages("file1", passages1);
@@ -195,12 +174,12 @@ describe("Project Index", () => {
         describe("Removing Documents", () => {
             it("should remove passages from with a deleted document", () => {
                 const passages1 = [
-                    buildPassage({ name: "F1 P1" }),
-                    buildPassage({ name: "F1 P2" }),
+                    buildPassage({ label: "F1 P1" }),
+                    buildPassage({ label: "F1 P2" }),
                 ];
                 const passages2 = [
-                    buildPassage({ name: "F2 P1" }),
-                    buildPassage({ name: "F2 P2" }),
+                    buildPassage({ label: "F2 P1" }),
+                    buildPassage({ label: "F2 P2" }),
                 ];
                 const index = new uut.Index();
                 index.setPassages("file1", passages1);

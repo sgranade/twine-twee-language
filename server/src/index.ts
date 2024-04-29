@@ -1,6 +1,15 @@
 import { Diagnostic, Location, Range } from "vscode-languageserver";
 
 /**
+ * A label, which can have an optional scope
+ */
+export interface Label {
+    label: string;
+    location: Location;
+    scope?: Range;
+}
+
+/**
  * Corresponds to the Twee 3 StoryData passage.
  */
 export interface StoryData {
@@ -21,12 +30,10 @@ export interface PassageMetadata {
  * A Twee 3 passage.
  */
 export interface Passage {
-    name: string;
-    location: Location;
-    scope: Range;
+    name: Label;
     isScript: boolean;
     isStylesheet: boolean;
-    tags?: string[];
+    tags?: Label[];
     metadata?: PassageMetadata;
 }
 
@@ -147,7 +154,7 @@ export class Index implements ProjectIndex {
         const s = new Set<string>();
 
         for (const passages of this._passages.values()) {
-            passages.map((p) => p.name).forEach(s.add, s);
+            passages.map((p) => p.name.label).forEach(s.add, s);
         }
 
         return s;

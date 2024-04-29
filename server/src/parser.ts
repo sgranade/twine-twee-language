@@ -6,7 +6,7 @@ import {
 } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
-import { Passage, PassageMetadata, StoryData } from "./index";
+import { Label, Passage, PassageMetadata, StoryData } from "./index";
 import { createDiagnostic, nextLineIndex, pairwise } from "./utilities";
 
 export interface ParserCallbacks {
@@ -175,12 +175,13 @@ function parseHeaderMetadata(
     return { position: positionMeta, size: sizeMeta };
 }
 
-const headerMetaCharPattern = /(?<!\\)(\{|\[)/;
+const openMetaCharPattern = /(?<!\\)(\{|\[)/;
+const tagPattern = /\[(.*?)((?<!\\)\])\s*/;
+const metadataPattern = /(\{(.*?)((?<!\\)\}))\s*/;
+const closeMetaCharPattern = /(?<!\\)(\}|\])/gm;
 
 /**
  * Parse a passage header.
- *
- * The returned passage's scope will only encompass the header line.
  *
  * @param header Text of the header line, without the leading "::" start token.
  * @param index Passage's location in the document, including the "::" token (zero-based index).
@@ -194,20 +195,12 @@ function parsePassageHeader(
 ): Passage {
     let unparsedHeader = header;
     let name = "";
-    let tags: string[] | undefined;
+    let tags: Label[] | undefined;
     let metadata: PassageMetadata | undefined;
     const headerStartIndex = index + 2; // Index where the header string starts. The + 2 is for the leading "::"
     let parsingIndex = headerStartIndex; // Index where we're currently parsing.
-    const location = Location.create(
-        state.textDocumentUri,
-        Range.create(
-            state.textDocument.positionAt(index),
-            state.textDocument.positionAt(parsingIndex + header.length)
-        )
-    );
-
     // Stop before an unescaped [ (for tags) or { (for metadata)
-    let m = headerMetaCharPattern.exec(unparsedHeader);
+    let m = openMetaCharPattern.exec(unparsedHeader);
     if (m === null) {
         // Easy peasy: the header's just a passage name
         name = unparsedHeader;
@@ -219,7 +212,7 @@ function parsePassageHeader(
 
         // Handle tags (which should come before any metadata)
         if (m[0] === "[") {
-            const tagMatch = /\[(.*?)((?<!\\)\])\s*/.exec(unparsedHeader);
+            const tagMatch = tagPattern.exec(unparsedHeader);
             if (tagMatch === null) {
                 logErrorFor(
                     unparsedHeader,
@@ -229,15 +222,30 @@ function parsePassageHeader(
                 );
                 unparsedHeader = "";
             } else {
-                tags = tagMatch[1].replace(/\\(.)/g, "$1").split(" ");
+                const rawTags = new Set(tagMatch[1].split(/\s+/));
+                tags = Array.from(rawTags).map((tag): Label => {
+                    const tagIndex = parsingIndex + tagMatch[0].indexOf(tag);
+                    return {
+                        label: tag.replace(/\\(.)/g, "$1"),
+                        location: Location.create(
+                            state.textDocumentUri,
+                            Range.create(
+                                state.textDocument.positionAt(tagIndex),
+                                state.textDocument.positionAt(
+                                    tagIndex + tag.length
+                                )
+                            )
+                        ),
+                    };
+                });
                 unparsedHeader = unparsedHeader.substring(tagMatch[0].length);
                 parsingIndex += tagMatch[0].length;
-                m = headerMetaCharPattern.exec(unparsedHeader); // Re-run to see if we have any trailing metadata
+                m = openMetaCharPattern.exec(unparsedHeader); // Re-run to see if we have any trailing metadata
             }
         }
 
         if (m !== null && m[0] === "{") {
-            const metaMatch = /(\{(.*?)((?<!\\)\}))\s*/.exec(unparsedHeader);
+            const metaMatch = metadataPattern.exec(unparsedHeader);
             if (metaMatch === null) {
                 logErrorFor(
                     unparsedHeader,
@@ -281,7 +289,8 @@ function parsePassageHeader(
 
     // If the name contains unescaped tag or block closing characters, flag them.
     // (No need to check for tag/block opening characters, as they'll be processed above.)
-    for (const closeMatch of name.matchAll(/(?<!\\)(\}|\])/gm)) {
+    closeMetaCharPattern.lastIndex = 0;
+    for (const closeMatch of name.matchAll(closeMetaCharPattern)) {
         logErrorFor(
             closeMatch[0],
             headerStartIndex + closeMatch.index,
@@ -290,12 +299,23 @@ function parsePassageHeader(
         );
     }
 
+    name = name.trim();
+    const tagNames = tags?.map((x) => x.label);
+    const nameIndex = headerStartIndex + header.indexOf(name);
+    const location = Location.create(
+        state.textDocumentUri,
+        Range.create(
+            state.textDocument.positionAt(nameIndex),
+            state.textDocument.positionAt(nameIndex + name.length)
+        )
+    );
     return {
-        name: name.replace(/\\(.)/g, "$1").trim(), // Remove escape characters
-        location: location,
-        scope: Range.create(location.range.start, location.range.end),
-        isScript: tags?.includes("script") || false,
-        isStylesheet: tags?.includes("stylesheet") || false,
+        name: {
+            label: name.replace(/\\(.)/g, "$1").trim(), // Remove escape characters
+            location: location,
+        },
+        isScript: tagNames?.includes("script") || false,
+        isStylesheet: tagNames?.includes("stylesheet") || false,
         tags: tags,
         metadata: metadata,
     };
@@ -535,15 +555,15 @@ function parsePassageText(
     textIndex: number,
     state: ParsingState
 ): void {
-    if (passage.name === "StoryTitle") {
+    if (passage.name.label === "StoryTitle") {
         parseStoryTitlePassage(passageText, textIndex, state);
-    } else if (passage.name === "StoryData") {
+    } else if (passage.name.label === "StoryData") {
         parseStoryDataPassage(passageText, textIndex, state);
     }
 }
 
 /**
- * Find a passage's contents, update the passage's scope to include it, and parse the contents.
+ * Find a passage's contents, set the passage's scope to include it, and parse the contents.
  *
  * @param text Full text of the document.
  * @param passage Passage whose contents we should find and parse.
@@ -558,17 +578,19 @@ function findAndParsePassageContents(
     state: ParsingState
 ): string {
     // Find the passage's contents
-    const passageContentsStartIndex = nextLineIndex(
-        text,
-        state.textDocument.offsetAt(passage.location.range.end)
-    );
+
+    const passageContentsStartIndex = state.textDocument.offsetAt({
+        line: passage.name.location.range.start.line + 1,
+        character: 0,
+    });
     const passageContentsEndIndex =
         followingPassage !== undefined
             ? nextLineIndex(
                   text,
-                  state.textDocument.offsetAt(
-                      followingPassage.location.range.start
-                  ) - 1
+                  state.textDocument.offsetAt({
+                      line: followingPassage.name.location.range.start.line - 1,
+                      character: 0,
+                  })
               )
             : undefined;
     const passageText = text.substring(
@@ -578,8 +600,15 @@ function findAndParsePassageContents(
 
     // Update the passage's scope to encompass the contents, not counting
     // any ending \r or \n
-    passage.scope.end = state.textDocument.positionAt(
-        passageContentsStartIndex + passageText.replace(/\r?\n$/g, "").length
+    passage.name.scope = Range.create(
+        {
+            line: passage.name.location.range.start.line,
+            character: 0,
+        },
+        state.textDocument.positionAt(
+            passageContentsStartIndex +
+                passageText.replace(/\r?\n$/g, "").length
+        )
     );
 
     parsePassageText(passage, passageText, passageContentsStartIndex, state);

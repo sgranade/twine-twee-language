@@ -3,7 +3,8 @@ import "mocha";
 import { DiagnosticSeverity, Position, Range } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
-import { Passage, Index } from "../index";
+import { Index } from "../index";
+import { buildPassage } from "./builders";
 
 import * as uut from "../indexer";
 
@@ -14,29 +15,6 @@ function buildDocument({
     content = "",
 }): TextDocument {
     return TextDocument.create(uri, languageId, version, content);
-}
-
-function buildPassage({
-    name = "Passage",
-    location = {
-        uri: "fake-uri",
-        range: Range.create(1, 1, 2, 2),
-    },
-    scope = Range.create(3, 3, 4, 4),
-    isScript = false,
-    isStylesheet = false,
-    tags = undefined,
-    metadata = undefined,
-}): Passage {
-    return {
-        name: name,
-        location: location,
-        scope: scope,
-        isScript: isScript,
-        isStylesheet: isStylesheet,
-        tags: tags,
-        metadata: metadata,
-    };
 }
 
 describe("Indexer", () => {
@@ -54,26 +32,26 @@ describe("Indexer", () => {
 
             expect(result).to.eql([
                 buildPassage({
-                    name: "Passage 1",
+                    label: "Passage 1",
                     location: {
                         uri: "test-uri",
-                        range: Range.create(0, 0, 0, 11),
+                        range: Range.create(0, 2, 0, 11),
                     },
                     scope: Range.create(0, 0, 2, 0),
                 }),
                 buildPassage({
-                    name: "Passage 2",
+                    label: "Passage 2",
                     location: {
                         uri: "test-uri",
-                        range: Range.create(3, 0, 3, 11),
+                        range: Range.create(3, 2, 3, 11),
                     },
                     scope: Range.create(3, 0, 4, 6),
                 }),
                 buildPassage({
-                    name: "Passage 3",
+                    label: "Passage 3",
                     location: {
                         uri: "test-uri",
-                        range: Range.create(5, 0, 5, 12),
+                        range: Range.create(5, 3, 5, 12),
                     },
                     scope: Range.create(5, 0, 5, 12),
                 }),

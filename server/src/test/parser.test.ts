@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import "mocha";
-import { Diagnostic, Range, Position } from "vscode-languageserver";
+import { Diagnostic, Range, Position, Location } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { Passage, StoryData } from "../index";
@@ -83,7 +83,7 @@ describe("Parser", () => {
 
                 uut.parse(doc, callbacks);
 
-                expect(callbacks.passages[0].name).to.equal("Passage 1");
+                expect(callbacks.passages[0].name.label).to.equal("Passage 1");
             });
 
             it("should properly decode escaped characters", () => {
@@ -97,10 +97,12 @@ describe("Parser", () => {
 
                 uut.parse(doc, callbacks);
 
-                expect(callbacks.passages[0].name).to.equal("[Passage] 1");
+                expect(callbacks.passages[0].name.label).to.equal(
+                    "[Passage] 1"
+                );
             });
 
-            it("should call back with the passage's location", () => {
+            it("should call back with the passage name's location", () => {
                 const callbacks = new MockCallbacks();
                 const doc = TextDocument.create(
                     "fake-uri",
@@ -110,24 +112,54 @@ describe("Parser", () => {
                 );
 
                 uut.parse(doc, callbacks);
-                const result = callbacks.passages[0].location;
-
-                expect(result.range.start).to.eql(Position.create(0, 0));
-                expect(result.range.end).to.eql(Position.create(0, 13));
+                const result = callbacks.passages[0].name.location;
+                expect(result.range.start).to.eql(Position.create(0, 3));
+                expect(result.range.end).to.eql(Position.create(0, 12));
             });
 
-            it("should call back with the passage's tags captured", () => {
+            it("should call back with the passage's tag names and locations captured", () => {
                 const callbacks = new MockCallbacks();
                 const doc = TextDocument.create(
                     "fake-uri",
                     "",
                     0,
-                    ":: Passage 1 [tag-1 tag_2]\nP1 contents"
+                    ":: Passage 1 [tag-1  tag_2]\nP1 contents"
                 );
 
                 uut.parse(doc, callbacks);
+                const result = callbacks.passages[0].tags;
 
-                expect(callbacks.passages[0].tags).to.eql(["tag-1", "tag_2"]);
+                expect(result).to.eql([
+                    {
+                        label: "tag-1",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(0, 14, 0, 19)
+                        ),
+                    },
+                    {
+                        label: "tag_2",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(0, 21, 0, 26)
+                        ),
+                    },
+                ]);
+            });
+
+            it("should ignore repeated tags", () => {
+                const callbacks = new MockCallbacks();
+                const doc = TextDocument.create(
+                    "fake-uri",
+                    "",
+                    0,
+                    ":: Passage 1 [tag-1 tag_2 tag-1]\nP1 contents"
+                );
+
+                uut.parse(doc, callbacks);
+                const result = callbacks.passages[0].tags?.map((x) => x.label);
+
+                expect(result).to.eql(["tag-1", "tag_2"]);
             });
 
             it("should capture passage tags with escaped metacharacters", () => {
@@ -140,8 +172,24 @@ describe("Parser", () => {
                 );
 
                 uut.parse(doc, callbacks);
+                const result = callbacks.passages[0].tags;
 
-                expect(callbacks.passages[0].tags).to.eql(["tag-1", "[tag_2]"]);
+                expect(result).to.eql([
+                    {
+                        label: "tag-1",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(0, 14, 0, 19)
+                        ),
+                    },
+                    {
+                        label: "[tag_2]",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(0, 20, 0, 29)
+                        ),
+                    },
+                ]);
             });
 
             it("should call back on passages with the script tag with the passage's isScript set", () => {
@@ -230,7 +278,15 @@ describe("Parser", () => {
                 uut.parse(doc, callbacks);
                 const result = callbacks.passages[0];
 
-                expect(result.tags).to.eql(["tag-1"]);
+                expect(result.tags).to.eql([
+                    {
+                        label: "tag-1",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(0, 14, 0, 19)
+                        ),
+                    },
+                ]);
                 expect(result.metadata).to.eql({
                     position: "600,400",
                     size: undefined,
@@ -247,10 +303,10 @@ describe("Parser", () => {
                 );
 
                 uut.parse(doc, callbacks);
-                const result = callbacks.passages[0].scope;
+                const result = callbacks.passages[0].name.scope;
 
-                expect(result.start).to.eql(Position.create(0, 0));
-                expect(result.end).to.eql(Position.create(1, 11));
+                expect(result?.start).to.eql(Position.create(0, 0));
+                expect(result?.end).to.eql(Position.create(1, 11));
             });
 
             it("should set a passage's scope to end before the next one", () => {
@@ -263,10 +319,10 @@ describe("Parser", () => {
                 );
 
                 uut.parse(doc, callbacks);
-                const result = callbacks.passages[0].scope;
+                const result = callbacks.passages[0].name.scope;
 
-                expect(result.start).to.eql(Position.create(0, 0));
-                expect(result.end).to.eql(Position.create(1, 11));
+                expect(result?.start).to.eql(Position.create(0, 0));
+                expect(result?.end).to.eql(Position.create(1, 11));
             });
 
             it("should set a passage's scope to end before the next one, even on Windows", () => {
@@ -279,10 +335,10 @@ describe("Parser", () => {
                 );
 
                 uut.parse(doc, callbacks);
-                const result = callbacks.passages[0].scope;
+                const result = callbacks.passages[0].name.scope;
 
-                expect(result.start).to.eql(Position.create(0, 0));
-                expect(result.end).to.eql(Position.create(1, 11));
+                expect(result?.start).to.eql(Position.create(0, 0));
+                expect(result?.end).to.eql(Position.create(1, 11));
             });
         });
 
