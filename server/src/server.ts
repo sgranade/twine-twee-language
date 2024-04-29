@@ -14,12 +14,14 @@ import {
     DocumentDiagnosticReport,
     DocumentSymbolParams,
     DocumentSymbol,
+    FoldingRangeParams,
+    FoldingRange,
 } from "vscode-languageserver/node";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { Index } from "./index";
 import { updateProjectIndex } from "./indexer";
-import { generateSymbols } from "./structure";
+import { generateFoldingRanges, generateSymbols } from "./structure";
 import { generateDiagnostics } from "./validator";
 
 const connection = createConnection(ProposedFeatures.all);
@@ -63,6 +65,7 @@ connection.onInitialize((params: InitializeParams) => {
                 workspaceDiagnostics: false,
             },
             documentSymbolProvider: true,
+            foldingRangeProvider: true,
             // TODO implement definitionProvider, referencesProvider, renameProvider
         },
     };
@@ -178,6 +181,12 @@ connection.onCompletionResolve((item: CompletionItem): CompletionItem => {
 connection.onDocumentSymbol(
     (params: DocumentSymbolParams): DocumentSymbol[] | null => {
         return generateSymbols(params.textDocument.uri, projectIndex);
+    }
+);
+
+connection.onFoldingRanges(
+    (params: FoldingRangeParams): FoldingRange[] | null => {
+        return generateFoldingRanges(params.textDocument.uri, projectIndex);
     }
 );
 

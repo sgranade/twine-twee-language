@@ -2,6 +2,7 @@ import { expect } from "chai";
 import "mocha";
 import {
     DocumentSymbol,
+    FoldingRange,
     Location,
     Range,
     SymbolKind,
@@ -13,7 +14,7 @@ import { buildPassage } from "./builders";
 import * as uut from "../structure";
 
 describe("Structure", () => {
-    describe("Passage Symbols", () => {
+    describe("Symbols", () => {
         it("should return null for un-indexed files", () => {
             const index = new Index();
             index.setPassages("test-uri", []);
@@ -25,13 +26,14 @@ describe("Structure", () => {
 
         it("should generate namespaces for passages", () => {
             const index = new Index();
-            index.setPassages("test-uri", [
+            const passages = [
                 buildPassage({
                     label: "Passage 1",
                     location: Location.create(
                         "test-uri",
-                        Range.create(0, 0, 7, 17)
+                        Range.create(0, 0, 0, 12)
                     ),
+                    scope: Range.create(0, 0, 7, 17),
                 }),
                 buildPassage({
                     label: "Passage 2",
@@ -40,7 +42,10 @@ describe("Structure", () => {
                         Range.create(8, 0, 8, 9)
                     ),
                 }),
-            ]);
+            ];
+            // For testing purposes, remove the scope from the second passage
+            passages[1].name.scope = undefined;
+            index.setPassages("test-uri", passages);
 
             const result = uut.generateSymbols("test-uri", index);
 
@@ -50,7 +55,7 @@ describe("Structure", () => {
                     undefined,
                     SymbolKind.Namespace,
                     Range.create(0, 0, 7, 17),
-                    Range.create(0, 0, 7, 17)
+                    Range.create(0, 0, 0, 12)
                 ),
                 DocumentSymbol.create(
                     "Passage 2",
@@ -59,6 +64,48 @@ describe("Structure", () => {
                     Range.create(8, 0, 8, 9),
                     Range.create(8, 0, 8, 9)
                 ),
+            ]);
+        });
+    });
+
+    describe("Folding Ranges", () => {
+        it("should return null for un-indexed files", () => {
+            const index = new Index();
+            index.setPassages("test-uri", []);
+
+            const result = uut.generateFoldingRanges("other-uri", index);
+
+            expect(result).to.be.null;
+        });
+
+        it("should generate folding ranges for passages", () => {
+            const index = new Index();
+            const passages = [
+                buildPassage({
+                    label: "Passage 1",
+                    location: Location.create(
+                        "test-uri",
+                        Range.create(0, 0, 0, 12)
+                    ),
+                    scope: Range.create(0, 0, 7, 17),
+                }),
+                buildPassage({
+                    label: "Passage 2",
+                    location: Location.create(
+                        "test-uri",
+                        Range.create(8, 0, 8, 9)
+                    ),
+                }),
+            ];
+            // For testing purposes, remove the scope from the second passage
+            passages[1].name.scope = undefined;
+            index.setPassages("test-uri", passages);
+
+            const result = uut.generateFoldingRanges("test-uri", index);
+
+            expect(result).to.eql([
+                FoldingRange.create(0, 7),
+                FoldingRange.create(8, 8),
             ]);
         });
     });
