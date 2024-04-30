@@ -21,7 +21,12 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { Index } from "./index";
 import { updateProjectIndex } from "./indexer";
-import { generateFoldingRanges, generateSymbols } from "./structure";
+import {
+    generateFoldingRanges,
+    generateSemanticTokens,
+    generateSymbols,
+    semanticTokensLegend,
+} from "./structure";
 import { generateDiagnostics } from "./validator";
 
 const connection = createConnection(ProposedFeatures.all);
@@ -66,6 +71,10 @@ connection.onInitialize((params: InitializeParams) => {
             },
             documentSymbolProvider: true,
             foldingRangeProvider: true,
+            semanticTokensProvider: {
+                legend: semanticTokensLegend,
+                full: true,
+            },
             // TODO implement definitionProvider, referencesProvider, renameProvider
         },
     };
@@ -189,6 +198,10 @@ connection.onFoldingRanges(
         return generateFoldingRanges(params.textDocument.uri, projectIndex);
     }
 );
+
+connection.onRequest("textDocument/semanticTokens/full", (params) => {
+    return generateSemanticTokens(params.textDocument.uri, projectIndex);
+});
 
 // Make the text document manager listen on the connection
 // for open, change and close text document events
