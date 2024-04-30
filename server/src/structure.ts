@@ -10,8 +10,15 @@ import {
 import { ProjectIndex } from "./index";
 import { normalizeUri } from "./utilities";
 
+const TokenType = {
+    class: 0,
+    property: 1,
+    string: 2,
+    number: 3,
+} as const;
+
 export const semanticTokensLegend: SemanticTokensLegend = {
-    tokenTypes: ["class"],
+    tokenTypes: Object.keys(TokenType),
     tokenModifiers: [],
 };
 
@@ -77,6 +84,8 @@ export function generateFoldingRanges(
     return ranges;
 }
 
+const stringRegex = /(?<!\\)"(.*?)(?<!\\)"/g;
+
 /**
  * Generate semantic tokens for a document.
  *
@@ -98,9 +107,39 @@ export function generateSemanticTokens(
                 passage.name.location.range.start.line,
                 passage.name.location.range.start.character,
                 passage.name.label.length,
-                0,
+                TokenType.class,
                 0
             );
+            if (passage.tags !== undefined) {
+                for (const tag of passage.tags) {
+                    builder.push(
+                        tag.location.range.start.line,
+                        tag.location.range.start.character,
+                        tag.label.length,
+                        TokenType.property,
+                        0
+                    );
+                }
+            }
+            if (passage.metadata !== undefined) {
+                // Do super simple searching rather than parse the underlying JSON
+                stringRegex.lastIndex = 0;
+                const line =
+                    passage.metadata.rawMetadata.location.range.start.line;
+                const character =
+                    passage.metadata.rawMetadata.location.range.start.character;
+                for (const m of passage.metadata.rawMetadata.label.matchAll(
+                    stringRegex
+                )) {
+                    builder.push(
+                        line,
+                        character + m.index,
+                        m[0].length,
+                        TokenType.string,
+                        0
+                    );
+                }
+            }
         }
     }
 
