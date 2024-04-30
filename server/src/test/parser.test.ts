@@ -261,6 +261,13 @@ describe("Parser", () => {
                 const result = callbacks.passages[0];
 
                 expect(result.metadata).to.eql({
+                    rawMetadata: {
+                        label: '{"position":"600,400", "size":"100,200"}',
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(0, 13, 0, 53)
+                        ),
+                    },
                     position: "600,400",
                     size: "100,200",
                 });
@@ -288,6 +295,13 @@ describe("Parser", () => {
                     },
                 ]);
                 expect(result.metadata).to.eql({
+                    rawMetadata: {
+                        label: '{"position":"600,400"}',
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(0, 21, 0, 43)
+                        ),
+                    },
                     position: "600,400",
                     size: undefined,
                 });

@@ -103,6 +103,20 @@ function parseHeaderMetadata(
     metadataIndex: number,
     state: ParsingState
 ): PassageMetadata {
+    const metadata: PassageMetadata = {
+        rawMetadata: {
+            label: rawMetadata,
+            location: Location.create(
+                state.textDocumentUri,
+                Range.create(
+                    state.textDocument.positionAt(metadataIndex),
+                    state.textDocument.positionAt(
+                        metadataIndex + rawMetadata.length
+                    )
+                )
+            ),
+        },
+    };
     let positionMeta: string | undefined;
     let sizeMeta: string | undefined;
 
@@ -115,7 +129,7 @@ function parseHeaderMetadata(
             errorMessage += " Did you use ' instead of \"?";
         }
         logErrorFor(rawMetadata, metadataIndex, errorMessage, state);
-        return {};
+        return metadata;
     }
 
     for (const [k, v] of Object.entries(metadataObject)) {
@@ -171,8 +185,10 @@ function parseHeaderMetadata(
             );
         }
     }
+    metadata.position = positionMeta;
+    metadata.size = sizeMeta;
 
-    return { position: positionMeta, size: sizeMeta };
+    return metadata;
 }
 
 const openMetaCharPattern = /(?<!\\)(\{|\[)/;

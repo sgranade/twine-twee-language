@@ -22,6 +22,7 @@ export interface StoryData {
 }
 
 export interface PassageMetadata {
+    rawMetadata: Label;
     position?: string;
     size?: string;
 }
