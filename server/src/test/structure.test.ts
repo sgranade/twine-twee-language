@@ -66,6 +66,25 @@ describe("Structure", () => {
                 ),
             ]);
         });
+
+        it("should skip class symbols for passages whose name is empty", () => {
+            const index = new Index();
+            const passages = [
+                buildPassage({
+                    label: "",
+                    location: Location.create(
+                        "test-uri",
+                        Range.create(0, 0, 0, 3)
+                    ),
+                    scope: Range.create(0, 0, 0, 13),
+                }),
+            ];
+            index.setPassages("test-uri", passages);
+
+            const result = uut.generateSymbols("test-uri", index);
+
+            expect(result).to.be.empty;
+        });
     });
 
     describe("Folding Ranges", () => {

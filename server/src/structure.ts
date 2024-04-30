@@ -24,15 +24,20 @@ export function generateSymbols(
     if (passages === undefined) {
         return null;
     }
-    const info = passages.map((passage) => {
-        return DocumentSymbol.create(
+    const info = [];
+    for (const passage of passages) {
+        if (passage.name.label) {
+            info.push(
+                DocumentSymbol.create(
             passage.name.label,
             undefined,
             SymbolKind.Class,
             passage.name.scope || passage.name.location.range,
             passage.name.location.range
+                )
         );
-    });
+        }
+    }
 
     return info;
 }
