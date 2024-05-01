@@ -16,10 +16,10 @@ export function buildPassage({
 }): Passage {
     return {
         name: {
-            label: label,
+            contents: label,
             location: location,
-            scope: scope,
         },
+        scope: scope,
         isScript: isScript,
         isStylesheet: isStylesheet,
         tags: tags,

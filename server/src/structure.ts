@@ -7,18 +7,11 @@ import {
     SymbolKind,
 } from "vscode-languageserver";
 
-import { ProjectIndex } from "./index";
+import { ETokenType, ProjectIndex } from "./index";
 import { normalizeUri } from "./utilities";
 
-const TokenType = {
-    class: 0,
-    property: 1,
-    string: 2,
-    number: 3,
-} as const;
-
 export const semanticTokensLegend: SemanticTokensLegend = {
-    tokenTypes: Object.keys(TokenType),
+    tokenTypes: Object.keys(ETokenType),
     tokenModifiers: [],
 };
 
@@ -41,13 +34,13 @@ export function generateSymbols(
     }
     const info = [];
     for (const passage of passages) {
-        if (passage.name.label) {
+        if (passage.name.contents) {
             info.push(
                 DocumentSymbol.create(
-                    passage.name.label,
+                    passage.name.contents,
                     undefined,
                     SymbolKind.Class,
-                    passage.name.scope || passage.name.location.range,
+                    passage.scope,
                     passage.name.location.range
                 )
             );
@@ -75,9 +68,8 @@ export function generateFoldingRanges(
     }
     const ranges = passages.map((passage) => {
         return FoldingRange.create(
-            passage.name.scope?.start.line ||
-                passage.name.location.range.start.line,
-            passage.name.scope?.end.line || passage.name.location.range.end.line
+            passage.scope.start.line || passage.name.location.range.start.line,
+            passage.scope.end.line || passage.name.location.range.end.line
         );
     });
 
@@ -106,8 +98,8 @@ export function generateSemanticTokens(
             builder.push(
                 passage.name.location.range.start.line,
                 passage.name.location.range.start.character,
-                passage.name.label.length,
-                TokenType.class,
+                passage.name.contents.length,
+                ETokenType.class,
                 0
             );
             if (passage.tags !== undefined) {
@@ -115,8 +107,8 @@ export function generateSemanticTokens(
                     builder.push(
                         tag.location.range.start.line,
                         tag.location.range.start.character,
-                        tag.label.length,
-                        TokenType.property,
+                        tag.contents.length,
+                        ETokenType.property,
                         0
                     );
                 }
@@ -124,18 +116,17 @@ export function generateSemanticTokens(
             if (passage.metadata !== undefined) {
                 // Do super simple searching rather than parse the underlying JSON
                 stringRegex.lastIndex = 0;
-                const line =
-                    passage.metadata.rawMetadata.location.range.start.line;
+                const line = passage.metadata.raw.location.range.start.line;
                 const character =
-                    passage.metadata.rawMetadata.location.range.start.character;
-                for (const m of passage.metadata.rawMetadata.label.matchAll(
+                    passage.metadata.raw.location.range.start.character;
+                for (const m of passage.metadata.raw.contents.matchAll(
                     stringRegex
                 )) {
                     builder.push(
                         line,
                         character + m.index,
                         m[0].length,
-                        TokenType.string,
+                        ETokenType.string,
                         0
                     );
                 }

@@ -41,10 +41,9 @@ describe("Structure", () => {
                         "test-uri",
                         Range.create(8, 0, 8, 9)
                     ),
+                    scope: Range.create(8, 0, 9, 2),
                 }),
             ];
-            // For testing purposes, remove the scope from the second passage
-            passages[1].name.scope = undefined;
             index.setPassages("test-uri", passages);
 
             const result = uut.generateSymbols("test-uri", index);
@@ -61,7 +60,7 @@ describe("Structure", () => {
                     "Passage 2",
                     undefined,
                     SymbolKind.Class,
-                    Range.create(8, 0, 8, 9),
+                    Range.create(8, 0, 9, 2),
                     Range.create(8, 0, 8, 9)
                 ),
             ]);
@@ -114,17 +113,16 @@ describe("Structure", () => {
                         "test-uri",
                         Range.create(8, 0, 8, 9)
                     ),
+                    scope: Range.create(8, 0, 9, 2),
                 }),
             ];
-            // For testing purposes, remove the scope from the second passage
-            passages[1].name.scope = undefined;
             index.setPassages("test-uri", passages);
 
             const result = uut.generateFoldingRanges("test-uri", index);
 
             expect(result).to.eql([
                 FoldingRange.create(0, 7),
-                FoldingRange.create(8, 8),
+                FoldingRange.create(8, 9),
             ]);
         });
     });

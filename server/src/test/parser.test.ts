@@ -83,7 +83,9 @@ describe("Parser", () => {
 
                 uut.parse(doc, callbacks);
 
-                expect(callbacks.passages[0].name.label).to.equal("Passage 1");
+                expect(callbacks.passages[0].name.contents).to.equal(
+                    "Passage 1"
+                );
             });
 
             it("should properly decode escaped characters", () => {
@@ -97,7 +99,7 @@ describe("Parser", () => {
 
                 uut.parse(doc, callbacks);
 
-                expect(callbacks.passages[0].name.label).to.equal(
+                expect(callbacks.passages[0].name.contents).to.equal(
                     "[Passage] 1"
                 );
             });
@@ -131,14 +133,14 @@ describe("Parser", () => {
 
                 expect(result).to.eql([
                     {
-                        label: "tag-1",
+                        contents: "tag-1",
                         location: Location.create(
                             "fake-uri",
                             Range.create(0, 14, 0, 19)
                         ),
                     },
                     {
-                        label: "tag_2",
+                        contents: "tag_2",
                         location: Location.create(
                             "fake-uri",
                             Range.create(0, 21, 0, 26)
@@ -157,7 +159,9 @@ describe("Parser", () => {
                 );
 
                 uut.parse(doc, callbacks);
-                const result = callbacks.passages[0].tags?.map((x) => x.label);
+                const result = callbacks.passages[0].tags?.map(
+                    (x) => x.contents
+                );
 
                 expect(result).to.eql(["tag-1", "tag_2"]);
             });
@@ -176,14 +180,14 @@ describe("Parser", () => {
 
                 expect(result).to.eql([
                     {
-                        label: "tag-1",
+                        contents: "tag-1",
                         location: Location.create(
                             "fake-uri",
                             Range.create(0, 14, 0, 19)
                         ),
                     },
                     {
-                        label: "[tag_2]",
+                        contents: "[tag_2]",
                         location: Location.create(
                             "fake-uri",
                             Range.create(0, 20, 0, 29)
@@ -261,8 +265,8 @@ describe("Parser", () => {
                 const result = callbacks.passages[0];
 
                 expect(result.metadata).to.eql({
-                    rawMetadata: {
-                        label: '{"position":"600,400", "size":"100,200"}',
+                    raw: {
+                        contents: '{"position":"600,400", "size":"100,200"}',
                         location: Location.create(
                             "fake-uri",
                             Range.create(0, 13, 0, 53)
@@ -287,7 +291,7 @@ describe("Parser", () => {
 
                 expect(result.tags).to.eql([
                     {
-                        label: "tag-1",
+                        contents: "tag-1",
                         location: Location.create(
                             "fake-uri",
                             Range.create(0, 14, 0, 19)
@@ -295,8 +299,8 @@ describe("Parser", () => {
                     },
                 ]);
                 expect(result.metadata).to.eql({
-                    rawMetadata: {
-                        label: '{"position":"600,400"}',
+                    raw: {
+                        contents: '{"position":"600,400"}',
                         location: Location.create(
                             "fake-uri",
                             Range.create(0, 21, 0, 43)
@@ -317,10 +321,10 @@ describe("Parser", () => {
                 );
 
                 uut.parse(doc, callbacks);
-                const result = callbacks.passages[0].name.scope;
+                const result = callbacks.passages[0].scope;
 
-                expect(result?.start).to.eql(Position.create(0, 0));
-                expect(result?.end).to.eql(Position.create(1, 11));
+                expect(result.start).to.eql(Position.create(0, 0));
+                expect(result.end).to.eql(Position.create(1, 11));
             });
 
             it("should set a passage's scope to end before the next one", () => {
@@ -333,10 +337,10 @@ describe("Parser", () => {
                 );
 
                 uut.parse(doc, callbacks);
-                const result = callbacks.passages[0].name.scope;
+                const result = callbacks.passages[0].scope;
 
-                expect(result?.start).to.eql(Position.create(0, 0));
-                expect(result?.end).to.eql(Position.create(1, 11));
+                expect(result.start).to.eql(Position.create(0, 0));
+                expect(result.end).to.eql(Position.create(1, 11));
             });
 
             it("should set a passage's scope to end before the next one, even on Windows", () => {
@@ -349,10 +353,10 @@ describe("Parser", () => {
                 );
 
                 uut.parse(doc, callbacks);
-                const result = callbacks.passages[0].name.scope;
+                const result = callbacks.passages[0].scope;
 
-                expect(result?.start).to.eql(Position.create(0, 0));
-                expect(result?.end).to.eql(Position.create(1, 11));
+                expect(result.start).to.eql(Position.create(0, 0));
+                expect(result.end).to.eql(Position.create(1, 11));
             });
         });
 

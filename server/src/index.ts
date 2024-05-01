@@ -1,12 +1,22 @@
 import { Diagnostic, Location, Range } from "vscode-languageserver";
 
 /**
- * A label, which can have an optional scope
+ * Available semantic token types
+ */
+export const ETokenType = {
+    class: 0,
+    property: 1,
+    string: 2,
+    number: 3,
+} as const;
+export type TokenType = (typeof ETokenType)[keyof typeof ETokenType];
+
+/**
+ * A label, which has a name and a location.
  */
 export interface Label {
-    label: string;
+    contents: string;
     location: Location;
-    scope?: Range;
 }
 
 /**
@@ -22,7 +32,7 @@ export interface StoryData {
 }
 
 export interface PassageMetadata {
-    rawMetadata: Label;
+    raw: Label;
     position?: string;
     size?: string;
 }
@@ -32,6 +42,7 @@ export interface PassageMetadata {
  */
 export interface Passage {
     name: Label;
+    scope: Range;
     isScript: boolean;
     isStylesheet: boolean;
     tags?: Label[];
@@ -155,7 +166,7 @@ export class Index implements ProjectIndex {
         const s = new Set<string>();
 
         for (const passages of this._passages.values()) {
-            passages.map((p) => p.name.label).forEach(s.add, s);
+            passages.map((p) => p.name.contents).forEach(s.add, s);
         }
 
         return s;

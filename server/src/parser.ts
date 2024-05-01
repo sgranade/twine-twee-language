@@ -104,8 +104,8 @@ function parseHeaderMetadata(
     state: ParsingState
 ): PassageMetadata {
     const metadata: PassageMetadata = {
-        rawMetadata: {
-            label: rawMetadata,
+        raw: {
+            contents: rawMetadata,
             location: Location.create(
                 state.textDocumentUri,
                 Range.create(
@@ -242,7 +242,7 @@ function parsePassageHeader(
                 tags = Array.from(rawTags).map((tag): Label => {
                     const tagIndex = parsingIndex + tagMatch[0].indexOf(tag);
                     return {
-                        label: tag.replace(/\\(.)/g, "$1"),
+                        contents: tag.replace(/\\(.)/g, "$1"),
                         location: Location.create(
                             state.textDocumentUri,
                             Range.create(
@@ -316,7 +316,7 @@ function parsePassageHeader(
     }
 
     name = name.trim();
-    const tagNames = tags?.map((x) => x.label);
+    const tagNames = tags?.map((x) => x.contents);
     const nameIndex = headerStartIndex + header.indexOf(name);
     const location = Location.create(
         state.textDocumentUri,
@@ -325,11 +325,13 @@ function parsePassageHeader(
             state.textDocument.positionAt(nameIndex + name.length)
         )
     );
+    const scope = Location.create(state.textDocumentUri, location.range);
     return {
         name: {
-            label: name.replace(/\\(.)/g, "$1").trim(), // Remove escape characters
+            contents: name.replace(/\\(.)/g, "$1").trim(), // Remove escape characters
             location: location,
         },
+        scope: Range.create(location.range.start, location.range.end),
         isScript: tagNames?.includes("script") || false,
         isStylesheet: tagNames?.includes("stylesheet") || false,
         tags: tags,
@@ -571,9 +573,9 @@ function parsePassageText(
     textIndex: number,
     state: ParsingState
 ): void {
-    if (passage.name.label === "StoryTitle") {
+    if (passage.name.contents === "StoryTitle") {
         parseStoryTitlePassage(passageText, textIndex, state);
-    } else if (passage.name.label === "StoryData") {
+    } else if (passage.name.contents === "StoryData") {
         parseStoryDataPassage(passageText, textIndex, state);
     }
 }
@@ -616,7 +618,7 @@ function findAndParsePassageContents(
 
     // Update the passage's scope to encompass the contents, not counting
     // any ending \r or \n
-    passage.name.scope = Range.create(
+    passage.scope = Range.create(
         {
             line: passage.name.location.range.start.line,
             character: 0,
