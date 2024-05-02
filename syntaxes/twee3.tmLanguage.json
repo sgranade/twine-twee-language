@@ -1,0 +1,64 @@
+{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "Twee3",
+	"patterns": [
+		{
+			"include": "#storydata"
+		},
+		{
+			"include": "#passage"
+		}
+	],
+	"repository": {
+		"storydata": {
+			"comment": "Twee 3 StoryData passage",
+			"begin": "^::\\s*(StoryData)\\s*?(?:(?<!\\\\)\\[(.*?)(?<!\\\\)\\]\\s*?)?((?<!\\\\)\\{.*?(?<!\\\\)\\}\\s*?)?$",
+			"end": "^(?=::)",
+			"captures": {
+				"1": {
+					"name": "entity.name.type.class.twee3"
+				},
+				"2": {
+					"name": "variable.other.property.twee3"
+				},
+				"3": {
+					"name": "source.json.twee3",
+					"patterns": [
+						{
+							"include": "source.json"
+						}
+					]
+				}
+			},
+			"name": "source.json.twee3",
+			"patterns": [
+				{
+					"include": "source.json"
+				}
+			]
+		},
+		"passage": {
+			"comment": "Twee 3 passage",
+			"begin": "^::\\s*((?!=:).*?)\\s*?(?:(?<!\\\\)\\[(.*?)(?<!\\\\)\\]\\s*?)?((?<!\\\\)\\{.*?(?<!\\\\)\\}\\s*?)?$",
+			"end": "^(?=::)",
+			"captures": {
+				"1": {
+					"name": "entity.name.type.class.twee3"
+				},
+				"2": {
+					"name": "variable.other.property.twee3"
+				},
+				"3": {
+					"name": "source.json.twee3",
+					"patterns": [
+						{
+							"include": "source.json"
+						}
+					]
+				}
+			},
+			"name": "source.passagedata.twee3"
+		}
+	},
+	"scopeName": "source.twee3"
+}

@@ -55,7 +55,21 @@
 					".tw",
 					".twee"
 				],
-				"configuration": "./language-configuration.json"
+				"configuration": "./syntaxes/twee3.language-configuration.json"
+			}
+		],
+		"grammars": [
+			{
+				"language": "twee3",
+				"scopeName": "source.twee3",
+				"path": "./syntaxes/twee3.tmLanguage.json",
+				"embeddedLanguages": {
+					"source.json": "json",
+					"source.json.twee3": "json",
+					"source.js.twee3": "javascript",
+					"source.css.twee3": "css",
+					"source.html.twee3": "html"
+				}
 			}
 		],
 		"configuration": {
