@@ -8,7 +8,15 @@ import {
     TransportKind,
 } from "vscode-languageclient/node";
 
+import { CustomMessages, StoryFormat } from "./client-server";
+import * as notifications from "./notifications";
+
 let client: LanguageClient;
+let currentStoryFormat: StoryFormat;
+
+function _onUpdatedStoryFormat(e: StoryFormat): void {
+    currentStoryFormat = e;
+}
 
 export function activate(context: ExtensionContext) {
     // The server is implemented in node
@@ -38,10 +46,18 @@ export function activate(context: ExtensionContext) {
 
     // Create the language client and start the client.
     client = new LanguageClient(
-        "languageServerExample",
-        "Language Server Example",
+        "twineChapbook",
+        "Twine Chapbook",
         serverOptions,
         clientOptions
+    );
+
+    // Be ready to handle notifications
+    context.subscriptions.push(notifications.initNotifications(client));
+
+    notifications.addNotificationHandler(
+        CustomMessages.UpdatedStoryFormat,
+        (e) => _onUpdatedStoryFormat(e[0])
     );
 
     // Start the client. This will also launch the server

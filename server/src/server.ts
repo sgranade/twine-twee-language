@@ -19,6 +19,7 @@ import {
 } from "vscode-languageserver/node";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
+import { CustomMessages, StoryFormat } from "./client-server";
 import { Index } from "./index";
 import { updateProjectIndex } from "./indexer";
 import {
@@ -150,7 +151,17 @@ connection.onDidChangeWatchedFiles((_change) => {
  * Process a document whose content has changed.
  */
 function processChangedDocument(document: TextDocument) {
+    // Keep track of the story format so, if it changes, we can notify listeners
+    const storyFormat = projectIndex.getStoryData()?.format;
     updateProjectIndex(document, projectIndex);
+    const newStoryData = projectIndex.getStoryData();
+    if (newStoryData?.format !== storyFormat && newStoryData?.format) {
+        const e: StoryFormat = {
+            format: newStoryData.format,
+            formatVersion: newStoryData.formatVersion,
+        };
+        connection.sendNotification(CustomMessages.UpdatedStoryFormat, e);
+    }
 }
 
 // This handler provides the initial list of the completion items.
