@@ -6,6 +6,12 @@
 			"include": "#storydata"
 		},
 		{
+			"include": "#scriptpassage"
+		},
+		{
+			"include": "#stylesheetpassage"
+		},
+		{
 			"include": "#passage"
 		}
 	],
@@ -34,6 +40,60 @@
 			"patterns": [
 				{
 					"include": "source.json"
+				}
+			]
+		},
+		"scriptpassage": {
+			"comment": "Twee 3 passage with the [script] tag",
+			"begin": "^::\\s*((?!=:).*?)\\s*?(?:(?<!\\\\)\\[(.*?\\bscript\\b.*?)(?<!\\\\)\\]\\s*?)((?<!\\\\)\\{.*?(?<!\\\\)\\}\\s*?)?$",
+			"end": "^(?=::)",
+			"captures": {
+				"1": {
+					"name": "entity.name.type.class.twee3"
+				},
+				"2": {
+					"name": "variable.other.property.twee3"
+				},
+				"3": {
+					"name": "source.json.twee3",
+					"patterns": [
+						{
+							"include": "source.json"
+						}
+					]
+				}
+			},
+			"name": "source.js.twee3",
+			"patterns": [
+				{
+					"include": "source.js"
+				}
+			]
+		},
+		"stylesheetpassage": {
+			"comment": "Twee 3 passage with the [stylesheet] tag",
+			"begin": "^::\\s*((?!=:).*?)\\s*?(?:(?<!\\\\)\\[(.*?\\bstylesheet\\b.*?)(?<!\\\\)\\]\\s*?)((?<!\\\\)\\{.*?(?<!\\\\)\\}\\s*?)?$",
+			"end": "^(?=::)",
+			"captures": {
+				"1": {
+					"name": "entity.name.type.class.twee3"
+				},
+				"2": {
+					"name": "variable.other.property.twee3"
+				},
+				"3": {
+					"name": "source.json.twee3",
+					"patterns": [
+						{
+							"include": "source.json"
+						}
+					]
+				}
+			},
+			"name": "source.css.twee3",
+			"patterns": [
+				{
+					"include": "source.css"
 				}
 			]
 		},
