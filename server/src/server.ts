@@ -6,7 +6,6 @@ import {
     InitializeParams,
     DidChangeConfigurationNotification,
     CompletionItem,
-    CompletionItemKind,
     TextDocumentPositionParams,
     TextDocumentSyncKind,
     InitializeResult,
@@ -16,6 +15,7 @@ import {
     DocumentSymbol,
     FoldingRangeParams,
     FoldingRange,
+    CompletionList,
 } from "vscode-languageserver/node";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
@@ -29,6 +29,7 @@ import {
     semanticTokensLegend,
 } from "./structure";
 import { generateDiagnostics } from "./validator";
+import { generateCompletions } from "./completions";
 
 const connection = createConnection(ProposedFeatures.all);
 
@@ -96,6 +97,7 @@ connection.onDidChangeConfiguration((change) => {
     // TODO implement later -- lsp demo has an example
 });
 
+// Diagnostics -- pull interface
 connection.languages.diagnostics.on(async (params) => {
     const document = documents.get(params.textDocument.uri);
     if (document !== undefined) {
@@ -147,24 +149,20 @@ function processChangedDocument(document: TextDocument) {
     }
 }
 
-// This handler provides the initial list of the completion items.
 connection.onCompletion(
-    (_textDocumentPosition: TextDocumentPositionParams): CompletionItem[] => {
-        // The pass parameter contains the position of the text document in
-        // which code complete got requested. For the example we ignore this
-        // info and always provide the same completion items.
-        return [
-            {
-                label: "TypeScript",
-                kind: CompletionItemKind.Text,
-                data: 1,
-            },
-            {
-                label: "JavaScript",
-                kind: CompletionItemKind.Text,
-                data: 2,
-            },
-        ];
+    async (
+        textDocumentPosition: TextDocumentPositionParams
+    ): Promise<CompletionList | null> => {
+        const document = documents.get(textDocumentPosition.textDocument.uri);
+        if (document === undefined) {
+            return null;
+        }
+        const tempy = await generateCompletions(
+            document,
+            textDocumentPosition.position,
+            projectIndex
+        );
+        return tempy;
     }
 );
 
