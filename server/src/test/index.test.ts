@@ -1,10 +1,12 @@
 import { expect } from "chai";
 import "mocha";
-import { Diagnostic, Range } from "vscode-languageserver";
+import { Diagnostic, Position, Range } from "vscode-languageserver";
+import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { buildPassage } from "./builders";
 
 import * as uut from "../index";
+import { JSONDocument } from "vscode-json-languageservice";
 
 describe("Project Index", () => {
     describe("Index", () => {
@@ -99,6 +101,42 @@ describe("Project Index", () => {
                 const result = index.getPassages("fake-uri");
 
                 expect(result).to.eql(passages);
+            });
+        });
+
+        describe("Embedded JSON Documents", () => {
+            it("should return an empty array for an unindexed file", () => {
+                const index = new uut.Index();
+
+                const result = index.getEmbeddedJSONDocuments("nopers");
+
+                expect(result).to.be.empty;
+            });
+
+            it("should return embedded documents for indexed files", () => {
+                const fakeEmbeddedDoc = TextDocument.create(
+                    "fake-sub-ui",
+                    "json",
+                    1,
+                    '{ "prop": 7 }'
+                );
+                const fakeEmbeddedJSON: JSONDocument = {
+                    root: undefined,
+                    getNodeFromOffset: (o, i?) => undefined,
+                };
+                const docs: uut.EmbeddedJSONDocument[] = [
+                    {
+                        document: fakeEmbeddedDoc,
+                        jsonDocument: fakeEmbeddedJSON,
+                        position: Position.create(1, 2),
+                    },
+                ];
+                const index = new uut.Index();
+                index.setEmbeddedJSONDocuments("fake-uri", docs);
+
+                const result = index.getEmbeddedJSONDocuments("fake-uri");
+
+                expect(result).to.eql(docs);
             });
         });
 

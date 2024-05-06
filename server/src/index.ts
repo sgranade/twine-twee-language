@@ -1,4 +1,6 @@
-import { Diagnostic, Location, Range } from "vscode-languageserver";
+import { Diagnostic, Location, Position, Range } from "vscode-languageserver";
+import { TextDocument } from "vscode-languageserver-textdocument";
+import { JSONDocument } from "vscode-json-languageservice";
 
 /**
  * Available semantic token types
@@ -50,6 +52,15 @@ export interface Passage {
 }
 
 /**
+ * A JSON document embedded inside the Twee 3 document.
+ */
+export interface EmbeddedJSONDocument {
+    position: Position; // Where the embedded document begins inside its parent
+    document: TextDocument;
+    jsonDocument: JSONDocument;
+}
+
+/**
  * Index for a Twee 3 project.
  */
 export interface ProjectIndex {
@@ -71,6 +82,15 @@ export interface ProjectIndex {
      * @param newPassages New index of labels.
      */
     setPassages(uri: string, newPassages: Passage[]): void;
+    /**
+     * Set the list of embedded JSON documents.
+     * @param uri URI to document whose index is to be updated.
+     * @param errors New list of embedded JSON documents.
+     */
+    setEmbeddedJSONDocuments(
+        uri: string,
+        documents: EmbeddedJSONDocument[]
+    ): void;
     /**
      * Set the list of errors that occured during parsing.
      * @param uri URI to document whose index is to be updated.
@@ -95,12 +115,17 @@ export interface ProjectIndex {
     getStoryDataUri(): string | undefined;
     /**
      * Get the list of passages in a document, if indexed.
-     * @param uri URI to document.
+     * @param uri Document URI.
      */
     getPassages(uri: string): Passage[] | undefined;
     /**
+     * Get the list of embedded JSON documents.
+     * @param uri Document URI.
+     */
+    getEmbeddedJSONDocuments(uri: string): EmbeddedJSONDocument[] | undefined;
+    /**
      * Get the parse errors.
-     * @param uri Scene document URI.
+     * @param uri Document URI.
      */
     getParseErrors(uri: string): ReadonlyArray<Diagnostic>;
     /**
@@ -123,11 +148,13 @@ export class Index implements ProjectIndex {
     private _storyData?: StoryData;
     private _storyDataUri?: string;
     private _passages: Map<string, Passage[]>;
+    private _jsonDocuments: Map<string, EmbeddedJSONDocument[]>;
     private _parseErrors: Map<string, Diagnostic[]>;
 
     constructor() {
         this._passages = new Map();
         this._parseErrors = new Map();
+        this._jsonDocuments = new Map();
     }
     setStoryTitle(title: string, uri: string): void {
         this._storyTitle = title;
@@ -139,6 +166,12 @@ export class Index implements ProjectIndex {
     }
     setPassages(uri: string, newPassages: Passage[]): void {
         this._passages.set(uri, [...newPassages]);
+    }
+    setEmbeddedJSONDocuments(
+        uri: string,
+        documents: EmbeddedJSONDocument[]
+    ): void {
+        this._jsonDocuments.set(uri, [...documents]);
     }
     setParseErrors(uri: string, errors: Diagnostic[]): void {
         this._parseErrors.set(uri, [...errors]);
@@ -157,6 +190,10 @@ export class Index implements ProjectIndex {
     }
     getPassages(uri: string): Passage[] | undefined {
         return this._passages.get(uri);
+    }
+    getEmbeddedJSONDocuments(uri: string): EmbeddedJSONDocument[] {
+        const documents = this._jsonDocuments.get(uri) ?? [];
+        return documents;
     }
     getParseErrors(uri: string): ReadonlyArray<Diagnostic> {
         const errors = this._parseErrors.get(uri) ?? [];

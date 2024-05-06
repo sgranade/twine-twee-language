@@ -1,18 +1,47 @@
 import {
-    Range,
-    Location,
     Diagnostic,
     DiagnosticSeverity,
+    Location,
+    Range,
 } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
+import { getLanguageService as getJSONLanguageService } from "vscode-json-languageservice";
 
-import { Label, Passage, PassageMetadata, StoryData } from "./index";
+import {
+    EmbeddedJSONDocument,
+    Label,
+    Passage,
+    PassageMetadata,
+    StoryData,
+} from "./index";
+import {
+    closeMetaCharPattern,
+    metadataPattern,
+    openMetaCharPattern,
+    storyDataSchema,
+    tagPattern,
+} from "./language";
 import { createDiagnostic, nextLineIndex, pairwise } from "./utilities";
+
+const storyDataSchemaUri = "file:///storydata.schema.json";
+export const storyDataJSONUri = "file:///storydata.json";
+export const jsonLanguageService = getJSONLanguageService({
+    schemaRequestService: (uri) => {
+        if (uri === storyDataSchemaUri) {
+            return Promise.resolve(storyDataSchema);
+        }
+        return Promise.reject(`Unabled to load schema at ${uri}`);
+    },
+});
+jsonLanguageService.configure({
+    schemas: [{ fileMatch: ["*/storydata.json"], uri: storyDataSchemaUri }],
+});
 
 export interface ParserCallbacks {
     onPassage(passage: Passage, contents: string): void;
     onStoryTitle(title: string, range: Range): void;
     onStoryData(data: StoryData, range: Range): void;
+    onEmbeddedJSONDocument(document: EmbeddedJSONDocument): void;
     onParseError(error: Diagnostic): void;
 }
 
@@ -190,11 +219,6 @@ function parseHeaderMetadata(
 
     return metadata;
 }
-
-const openMetaCharPattern = /(?<!\\)(\{|\[)/;
-const tagPattern = /\[(.*?)((?<!\\)\])\s*/;
-const metadataPattern = /(\{(.*?)((?<!\\)\}))\s*/;
-const closeMetaCharPattern = /(?<!\\)(\}|\])/gm;
 
 /**
  * Parse a passage header.
@@ -461,92 +485,53 @@ function parseStoryDataPassage(
     textIndex: number,
     state: ParsingState
 ): void {
-    let storyDataObject;
-    let ifidFound = false;
-    const storyData: StoryData = { ifid: "" };
-    try {
-        storyDataObject = JSON.parse(passageText);
-    } catch {
-        let errorMessage = "StoryData isn't properly-formatted JSON.";
-        if (passageText.includes("'")) {
-            errorMessage += " Did you use ' instead of \"?";
-        }
-        logErrorFor(passageText, textIndex, errorMessage, state);
-        return;
-    }
+    const storyData: StoryData = {
+        ifid: "",
+    };
 
-    for (const [k, v] of Object.entries(storyDataObject)) {
-        const vAsString = String(v);
-        const valueIndex = textIndex + passageText.indexOf(vAsString);
-        if (k === "ifid") {
-            ifidFound = true;
-            if (validateIfid(v, valueIndex, state)) {
-                storyData.ifid = String(v);
-            }
-        } else if (k === "format") {
-            if (typeof v === "string") {
-                storyData.format = v;
-            } else {
-                logErrorFor(vAsString, valueIndex, "Must be a string.", state);
-            }
-        } else if (k === "format-version") {
-            if (typeof v === "string") {
-                storyData.formatVersion = v;
-            } else {
-                logErrorFor(vAsString, valueIndex, "Must be a string.", state);
-            }
-        } else if (k === "start") {
-            if (typeof v === "string") {
-                storyData.start = v;
-            } else {
-                logErrorFor(vAsString, valueIndex, "Must be a string.", state);
-            }
-        } else if (k === "tag-colors") {
-            const m = /"tag-colors"\s*:\s*\{.*?\}/s.exec(passageText);
-            if (m !== null) {
-                const tagColors = parseTagColors(
-                    v,
-                    m[0],
-                    textIndex + m.index,
-                    state
-                );
-                if (tagColors !== undefined) {
-                    storyData.tagColors = tagColors;
+    const subDocument = TextDocument.create(
+        storyDataJSONUri,
+        "json",
+        state.textDocument.version,
+        passageText
+    );
+    const embeddedJSONDocument: EmbeddedJSONDocument = {
+        position: state.textDocument.positionAt(textIndex),
+        document: subDocument,
+        jsonDocument: jsonLanguageService.parseJSONDocument(subDocument),
+    };
+    for (const kid of embeddedJSONDocument.jsonDocument.root?.children || []) {
+        if (kid.type === "property") {
+            if (kid.valueNode?.type === "string") {
+                if (kid.keyNode.value === "ifid") {
+                    storyData.ifid = kid.valueNode.value;
+                } else if (kid.keyNode.value === "format") {
+                    storyData.format = kid.valueNode.value;
+                } else if (kid.keyNode.value === "format-version") {
+                    storyData.formatVersion = kid.valueNode.value;
+                } else if (kid.keyNode.value === "start") {
+                    storyData.start = kid.valueNode.value;
                 }
-            } else {
-                const kAsString = `"${k}"`;
-                const keyIndex = textIndex + passageText.indexOf(kAsString);
-                logErrorFor(
-                    kAsString,
-                    keyIndex,
-                    '"tag-colors" must be a JSON object of tag name to color pairs, like {"tag": "color"}',
-                    state
-                );
+            } else if (
+                kid.valueNode?.type === "number" &&
+                kid.keyNode.value === "zoom"
+            ) {
+                storyData.zoom = kid.valueNode.value;
+            } else if (
+                kid.valueNode?.type === "object" &&
+                kid.keyNode.value === "tag-colors"
+            ) {
+                storyData.tagColors = new Map();
+                for (const prop of kid.valueNode.properties) {
+                    if (prop.valueNode?.type === "string") {
+                        storyData.tagColors.set(
+                            prop.keyNode.value,
+                            prop.valueNode.value
+                        );
+                    }
+                }
             }
-        } else if (k === "zoom") {
-            if (typeof v === "number") {
-                storyData.zoom = v;
-            } else {
-                logErrorFor(vAsString, valueIndex, "Must be a number.", state);
-            }
-        } else {
-            const keyIndex = passageText.indexOf(k);
-            logErrorFor(
-                k,
-                textIndex + keyIndex,
-                `Unsupported StoryData property.`,
-                state
-            );
         }
-    }
-
-    if (!ifidFound) {
-        logErrorFor(
-            passageText,
-            textIndex,
-            'StoryData must include an "ifid" property.',
-            state
-        );
     }
 
     const trimmedPassageText = passageText.trimEnd();
@@ -557,6 +542,7 @@ function parseStoryDataPassage(
             state.textDocument.positionAt(textIndex + trimmedPassageText.length)
         )
     );
+    state.callbacks.onEmbeddedJSONDocument(embeddedJSONDocument);
 }
 
 /**

@@ -1,12 +1,8 @@
-import {
-    Location,
-    Diagnostic,
-    DiagnosticSeverity,
-    DiagnosticRelatedInformation,
-} from "vscode-languageserver";
+import { Diagnostic } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { ProjectIndex } from "./index";
+import { jsonLanguageService } from "./parser";
 import { normalizeUri } from "./utilities";
 
 /**
@@ -26,7 +22,24 @@ export async function generateDiagnostics(
     // Start with parse errors
     const diagnostics: Diagnostic[] = [...projectIndex.getParseErrors(uri)];
 
-    // TODO future validation goes here
+    // Add diagnostics from embedded documents
+    const embeddedJSONDocuments = projectIndex.getEmbeddedJSONDocuments(uri);
+    if (embeddedJSONDocuments !== undefined) {
+        for (const doc of embeddedJSONDocuments) {
+            const newDiagnostics = await jsonLanguageService.doValidation(
+                doc.document,
+                doc.jsonDocument,
+                undefined
+            );
+            diagnostics.push(
+                ...newDiagnostics.map((d) => {
+                    d.range.start.line += doc.position.line;
+                    d.range.end.line += doc.position.line;
+                    return d;
+                })
+            );
+        }
+    }
 
     return diagnostics;
 }
