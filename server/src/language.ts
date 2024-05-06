@@ -47,15 +47,23 @@ export const storyDataSchema = JSON.stringify({
             type: "string",
         },
         "tag-colors": {
+            description:
+                "How to color passages with a given tag in the Twine 2 editor",
             type: "object",
             patternProperties: {
                 "^.*$": {
-                    anyOf: [{ type: "string" }],
+                    description: "Color",
+                    type: "string",
+                    pattern: "^(gray|red|orange|yellow|green|blue|purple)$",
+                    patternErrorMessage:
+                        "Must be one of gray, red, orange, yellow, green, blue, or purple",
                 },
             },
             additionalProperties: false,
         },
         zoom: {
+            description:
+                "The zoom level of the story map in the Twine 2 editor (1.0 = 100%)",
             type: "number",
         },
     },
