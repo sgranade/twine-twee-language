@@ -5,7 +5,6 @@ import {
     ProposedFeatures,
     InitializeParams,
     DidChangeConfigurationNotification,
-    CompletionItem,
     TextDocumentPositionParams,
     TextDocumentSyncKind,
     InitializeResult,
@@ -16,10 +15,14 @@ import {
     FoldingRangeParams,
     FoldingRange,
     CompletionList,
+    HoverParams,
+    Hover,
 } from "vscode-languageserver/node";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { CustomMessages, StoryFormat } from "./client-server";
+import { generateCompletions } from "./completions";
+import { generateHover } from "./hover";
 import { Index } from "./index";
 import { updateProjectIndex } from "./indexer";
 import {
@@ -29,7 +32,6 @@ import {
     semanticTokensLegend,
 } from "./structure";
 import { generateDiagnostics } from "./validator";
-import { generateCompletions } from "./completions";
 
 const connection = createConnection(ProposedFeatures.all);
 
@@ -73,6 +75,7 @@ connection.onInitialize((params: InitializeParams) => {
             },
             documentSymbolProvider: true,
             foldingRangeProvider: true,
+            hoverProvider: true,
             semanticTokensProvider: {
                 legend: semanticTokensLegend,
                 full: true,
@@ -151,33 +154,19 @@ function processChangedDocument(document: TextDocument) {
 
 connection.onCompletion(
     async (
-        textDocumentPosition: TextDocumentPositionParams
+        params: TextDocumentPositionParams
     ): Promise<CompletionList | null> => {
-        const document = documents.get(textDocumentPosition.textDocument.uri);
+        const document = documents.get(params.textDocument.uri);
         if (document === undefined) {
             return null;
         }
-        const tempy = await generateCompletions(
+        return await generateCompletions(
             document,
-            textDocumentPosition.position,
+            params.position,
             projectIndex
         );
-        return tempy;
     }
 );
-
-// This handler resolves additional information for the item selected in
-// the completion list.
-connection.onCompletionResolve((item: CompletionItem): CompletionItem => {
-    if (item.data === 1) {
-        item.detail = "TypeScript details";
-        item.documentation = "TypeScript documentation";
-    } else if (item.data === 2) {
-        item.detail = "JavaScript details";
-        item.documentation = "JavaScript documentation";
-    }
-    return item;
-});
 
 connection.onDocumentSymbol(
     (params: DocumentSymbolParams): DocumentSymbol[] | null => {
@@ -188,6 +177,16 @@ connection.onDocumentSymbol(
 connection.onFoldingRanges(
     (params: FoldingRangeParams): FoldingRange[] | null => {
         return generateFoldingRanges(params.textDocument.uri, projectIndex);
+    }
+);
+
+connection.onHover(
+    async (params: HoverParams): Promise<Hover | null | undefined> => {
+        const document = documents.get(params.textDocument.uri);
+        if (document === undefined) {
+            return null;
+        }
+        return await generateHover(document, params.position, projectIndex);
     }
 );
 

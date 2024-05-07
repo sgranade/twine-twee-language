@@ -1,4 +1,4 @@
-import { CompletionList, Diagnostic } from "vscode-languageserver";
+import { CompletionList, Diagnostic, Hover } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import {
     JSONDocument,
@@ -33,6 +33,21 @@ export async function doComplete(
 }
 
 /**
+ * Get hover information.
+ *
+ * @param embeddedDocument Embedded document.
+ * @param offset Offset in the parent document where completions are being requested (zero-based).
+ * @returns Hover information.
+ */
+export async function doHover(
+    embeddedDocument: EmbeddedDocument,
+    offset: number
+): Promise<Hover | null | undefined> {
+    const service = getLanguageService(embeddedDocument.languageId);
+    return await service?.doHover(embeddedDocument, offset);
+}
+
+/**
  * Validate an embedded document.
  *
  * @param embeddedDocument Embedded document.
@@ -60,6 +75,10 @@ interface LanguageService {
         embeddedDocument: EmbeddedDocument,
         offset: number
     ) => Promise<CompletionList | null>;
+    doHover: (
+        embeddedDocument: EmbeddedDocument,
+        offset: number
+    ) => Promise<Hover | null>;
     /**
      * Validate an embedded document.
      *
@@ -118,7 +137,7 @@ export function parseJSON(document: TextDocument): JSONDocument {
 // If this becomes a time suck, consider cacheing the results
 
 const jsonService: LanguageService = {
-    async doComplete(embeddedDocument: EmbeddedDocument, offset: number) {
+    async doComplete(embeddedDocument, offset) {
         return await jsonLanguageService.doComplete(
             embeddedDocument.document,
             embeddedDocument.document.positionAt(
@@ -128,7 +147,17 @@ const jsonService: LanguageService = {
         );
     },
 
-    async doValidation(embeddedDocument: EmbeddedDocument) {
+    async doHover(embeddedDocument, offset) {
+        return await jsonLanguageService.doHover(
+            embeddedDocument.document,
+            embeddedDocument.document.positionAt(
+                offset - embeddedDocument.offset
+            ),
+            parseJSON(embeddedDocument.document)
+        );
+    },
+
+    async doValidation(embeddedDocument) {
         return await jsonLanguageService.doValidation(
             embeddedDocument.document,
             parseJSON(embeddedDocument.document)
@@ -157,7 +186,20 @@ const cssService: LanguageService = {
         );
     },
 
-    async doValidation(embeddedDocument: EmbeddedDocument) {
+    async doHover(embeddedDocument, offset) {
+        const stylesheet = cssLanguageService.parseStylesheet(
+            embeddedDocument.document
+        );
+        return cssLanguageService.doHover(
+            embeddedDocument.document,
+            embeddedDocument.document.positionAt(
+                offset - embeddedDocument.offset
+            ),
+            stylesheet
+        );
+    },
+
+    async doValidation(embeddedDocument) {
         const stylesheet = cssLanguageService.parseStylesheet(
             embeddedDocument.document
         );
