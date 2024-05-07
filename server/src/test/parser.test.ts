@@ -3,7 +3,8 @@ import "mocha";
 import { Diagnostic, Range, Position, Location } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
-import { EmbeddedJSONDocument, Passage, StoryData } from "../index";
+import { EmbeddedDocument } from "../embedded-languages";
+import { Passage, StoryData } from "../index";
 import * as uut from "../parser";
 
 class MockCallbacks implements uut.ParserCallbacks {
@@ -13,7 +14,7 @@ class MockCallbacks implements uut.ParserCallbacks {
     public storyTitleRange?: Range;
     public storyData?: StoryData;
     public storyDataRange?: Range;
-    public embeddedJSONDocuments: EmbeddedJSONDocument[] = [];
+    public embeddedDocuments: EmbeddedDocument[] = [];
     public errors: Diagnostic[] = [];
 
     onPassage(passage: Passage, contents: string): void {
@@ -28,8 +29,8 @@ class MockCallbacks implements uut.ParserCallbacks {
         this.storyData = data;
         this.storyDataRange = range;
     }
-    onEmbeddedJSONDocument(document: EmbeddedJSONDocument): void {
-        this.embeddedJSONDocuments.push(document);
+    onEmbeddedDocument(document: EmbeddedDocument): void {
+        this.embeddedDocuments.push(document);
     }
     onParseError(error: Diagnostic): void {
         this.errors.push(error);

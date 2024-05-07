@@ -1,12 +1,12 @@
 import { expect } from "chai";
 import "mocha";
-import { Diagnostic, Position, Range } from "vscode-languageserver";
+import { Diagnostic, Range } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { buildPassage } from "./builders";
 
+import { EmbeddedDocument } from "../embedded-languages";
 import * as uut from "../index";
-import { JSONDocument } from "vscode-json-languageservice";
 
 describe("Project Index", () => {
     describe("Index", () => {
@@ -108,7 +108,7 @@ describe("Project Index", () => {
             it("should return an empty array for an unindexed file", () => {
                 const index = new uut.Index();
 
-                const result = index.getEmbeddedJSONDocuments("nopers");
+                const result = index.getEmbeddedDocuments("nopers");
 
                 expect(result).to.be.empty;
             });
@@ -120,21 +120,17 @@ describe("Project Index", () => {
                     1,
                     '{ "prop": 7 }'
                 );
-                const fakeEmbeddedJSON: JSONDocument = {
-                    root: undefined,
-                    getNodeFromOffset: (o, i?) => undefined,
-                };
-                const docs: uut.EmbeddedJSONDocument[] = [
+                const docs: EmbeddedDocument[] = [
                     {
                         document: fakeEmbeddedDoc,
-                        jsonDocument: fakeEmbeddedJSON,
-                        position: Position.create(1, 2),
+                        offset: 7,
+                        languageId: "json",
                     },
                 ];
                 const index = new uut.Index();
-                index.setEmbeddedJSONDocuments("fake-uri", docs);
+                index.setEmbeddedDocuments("fake-uri", docs);
 
-                const result = index.getEmbeddedJSONDocuments("fake-uri");
+                const result = index.getEmbeddedDocuments("fake-uri");
 
                 expect(result).to.eql(docs);
             });

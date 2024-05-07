@@ -1,14 +1,10 @@
 import { Diagnostic, DiagnosticSeverity, Range } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
-import {
-    EmbeddedJSONDocument,
-    Passage,
-    ProjectIndex,
-    StoryData,
-} from "./index";
+import { Passage, ProjectIndex, StoryData } from "./index";
 import { ParserCallbacks, parse } from "./parser";
 import { normalizeUri } from "./utilities";
+import { EmbeddedDocument } from "./embedded-languages";
 
 /**
  * Captures information about the current state of indexing
@@ -21,7 +17,7 @@ class IndexingState {
 
     passages: Array<Passage> = [];
     parseErrors: Array<Diagnostic> = [];
-    embeddedJSONDocuments: Array<EmbeddedJSONDocument> = [];
+    embeddedJSONDocuments: Array<EmbeddedDocument> = [];
 
     constructor(textDocument: TextDocument) {
         this.textDocument = textDocument;
@@ -77,9 +73,7 @@ export function updateProjectIndex(
         onParseError: function (error: Diagnostic): void {
             indexingState.parseErrors.push(error);
         },
-        onEmbeddedJSONDocument: function (
-            document: EmbeddedJSONDocument
-        ): void {
+        onEmbeddedDocument: function (document: EmbeddedDocument): void {
             indexingState.embeddedJSONDocuments.push(document);
         },
     };
@@ -88,5 +82,5 @@ export function updateProjectIndex(
 
     index.setPassages(uri, indexingState.passages);
     index.setParseErrors(uri, indexingState.parseErrors);
-    index.setEmbeddedJSONDocuments(uri, indexingState.embeddedJSONDocuments);
+    index.setEmbeddedDocuments(uri, indexingState.embeddedJSONDocuments);
 }

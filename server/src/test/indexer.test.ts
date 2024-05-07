@@ -117,7 +117,7 @@ describe("Indexer", () => {
             });
         });
 
-        it("should add an embedded JSON document to the index for story data", () => {
+        it("should add an embedded document to the index for story data", () => {
             const doc = buildDocument({
                 uri: "test-uri",
                 content:
@@ -126,14 +126,12 @@ describe("Indexer", () => {
             const index = new Index();
 
             uut.updateProjectIndex(doc, index);
-            const [result] = [...index.getEmbeddedJSONDocuments("test-uri")];
+            const [result] = [...index.getEmbeddedDocuments("test-uri")];
 
-            // Don't worry about the JSON contents; trust the JSON parser parses correctly
-            // _Do_ check the embedded unparsed document and that its position inside the parent is correct
             expect(result.document.getText()).to.eql(
                 '{ "ifid": "11111111-DEFA-4F70-B7A2-27742230C0FC" }\n'
             );
-            expect(result.position).to.eql(Position.create(1, 0));
+            expect(result.offset).to.eql(12);
         });
 
         it("should add parse errors to the index", () => {

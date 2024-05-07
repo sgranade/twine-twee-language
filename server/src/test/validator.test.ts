@@ -1,10 +1,10 @@
 import { expect } from "chai";
 import "mocha";
-import { Diagnostic, Position, Range } from "vscode-languageserver";
+import { Diagnostic, Range } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
-import { getLanguageService as getJSONLanguageService } from "vscode-json-languageservice";
 
-import { EmbeddedJSONDocument, Index } from "../index";
+import { EmbeddedDocument } from "../embedded-languages";
+import { Index } from "../index";
 import * as uut from "../validator";
 
 describe("Validator", () => {
@@ -43,21 +43,19 @@ describe("Validator", () => {
                 1,
                 '{ "test": 17, }'
             );
-            const embeddedDocument = TextDocument.create(
+            const subDocument = TextDocument.create(
                 "file:///fake.json",
                 "json",
                 1,
                 document.getText()
             );
-            const embeddedJSONDocument: EmbeddedJSONDocument = {
-                position: Position.create(2, 0),
-                document: document,
-                jsonDocument: getJSONLanguageService({}).parseJSONDocument(
-                    embeddedDocument
-                ),
+            const embeddedDocument: EmbeddedDocument = {
+                document: subDocument,
+                offset: 17,
+                languageId: "json",
             };
             const index = new Index();
-            index.setEmbeddedJSONDocuments("test-uri", [embeddedJSONDocument]);
+            index.setEmbeddedDocuments("test-uri", [embeddedDocument]);
 
             const result = await uut.generateDiagnostics(document, index);
 
@@ -70,27 +68,25 @@ describe("Validator", () => {
                 "test-uri",
                 "twine",
                 1,
-                '{ "test": 17, }'
+                '012345678\n0123456{ "test": 17, }'
             );
-            const embeddedDocument = TextDocument.create(
+            const subDocument = TextDocument.create(
                 "file:///fake.json",
                 "json",
                 1,
-                document.getText()
+                '{ "test": 17, }'
             );
-            const embeddedJSONDocument: EmbeddedJSONDocument = {
-                position: Position.create(2, 0),
-                document: document,
-                jsonDocument: getJSONLanguageService({}).parseJSONDocument(
-                    embeddedDocument
-                ),
+            const embeddedDocument: EmbeddedDocument = {
+                document: subDocument,
+                offset: 17,
+                languageId: "json",
             };
             const index = new Index();
-            index.setEmbeddedJSONDocuments("test-uri", [embeddedJSONDocument]);
+            index.setEmbeddedDocuments("test-uri", [embeddedDocument]);
 
             const result = await uut.generateDiagnostics(document, index);
 
-            expect(result[0].message).to.equal("Trailing comma");
+            expect(result[0].range).to.eql(Range.create(1, 19, 1, 20));
         });
     });
 });

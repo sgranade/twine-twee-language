@@ -8,10 +8,14 @@ import {
     Range,
 } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
-import { JSONDocument } from "vscode-json-languageservice";
 
+import {
+    EmbeddedDocument,
+    doComplete,
+    parseJSON,
+    storyDataJSONUri,
+} from "./embedded-languages";
 import { ProjectIndex } from "./index";
-import { jsonLanguageService, storyDataJSONUri } from "./parser";
 import { containingRange, normalizeUri } from "./utilities";
 
 /**
@@ -84,24 +88,26 @@ function createStringCompletions(
  * @returns Completion items.
  */
 function generateStoryDataCompletions(
-    embeddedDocument: TextDocument,
-    jsonDocument: JSONDocument,
+    embeddedDocument: EmbeddedDocument,
     offset: number,
     index: ProjectIndex
 ): CompletionItem[] {
     const completions: CompletionItem[] = [];
 
+    const jsonDocument = parseJSON(embeddedDocument.document);
     const node = jsonDocument.getNodeFromOffset(offset);
     if (node?.parent?.type === "property") {
+        const nodeRange = Range.create(
+            embeddedDocument.document.positionAt(node.offset),
+            embeddedDocument.document.positionAt(node.offset + node.length)
+        );
+
         // A new IFID value
         if (node.parent.keyNode.value === "ifid") {
             completions.push(
                 createStringCompletion(
                     v4().toUpperCase(),
-                    Range.create(
-                        embeddedDocument.positionAt(node.offset),
-                        embeddedDocument.positionAt(node.offset + node.length)
-                    ),
+                    nodeRange,
                     CompletionItemKind.Text,
                     "Newly-generated IFID"
                 )
@@ -113,10 +119,7 @@ function generateStoryDataCompletions(
             completions.push(
                 ...createStringCompletions(
                     "Chapbook|Harlowe|SugarCube".split("|"),
-                    Range.create(
-                        embeddedDocument.positionAt(node.offset),
-                        embeddedDocument.positionAt(node.offset + node.length)
-                    ),
+                    nodeRange,
                     CompletionItemKind.Text
                 )
             );
@@ -127,10 +130,7 @@ function generateStoryDataCompletions(
             completions.push(
                 ...createStringCompletions(
                     index.getPassageNames(),
-                    Range.create(
-                        embeddedDocument.positionAt(node.offset),
-                        embeddedDocument.positionAt(node.offset + node.length)
-                    ),
+                    nodeRange,
                     CompletionItemKind.Class
                 )
             );
@@ -144,10 +144,7 @@ function generateStoryDataCompletions(
             completions.push(
                 ...createStringCompletions(
                     "gray|red|orange|yellow|green|blue|purple".split("|"),
-                    Range.create(
-                        embeddedDocument.positionAt(node.offset),
-                        embeddedDocument.positionAt(node.offset + node.length)
-                    ),
+                    nodeRange,
                     CompletionItemKind.Color
                 )
             );
@@ -167,33 +164,24 @@ export async function generateCompletions(
     let completions: CompletionList | null = null;
 
     // Embedded documents get to create their own completions
-    for (const {
-        document: embeddedDocument,
-        jsonDocument,
-        position: embeddedPosition,
-    } of index.getEmbeddedJSONDocuments(documentUri) || []) {
-        const embeddedDocumentOffset = document.offsetAt(embeddedPosition);
-
+    for (const embeddedDocument of index.getEmbeddedDocuments(documentUri) ||
+        []) {
         if (
-            offset >= embeddedDocumentOffset &&
-            offset < embeddedDocumentOffset + embeddedDocument.getText().length
+            offset >= embeddedDocument.offset &&
+            offset <
+                embeddedDocument.offset +
+                    embeddedDocument.document.getText().length
         ) {
             completions =
-                (await jsonLanguageService.doComplete(
-                    embeddedDocument,
-                    embeddedDocument.positionAt(
-                        offset - embeddedDocumentOffset
-                    ),
-                    jsonDocument
-                )) || CompletionList.create([], false);
+                (await doComplete(embeddedDocument, offset)) ||
+                CompletionList.create([], false);
 
             // Add custom completions for specific items
-            if (embeddedDocument.uri === storyDataJSONUri) {
+            if (embeddedDocument.document.uri === storyDataJSONUri) {
                 completions.items.push(
                     ...generateStoryDataCompletions(
                         embeddedDocument,
-                        jsonDocument,
-                        offset - embeddedDocumentOffset,
+                        offset - embeddedDocument.offset,
                         index
                     )
                 );
@@ -208,10 +196,10 @@ export async function generateCompletions(
                         "range" in item.textEdit
                     ) {
                         item.textEdit.range = containingRange(
-                            embeddedDocument,
+                            embeddedDocument.document,
                             item.textEdit.range,
                             document,
-                            embeddedDocumentOffset
+                            embeddedDocument.offset
                         );
                     }
                 }

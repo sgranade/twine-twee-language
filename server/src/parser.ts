@@ -5,52 +5,27 @@ import {
     Range,
 } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
-import { getLanguageService as getJSONLanguageService } from "vscode-json-languageservice";
 
 import {
-    EmbeddedJSONDocument,
-    Label,
-    Passage,
-    PassageMetadata,
-    StoryData,
-} from "./index";
+    EmbeddedDocument,
+    headerMetadataJSONUri,
+    parseJSON,
+    storyDataJSONUri,
+} from "./embedded-languages";
+import { Label, Passage, PassageMetadata, StoryData } from "./index";
 import {
     closeMetaCharPattern,
-    headerMetadataSchema,
     metadataPattern,
     openMetaCharPattern,
-    storyDataSchema,
     tagPattern,
 } from "./language";
 import { createDiagnostic, nextLineIndex, pairwise } from "./utilities";
-
-const storyDataSchemaUri = "file:///storydata.schema.json";
-const headerMetadataSchemaUri = "file:///headermetadata.schema.json";
-export const storyDataJSONUri = "file:///storydata.json";
-export const headerMetadataJSONUri = "file:///headermetadata.json";
-export const jsonLanguageService = getJSONLanguageService({
-    schemaRequestService: (uri) => {
-        if (uri === storyDataSchemaUri) {
-            return Promise.resolve(storyDataSchema);
-        }
-        if (uri === headerMetadataSchemaUri) {
-            return Promise.resolve(headerMetadataSchema);
-        }
-        return Promise.reject(`Unabled to load schema at ${uri}`);
-    },
-});
-jsonLanguageService.configure({
-    schemas: [
-        { fileMatch: ["*/storydata.json"], uri: storyDataSchemaUri },
-        { fileMatch: ["*/headermetadata.json"], uri: headerMetadataSchemaUri },
-    ],
-});
 
 export interface ParserCallbacks {
     onPassage(passage: Passage, contents: string): void;
     onStoryTitle(title: string, range: Range): void;
     onStoryData(data: StoryData, range: Range): void;
-    onEmbeddedJSONDocument(document: EmbeddedJSONDocument): void;
+    onEmbeddedDocument(document: EmbeddedDocument): void;
     onParseError(error: Diagnostic): void;
 }
 
@@ -162,13 +137,9 @@ function parseHeaderMetadata(
         state.textDocument.version,
         rawMetadata
     );
-    const embeddedJSONDocument: EmbeddedJSONDocument = {
-        position: metadata.raw.location.range.start,
-        document: subDocument,
-        jsonDocument: jsonLanguageService.parseJSONDocument(subDocument),
-    };
+    const jsonDocument = parseJSON(subDocument);
 
-    for (const kid of embeddedJSONDocument.jsonDocument.root?.children || []) {
+    for (const kid of jsonDocument.root?.children || []) {
         if (kid.type === "property") {
             if (kid.valueNode?.type === "string") {
                 if (kid.keyNode.value === "position") {
@@ -180,7 +151,11 @@ function parseHeaderMetadata(
         }
     }
 
-    state.callbacks.onEmbeddedJSONDocument(embeddedJSONDocument);
+    state.callbacks.onEmbeddedDocument({
+        document: subDocument,
+        offset: metadataIndex,
+        languageId: "json",
+    });
 
     return metadata;
 }
@@ -460,13 +435,9 @@ function parseStoryDataPassage(
         state.textDocument.version,
         passageText
     );
-    const embeddedJSONDocument: EmbeddedJSONDocument = {
-        position: state.textDocument.positionAt(textIndex),
-        document: subDocument,
-        jsonDocument: jsonLanguageService.parseJSONDocument(subDocument),
-    };
+    const jsonDocument = parseJSON(subDocument);
 
-    for (const kid of embeddedJSONDocument.jsonDocument.root?.children || []) {
+    for (const kid of jsonDocument.root?.children || []) {
         if (kid.type === "property") {
             if (kid.valueNode?.type === "string") {
                 if (kid.keyNode.value === "ifid") {
@@ -508,7 +479,11 @@ function parseStoryDataPassage(
             state.textDocument.positionAt(textIndex + trimmedPassageText.length)
         )
     );
-    state.callbacks.onEmbeddedJSONDocument(embeddedJSONDocument);
+    state.callbacks.onEmbeddedDocument({
+        document: subDocument,
+        offset: textIndex,
+        languageId: "json",
+    });
 }
 
 /**
