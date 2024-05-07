@@ -127,11 +127,11 @@ export interface ProjectIndex {
      * Get the parse errors.
      * @param uri Document URI.
      */
-    getParseErrors(uri: string): ReadonlyArray<Diagnostic>;
+    getParseErrors(uri: string): readonly Diagnostic[];
     /**
      * Get all passage names in the index.
      */
-    getPassageNames(): Set<string>;
+    getPassageNames(): readonly string[];
     /**
      * Remove a document from the project index.
      * @param uri URI of document to remove.
@@ -195,18 +195,18 @@ export class Index implements ProjectIndex {
         const documents = this._jsonDocuments.get(uri) ?? [];
         return documents;
     }
-    getParseErrors(uri: string): ReadonlyArray<Diagnostic> {
+    getParseErrors(uri: string): readonly Diagnostic[] {
         const errors = this._parseErrors.get(uri) ?? [];
         return errors;
     }
-    getPassageNames(): Set<string> {
+    getPassageNames(): readonly string[] {
         const s = new Set<string>();
 
         for (const passages of this._passages.values()) {
             passages.map((p) => p.name.contents).forEach(s.add, s);
         }
 
-        return s;
+        return [...s];
     }
     removeDocument(uri: string): void {
         this._passages.delete(uri);

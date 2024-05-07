@@ -182,12 +182,7 @@ describe("Project Index", () => {
 
                 const result = index.getPassageNames();
 
-                expect(result).to.have.all.keys(
-                    "F1 P1",
-                    "F1 P2",
-                    "F2 P1",
-                    "F2 P2"
-                );
+                expect(result).to.eql(["F1 P1", "F1 P2", "F2 P1", "F2 P2"]);
             });
 
             it("should return passage names with no duplicates", () => {
@@ -205,7 +200,7 @@ describe("Project Index", () => {
 
                 const result = index.getPassageNames();
 
-                expect(result).to.have.all.keys("F1 P1", "spoiler", "F2 P2");
+                expect(result).to.eql(["F1 P1", "spoiler", "F2 P2"]);
             });
         });
 
@@ -226,7 +221,7 @@ describe("Project Index", () => {
                 index.removeDocument("file1");
                 const result = index.getPassageNames();
 
-                expect(result).to.have.all.keys("F2 P1", "F2 P2");
+                expect(result).to.eql(["F2 P1", "F2 P2"]);
             });
 
             it("should remove story title if a deleted document contained it", () => {
