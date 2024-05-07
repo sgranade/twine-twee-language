@@ -487,6 +487,31 @@ function parseStoryDataPassage(
 }
 
 /**
+ * Parse the contents of a passage with the stylesheet tag.
+ *
+ * @param passageText Text contents of the stylesheet passage.
+ * @param textIndex Index of the text contents in the document.
+ * @param state Parsing state.
+ */
+function parseStylesheetPassage(
+    passageText: string,
+    textIndex: number,
+    state: ParsingState
+): void {
+    const subDocument = TextDocument.create(
+        "stylesheet",
+        "css",
+        state.textDocument.version,
+        passageText
+    );
+    state.callbacks.onEmbeddedDocument({
+        document: subDocument,
+        offset: textIndex,
+        languageId: "css",
+    });
+}
+
+/**
  * Parse passage text.
  *
  * @param passage Information about the passage.
@@ -504,6 +529,8 @@ function parsePassageText(
         parseStoryTitlePassage(passageText, textIndex, state);
     } else if (passage.name.contents === "StoryData") {
         parseStoryDataPassage(passageText, textIndex, state);
+    } else if (passage.isStylesheet) {
+        parseStylesheetPassage(passageText, textIndex, state);
     }
 }
 

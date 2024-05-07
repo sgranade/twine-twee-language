@@ -252,6 +252,23 @@ describe("Parser", () => {
                 expect(callbacks.passages[0].isStylesheet).to.be.false;
             });
 
+            it("should call back on stylesheet passages with an embedded passage", () => {
+                const callbacks = new MockCallbacks();
+                const doc = TextDocument.create(
+                    "fake-uri",
+                    "",
+                    0,
+                    ":: Passage 1 [stylesheet]\nP1 contents"
+                );
+
+                uut.parse(doc, callbacks);
+                const [result] = callbacks.embeddedDocuments;
+
+                expect(result.document.getText()).to.eql("P1 contents");
+                expect(result.languageId).to.eql("css");
+                expect(result.offset).to.eql(26);
+            });
+
             it("should call back with the passage's metadata captured", () => {
                 const callbacks = new MockCallbacks();
                 const doc = TextDocument.create(
@@ -262,7 +279,7 @@ describe("Parser", () => {
                 );
 
                 uut.parse(doc, callbacks);
-                const result = callbacks.passages[0];
+                const [result] = callbacks.passages;
 
                 expect(result.metadata).to.eql({
                     raw: {
@@ -275,6 +292,25 @@ describe("Parser", () => {
                     position: "600,400",
                     size: "100,200",
                 });
+            });
+
+            it("should call back on passage metadata with an embedded passage", () => {
+                const callbacks = new MockCallbacks();
+                const doc = TextDocument.create(
+                    "fake-uri",
+                    "",
+                    0,
+                    ':: Passage 1 {"position":"600,400", "size":"100,200"}\nP1 contents'
+                );
+
+                uut.parse(doc, callbacks);
+                const [result] = callbacks.embeddedDocuments;
+
+                expect(result.document.getText()).to.eql(
+                    '{"position":"600,400", "size":"100,200"}'
+                );
+                expect(result.languageId).to.eql("json");
+                expect(result.offset).to.eql(13);
             });
 
             it("should call back with both the passage's tags and metadata", () => {
@@ -412,11 +448,32 @@ describe("Parser", () => {
                 );
             });
 
+            it("should call back on StoryData with an embedded passage", () => {
+                const callbacks = new MockCallbacks();
+                const doc = TextDocument.create(
+                    "fake-uri",
+                    "",
+                    0,
+                    ":: StoryData\n" +
+                        "{\n" +
+                        '\t"ifid": "62891577-8D8E-496F-B46C-9FF0194C0EAC"\n' +
+                        "}\n"
+                );
+
+                uut.parse(doc, callbacks);
+                const [result] = callbacks.embeddedDocuments;
+
+                expect(result.document.getText()).to.eql(
+                    "{\n" +
+                        '\t"ifid": "62891577-8D8E-496F-B46C-9FF0194C0EAC"\n' +
+                        "}\n"
+                );
+                expect(result.languageId).to.eql("json");
+                expect(result.offset).to.eql(13);
+            });
+
             it("should call back on StoryData with the data's range", () => {
                 const callbacks = new MockCallbacks();
-                const storyData = buildStoryData({
-                    ifid: "62891577-8D8E-496F-B46C-9FF0194C0EAC",
-                });
                 const doc = TextDocument.create(
                     "fake-uri",
                     "",

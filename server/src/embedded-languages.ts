@@ -4,6 +4,7 @@ import {
     JSONDocument,
     getLanguageService as getJSONLanguageService,
 } from "vscode-json-languageservice";
+import { getCSSLanguageService } from "vscode-css-languageservice";
 
 import { headerMetadataSchema, storyDataSchema } from "./language";
 
@@ -41,7 +42,7 @@ export async function doValidation(
     embeddedDocument: EmbeddedDocument
 ): Promise<Diagnostic[]> {
     const service = getLanguageService(embeddedDocument.languageId);
-    return (await service?.doValidation(embeddedDocument)) || [];
+    return service?.doValidation(embeddedDocument) || [];
 }
 
 /**
@@ -58,21 +59,22 @@ interface LanguageService {
     doComplete: (
         embeddedDocument: EmbeddedDocument,
         offset: number
-    ) => Thenable<CompletionList | null>;
+    ) => Promise<CompletionList | null>;
     /**
      * Validate an embedded document.
      *
      * @param embeddedDocument Embedded document.
      * @returns List of diagnostic messages.
      */
-    doValidation: (
-        embeddedDocument: EmbeddedDocument
-    ) => Thenable<Diagnostic[]>;
+    doValidation: (embeddedDocument: EmbeddedDocument) => Promise<Diagnostic[]>;
 }
 
 function getLanguageService(id: string): LanguageService | undefined {
     if (id === "json") {
         return jsonService;
+    }
+    if (id === "css") {
+        return cssService;
     }
 
     return undefined;
@@ -116,8 +118,8 @@ export function parseJSON(document: TextDocument): JSONDocument {
 // If this becomes a time suck, consider cacheing the results
 
 const jsonService: LanguageService = {
-    doComplete(embeddedDocument: EmbeddedDocument, offset: number) {
-        return jsonLanguageService.doComplete(
+    async doComplete(embeddedDocument: EmbeddedDocument, offset: number) {
+        return await jsonLanguageService.doComplete(
             embeddedDocument.document,
             embeddedDocument.document.positionAt(
                 offset - embeddedDocument.offset
@@ -126,10 +128,42 @@ const jsonService: LanguageService = {
         );
     },
 
-    doValidation(embeddedDocument: EmbeddedDocument) {
-        return jsonLanguageService.doValidation(
+    async doValidation(embeddedDocument: EmbeddedDocument) {
+        return await jsonLanguageService.doValidation(
             embeddedDocument.document,
             parseJSON(embeddedDocument.document)
+        );
+    },
+};
+
+/* CSS */
+
+const cssLanguageService = getCSSLanguageService();
+
+// TODO right now the language services re-parse on every validation and completion.
+// If this becomes a time suck, consider cacheing the results
+
+const cssService: LanguageService = {
+    async doComplete(embeddedDocument, offset) {
+        const stylesheet = cssLanguageService.parseStylesheet(
+            embeddedDocument.document
+        );
+        return cssLanguageService.doComplete(
+            embeddedDocument.document,
+            embeddedDocument.document.positionAt(
+                offset - embeddedDocument.offset
+            ),
+            stylesheet
+        );
+    },
+
+    async doValidation(embeddedDocument: EmbeddedDocument) {
+        const stylesheet = cssLanguageService.parseStylesheet(
+            embeddedDocument.document
+        );
+        return cssLanguageService.doValidation(
+            embeddedDocument.document,
+            stylesheet
         );
     },
 };
