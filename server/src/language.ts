@@ -21,6 +21,29 @@ export const closeMetaCharPattern = /(?<!\\)(\}|\])/gm;
 export const metadataPattern = /(\{(.*?)((?<!\\)\}))\s*/;
 
 /**
+ * JSON schema for header metadata.
+ */
+export const headerMetadataSchema = JSON.stringify({
+    $schema: "http://json-schema.org/draft-04/schema#",
+    type: "object",
+    properties: {
+        position: {
+            description: "Passage tile's position in the Twine 2 editor",
+            type: "string",
+            pattern: "^\\d+,\\d+",
+            patternErrorMessage: 'Must be coordinates in the form "600,400"',
+        },
+        size: {
+            description: "Passage tile's size in the Twine 2 editor",
+            type: "string",
+            pattern: "^\\d+,\\d+",
+            patternErrorMessage: 'Must be a size in the form "100,200"',
+        },
+    },
+    additionalProperties: false,
+});
+
+/**
  * JSON schema for Story Data.
  */
 export const storyDataSchema = JSON.stringify({

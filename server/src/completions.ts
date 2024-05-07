@@ -11,28 +11,8 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 import { JSONDocument } from "vscode-json-languageservice";
 
 import { ProjectIndex } from "./index";
-import { normalizeUri } from "./utilities";
 import { jsonLanguageService, storyDataJSONUri } from "./parser";
-
-/**
- * Convert a position in an embedded document to one in its containing document.
- *
- * @param embeddedDocument The embedded document.
- * @param embeddedPosition Position within the embedded document.
- * @param document Document that contains the embedded document.
- * @param embeddedDocumentOffset Offset of the embedded document in the containing document.
- * @returns Position relative to the containing document.
- */
-function containingPosition(
-    embeddedDocument: TextDocument,
-    embeddedPosition: Position,
-    document: TextDocument,
-    embeddedDocumentOffset: number
-) {
-    return document.positionAt(
-        embeddedDocument.offsetAt(embeddedPosition) + embeddedDocumentOffset
-    );
-}
+import { containingRange, normalizeUri } from "./utilities";
 
 /**
  * Create a string completion.
@@ -227,19 +207,11 @@ export async function generateCompletions(
                         item.textEdit !== undefined &&
                         "range" in item.textEdit
                     ) {
-                        item.textEdit.range = Range.create(
-                            containingPosition(
-                                embeddedDocument,
-                                item.textEdit.range.start,
-                                document,
-                                embeddedDocumentOffset
-                            ),
-                            containingPosition(
-                                embeddedDocument,
-                                item.textEdit.range.end,
-                                document,
-                                embeddedDocumentOffset
-                            )
+                        item.textEdit.range = containingRange(
+                            embeddedDocument,
+                            item.textEdit.range,
+                            document,
+                            embeddedDocumentOffset
                         );
                     }
                 }

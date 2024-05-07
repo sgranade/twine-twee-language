@@ -16,6 +16,7 @@ import {
 } from "./index";
 import {
     closeMetaCharPattern,
+    headerMetadataSchema,
     metadataPattern,
     openMetaCharPattern,
     storyDataSchema,
@@ -24,17 +25,25 @@ import {
 import { createDiagnostic, nextLineIndex, pairwise } from "./utilities";
 
 const storyDataSchemaUri = "file:///storydata.schema.json";
+const headerMetadataSchemaUri = "file:///headermetadata.schema.json";
 export const storyDataJSONUri = "file:///storydata.json";
+export const headerMetadataJSONUri = "file:///headermetadata.json";
 export const jsonLanguageService = getJSONLanguageService({
     schemaRequestService: (uri) => {
         if (uri === storyDataSchemaUri) {
             return Promise.resolve(storyDataSchema);
         }
+        if (uri === headerMetadataSchemaUri) {
+            return Promise.resolve(headerMetadataSchema);
+        }
         return Promise.reject(`Unabled to load schema at ${uri}`);
     },
 });
 jsonLanguageService.configure({
-    schemas: [{ fileMatch: ["*/storydata.json"], uri: storyDataSchemaUri }],
+    schemas: [
+        { fileMatch: ["*/storydata.json"], uri: storyDataSchemaUri },
+        { fileMatch: ["*/headermetadata.json"], uri: headerMetadataSchemaUri },
+    ],
 });
 
 export interface ParserCallbacks {
@@ -146,76 +155,32 @@ function parseHeaderMetadata(
             ),
         },
     };
-    let positionMeta: string | undefined;
-    let sizeMeta: string | undefined;
 
-    let metadataObject;
-    try {
-        metadataObject = JSON.parse(rawMetadata);
-    } catch {
-        let errorMessage = "Metadata isn't properly-formatted JSON.";
-        if (rawMetadata.includes("'")) {
-            errorMessage += " Did you use ' instead of \"?";
-        }
-        logErrorFor(rawMetadata, metadataIndex, errorMessage, state);
-        return metadata;
-    }
+    const subDocument = TextDocument.create(
+        headerMetadataJSONUri,
+        "json",
+        state.textDocument.version,
+        rawMetadata
+    );
+    const embeddedJSONDocument: EmbeddedJSONDocument = {
+        position: metadata.raw.location.range.start,
+        document: subDocument,
+        jsonDocument: jsonLanguageService.parseJSONDocument(subDocument),
+    };
 
-    for (const [k, v] of Object.entries(metadataObject)) {
-        const vAsString = String(v);
-        const valueIndex = rawMetadata.indexOf(vAsString);
-        if (k === "position") {
-            if (typeof v === "string") {
-                if (!/^\d+,\d+$/.test(v)) {
-                    logErrorFor(
-                        vAsString,
-                        metadataIndex + valueIndex,
-                        `"position" metadata should give the tile location in x,y: "600,400".`,
-                        state
-                    );
-                } else {
-                    positionMeta = v;
+    for (const kid of embeddedJSONDocument.jsonDocument.root?.children || []) {
+        if (kid.type === "property") {
+            if (kid.valueNode?.type === "string") {
+                if (kid.keyNode.value === "position") {
+                    metadata.position = kid.valueNode.value;
+                } else if (kid.keyNode.value === "size") {
+                    metadata.size = kid.valueNode.value;
                 }
-            } else {
-                logErrorFor(
-                    vAsString,
-                    metadataIndex + valueIndex,
-                    `Must be a string.`,
-                    state
-                );
             }
-        } else if (k === "size") {
-            if (typeof v === "string") {
-                if (!/^\d+,\d+$/.test(v)) {
-                    logErrorFor(
-                        vAsString,
-                        metadataIndex + valueIndex,
-                        `"size" metadata should give the tile size in width,height: "100,200"`,
-                        state
-                    );
-                } else {
-                    sizeMeta = v;
-                }
-            } else {
-                logErrorFor(
-                    vAsString,
-                    metadataIndex + valueIndex,
-                    `Must be a string.`,
-                    state
-                );
-            }
-        } else {
-            const keyIndex = rawMetadata.indexOf(k);
-            logErrorFor(
-                k,
-                metadataIndex + keyIndex,
-                `Unsupported metadata property.`,
-                state
-            );
         }
     }
-    metadata.position = positionMeta;
-    metadata.size = sizeMeta;
+
+    state.callbacks.onEmbeddedJSONDocument(embeddedJSONDocument);
 
     return metadata;
 }
@@ -500,6 +465,7 @@ function parseStoryDataPassage(
         document: subDocument,
         jsonDocument: jsonLanguageService.parseJSONDocument(subDocument),
     };
+
     for (const kid of embeddedJSONDocument.jsonDocument.root?.children || []) {
         if (kid.type === "property") {
             if (kid.valueNode?.type === "string") {

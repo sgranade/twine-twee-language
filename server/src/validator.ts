@@ -3,41 +3,44 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { ProjectIndex } from "./index";
 import { jsonLanguageService } from "./parser";
-import { normalizeUri } from "./utilities";
+import { containingRange, normalizeUri } from "./utilities";
 
 /**
  * Validate a text file and generate diagnostics against it.
  *
- * @param textDocument Document to validate and generate diagnostics against
- * @param projectIndex Index of the ChoiceScript project
- * @param validationSettings Current validation settings
- * @param fsProvider File system provider
+ * @param document Document to validate and generate diagnostics against
+ * @param index Index of the ChoiceScript project
  * @returns List of diagnostic messages.
  */
 export async function generateDiagnostics(
-    textDocument: TextDocument,
-    projectIndex: ProjectIndex
+    document: TextDocument,
+    index: ProjectIndex
 ): Promise<Diagnostic[]> {
-    const uri = normalizeUri(textDocument.uri);
+    const documentUri = normalizeUri(document.uri);
     // Start with parse errors
-    const diagnostics: Diagnostic[] = [...projectIndex.getParseErrors(uri)];
+    const diagnostics: Diagnostic[] = [...index.getParseErrors(documentUri)];
 
     // Add diagnostics from embedded documents
-    const embeddedJSONDocuments = projectIndex.getEmbeddedJSONDocuments(uri);
-    if (embeddedJSONDocuments !== undefined) {
-        for (const doc of embeddedJSONDocuments) {
-            const newDiagnostics = await jsonLanguageService.doValidation(
-                doc.document,
-                doc.jsonDocument,
-                undefined
+    for (const {
+        document: embeddedDocument,
+        jsonDocument,
+        position: embeddedPosition,
+    } of index.getEmbeddedJSONDocuments(documentUri) || []) {
+        const embeddedDocumentOffset = document.offsetAt(embeddedPosition);
+
+        const newDiagnostics = await jsonLanguageService.doValidation(
+            embeddedDocument,
+            jsonDocument,
+            undefined
+        );
+        for (const diagnostic of newDiagnostics) {
+            diagnostic.range = containingRange(
+                embeddedDocument,
+                diagnostic.range,
+                document,
+                embeddedDocumentOffset
             );
-            diagnostics.push(
-                ...newDiagnostics.map((d) => {
-                    d.range.start.line += doc.position.line;
-                    d.range.end.line += doc.position.line;
-                    return d;
-                })
-            );
+            diagnostics.push(diagnostic);
         }
     }
 

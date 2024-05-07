@@ -1,5 +1,10 @@
 import * as URI from "urijs";
-import { Diagnostic, DiagnosticSeverity } from "vscode-languageserver";
+import {
+    Diagnostic,
+    DiagnosticSeverity,
+    Position,
+    Range,
+} from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 /**
@@ -47,6 +52,57 @@ export function nextLineIndex(document: string, startIndex: number): number {
 export function normalizeUri(uriString: string): string {
     const uri = new URI(uriString);
     return uri.normalize().toString();
+}
+
+/**
+ * Convert a position in an embedded document to one in its containing document.
+ *
+ * @param embeddedDocument The embedded document.
+ * @param embeddedPosition Position within the embedded document.
+ * @param document Document that contains the embedded document.
+ * @param embeddedDocumentOffset Offset of the embedded document in the containing document.
+ * @returns Position relative to the containing document.
+ */
+export function containingPosition(
+    embeddedDocument: TextDocument,
+    embeddedPosition: Position,
+    document: TextDocument,
+    embeddedDocumentOffset: number
+): Position {
+    return document.positionAt(
+        embeddedDocument.offsetAt(embeddedPosition) + embeddedDocumentOffset
+    );
+}
+
+/**
+ * Convert a position in an embedded document to one in its containing document.
+ *
+ * @param embeddedDocument The embedded document.
+ * @param embeddedRange Range within the embedded document.
+ * @param document Document that contains the embedded document.
+ * @param embeddedDocumentOffset Offset of the embedded document in the containing document.
+ * @returns Position relative to the containing document.
+ */
+export function containingRange(
+    embeddedDocument: TextDocument,
+    embeddedRange: Range,
+    document: TextDocument,
+    embeddedDocumentOffset: number
+): Range {
+    return Range.create(
+        containingPosition(
+            embeddedDocument,
+            embeddedRange.start,
+            document,
+            embeddedDocumentOffset
+        ),
+        containingPosition(
+            embeddedDocument,
+            embeddedRange.end,
+            document,
+            embeddedDocumentOffset
+        )
+    );
 }
 
 /**
