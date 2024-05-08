@@ -52,7 +52,9 @@ describe("Project Index", () => {
                 index.setStoryData(
                     {
                         ifid: "fake-ifid",
-                        format: "Fake Format",
+                        storyFormat: {
+                            format: "Fake Format",
+                        },
                     },
                     "fake-uri"
                 );
@@ -61,7 +63,9 @@ describe("Project Index", () => {
 
                 expect(result).to.eql({
                     ifid: "fake-ifid",
-                    format: "Fake Format",
+                    storyFormat: {
+                        format: "Fake Format",
+                    },
                 });
             });
 
@@ -70,7 +74,6 @@ describe("Project Index", () => {
                 index.setStoryData(
                     {
                         ifid: "fake-ifid",
-                        format: "Fake Format",
                     },
                     "fake-uri"
                 );
@@ -245,7 +248,6 @@ describe("Project Index", () => {
                 index.setStoryData(
                     {
                         ifid: "fake-ifid",
-                        format: "Fake Format",
                     },
                     "storydata-uri"
                 );
@@ -261,7 +263,6 @@ describe("Project Index", () => {
                 index.setStoryData(
                     {
                         ifid: "fake-ifid",
-                        format: "Fake Format",
                     },
                     "storydata-uri"
                 );

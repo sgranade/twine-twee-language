@@ -1,5 +1,6 @@
 import { Diagnostic, Location, Range } from "vscode-languageserver";
 import { EmbeddedDocument } from "./embedded-languages";
+import { StoryFormat } from "./client-server";
 
 /**
  * Available semantic token types
@@ -25,8 +26,7 @@ export interface Label {
  */
 export interface StoryData {
     ifid: string;
-    format?: string;
-    formatVersion?: string;
+    storyFormat?: StoryFormat;
     start?: string;
     tagColors?: Map<string, string>;
     zoom?: number;

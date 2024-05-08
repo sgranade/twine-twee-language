@@ -78,7 +78,7 @@ export function updateProjectIndex(
         },
     };
 
-    parse(textDocument, callbacks);
+    parse(textDocument, index.getStoryData()?.storyFormat, callbacks);
 
     index.setPassages(uri, indexingState.passages);
     index.setParseErrors(uri, indexingState.parseErrors);

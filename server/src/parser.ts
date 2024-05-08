@@ -20,14 +20,7 @@ import {
     tagPattern,
 } from "./language";
 import { createDiagnostic, nextLineIndex, pairwise } from "./utilities";
-
-export interface ParserCallbacks {
-    onPassage(passage: Passage, contents: string): void;
-    onStoryTitle(title: string, range: Range): void;
-    onStoryData(data: StoryData, range: Range): void;
-    onEmbeddedDocument(document: EmbeddedDocument): void;
-    onParseError(error: Diagnostic): void;
-}
+import { StoryFormat } from "./client-server";
 
 /**
  * Captures information about the current state of parsing
@@ -42,15 +35,46 @@ export class ParsingState {
      */
     textDocumentUri: string;
     /**
+     * The current story format.
+     */
+    storyFormat?: StoryFormat;
+    /**
      * Callbacks for parsing events
      */
     callbacks: ParserCallbacks;
 
-    constructor(textDocument: TextDocument, callbacks: ParserCallbacks) {
+    constructor(
+        textDocument: TextDocument,
+        storyFormat: StoryFormat | undefined,
+        callbacks: ParserCallbacks
+    ) {
         this.textDocument = textDocument;
         this.textDocumentUri = textDocument.uri;
+        this.storyFormat = storyFormat;
         this.callbacks = callbacks;
     }
+}
+
+/**
+ * Story-format-specific parsers that parse passage text.
+ */
+export interface PassageTextParser {
+    parsePassageText(
+        passageText: string,
+        textIndex: number,
+        state: ParsingState
+    ): void;
+}
+
+/**
+ * Callbacks during parsing.
+ */
+export interface ParserCallbacks {
+    onPassage(passage: Passage, contents: string): void;
+    onStoryTitle(title: string, range: Range): void;
+    onStoryData(data: StoryData, range: Range): void;
+    onEmbeddedDocument(document: EmbeddedDocument): void;
+    onParseError(error: Diagnostic): void;
 }
 
 /**
@@ -347,15 +371,18 @@ function parseStoryDataPassage(
     );
     const jsonDocument = parseJSON(subDocument);
 
+    const storyFormat: StoryFormat = {
+        format: "",
+    };
     for (const kid of jsonDocument.root?.children || []) {
         if (kid.type === "property") {
             if (kid.valueNode?.type === "string") {
                 if (kid.keyNode.value === "ifid") {
                     storyData.ifid = kid.valueNode.value;
                 } else if (kid.keyNode.value === "format") {
-                    storyData.format = kid.valueNode.value;
+                    storyFormat.format = kid.valueNode.value;
                 } else if (kid.keyNode.value === "format-version") {
-                    storyData.formatVersion = kid.valueNode.value;
+                    storyFormat.formatVersion = kid.valueNode.value;
                 } else if (kid.keyNode.value === "start") {
                     storyData.start = kid.valueNode.value;
                 }
@@ -379,6 +406,11 @@ function parseStoryDataPassage(
                 }
             }
         }
+    }
+
+    // If we found a story format, copy it over to storyData
+    if (storyFormat.format !== "") {
+        storyData.storyFormat = storyFormat;
     }
 
     const trimmedPassageText = passageText.trimEnd();
@@ -433,6 +465,7 @@ function parsePassageText(
     passage: Passage,
     passageText: string,
     textIndex: number,
+    passageTextParser: PassageTextParser | undefined,
     state: ParsingState
 ): void {
     if (passage.name.contents === "StoryTitle") {
@@ -441,6 +474,8 @@ function parsePassageText(
         parseStoryDataPassage(passageText, textIndex, state);
     } else if (passage.isStylesheet) {
         parseStylesheetPassage(passageText, textIndex, state);
+    } else if (passageTextParser !== undefined) {
+        passageTextParser.parsePassageText(passageText, textIndex, state);
     }
 }
 
@@ -493,7 +528,13 @@ function findAndParsePassageContents(
         )
     );
 
-    parsePassageText(passage, passageText, passageContentsStartIndex, state);
+    parsePassageText(
+        passage,
+        passageText,
+        passageContentsStartIndex,
+        undefined,
+        state
+    );
 
     return passageText;
 }
@@ -504,6 +545,8 @@ function findAndParsePassageContents(
  */
 function parseTwee3(state: ParsingState): void {
     const text = state.textDocument.getText();
+
+    // TODO find any StoryData first and parse it as that might change the story format we use for parsing passages
 
     // Generate all passages
     const passages = [...text.matchAll(/^::([^:].*?|)$/gm)].map((m) =>
@@ -539,13 +582,15 @@ function parseTwee3(state: ParsingState): void {
  * Parse a Twee 3 document.
  *
  * @param textDocument Document to parse.
+ * @param storyFormat Previous story format (if any) to use in parsing.
  * @param callbacks Parser event callbacks.
  */
 export function parse(
     textDocument: TextDocument,
+    storyFormat: StoryFormat | undefined,
     callbacks: ParserCallbacks
 ): void {
-    const state = new ParsingState(textDocument, callbacks);
+    const state = new ParsingState(textDocument, storyFormat, callbacks);
 
     parseTwee3(state);
 }
