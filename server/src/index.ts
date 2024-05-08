@@ -1,17 +1,8 @@
 import { Diagnostic, Location, Range } from "vscode-languageserver";
-import { EmbeddedDocument } from "./embedded-languages";
-import { StoryFormat } from "./client-server";
 
-/**
- * Available semantic token types
- */
-export const ETokenType = {
-    class: 0,
-    property: 1,
-    string: 2,
-    number: 3,
-} as const;
-export type TokenType = (typeof ETokenType)[keyof typeof ETokenType];
+import { StoryFormat } from "./client-server";
+import { EmbeddedDocument } from "./embedded-languages";
+import { Token } from "./tokens";
 
 /**
  * A label, which has a name and a location.
@@ -73,13 +64,19 @@ export interface ProjectIndex {
      */
     setPassages(uri: string, newPassages: Passage[]): void;
     /**
-     * Set the list of embedded documents.
+     * Set a document's list of embedded documents.
      * @param uri URI to document whose index is to be updated.
      * @param errors New list of embedded documents.
      */
     setEmbeddedDocuments(uri: string, documents: EmbeddedDocument[]): void;
     /**
-     * Set the list of errors that occured during parsing.
+     * Set a document's semantic tokens.
+     * @param uri URI to document whose index is to be updated.
+     * @param tokens New list of semantic tokens.
+     */
+    setTokens(uri: string, tokens: Token[]): void;
+    /**
+     * Set a document's list of errors that occured during parsing.
      * @param uri URI to document whose index is to be updated.
      * @param errors New list of errors.
      */
@@ -106,12 +103,17 @@ export interface ProjectIndex {
      */
     getPassages(uri: string): Passage[] | undefined;
     /**
-     * Get the list of embedded documents.
+     * Get a document's list of embedded documents.
      * @param uri Document URI.
      */
     getEmbeddedDocuments(uri: string): EmbeddedDocument[] | undefined;
     /**
-     * Get the parse errors.
+     * Get a document's semantic tokens.
+     * @param uri Document URI.
+     */
+    getTokens(uri: string): readonly Token[];
+    /**
+     * Get a document's parse errors.
      * @param uri Document URI.
      */
     getParseErrors(uri: string): readonly Diagnostic[];
@@ -134,15 +136,11 @@ export class Index implements ProjectIndex {
     private _storyTitleUri?: string;
     private _storyData?: StoryData;
     private _storyDataUri?: string;
-    private _passages: Map<string, Passage[]>;
-    private _jsonDocuments: Map<string, EmbeddedDocument[]>;
-    private _parseErrors: Map<string, Diagnostic[]>;
+    private _passages: Map<string, Passage[]> = new Map();
+    private _embeddedDocuments: Map<string, EmbeddedDocument[]> = new Map();
+    private _tokens: Map<string, Token[]> = new Map();
+    private _parseErrors: Map<string, Diagnostic[]> = new Map();
 
-    constructor() {
-        this._passages = new Map();
-        this._parseErrors = new Map();
-        this._jsonDocuments = new Map();
-    }
     setStoryTitle(title: string, uri: string): void {
         this._storyTitle = title;
         this._storyTitleUri = uri;
@@ -155,7 +153,10 @@ export class Index implements ProjectIndex {
         this._passages.set(uri, [...newPassages]);
     }
     setEmbeddedDocuments(uri: string, documents: EmbeddedDocument[]): void {
-        this._jsonDocuments.set(uri, [...documents]);
+        this._embeddedDocuments.set(uri, [...documents]);
+    }
+    setTokens(uri: string, tokens: Token[]): void {
+        this._tokens.set(uri, [...tokens]);
     }
     setParseErrors(uri: string, errors: Diagnostic[]): void {
         this._parseErrors.set(uri, [...errors]);
@@ -176,8 +177,12 @@ export class Index implements ProjectIndex {
         return this._passages.get(uri);
     }
     getEmbeddedDocuments(uri: string): EmbeddedDocument[] {
-        const documents = this._jsonDocuments.get(uri) ?? [];
+        const documents = this._embeddedDocuments.get(uri) ?? [];
         return documents;
+    }
+    getTokens(uri: string): readonly Token[] {
+        const errors = this._tokens.get(uri) ?? [];
+        return errors;
     }
     getParseErrors(uri: string): readonly Diagnostic[] {
         const errors = this._parseErrors.get(uri) ?? [];
@@ -194,6 +199,8 @@ export class Index implements ProjectIndex {
     }
     removeDocument(uri: string): void {
         this._passages.delete(uri);
+        this._embeddedDocuments.delete(uri);
+        this._tokens.delete(uri);
         this._parseErrors.delete(uri);
         if (uri === this._storyTitleUri) {
             this._storyTitle = undefined;

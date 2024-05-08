@@ -6,6 +6,7 @@ import {
 } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
+import { StoryFormat } from "./client-server";
 import {
     EmbeddedDocument,
     headerMetadataJSONUri,
@@ -19,8 +20,8 @@ import {
     openMetaCharPattern,
     tagPattern,
 } from "./language";
+import { Token } from "./tokens";
 import { createDiagnostic, nextLineIndex, pairwise } from "./utilities";
-import { StoryFormat } from "./client-server";
 
 /**
  * Captures information about the current state of parsing
@@ -74,6 +75,7 @@ export interface ParserCallbacks {
     onStoryTitle(title: string, range: Range): void;
     onStoryData(data: StoryData, range: Range): void;
     onEmbeddedDocument(document: EmbeddedDocument): void;
+    onToken(token: Token): void;
     onParseError(error: Diagnostic): void;
 }
 

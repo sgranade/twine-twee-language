@@ -7,6 +7,7 @@ import { buildPassage } from "./builders";
 
 import { EmbeddedDocument } from "../embedded-languages";
 import * as uut from "../index";
+import { Token } from "../tokens";
 
 describe("Project Index", () => {
     describe("Index", () => {
@@ -107,7 +108,7 @@ describe("Project Index", () => {
             });
         });
 
-        describe("Embedded JSON Documents", () => {
+        describe("Embedded Documents", () => {
             it("should return an empty array for an unindexed file", () => {
                 const index = new uut.Index();
 
@@ -136,6 +137,34 @@ describe("Project Index", () => {
                 const result = index.getEmbeddedDocuments("fake-uri");
 
                 expect(result).to.eql(docs);
+            });
+        });
+
+        describe("Tokens", () => {
+            it("should return an empty array for an unindexed file", () => {
+                const index = new uut.Index();
+
+                const result = index.getTokens("nopers");
+
+                expect(result).to.be.empty;
+            });
+
+            it("should return tokens for indexed files", () => {
+                const fakeTokens: Token[] = [
+                    {
+                        line: 1,
+                        char: 2,
+                        length: 3,
+                        tokenModifiers: 1,
+                        tokenType: 2,
+                    },
+                ];
+                const index = new uut.Index();
+                index.setTokens("fake-uri", fakeTokens);
+
+                const result = index.getTokens("fake-uri");
+
+                expect(result).to.eql(fakeTokens);
             });
         });
 
@@ -204,26 +233,7 @@ describe("Project Index", () => {
         });
 
         describe("Removing Documents", () => {
-            it("should remove passages from with a deleted document", () => {
-                const passages1 = [
-                    buildPassage({ label: "F1 P1" }),
-                    buildPassage({ label: "F1 P2" }),
-                ];
-                const passages2 = [
-                    buildPassage({ label: "F2 P1" }),
-                    buildPassage({ label: "F2 P2" }),
-                ];
-                const index = new uut.Index();
-                index.setPassages("file1", passages1);
-                index.setPassages("file2", passages2);
-
-                index.removeDocument("file1");
-                const result = index.getPassageNames();
-
-                expect(result).to.eql(["F2 P1", "F2 P2"]);
-            });
-
-            it("should remove story title if a deleted document contained it", () => {
+            it("should remove the story title if a deleted document contained it", () => {
                 const index = new uut.Index();
                 index.setStoryTitle("Title!", "storytitle-uri");
 
@@ -233,7 +243,7 @@ describe("Project Index", () => {
                 expect(result).to.be.undefined;
             });
 
-            it("should leave story title alone if a deleted document didn't contained it", () => {
+            it("should leave the story title alone if a deleted document didn't contain it", () => {
                 const index = new uut.Index();
                 index.setStoryTitle("Title!", "storytitle-uri");
 
@@ -271,6 +281,67 @@ describe("Project Index", () => {
                 const result = index.getStoryData();
 
                 expect(result).not.to.be.undefined;
+            });
+
+            it("should remove passages from a deleted document", () => {
+                const passages1 = [
+                    buildPassage({ label: "F1 P1" }),
+                    buildPassage({ label: "F1 P2" }),
+                ];
+                const passages2 = [
+                    buildPassage({ label: "F2 P1" }),
+                    buildPassage({ label: "F2 P2" }),
+                ];
+                const index = new uut.Index();
+                index.setPassages("file1", passages1);
+                index.setPassages("file2", passages2);
+
+                index.removeDocument("file1");
+                const result = index.getPassageNames();
+
+                expect(result).to.eql(["F2 P1", "F2 P2"]);
+            });
+
+            it("should remove embedded documents for a deleted document", () => {
+                const fakeEmbeddedDoc = TextDocument.create(
+                    "fake-sub-ui",
+                    "json",
+                    1,
+                    '{ "prop": 7 }'
+                );
+                const docs: EmbeddedDocument[] = [
+                    {
+                        document: fakeEmbeddedDoc,
+                        offset: 7,
+                        languageId: "json",
+                    },
+                ];
+                const index = new uut.Index();
+                index.setEmbeddedDocuments("fake-uri", docs);
+
+                index.removeDocument("fake-uri");
+                const result = index.getEmbeddedDocuments("fake-uri");
+
+                expect(result).to.be.empty;
+            });
+
+            it("should remove tokens for a deleted document", () => {
+                const fakeTokens: Token[] = [
+                    {
+                        line: 1,
+                        char: 2,
+                        length: 3,
+                        tokenModifiers: 1,
+                        tokenType: 2,
+                    },
+                ];
+                const index = new uut.Index();
+                index.setTokens("fake-uri", fakeTokens);
+
+                index.removeDocument("fake-uri");
+                const result = index.getTokens("fake-uri");
+
+                expect(result).to.be.empty;
             });
 
             it("should remove parse errors for a deleted document", () => {

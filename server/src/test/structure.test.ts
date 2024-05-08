@@ -12,6 +12,7 @@ import { Index } from "../index";
 import { buildPassage } from "./builders";
 
 import * as uut from "../structure";
+import { Token } from "../tokens";
 
 describe("Structure", () => {
     describe("Symbols", () => {
@@ -124,6 +125,35 @@ describe("Structure", () => {
                 FoldingRange.create(0, 7),
                 FoldingRange.create(8, 9),
             ]);
+        });
+    });
+
+    describe("Semantic Tokens", () => {
+        it("should return an empty set of tokens for un-indexed files", () => {
+            const index = new Index();
+            index.setPassages("test-uri", []);
+
+            const result = uut.generateSemanticTokens("other-uri", index);
+
+            expect(result.data).to.be.empty;
+        });
+
+        it("should generate tokens for indexed files", () => {
+            const index = new Index();
+            const tokens: Token[] = [
+                {
+                    line: 5,
+                    char: 4,
+                    length: 3,
+                    tokenType: 2,
+                    tokenModifiers: 1,
+                },
+            ];
+            index.setTokens("test-uri", tokens);
+
+            const result = uut.generateSemanticTokens("test-uri", index);
+
+            expect(result.data).to.eql([5, 4, 3, 2, 1]);
         });
     });
 });

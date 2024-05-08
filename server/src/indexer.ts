@@ -1,10 +1,11 @@
 import { Diagnostic, DiagnosticSeverity, Range } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
+import { EmbeddedDocument } from "./embedded-languages";
 import { Passage, ProjectIndex, StoryData } from "./index";
 import { ParserCallbacks, parse } from "./parser";
+import { Token } from "./tokens";
 import { normalizeUri } from "./utilities";
-import { EmbeddedDocument } from "./embedded-languages";
 
 /**
  * Captures information about the current state of indexing
@@ -15,9 +16,10 @@ class IndexingState {
      */
     textDocument: TextDocument;
 
-    passages: Array<Passage> = [];
-    parseErrors: Array<Diagnostic> = [];
-    embeddedJSONDocuments: Array<EmbeddedDocument> = [];
+    passages: Passage[] = [];
+    parseErrors: Diagnostic[] = [];
+    tokens: Token[] = [];
+    embeddedDocuments: EmbeddedDocument[] = [];
 
     constructor(textDocument: TextDocument) {
         this.textDocument = textDocument;
@@ -70,17 +72,21 @@ export function updateProjectIndex(
                 index.setStoryData(data, uri);
             }
         },
+        onEmbeddedDocument: function (document: EmbeddedDocument): void {
+            indexingState.embeddedDocuments.push(document);
+        },
+        onToken: function (token: Token): void {
+            indexingState.tokens.push(token);
+        },
         onParseError: function (error: Diagnostic): void {
             indexingState.parseErrors.push(error);
-        },
-        onEmbeddedDocument: function (document: EmbeddedDocument): void {
-            indexingState.embeddedJSONDocuments.push(document);
         },
     };
 
     parse(textDocument, index.getStoryData()?.storyFormat, callbacks);
 
     index.setPassages(uri, indexingState.passages);
+    index.setEmbeddedDocuments(uri, indexingState.embeddedDocuments);
+    index.setTokens(uri, indexingState.tokens);
     index.setParseErrors(uri, indexingState.parseErrors);
-    index.setEmbeddedDocuments(uri, indexingState.embeddedJSONDocuments);
 }

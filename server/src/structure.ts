@@ -3,17 +3,11 @@ import {
     FoldingRange,
     SemanticTokens,
     SemanticTokensBuilder,
-    SemanticTokensLegend,
     SymbolKind,
 } from "vscode-languageserver";
 
-import { ETokenType, ProjectIndex } from "./index";
+import { ProjectIndex } from "./index";
 import { normalizeUri } from "./utilities";
-
-export const semanticTokensLegend: SemanticTokensLegend = {
-    tokenTypes: Object.keys(ETokenType),
-    tokenModifiers: [],
-};
 
 /**
  * Generate symbols for a document.
@@ -92,46 +86,14 @@ export function generateSemanticTokens(
     const normalizedUri = normalizeUri(uri);
     const builder = new SemanticTokensBuilder();
 
-    const passages = projectIndex.getPassages(normalizedUri);
-    if (passages !== undefined) {
-        for (const passage of passages) {
-            builder.push(
-                passage.name.location.range.start.line,
-                passage.name.location.range.start.character,
-                passage.name.contents.length,
-                ETokenType.class,
-                0
-            );
-            if (passage.tags !== undefined) {
-                for (const tag of passage.tags) {
-                    builder.push(
-                        tag.location.range.start.line,
-                        tag.location.range.start.character,
-                        tag.contents.length,
-                        ETokenType.property,
-                        0
-                    );
-                }
-            }
-            if (passage.metadata !== undefined) {
-                // Do super simple searching rather than parse the underlying JSON
-                stringRegex.lastIndex = 0;
-                const line = passage.metadata.raw.location.range.start.line;
-                const character =
-                    passage.metadata.raw.location.range.start.character;
-                for (const m of passage.metadata.raw.contents.matchAll(
-                    stringRegex
-                )) {
-                    builder.push(
-                        line,
-                        character + m.index,
-                        m[0].length,
-                        ETokenType.string,
-                        0
-                    );
-                }
-            }
-        }
+    for (const {
+        line,
+        char,
+        length,
+        tokenType,
+        tokenModifiers,
+    } of projectIndex.getTokens(normalizedUri)) {
+        builder.push(line, char, length, tokenType, tokenModifiers);
     }
 
     return builder.build();

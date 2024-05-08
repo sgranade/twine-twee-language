@@ -29,8 +29,8 @@ import {
     generateFoldingRanges,
     generateSemanticTokens,
     generateSymbols,
-    semanticTokensLegend,
 } from "./structure";
+import { semanticTokensLegend } from "./tokens";
 import { generateDiagnostics } from "./validator";
 
 const connection = createConnection(ProposedFeatures.all);
