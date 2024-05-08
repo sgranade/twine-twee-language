@@ -187,7 +187,7 @@ export class Index implements ProjectIndex {
         const s = new Set<string>();
 
         for (const passages of this._passages.values()) {
-            passages.map((p) => p.name.contents).forEach(s.add, s);
+            passages.forEach((p) => s.add(p.name.contents));
         }
 
         return [...s];

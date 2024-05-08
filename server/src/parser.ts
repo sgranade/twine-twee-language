@@ -289,7 +289,6 @@ function parsePassageHeader(
             state.textDocument.positionAt(nameIndex + name.length)
         )
     );
-    const scope = Location.create(state.textDocumentUri, location.range);
     return {
         name: {
             contents: name.replace(/\\(.)/g, "$1").trim(), // Remove escape characters
@@ -322,95 +321,6 @@ function parseStoryTitlePassage(
             state.textDocument.positionAt(textIndex + trimmedPassageText.length)
         )
     );
-}
-
-/**
- * Validate the IFID field of StoryData.
- *
- * Any errors are logged as Diagnostics.
- *
- * @param ifid Contents of the IFID field.
- * @param index Index of the IFID in the document.
- * @param state Parsing state.
- * @returns True if the IFID is properly formatted; false otherwise.
- */
-function validateIfid(
-    ifid: unknown,
-    index: number,
-    state: ParsingState
-): boolean {
-    let valid = false;
-
-    if (typeof ifid === "string") {
-        if (
-            !/^[a-fA-F\d]{8}-[a-fA-F\d]{4}-4[a-fA-F\d]{3}-[a-fA-F\d]{4}-[a-fA-F\d]{12}$/.test(
-                ifid
-            )
-        ) {
-            logErrorFor(ifid, index, `"ifid" must be a version 4 UUID.`, state);
-        } else {
-            valid = true;
-            if (/[a-f]/.test(ifid)) {
-                logWarningFor(
-                    ifid,
-                    index,
-                    `"ifid" must only have captial letters.`,
-                    state
-                );
-            }
-        }
-    } else {
-        logErrorFor(String(ifid), index, `Must be a string.`, state);
-    }
-
-    return valid;
-}
-
-/**
- * Parse the tag-colors field of StoryData.
- *
- * @param tagColorsObject JSON-decoded object with the tag-colors.
- * @param rawTagColorText Raw JSON-encoded text of the tag-colors.
- * @param rawTagColorIndex Index of the raw text in the document.
- * @param state Parsing state.
- * @returns Map of tag names to color names, or undefined if parsing failed.
- */
-function parseTagColors(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    tagColorsObject: any,
-    rawTagColorText: string,
-    rawTagColorIndex: number,
-    state: ParsingState
-): Map<string, string> | undefined {
-    const tagColors = new Map<string, string>();
-
-    for (const [k, v] of Object.entries(tagColorsObject)) {
-        if (typeof v === "string") {
-            tagColors.set(k, v);
-        } else {
-            const vAsString = String(v);
-            const vIndex = rawTagColorText.indexOf(vAsString);
-            if (vIndex >= 0) {
-                logErrorFor(
-                    vAsString,
-                    rawTagColorIndex + vIndex,
-                    "Must be a string",
-                    state
-                );
-            } else {
-                const kAsString = `"${k}"`;
-                const kIndex = rawTagColorText.indexOf(kAsString);
-                logErrorFor(
-                    kAsString,
-                    rawTagColorIndex + kIndex,
-                    `The value for key ${k} must be a string`,
-                    state
-                );
-            }
-        }
-    }
-
-    return tagColors.size == 0 ? undefined : tagColors;
 }
 
 /**
