@@ -18,9 +18,9 @@ export const ETokenType = {
 export type TokenType = (typeof ETokenType)[keyof typeof ETokenType];
 
 export const ETokenModifier = {
-    declaration: 0,
-    deprecated: 1,
-    modification: 2,
+    declaration: 0b1,
+    deprecated: 0b10,
+    modification: 0b100,
 } as const;
 export type TokenModifier =
     (typeof ETokenModifier)[keyof typeof ETokenModifier];
@@ -33,7 +33,7 @@ export interface Token {
     char: number;
     length: number;
     tokenType: TokenType;
-    tokenModifiers: TokenModifier;
+    tokenModifiers: TokenModifier[];
 }
 
 export const semanticTokensLegend: SemanticTokensLegend = {

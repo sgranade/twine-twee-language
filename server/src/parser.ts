@@ -20,7 +20,7 @@ import {
     openMetaCharPattern,
     tagPattern,
 } from "./language";
-import { Token } from "./tokens";
+import { Token, TokenModifier, TokenType } from "./tokens";
 import { createDiagnostic, nextLineIndex, pairwise } from "./utilities";
 
 /**
@@ -87,7 +87,7 @@ export interface ParserCallbacks {
  * @param message Error message.
  * @param state Parsing state.
  */
-function logErrorFor(
+export function logErrorFor(
     text: string,
     at: number,
     message: string,
@@ -112,7 +112,7 @@ function logErrorFor(
  * @param message Error message.
  * @param state Parsing state.
  */
-function logWarningFor(
+export function logWarningFor(
     text: string,
     at: number,
     message: string,
@@ -127,6 +127,32 @@ function logWarningFor(
             message
         )
     );
+}
+
+/**
+ * Log a token associated with text in a document.
+ *
+ * @param text Document text to tokenize.
+ * @param at Index where the text occurs in the document (zero-based).
+ * @param type Token type.
+ * @param modifiers Token modifiers.
+ * @param state Parsing state.
+ */
+export function logTokenFor(
+    text: string,
+    at: number,
+    type: TokenType,
+    modifiers: TokenModifier[],
+    state: ParsingState
+): void {
+    const position = state.textDocument.positionAt(at);
+    state.callbacks.onToken({
+        line: position.line,
+        char: position.character,
+        length: text.length,
+        tokenType: type,
+        tokenModifiers: modifiers,
+    });
 }
 
 /**

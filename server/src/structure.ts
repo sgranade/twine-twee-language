@@ -93,7 +93,11 @@ export function generateSemanticTokens(
         tokenType,
         tokenModifiers,
     } of projectIndex.getTokens(normalizedUri)) {
-        builder.push(line, char, length, tokenType, tokenModifiers);
+        let modifier = 0;
+        for (const m of tokenModifiers) {
+            modifier |= m;
+        }
+        builder.push(line, char, length, tokenType, modifier);
     }
 
     return builder.build();

@@ -1,6 +1,10 @@
-import { Range } from "vscode-languageserver";
+import { Diagnostic, Range } from "vscode-languageserver";
+import { TextDocument } from "vscode-languageserver-textdocument";
 
-import { Passage } from "../index";
+import { EmbeddedDocument } from "../embedded-languages";
+import { Passage, StoryData } from "../index";
+import { ParserCallbacks, ParsingState } from "../parser";
+import { Token } from "../tokens";
 
 export function buildPassage({
     label = "Passage",
@@ -25,4 +29,56 @@ export function buildPassage({
         tags: tags,
         metadata: metadata,
     };
+}
+
+export function buildParsingState({
+    uri = "fake-uri",
+    content = "content",
+    format = "Chapbook",
+    formatVersion = "2.0.0",
+    callbacks = new MockCallbacks(),
+}): ParsingState {
+    return {
+        textDocument: TextDocument.create(uri, "twee3", 1, content),
+        textDocumentUri: uri,
+        storyFormat: {
+            format: format,
+            formatVersion: formatVersion,
+        },
+        callbacks: callbacks,
+    };
+}
+
+export class MockCallbacks implements ParserCallbacks {
+    public passages: Passage[] = [];
+    public passageContents: string[] = [];
+    public storyTitle?: string;
+    public storyTitleRange?: Range;
+    public storyData?: StoryData;
+    public storyDataRange?: Range;
+    public embeddedDocuments: EmbeddedDocument[] = [];
+    public tokens: Token[] = [];
+    public errors: Diagnostic[] = [];
+
+    onPassage(passage: Passage, contents: string): void {
+        this.passages.push(passage);
+        this.passageContents.push(contents);
+    }
+    onStoryTitle(title: string, range: Range): void {
+        this.storyTitle = title;
+        this.storyTitleRange = range;
+    }
+    onStoryData(data: StoryData, range: Range): void {
+        this.storyData = data;
+        this.storyDataRange = range;
+    }
+    onEmbeddedDocument(document: EmbeddedDocument): void {
+        this.embeddedDocuments.push(document);
+    }
+    onToken(token: Token): void {
+        this.tokens.push(token);
+    }
+    onParseError(error: Diagnostic): void {
+        this.errors.push(error);
+    }
 }

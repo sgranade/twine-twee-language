@@ -27,6 +27,24 @@ describe("Utilities", () => {
         });
     });
 
+    describe("remove left padding", () => {
+        it("should return the string without padding on the left", () => {
+            // No arrange
+
+            const [result] = uut.removeLeftPadding(" \t No left padding? ");
+
+            expect(result).to.eql("No left padding? ");
+        });
+
+        it("should return the number of padding characters removed from the left", () => {
+            // No arrange
+
+            const [, result] = uut.removeLeftPadding(" \t No left padding? ");
+
+            expect(result).to.eql(3);
+        });
+    });
+
     describe("next line index", () => {
         it("should find the next line after a \\n", () => {
             const text = "line1\nline2";

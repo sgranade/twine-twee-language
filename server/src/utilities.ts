@@ -44,6 +44,22 @@ export function nextLineIndex(document: string, startIndex: number): number {
     return lineEnd;
 }
 
+const paddingAndTextPattern = /^(\s*)(.*)/;
+
+/**
+ * Remove left padding from a string and capture how many pad characters were removed.
+ *
+ * @param s String to remove leading padding from.
+ * @returns Tuple of the un-padded string and the length of removed padding.
+ */
+export function removeLeftPadding(s: string): [string, number] {
+    const m = paddingAndTextPattern.exec(s);
+    if (m === null) {
+        return ["", 0];
+    }
+    return [m[2], m[1].length];
+}
+
 /**
  * Normalize a URI.
  *

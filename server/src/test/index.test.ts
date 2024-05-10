@@ -155,7 +155,7 @@ describe("Project Index", () => {
                         line: 1,
                         char: 2,
                         length: 3,
-                        tokenModifiers: 1,
+                        tokenModifiers: [1],
                         tokenType: 2,
                     },
                 ];
@@ -331,7 +331,7 @@ describe("Project Index", () => {
                         line: 1,
                         char: 2,
                         length: 3,
-                        tokenModifiers: 1,
+                        tokenModifiers: [1],
                         tokenType: 2,
                     },
                 ];

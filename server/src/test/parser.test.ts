@@ -1,46 +1,10 @@
-import { expect } from "chai";
 import "mocha";
-import { Diagnostic, Range, Position, Location } from "vscode-languageserver";
+import { expect } from "chai";
+import { Range, Position, Location } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
-import { EmbeddedDocument } from "../embedded-languages";
-import { Passage, StoryData } from "../index";
+import { MockCallbacks } from "./builders";
 import * as uut from "../parser";
-import { Token } from "../tokens";
-
-class MockCallbacks implements uut.ParserCallbacks {
-    public passages: Passage[] = [];
-    public passageContents: string[] = [];
-    public storyTitle?: string;
-    public storyTitleRange?: Range;
-    public storyData?: StoryData;
-    public storyDataRange?: Range;
-    public embeddedDocuments: EmbeddedDocument[] = [];
-    public tokens: Token[] = [];
-    public errors: Diagnostic[] = [];
-
-    onPassage(passage: Passage, contents: string): void {
-        this.passages.push(passage);
-        this.passageContents.push(contents);
-    }
-    onStoryTitle(title: string, range: Range): void {
-        this.storyTitle = title;
-        this.storyTitleRange = range;
-    }
-    onStoryData(data: StoryData, range: Range): void {
-        this.storyData = data;
-        this.storyDataRange = range;
-    }
-    onEmbeddedDocument(document: EmbeddedDocument): void {
-        this.embeddedDocuments.push(document);
-    }
-    onToken(token: Token): void {
-        this.tokens.push(token);
-    }
-    onParseError(error: Diagnostic): void {
-        this.errors.push(error);
-    }
-}
 
 function buildStoryData({
     ifid = "9F187C0A-AE64-465A-8B13-B30B9DE446E2",

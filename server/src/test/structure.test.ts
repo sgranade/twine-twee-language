@@ -146,14 +146,14 @@ describe("Structure", () => {
                     char: 4,
                     length: 3,
                     tokenType: 2,
-                    tokenModifiers: 1,
+                    tokenModifiers: [0b1, 0b10],
                 },
             ];
             index.setTokens("test-uri", tokens);
 
             const result = uut.generateSemanticTokens("test-uri", index);
 
-            expect(result.data).to.eql([5, 4, 3, 2, 1]);
+            expect(result.data).to.eql([5, 4, 3, 2, 0b11]);
         });
     });
 });
