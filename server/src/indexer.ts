@@ -26,22 +26,26 @@ class IndexingState {
 }
 
 /**
- * Update project index for a document in that project.
+ * Update a project index for a document in that project.
+ *
+ * Passage content parsing is optional so that documents can be quickly parsed
+ * to build an initial index of passage names. Even if passage content parsing
+ * is skipped, though, the StoryTitle and StoryData passages are still parsed.
  *
  * @param textDocument Document to index.
- * @param isStartupFile True if the document is the ChoiceScript startup file.
- * @param isChoicescriptStatsFile True if the document is the ChoiceScript stats file.
+ * @param parsePassageContents Whether to parse passage contents.
  * @param index Project index to update.
  */
 export function updateProjectIndex(
     textDocument: TextDocument,
+    parsePassageContents: boolean,
     index: ProjectIndex
 ): void {
     const indexingState = new IndexingState(textDocument);
     index.removeDocument(textDocument.uri);
 
     const callbacks: ParserCallbacks = {
-        onPassage: function (passage: Passage, contents: string): void {
+        onPassage: function (passage: Passage): void {
             indexingState.passages.push(passage);
         },
         onStoryTitle: function (title: string, range: Range): void {
@@ -81,7 +85,12 @@ export function updateProjectIndex(
         },
     };
 
-    parse(textDocument, index.getStoryData()?.storyFormat, callbacks);
+    parse(
+        textDocument,
+        index.getStoryData()?.storyFormat,
+        parsePassageContents,
+        callbacks
+    );
 
     index.setPassages(textDocument.uri, indexingState.passages);
     index.setEmbeddedDocuments(

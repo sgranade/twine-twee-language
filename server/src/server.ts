@@ -140,13 +140,13 @@ connection.onDidChangeWatchedFiles((_change) => {
  */
 function processChangedDocument(document: TextDocument) {
     // Keep track of the story format so, if it changes, we can notify listeners
-    const storyFormat = projectIndex.getStoryData()?.format;
-    updateProjectIndex(document, projectIndex);
-    const newStoryData = projectIndex.getStoryData();
-    if (newStoryData?.format !== storyFormat && newStoryData?.format) {
+    const storyFormat = projectIndex.getStoryData()?.storyFormat?.format;
+    updateProjectIndex(document, true, projectIndex);
+    const newStoryFormat = projectIndex.getStoryData()?.storyFormat;
+    if (newStoryFormat?.format !== storyFormat && newStoryFormat?.format) {
         const e: StoryFormat = {
-            format: newStoryData.format,
-            formatVersion: newStoryData.formatVersion,
+            format: newStoryFormat.format,
+            formatVersion: newStoryFormat.formatVersion,
         };
         connection.sendNotification(CustomMessages.UpdatedStoryFormat, e);
     }

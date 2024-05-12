@@ -22,56 +22,34 @@ import {
 } from "./language";
 import { Token, TokenModifier, TokenType } from "./tokens";
 import { createDiagnostic, nextLineIndex, pairwise } from "./utilities";
+import {
+    PassageTextParser,
+    getPassageTextParser,
+} from "./passage-text-parsers/passage-parser";
 
 /**
  * Captures information about the current state of parsing
  */
-export class ParsingState {
+export interface ParsingState {
     /**
      * Document being validated
      */
     textDocument: TextDocument;
     /**
-     * Document's normalized URI.
+     * The parser to parse passage contents (other than the StoryTitle and StoryData passages).
      */
-    textDocumentUri: string;
-    /**
-     * The current story format.
-     */
-    storyFormat?: StoryFormat;
+    passageTextParser: PassageTextParser | undefined;
     /**
      * Callbacks for parsing events
      */
     callbacks: ParserCallbacks;
-
-    constructor(
-        textDocument: TextDocument,
-        storyFormat: StoryFormat | undefined,
-        callbacks: ParserCallbacks
-    ) {
-        this.textDocument = textDocument;
-        this.textDocumentUri = textDocument.uri;
-        this.storyFormat = storyFormat;
-        this.callbacks = callbacks;
-    }
-}
-
-/**
- * Story-format-specific parsers that parse passage text.
- */
-export interface PassageTextParser {
-    parsePassageText(
-        passageText: string,
-        textIndex: number,
-        state: ParsingState
-    ): void;
 }
 
 /**
  * Callbacks during parsing.
  */
 export interface ParserCallbacks {
-    onPassage(passage: Passage, contents: string): void;
+    onPassage(passage: Passage): void;
     onStoryTitle(title: string, range: Range): void;
     onStoryData(data: StoryData, range: Range): void;
     onEmbeddedDocument(document: EmbeddedDocument): void;
@@ -172,7 +150,7 @@ function parseHeaderMetadata(
         raw: {
             contents: rawMetadata,
             location: Location.create(
-                state.textDocumentUri,
+                state.textDocument.uri,
                 Range.create(
                     state.textDocument.positionAt(metadataIndex),
                     state.textDocument.positionAt(
@@ -260,7 +238,7 @@ function parsePassageHeader(
                     return {
                         contents: tag.replace(/\\(.)/g, "$1"),
                         location: Location.create(
-                            state.textDocumentUri,
+                            state.textDocument.uri,
                             Range.create(
                                 state.textDocument.positionAt(tagIndex),
                                 state.textDocument.positionAt(
@@ -335,7 +313,7 @@ function parsePassageHeader(
     const tagNames = tags?.map((x) => x.contents);
     const nameIndex = headerStartIndex + header.indexOf(name);
     const location = Location.create(
-        state.textDocumentUri,
+        state.textDocument.uri,
         Range.create(
             state.textDocument.positionAt(nameIndex),
             state.textDocument.positionAt(nameIndex + name.length)
@@ -381,12 +359,13 @@ function parseStoryTitlePassage(
  * @param passageText Text contents of the StoryData passage.
  * @param textIndex Index of the text contents in the document.
  * @param state Parsing state.
+ * @returns New story data.
  */
 function parseStoryDataPassage(
     passageText: string,
     textIndex: number,
     state: ParsingState
-): void {
+): StoryData {
     const storyData: StoryData = {
         ifid: "",
     };
@@ -454,6 +433,8 @@ function parseStoryDataPassage(
         offset: textIndex,
         languageId: "json",
     });
+
+    return storyData;
 }
 
 /**
@@ -499,7 +480,7 @@ function parsePassageText(
     if (passage.name.contents === "StoryTitle") {
         parseStoryTitlePassage(passageText, textIndex, state);
     } else if (passage.name.contents === "StoryData") {
-        parseStoryDataPassage(passageText, textIndex, state);
+        // Do nothing -- we parsed it before parsing any other passages
     } else if (passage.isStylesheet) {
         parseStylesheetPassage(passageText, textIndex, state);
     } else if (passageTextParser !== undefined) {
@@ -508,22 +489,20 @@ function parsePassageText(
 }
 
 /**
- * Find a passage's contents, set the passage's scope to include it, and parse the contents.
+ * Find a passage's contents, set the passage's scope to include it, and (optionally) parse the contents.
  *
  * @param text Full text of the document.
  * @param passage Passage whose contents we should find and parse.
  * @param followingPassage The passage after the one to be processed, if any.
  * @param state Parsing state.
- * @returns The text of the passage's contents.
  */
 function findAndParsePassageContents(
     text: string,
     passage: Passage,
     followingPassage: Passage | undefined,
     state: ParsingState
-): string {
+): void {
     // Find the passage's contents
-
     const passageContentsStartIndex = state.textDocument.offsetAt({
         line: passage.name.location.range.start.line + 1,
         character: 0,
@@ -563,8 +542,6 @@ function findAndParsePassageContents(
         undefined,
         state
     );
-
-    return passageText;
 }
 
 /**
@@ -574,8 +551,6 @@ function findAndParsePassageContents(
 function parseTwee3(state: ParsingState): void {
     const text = state.textDocument.getText();
 
-    // TODO find any StoryData first and parse it as that might change the story format we use for parsing passages
-
     // Generate all passages
     const passages = [...text.matchAll(/^::([^:].*?|)$/gm)].map((m) =>
         parsePassageHeader(m[1], m.index, state)
@@ -584,41 +559,81 @@ function parseTwee3(state: ParsingState): void {
     // Call back on the passages, along with their contents.
     // This will cover every passage except the last one in the array.
     for (const [passage1, passage2] of pairwise(passages)) {
-        const passageText = findAndParsePassageContents(
-            text,
-            passage1,
-            passage2,
-            state
-        );
-        state.callbacks.onPassage(passage1, passageText);
+        findAndParsePassageContents(text, passage1, passage2, state);
+        state.callbacks.onPassage(passage1);
     }
 
     // Handle the final passage, if any
     const lastPassage = passages.at(-1);
     if (lastPassage !== undefined) {
-        const passageText = findAndParsePassageContents(
-            text,
-            lastPassage,
-            undefined,
-            state
-        );
-        state.callbacks.onPassage(lastPassage, passageText);
+        findAndParsePassageContents(text, lastPassage, undefined, state);
+        state.callbacks.onPassage(lastPassage);
     }
 }
 
 /**
  * Parse a Twee 3 document.
  *
+ * Passage content parsing is optional so that documents can be quickly parsed
+ * to build an initial index of passage names. Even if passage content parsing
+ * is skipped, though, the StoryTitle and StoryData passages are still parsed.
+ *
  * @param textDocument Document to parse.
  * @param storyFormat Previous story format (if any) to use in parsing.
+ * @param parsePassageContents Whether to parse passage contents.
  * @param callbacks Parser event callbacks.
  */
 export function parse(
     textDocument: TextDocument,
     storyFormat: StoryFormat | undefined,
+    parsePassageContents: boolean,
     callbacks: ParserCallbacks
 ): void {
-    const state = new ParsingState(textDocument, storyFormat, callbacks);
+    const state = {
+        textDocument,
+        passageTextParser: undefined, // No passage text parser to begin with
+        callbacks,
+    };
 
-    parseTwee3(state);
+    // Before anything else, see if we've got a story data passage, as
+    // if that changes the story format, it changes how we parse passages
+    const docText = textDocument.getText();
+    for (const storyDataMatch of docText.matchAll(
+        /^::\s*StoryData\b.*?\r?\n/gm
+    )) {
+        if (storyDataMatch !== null) {
+            const contentStartIndex =
+                storyDataMatch.index + storyDataMatch[0].length;
+
+            // Get the StoryData passage contents, which run to the next passage or at the end
+            const nextPassageRegex = /^::/;
+            nextPassageRegex.lastIndex = contentStartIndex;
+            const nextPassageMatch = nextPassageRegex.exec(docText);
+            const storyDataText = docText.slice(
+                contentStartIndex,
+                nextPassageMatch?.index || undefined
+            );
+
+            const storyData = parseStoryDataPassage(
+                storyDataText,
+                contentStartIndex,
+                state
+            );
+            if (
+                storyData.storyFormat?.format !== storyFormat?.format ||
+                storyData.storyFormat?.formatVersion !==
+                    storyFormat?.formatVersion
+            ) {
+                storyFormat = storyData.storyFormat;
+            }
+        }
+    }
+
+    parseTwee3({
+        textDocument,
+        passageTextParser: parsePassageContents
+            ? getPassageTextParser(storyFormat)
+            : undefined,
+        callbacks,
+    });
 }

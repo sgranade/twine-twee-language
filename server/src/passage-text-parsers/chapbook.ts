@@ -6,9 +6,25 @@ import {
 } from "../parser";
 import { ETokenModifier, ETokenType } from "../tokens";
 import { removeLeftPadding } from "../utilities";
+import { PassageTextParser } from "./passage-parser";
 
 const lineExtractionPattern = /^(\s*)(.*)$/gm;
 const conditionPattern = /((\((.+?)\)?)\s*)([^)]*)$/;
+
+/**
+ * Get passage text parser for the Chapbook story format.
+ *
+ * @param formatVersion Specific Chapbook version.
+ * @returns Parser, or undefined if none is available.
+ */
+export function getChapbookParser(
+    formatVersion: string | undefined
+): PassageTextParser | undefined {
+    return {
+        id: "chapbook-any",
+        parsePassageText: parsePassageText,
+    };
+}
 
 function parseVarsSection(
     section: string,
@@ -115,7 +131,7 @@ function parseVarsSection(
     }
 }
 
-export function parsePassageText(
+function parsePassageText(
     passageText: string,
     textIndex: number,
     state: ParsingState

@@ -34,18 +34,12 @@ export function buildPassage({
 export function buildParsingState({
     uri = "fake-uri",
     content = "content",
-    format = "Chapbook",
-    formatVersion = "2.0.0",
     callbacks = new MockCallbacks(),
 }): ParsingState {
     return {
         textDocument: TextDocument.create(uri, "twee3", 1, content),
-        textDocumentUri: uri,
-        storyFormat: {
-            format: format,
-            formatVersion: formatVersion,
-        },
-        callbacks: callbacks,
+        passageTextParser: undefined,
+        callbacks,
     };
 }
 
@@ -60,9 +54,8 @@ export class MockCallbacks implements ParserCallbacks {
     public tokens: Token[] = [];
     public errors: Diagnostic[] = [];
 
-    onPassage(passage: Passage, contents: string): void {
+    onPassage(passage: Passage): void {
         this.passages.push(passage);
-        this.passageContents.push(contents);
     }
     onStoryTitle(title: string, range: Range): void {
         this.storyTitle = title;

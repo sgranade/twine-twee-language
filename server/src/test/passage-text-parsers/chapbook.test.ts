@@ -4,7 +4,7 @@ import { DiagnosticSeverity, Range } from "vscode-languageserver";
 
 import { ETokenModifier, ETokenType } from "../../tokens";
 import { MockCallbacks, buildParsingState } from "../builders";
-import * as uut from "../../parsers/chapbook";
+import * as uut from "../../passage-text-parsers/chapbook";
 
 describe("Chapbook Passage", () => {
     describe("Parsing", () => {
@@ -17,8 +17,9 @@ describe("Chapbook Passage", () => {
                     content: header + passage,
                     callbacks: callbacks,
                 });
+                const parser = uut.getChapbookParser(undefined);
 
-                uut.parsePassageText(passage, header.length, state);
+                parser?.parsePassageText(passage, header.length, state);
                 const [result] = callbacks.tokens;
 
                 expect(result).to.eql({
@@ -42,8 +43,9 @@ describe("Chapbook Passage", () => {
                     content: header + passage,
                     callbacks: callbacks,
                 });
+                const parser = uut.getChapbookParser(undefined);
 
-                uut.parsePassageText(passage, header.length, state);
+                parser?.parsePassageText(passage, header.length, state);
                 const [result] = callbacks.errors;
 
                 expect(callbacks.errors.length).to.equal(1);
@@ -60,8 +62,9 @@ describe("Chapbook Passage", () => {
                     content: header + passage,
                     callbacks: callbacks,
                 });
+                const parser = uut.getChapbookParser(undefined);
 
-                uut.parsePassageText(passage, header.length, state);
+                parser?.parsePassageText(passage, header.length, state);
                 const [result] = callbacks.errors;
 
                 expect(callbacks.errors.length).to.equal(1);
@@ -80,8 +83,9 @@ describe("Chapbook Passage", () => {
                     content: header + passage,
                     callbacks: callbacks,
                 });
+                const parser = uut.getChapbookParser(undefined);
 
-                uut.parsePassageText(passage, header.length, state);
+                parser?.parsePassageText(passage, header.length, state);
                 const [result] = callbacks.errors;
 
                 expect(callbacks.errors.length).to.equal(1);
@@ -100,8 +104,9 @@ describe("Chapbook Passage", () => {
                     content: header + passage,
                     callbacks: callbacks,
                 });
+                const parser = uut.getChapbookParser(undefined);
 
-                uut.parsePassageText(passage, header.length, state);
+                parser?.parsePassageText(passage, header.length, state);
                 const result = callbacks.errors;
 
                 expect(result.length).to.equal(2);
@@ -126,8 +131,9 @@ describe("Chapbook Passage", () => {
                     content: header + passage,
                     callbacks: callbacks,
                 });
+                const parser = uut.getChapbookParser(undefined);
 
-                uut.parsePassageText(passage, header.length, state);
+                parser?.parsePassageText(passage, header.length, state);
                 const [result] = callbacks.errors;
 
                 expect(callbacks.errors.length).to.equal(1);
@@ -146,8 +152,9 @@ describe("Chapbook Passage", () => {
                     content: header + passage,
                     callbacks: callbacks,
                 });
+                const parser = uut.getChapbookParser(undefined);
 
-                uut.parsePassageText(passage, header.length, state);
+                parser?.parsePassageText(passage, header.length, state);
                 const [result] = callbacks.errors;
 
                 expect(callbacks.errors.length).to.equal(1);
