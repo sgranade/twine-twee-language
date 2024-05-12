@@ -3,19 +3,18 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { doHover } from "./embedded-languages";
 import { ProjectIndex } from "./index";
-import { containingRange, normalizeUri } from "./utilities";
+import { containingRange } from "./utilities";
 
 export async function generateHover(
     document: TextDocument,
     position: Position,
     index: ProjectIndex
 ): Promise<Hover | null | undefined> {
-    const documentUri = normalizeUri(document.uri);
     const offset = document.offsetAt(position);
     let hover: Hover | null | undefined;
 
     // Embedded documents get to create their own completions
-    for (const embeddedDocument of index.getEmbeddedDocuments(documentUri) ||
+    for (const embeddedDocument of index.getEmbeddedDocuments(document.uri) ||
         []) {
         if (
             offset >= embeddedDocument.offset &&

@@ -16,7 +16,7 @@ import {
     storyDataJSONUri,
 } from "./embedded-languages";
 import { ProjectIndex } from "./index";
-import { containingRange, normalizeUri } from "./utilities";
+import { containingRange } from "./utilities";
 
 /**
  * Create a string completion.
@@ -159,12 +159,11 @@ export async function generateCompletions(
     position: Position,
     index: ProjectIndex
 ): Promise<CompletionList | null> {
-    const documentUri = normalizeUri(document.uri);
     const offset = document.offsetAt(position);
     let completions: CompletionList | null = null;
 
     // Embedded documents get to create their own completions
-    for (const embeddedDocument of index.getEmbeddedDocuments(documentUri) ||
+    for (const embeddedDocument of index.getEmbeddedDocuments(document.uri) ||
         []) {
         if (
             offset >= embeddedDocument.offset &&

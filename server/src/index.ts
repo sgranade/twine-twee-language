@@ -3,6 +3,7 @@ import { Diagnostic, Location, Range } from "vscode-languageserver";
 import { StoryFormat } from "./client-server";
 import { EmbeddedDocument } from "./embedded-languages";
 import { Token } from "./tokens";
+import { normalizeUri } from "./utilities";
 
 /**
  * A label, which has a name and a location.
@@ -142,23 +143,29 @@ export class Index implements ProjectIndex {
     private _parseErrors: Map<string, Diagnostic[]> = new Map();
 
     setStoryTitle(title: string, uri: string): void {
+        uri = normalizeUri(uri);
         this._storyTitle = title;
         this._storyTitleUri = uri;
     }
     setStoryData(data: StoryData, uri: string): void {
+        uri = normalizeUri(uri);
         this._storyData = data;
         this._storyDataUri = uri;
     }
     setPassages(uri: string, newPassages: Passage[]): void {
+        uri = normalizeUri(uri);
         this._passages.set(uri, [...newPassages]);
     }
     setEmbeddedDocuments(uri: string, documents: EmbeddedDocument[]): void {
+        uri = normalizeUri(uri);
         this._embeddedDocuments.set(uri, [...documents]);
     }
     setTokens(uri: string, tokens: Token[]): void {
+        uri = normalizeUri(uri);
         this._tokens.set(uri, [...tokens]);
     }
     setParseErrors(uri: string, errors: Diagnostic[]): void {
+        uri = normalizeUri(uri);
         this._parseErrors.set(uri, [...errors]);
     }
     getStoryTitle(): string | undefined {
@@ -174,19 +181,20 @@ export class Index implements ProjectIndex {
         return this._storyDataUri;
     }
     getPassages(uri: string): Passage[] | undefined {
+        uri = normalizeUri(uri);
         return this._passages.get(uri);
     }
     getEmbeddedDocuments(uri: string): EmbeddedDocument[] {
-        const documents = this._embeddedDocuments.get(uri) ?? [];
-        return documents;
+        uri = normalizeUri(uri);
+        return this._embeddedDocuments.get(uri) ?? [];
     }
     getTokens(uri: string): readonly Token[] {
-        const errors = this._tokens.get(uri) ?? [];
-        return errors;
+        uri = normalizeUri(uri);
+        return this._tokens.get(uri) ?? [];
     }
     getParseErrors(uri: string): readonly Diagnostic[] {
-        const errors = this._parseErrors.get(uri) ?? [];
-        return errors;
+        uri = normalizeUri(uri);
+        return this._parseErrors.get(uri) ?? [];
     }
     getPassageNames(): readonly string[] {
         const s = new Set<string>();
@@ -198,6 +206,7 @@ export class Index implements ProjectIndex {
         return [...s];
     }
     removeDocument(uri: string): void {
+        uri = normalizeUri(uri);
         this._passages.delete(uri);
         this._embeddedDocuments.delete(uri);
         this._tokens.delete(uri);

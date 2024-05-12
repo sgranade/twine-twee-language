@@ -5,7 +5,6 @@ import { EmbeddedDocument } from "./embedded-languages";
 import { Passage, ProjectIndex, StoryData } from "./index";
 import { ParserCallbacks, parse } from "./parser";
 import { Token } from "./tokens";
-import { normalizeUri } from "./utilities";
 
 /**
  * Captures information about the current state of indexing
@@ -39,8 +38,7 @@ export function updateProjectIndex(
     index: ProjectIndex
 ): void {
     const indexingState = new IndexingState(textDocument);
-    const uri = normalizeUri(textDocument.uri);
-    index.removeDocument(uri);
+    index.removeDocument(textDocument.uri);
 
     const callbacks: ParserCallbacks = {
         onPassage: function (passage: Passage, contents: string): void {
@@ -56,7 +54,7 @@ export function updateProjectIndex(
                     )
                 );
             } else {
-                index.setStoryTitle(title, uri);
+                index.setStoryTitle(title, textDocument.uri);
             }
         },
         onStoryData: function (data: StoryData, range: Range): void {
@@ -69,7 +67,7 @@ export function updateProjectIndex(
                     )
                 );
             } else {
-                index.setStoryData(data, uri);
+                index.setStoryData(data, textDocument.uri);
             }
         },
         onEmbeddedDocument: function (document: EmbeddedDocument): void {
@@ -85,8 +83,11 @@ export function updateProjectIndex(
 
     parse(textDocument, index.getStoryData()?.storyFormat, callbacks);
 
-    index.setPassages(uri, indexingState.passages);
-    index.setEmbeddedDocuments(uri, indexingState.embeddedDocuments);
-    index.setTokens(uri, indexingState.tokens);
-    index.setParseErrors(uri, indexingState.parseErrors);
+    index.setPassages(textDocument.uri, indexingState.passages);
+    index.setEmbeddedDocuments(
+        textDocument.uri,
+        indexingState.embeddedDocuments
+    );
+    index.setTokens(textDocument.uri, indexingState.tokens);
+    index.setParseErrors(textDocument.uri, indexingState.parseErrors);
 }

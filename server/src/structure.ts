@@ -7,7 +7,6 @@ import {
 } from "vscode-languageserver";
 
 import { ProjectIndex } from "./index";
-import { normalizeUri } from "./utilities";
 
 /**
  * Generate symbols for a document.
@@ -20,9 +19,7 @@ export function generateSymbols(
     uri: string,
     projectIndex: ProjectIndex
 ): DocumentSymbol[] | null {
-    const normalizedUri = normalizeUri(uri);
-
-    const passages = projectIndex.getPassages(normalizedUri);
+    const passages = projectIndex.getPassages(uri);
     if (passages === undefined) {
         return null;
     }
@@ -55,8 +52,7 @@ export function generateFoldingRanges(
     uri: string,
     projectIndex: ProjectIndex
 ): FoldingRange[] | null {
-    const normalizedUri = normalizeUri(uri);
-    const passages = projectIndex.getPassages(normalizedUri);
+    const passages = projectIndex.getPassages(uri);
     if (passages === undefined) {
         return null;
     }
@@ -83,7 +79,6 @@ export function generateSemanticTokens(
     uri: string,
     projectIndex: ProjectIndex
 ): SemanticTokens {
-    const normalizedUri = normalizeUri(uri);
     const builder = new SemanticTokensBuilder();
 
     for (const {
@@ -92,7 +87,7 @@ export function generateSemanticTokens(
         length,
         tokenType,
         tokenModifiers,
-    } of projectIndex.getTokens(normalizedUri)) {
+    } of projectIndex.getTokens(uri)) {
         let modifier = 0;
         for (const m of tokenModifiers) {
             modifier |= m;

@@ -3,7 +3,7 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { doValidation } from "./embedded-languages";
 import { ProjectIndex } from "./index";
-import { containingRange, normalizeUri } from "./utilities";
+import { containingRange } from "./utilities";
 
 /**
  * Validate a text file and generate diagnostics against it.
@@ -16,12 +16,11 @@ export async function generateDiagnostics(
     document: TextDocument,
     index: ProjectIndex
 ): Promise<Diagnostic[]> {
-    const documentUri = normalizeUri(document.uri);
     // Start with parse errors
-    const diagnostics: Diagnostic[] = [...index.getParseErrors(documentUri)];
+    const diagnostics: Diagnostic[] = [...index.getParseErrors(document.uri)];
 
     // Add diagnostics from embedded documents
-    for (const embeddedDocument of index.getEmbeddedDocuments(documentUri) ||
+    for (const embeddedDocument of index.getEmbeddedDocuments(document.uri) ||
         []) {
         const newDiagnostics = await doValidation(embeddedDocument);
         for (const diagnostic of newDiagnostics) {
