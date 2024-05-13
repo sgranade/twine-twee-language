@@ -42,7 +42,8 @@ export function updateProjectIndex(
     index: ProjectIndex
 ): void {
     const indexingState = new IndexingState(textDocument);
-    index.removeDocument(textDocument.uri);
+    const uri = textDocument.uri;
+    index.removeDocument(uri);
 
     const callbacks: ParserCallbacks = {
         onPassage: function (passage: Passage): void {
@@ -58,7 +59,7 @@ export function updateProjectIndex(
                     )
                 );
             } else {
-                index.setStoryTitle(title, textDocument.uri);
+                index.setStoryTitle(title, uri);
             }
         },
         onStoryData: function (data: StoryData, range: Range): void {
@@ -71,7 +72,7 @@ export function updateProjectIndex(
                     )
                 );
             } else {
-                index.setStoryData(data, textDocument.uri);
+                index.setStoryData(data, uri);
             }
         },
         onEmbeddedDocument: function (document: EmbeddedDocument): void {
@@ -92,11 +93,8 @@ export function updateProjectIndex(
         callbacks
     );
 
-    index.setPassages(textDocument.uri, indexingState.passages);
-    index.setEmbeddedDocuments(
-        textDocument.uri,
-        indexingState.embeddedDocuments
-    );
-    index.setTokens(textDocument.uri, indexingState.tokens);
-    index.setParseErrors(textDocument.uri, indexingState.parseErrors);
+    index.setPassages(uri, indexingState.passages);
+    index.setEmbeddedDocuments(uri, indexingState.embeddedDocuments);
+    index.setTokens(uri, indexingState.tokens);
+    index.setParseErrors(uri, indexingState.parseErrors);
 }

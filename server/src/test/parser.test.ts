@@ -1,10 +1,14 @@
 import "mocha";
 import { expect } from "chai";
+import { ImportMock } from "ts-mock-imports";
+
 import { Range, Position, Location } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { MockCallbacks } from "./builders";
+import * as ptpModule from "../passage-text-parsers/passage-text-parser";
 import * as uut from "../parser";
+import { StoryFormat } from "../client-server";
 
 function buildStoryData({
     ifid = "9F187C0A-AE64-465A-8B13-B30B9DE446E2",
@@ -445,7 +449,8 @@ describe("Parser", () => {
                     ":: StoryData\n" +
                         "{\n" +
                         '\t"ifid": "62891577-8D8E-496F-B46C-9FF0194C0EAC"\n' +
-                        "}\n"
+                        "}\n\n" +
+                        ":: NextPassage\nContent"
                 );
 
                 uut.parse(doc, undefined, true, callbacks);
@@ -657,6 +662,87 @@ describe("Parser", () => {
                 expect(callbacks.storyDataRange?.end).to.eql(
                     Position.create(3, 1)
                 );
+            });
+        });
+
+        describe("Passage Text Parsing", () => {
+            it("should parse passage text based on the initial story format", () => {
+                const callbacks = new MockCallbacks();
+                const doc = TextDocument.create(
+                    "fake-uri",
+                    "",
+                    0,
+                    ":: Passage\nI am the passage contents!\n"
+                );
+                const receivedContents: string[] = [];
+                const mockFunction = ImportMock.mockFunction(
+                    ptpModule,
+                    "getPassageTextParser"
+                ).callsFake((format: StoryFormat | undefined) => {
+                    if (format?.format == "FakeFormat") {
+                        return {
+                            id: "FakeFormat",
+                            parsePassageText: (
+                                passageText: string,
+                                textIndex: number,
+                                state: uut.ParsingState
+                            ) => {
+                                receivedContents.push(passageText);
+                            },
+                        };
+                    }
+                    return undefined;
+                });
+
+                uut.parse(doc, { format: "FakeFormat" }, true, callbacks);
+                mockFunction.restore();
+
+                expect(receivedContents).to.eql([
+                    "I am the passage contents!\n",
+                ]);
+            });
+
+            it("should parse passage text based on the story format in the StoryData passage", () => {
+                const callbacks = new MockCallbacks();
+                const doc = TextDocument.create(
+                    "fake-uri",
+                    "",
+                    0,
+                    ":: Passage\nI am the passage contents!\n\n" +
+                        ":: StoryData\n" +
+                        "{\n" +
+                        '\t"ifid": "62891577-8D8E-496F-B46C-9FF0194C0EAC"\n' +
+                        '\t"format": "FakeFormat"\n' +
+                        "}\n\n" +
+                        ":: Other Passage\nMe? Also contents!\n\n"
+                );
+                const receivedContents: string[] = [];
+                const mockFunction = ImportMock.mockFunction(
+                    ptpModule,
+                    "getPassageTextParser"
+                ).callsFake((format: StoryFormat | undefined) => {
+                    if (format?.format == "FakeFormat") {
+                        return {
+                            id: "FakeFormat",
+                            parsePassageText: (
+                                passageText: string,
+                                textIndex: number,
+                                state: uut.ParsingState
+                            ) => {
+                                receivedContents.push(passageText);
+                            },
+                        };
+                    }
+                    return undefined;
+                });
+
+                uut.parse(doc, { format: "FakeFormat" }, true, callbacks);
+                mockFunction.restore();
+
+                expect(receivedContents).to.eql([
+                    "I am the passage contents!\n\n",
+                    "Me? Also contents!\n\n",
+                ]);
             });
         });
     });

@@ -6,7 +6,7 @@ import {
 } from "../parser";
 import { ETokenModifier, ETokenType } from "../tokens";
 import { removeLeftPadding } from "../utilities";
-import { PassageTextParser } from "./passage-parser";
+import { PassageTextParser } from "./passage-text-parser";
 
 const lineExtractionPattern = /^(\s*)(.*)$/gm;
 const conditionPattern = /((\((.+?)\)?)\s*)([^)]*)$/;
@@ -108,7 +108,9 @@ function parseVarsSection(
                 state
             );
         }
-        for (const badCharMatch of name.slice(1).matchAll(/[^A-Za-z0-9$_]/gu)) {
+        for (const badCharMatch of name
+            .slice(1)
+            .matchAll(/[^A-Za-z0-9$_.]/gu)) {
             logErrorFor(
                 badCharMatch[0],
                 sectionIndex + nameIndex + 1 + badCharMatch.index,

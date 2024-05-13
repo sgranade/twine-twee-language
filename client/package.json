@@ -1,13 +1,13 @@
 {
 	"name": "twine-chapbook-lsp-client",
-	"description": "Twine Chapbook language client",
+	"description": "Twine (Twee 3) language client",
 	"author": "Stephen Granade",
 	"license": "MIT",
 	"version": "0.0.1",
 	"publisher": "Stephen Granade",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/sgranade/twine-chapbook"
+		"url": "https://github.com/sgranade/twine-twee-language"
 	},
 	"engines": {
 		"vscode": "^1.75.0"

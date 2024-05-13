@@ -1,7 +1,7 @@
 {
-	"name": "twine-chapbook",
-	"displayName": "Twine Chapbook",
-	"description": "Twine (Twee 3) Chapbook language support for VS Code",
+	"name": "twine-twee-language",
+	"displayName": "Twine (Twee 3)",
+	"description": "Twine (Twee 3) language support for VS Code",
 	"author": {
 		"name": "Stephen Granade",
 		"email": "stephen@granades.com",
@@ -11,7 +11,7 @@
 	"version": "0.0.1",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/sgranade/twine-chapbook"
+		"url": "https://github.com/sgranade/twine-twee-language"
 	},
 	"publisher": "StephenGranade",
 	"categories": [
@@ -23,6 +23,8 @@
 		"Twine",
 		"Twee",
 		"Chapbook",
+		"Harlowe",
+		"SugarCube",
 		"cyoa",
 		"interactive fiction"
 	],
@@ -96,7 +98,7 @@
 		],
 		"configuration": {
 			"type": "object",
-			"title": "Twine Chapbook",
+			"title": "Twine (Twee 3) Language",
 			"properties": {}
 		}
 	},
@@ -112,12 +114,15 @@
 		"@types/chai": "^4.3.10",
 		"@types/mocha": "^10.0.6",
 		"@types/node": "^20.9.2",
+		"@types/sinon": "^17.0.3",
 		"@typescript-eslint/eslint-plugin": "^7.1.1",
 		"@typescript-eslint/parser": "^7.1.1",
 		"chai": "^4.4.1",
 		"eslint": "^8.57.0",
 		"mocha": "^10.3.0",
 		"prettier": "3.2.5",
+		"sinon": "^17.0.2",
+		"ts-mock-imports": "^1.3.8",
 		"ts-node": "^10.9.2",
 		"typescript": "^5.3.3"
 	}

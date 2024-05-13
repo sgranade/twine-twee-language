@@ -25,7 +25,7 @@ import { createDiagnostic, nextLineIndex, pairwise } from "./utilities";
 import {
     PassageTextParser,
     getPassageTextParser,
-} from "./passage-text-parsers/passage-parser";
+} from "./passage-text-parsers/passage-text-parser";
 
 /**
  * Captures information about the current state of parsing
@@ -474,7 +474,6 @@ function parsePassageText(
     passage: Passage,
     passageText: string,
     textIndex: number,
-    passageTextParser: PassageTextParser | undefined,
     state: ParsingState
 ): void {
     if (passage.name.contents === "StoryTitle") {
@@ -483,8 +482,12 @@ function parsePassageText(
         // Do nothing -- we parsed it before parsing any other passages
     } else if (passage.isStylesheet) {
         parseStylesheetPassage(passageText, textIndex, state);
-    } else if (passageTextParser !== undefined) {
-        passageTextParser.parsePassageText(passageText, textIndex, state);
+    } else {
+        state.passageTextParser?.parsePassageText(
+            passageText,
+            textIndex,
+            state
+        );
     }
 }
 
@@ -535,13 +538,7 @@ function findAndParsePassageContents(
         )
     );
 
-    parsePassageText(
-        passage,
-        passageText,
-        passageContentsStartIndex,
-        undefined,
-        state
-    );
+    parsePassageText(passage, passageText, passageContentsStartIndex, state);
 }
 
 /**
@@ -589,13 +586,13 @@ export function parse(
     parsePassageContents: boolean,
     callbacks: ParserCallbacks
 ): void {
-    const state = {
+    const state: ParsingState = {
         textDocument,
         passageTextParser: undefined, // No passage text parser to begin with
         callbacks,
     };
 
-    // Before anything else, see if we've got a story data passage, as
+    // Before anything else, see if we've got a story data passage, as,
     // if that changes the story format, it changes how we parse passages
     const docText = textDocument.getText();
     for (const storyDataMatch of docText.matchAll(
@@ -606,12 +603,16 @@ export function parse(
                 storyDataMatch.index + storyDataMatch[0].length;
 
             // Get the StoryData passage contents, which run to the next passage or at the end
-            const nextPassageRegex = /^::/;
+            const nextPassageRegex = /^::/gm;
             nextPassageRegex.lastIndex = contentStartIndex;
             const nextPassageMatch = nextPassageRegex.exec(docText);
+            let nextPassageIndex = nextPassageMatch?.index;
+            if (nextPassageIndex !== undefined) {
+                nextPassageIndex--;
+            }
             const storyDataText = docText.slice(
                 contentStartIndex,
-                nextPassageMatch?.index || undefined
+                nextPassageIndex
             );
 
             const storyData = parseStoryDataPassage(
@@ -629,11 +630,9 @@ export function parse(
         }
     }
 
-    parseTwee3({
-        textDocument,
-        passageTextParser: parsePassageContents
-            ? getPassageTextParser(storyFormat)
-            : undefined,
-        callbacks,
-    });
+    if (parsePassageContents) {
+        state.passageTextParser = getPassageTextParser(storyFormat);
+    }
+
+    parseTwee3(state);
 }

@@ -123,6 +123,21 @@ describe("Chapbook Passage", () => {
                 expect(result[1].range).to.eql(Range.create(1, 5, 1, 7));
             });
 
+            it("should not error on a variable with a dot", () => {
+                const header = ":: Passage\n";
+                const passage = " var.sub : 17\n--\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const parser = uut.getChapbookParser(undefined);
+
+                parser?.parsePassageText(passage, header.length, state);
+
+                expect(callbacks.errors).to.be.empty;
+            });
+
             it("should error on an unclosed parenthesis before a colon", () => {
                 const header = ":: Passage\n";
                 const passage = "var(cond: 17\n--\n";

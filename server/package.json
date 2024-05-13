@@ -1,6 +1,6 @@
 {
 	"name": "twine-chapbook-lsp-server",
-	"description": "Twine Chapbook language server in node.",
+	"description": "Twine (Twee 3) language server in node.",
 	"version": "0.0.1",
 	"author": "Stephen Granade",
 	"license": "MIT",
@@ -9,13 +9,14 @@
 	},
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/sgranade/twine-chapbook"
+		"url": "https://github.com/sgranade/twine-twee-language"
 	},
 	"dependencies": {
 		"@types/urijs": "^1.19.25",
 		"urijs": "^1.19.11",
 		"uuid": "^9.0.1",
 		"vscode-css-languageservice": "^6.2.14",
+		"vscode-html-languageservice": "^5.2.0",
 		"vscode-json-languageservice": "^5.3.11",
 		"vscode-languageserver": "^9.0.1",
 		"vscode-languageserver-textdocument": "^1.0.11"
