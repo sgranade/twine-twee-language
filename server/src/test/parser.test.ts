@@ -238,7 +238,7 @@ describe("Parser", () => {
                 const [result] = callbacks.embeddedDocuments;
 
                 expect(result.document.getText()).to.eql("P1 contents");
-                expect(result.languageId).to.eql("css");
+                expect(result.document.languageId).to.eql("css");
                 expect(result.offset).to.eql(26);
             });
 
@@ -282,7 +282,7 @@ describe("Parser", () => {
                 expect(result.document.getText()).to.eql(
                     '{"position":"600,400", "size":"100,200"}'
                 );
-                expect(result.languageId).to.eql("json");
+                expect(result.document.languageId).to.eql("json");
                 expect(result.offset).to.eql(13);
             });
 
@@ -461,7 +461,7 @@ describe("Parser", () => {
                         '\t"ifid": "62891577-8D8E-496F-B46C-9FF0194C0EAC"\n' +
                         "}\n"
                 );
-                expect(result.languageId).to.eql("json");
+                expect(result.document.languageId).to.eql("json");
                 expect(result.offset).to.eql(13);
             });
 

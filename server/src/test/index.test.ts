@@ -128,7 +128,6 @@ describe("Project Index", () => {
                     {
                         document: fakeEmbeddedDoc,
                         offset: 7,
-                        languageId: "json",
                     },
                 ];
                 const index = new uut.Index();
@@ -313,7 +312,6 @@ describe("Project Index", () => {
                     {
                         document: fakeEmbeddedDoc,
                         offset: 7,
-                        languageId: "json",
                     },
                 ];
                 const index = new uut.Index();

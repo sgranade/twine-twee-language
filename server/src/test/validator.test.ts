@@ -52,7 +52,6 @@ describe("Validator", () => {
             const embeddedDocument: EmbeddedDocument = {
                 document: subDocument,
                 offset: 17,
-                languageId: "json",
             };
             const index = new Index();
             index.setEmbeddedDocuments("test-uri", [embeddedDocument]);
@@ -79,7 +78,6 @@ describe("Validator", () => {
             const embeddedDocument: EmbeddedDocument = {
                 document: subDocument,
                 offset: 17,
-                languageId: "json",
             };
             const index = new Index();
             index.setEmbeddedDocuments("test-uri", [embeddedDocument]);

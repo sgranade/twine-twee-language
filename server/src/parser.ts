@@ -123,14 +123,22 @@ export function logTokenFor(
     modifiers: TokenModifier[],
     state: ParsingState
 ): void {
-    const position = state.textDocument.positionAt(at);
-    state.callbacks.onToken({
-        line: position.line,
-        char: position.character,
-        length: text.length,
-        tokenType: type,
-        tokenModifiers: modifiers,
-    });
+    let { line, character } = state.textDocument.positionAt(at);
+    // Tokens can only span a single line, so split on those lines
+    for (const t of text.split(/\r?\n/)) {
+        if (t.length) {
+            state.callbacks.onToken({
+                line: line,
+                char: character,
+                length: t.length,
+                tokenType: type,
+                tokenModifiers: modifiers,
+            });
+        }
+
+        line++;
+        character = 0;
+    }
 }
 
 /**
@@ -184,7 +192,6 @@ function parseHeaderMetadata(
     state.callbacks.onEmbeddedDocument({
         document: subDocument,
         offset: metadataIndex,
-        languageId: "json",
     });
 
     return metadata;
@@ -431,7 +438,6 @@ function parseStoryDataPassage(
     state.callbacks.onEmbeddedDocument({
         document: subDocument,
         offset: textIndex,
-        languageId: "json",
     });
 
     return storyData;
@@ -458,7 +464,6 @@ function parseStylesheetPassage(
     state.callbacks.onEmbeddedDocument({
         document: subDocument,
         offset: textIndex,
-        languageId: "css",
     });
 }
 

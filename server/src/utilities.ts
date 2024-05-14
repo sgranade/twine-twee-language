@@ -44,20 +44,20 @@ export function nextLineIndex(document: string, startIndex: number): number {
     return lineEnd;
 }
 
-const paddingAndTextPattern = /^(\s*)(.*)/;
+const paddingAndTextPattern = /^(\s*)(.*?)(\s*)$/;
 
 /**
- * Remove left padding from a string and capture how many pad characters were removed.
+ * Remove padding from a string and capture how many pad characters were removed.
  *
  * @param s String to remove leading padding from.
- * @returns Tuple of the un-padded string and the length of removed padding.
+ * @returns Tuple of the un-padded string and the lengths of removed padding on left nd right.
  */
-export function removeLeftPadding(s: string): [string, number] {
+export function removeAndCountPadding(s: string): [string, number, number] {
     const m = paddingAndTextPattern.exec(s);
     if (m === null) {
-        return ["", 0];
+        return ["", 0, 0];
     }
-    return [m[2], m[1].length];
+    return [m[2], m[1].length, m[3].length];
 }
 
 /**

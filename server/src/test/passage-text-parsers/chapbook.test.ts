@@ -31,6 +31,149 @@ describe("Chapbook Passage", () => {
                 });
             });
         });
+
+        describe("text section", () => {
+            it("should set semantic tokens for modifiers", () => {
+                const header = ":: Passage\n";
+                const passage = "[ mod1 ; mod2 nice  nice ]\nContent\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const parser = uut.getChapbookParser(undefined);
+
+                parser?.parsePassageText(passage, header.length, state);
+                const [mod1Token, mod2Token, mod2Param1, mod2Param2] =
+                    callbacks.tokens;
+
+                expect(callbacks.tokens.length).to.equal(4);
+                expect(mod1Token).to.eql({
+                    line: 1,
+                    char: 2,
+                    length: 4,
+                    tokenType: ETokenType.function,
+                    tokenModifiers: [],
+                });
+                expect(mod2Token).to.eql({
+                    line: 1,
+                    char: 9,
+                    length: 4,
+                    tokenType: ETokenType.function,
+                    tokenModifiers: [],
+                });
+                expect(mod2Param1).to.eql({
+                    line: 1,
+                    char: 14,
+                    length: 4,
+                    tokenType: ETokenType.parameter,
+                    tokenModifiers: [],
+                });
+                expect(mod2Param2).to.eql({
+                    line: 1,
+                    char: 20,
+                    length: 4,
+                    tokenType: ETokenType.parameter,
+                    tokenModifiers: [],
+                });
+            });
+
+            it("should set a comment token for a note modifier", () => {
+                const header = ":: Passage\n";
+                const passage = "[ note ]\nContent\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const parser = uut.getChapbookParser(undefined);
+
+                parser?.parsePassageText(passage, header.length, state);
+                const [token] = callbacks.tokens;
+
+                expect(callbacks.tokens.length).to.equal(2);
+                expect(token).to.eql({
+                    line: 1,
+                    char: 2,
+                    length: 4,
+                    tokenType: ETokenType.comment,
+                    tokenModifiers: [],
+                });
+            });
+
+            it("should set an embedded document for a CSS modifier", () => {
+                const header = ":: Passage\n";
+                const passage =
+                    "Content before\n" +
+                    "[mod; cSs ]\n" +
+                    "Fake CSS\nMore fake\n" +
+                    "[continue]\nNot CSS.\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const parser = uut.getChapbookParser(undefined);
+
+                parser?.parsePassageText(passage, header.length, state);
+                const [result] = callbacks.embeddedDocuments;
+
+                expect(result.document.getText()).to.eql(
+                    "Fake CSS\nMore fake\n"
+                );
+                expect(result.document.languageId).to.eql("css");
+                expect(result.offset).to.eql(38);
+            });
+
+            it("should set a semantic token for a note modifier", () => {
+                const header = ":: Passage\n";
+                const passage =
+                    "Content before\n" +
+                    "[mod; n.b. ]\n" +
+                    "A note\nMore note\n" +
+                    "[continue]\nUnnoteable.\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const parser = uut.getChapbookParser(undefined);
+
+                parser?.parsePassageText(passage, header.length, state);
+                const [modToken, nbToken, noteToken1, noteToken2] =
+                    callbacks.tokens;
+
+                expect(callbacks.tokens.length).to.equal(5);
+                expect(modToken).to.eql({
+                    line: 2,
+                    char: 1,
+                    length: 3,
+                    tokenType: ETokenType.function,
+                    tokenModifiers: [],
+                });
+                expect(nbToken).to.eql({
+                    line: 2,
+                    char: 6,
+                    length: 4,
+                    tokenType: ETokenType.comment,
+                    tokenModifiers: [],
+                });
+                expect(noteToken1).to.eql({
+                    line: 3,
+                    char: 0,
+                    length: 6,
+                    tokenType: ETokenType.comment,
+                    tokenModifiers: [],
+                });
+                expect(noteToken2).to.eql({
+                    line: 4,
+                    char: 0,
+                    length: 9,
+                    tokenType: ETokenType.comment,
+                    tokenModifiers: [],
+                });
+            });
+        });
     });
 
     describe("errors", () => {
@@ -176,6 +319,82 @@ describe("Chapbook Passage", () => {
                 expect(result.severity).to.eql(DiagnosticSeverity.Warning);
                 expect(result.message).to.include("This will be ignored");
                 expect(result.range).to.eql(Range.create(1, 11, 1, 18));
+            });
+        });
+
+        describe("text section", () => {
+            it("should error on spaces before modifiers", () => {
+                const header = ":: Passage\n";
+                const passage = "var1: 17\n--\n" + "  [modifier]\nOther text\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const parser = uut.getChapbookParser(undefined);
+
+                parser?.parsePassageText(passage, header.length, state);
+                const [result] = callbacks.errors;
+
+                expect(callbacks.errors.length).to.equal(1);
+                expect(result.severity).to.eql(DiagnosticSeverity.Error);
+                expect(result.message).to.include(
+                    "Modifiers can't have spaces before them"
+                );
+                expect(result.range).to.eql(Range.create(3, 0, 3, 2));
+            });
+
+            it("should error on spaces after modifiers", () => {
+                const header = ":: Passage\n";
+                const passage =
+                    "var1: 17\n--\n" + " [modifier]  \nOther text\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const parser = uut.getChapbookParser(undefined);
+
+                parser?.parsePassageText(passage, header.length, state);
+                const [, result] = callbacks.errors;
+
+                expect(callbacks.errors.length).to.equal(2);
+                expect(result.severity).to.eql(DiagnosticSeverity.Error);
+                expect(result.message).to.include(
+                    "Modifiers can't have spaces after them"
+                );
+                expect(result.range).to.eql(Range.create(3, 11, 3, 13));
+            });
+
+            it("should not error on blank lines before or after modifiers", () => {
+                const header = ":: Passage\n";
+                const passage = "var1: 17\n--\n" + "\n[modifier]\nOther text\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const parser = uut.getChapbookParser(undefined);
+
+                parser?.parsePassageText(passage, header.length, state);
+
+                expect(callbacks.errors).to.be.empty;
+            });
+
+            it("should not error on Windows blank lines before or after modifiers", () => {
+                const header = ":: Passage\r\n";
+                const passage =
+                    "var1: 17\r\n--\r\n" + "\r\n[modifier]\r\nOther text\r\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const parser = uut.getChapbookParser(undefined);
+
+                parser?.parsePassageText(passage, header.length, state);
+
+                expect(callbacks.errors).to.be.empty;
             });
         });
     });

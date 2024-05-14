@@ -14,7 +14,6 @@ import { headerMetadataSchema, storyDataSchema } from "./language";
 export interface EmbeddedDocument {
     document: TextDocument; // Raw document
     offset: number; // Where the embedded document begins inside its parent (zero-based)
-    languageId: string; // ID of the embedded document's language
 }
 
 /**
@@ -28,7 +27,7 @@ export async function doComplete(
     embeddedDocument: EmbeddedDocument,
     offset: number
 ): Promise<CompletionList | null> {
-    const service = getLanguageService(embeddedDocument.languageId);
+    const service = getLanguageService(embeddedDocument.document.languageId);
     return (await service?.doComplete(embeddedDocument, offset)) || null;
 }
 
@@ -43,7 +42,7 @@ export async function doHover(
     embeddedDocument: EmbeddedDocument,
     offset: number
 ): Promise<Hover | null | undefined> {
-    const service = getLanguageService(embeddedDocument.languageId);
+    const service = getLanguageService(embeddedDocument.document.languageId);
     return await service?.doHover(embeddedDocument, offset);
 }
 
@@ -56,7 +55,7 @@ export async function doHover(
 export async function doValidation(
     embeddedDocument: EmbeddedDocument
 ): Promise<Diagnostic[]> {
-    const service = getLanguageService(embeddedDocument.languageId);
+    const service = getLanguageService(embeddedDocument.document.languageId);
     return service?.doValidation(embeddedDocument) || [];
 }
 

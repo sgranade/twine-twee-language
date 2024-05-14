@@ -28,20 +28,32 @@ describe("Utilities", () => {
     });
 
     describe("remove left padding", () => {
-        it("should return the string without padding on the left", () => {
+        it("should return the string without padding on the left and right", () => {
             // No arrange
 
-            const [result] = uut.removeLeftPadding(" \t No left padding? ");
+            const [result] = uut.removeAndCountPadding(" \t No padding? ");
 
-            expect(result).to.eql("No left padding? ");
+            expect(result).to.eql("No padding?");
         });
 
         it("should return the number of padding characters removed from the left", () => {
             // No arrange
 
-            const [, result] = uut.removeLeftPadding(" \t No left padding? ");
+            const [, result] = uut.removeAndCountPadding(
+                " \t No left padding? "
+            );
 
             expect(result).to.eql(3);
+        });
+
+        it("should return the number of padding characters removed from the right", () => {
+            // No arrange
+
+            const [, , result] = uut.removeAndCountPadding(
+                " \t No left padding? "
+            );
+
+            expect(result).to.eql(1);
         });
     });
 
