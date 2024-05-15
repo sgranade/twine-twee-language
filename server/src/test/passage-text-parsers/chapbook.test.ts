@@ -33,144 +33,310 @@ describe("Chapbook Passage", () => {
         });
 
         describe("text section", () => {
-            it("should set semantic tokens for modifiers", () => {
-                const header = ":: Passage\n";
-                const passage = "[ mod1 ; mod2 nice  nice ]\nContent\n";
-                const callbacks = new MockCallbacks();
-                const state = buildParsingState({
-                    content: header + passage,
-                    callbacks: callbacks,
-                });
-                const parser = uut.getChapbookParser(undefined);
+            describe("modifiers", () => {
+                it("should set semantic tokens for modifiers", () => {
+                    const header = ":: Passage\n";
+                    const passage = "[ mod1 ; mod2 nice  nice ]\nContent\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
 
-                parser?.parsePassageText(passage, header.length, state);
-                const [mod1Token, mod2Token, mod2Param1, mod2Param2] =
-                    callbacks.tokens;
+                    parser?.parsePassageText(passage, header.length, state);
+                    const [mod1Token, mod2Token, mod2Param1, mod2Param2] =
+                        callbacks.tokens;
 
-                expect(callbacks.tokens.length).to.equal(4);
-                expect(mod1Token).to.eql({
-                    line: 1,
-                    char: 2,
-                    length: 4,
-                    tokenType: ETokenType.function,
-                    tokenModifiers: [],
+                    expect(callbacks.tokens.length).to.equal(4);
+                    expect(mod1Token).to.eql({
+                        line: 1,
+                        char: 2,
+                        length: 4,
+                        tokenType: ETokenType.function,
+                        tokenModifiers: [],
+                    });
+                    expect(mod2Token).to.eql({
+                        line: 1,
+                        char: 9,
+                        length: 4,
+                        tokenType: ETokenType.function,
+                        tokenModifiers: [],
+                    });
+                    expect(mod2Param1).to.eql({
+                        line: 1,
+                        char: 14,
+                        length: 4,
+                        tokenType: ETokenType.parameter,
+                        tokenModifiers: [],
+                    });
+                    expect(mod2Param2).to.eql({
+                        line: 1,
+                        char: 20,
+                        length: 4,
+                        tokenType: ETokenType.parameter,
+                        tokenModifiers: [],
+                    });
                 });
-                expect(mod2Token).to.eql({
-                    line: 1,
-                    char: 9,
-                    length: 4,
-                    tokenType: ETokenType.function,
-                    tokenModifiers: [],
+
+                it("should set a comment token for a note modifier", () => {
+                    const header = ":: Passage\n";
+                    const passage = "[ note ]\nContent\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    const [token] = callbacks.tokens;
+
+                    expect(callbacks.tokens.length).to.equal(2);
+                    expect(token).to.eql({
+                        line: 1,
+                        char: 2,
+                        length: 4,
+                        tokenType: ETokenType.comment,
+                        tokenModifiers: [],
+                    });
                 });
-                expect(mod2Param1).to.eql({
-                    line: 1,
-                    char: 14,
-                    length: 4,
-                    tokenType: ETokenType.parameter,
-                    tokenModifiers: [],
+
+                it("should set an embedded document for a CSS modifier", () => {
+                    const header = ":: Passage\n";
+                    const passage =
+                        "Content before\n" +
+                        "[mod; cSs ]\n" +
+                        "Fake CSS\nMore fake\n" +
+                        "[continue]\nNot CSS.\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    const [result] = callbacks.embeddedDocuments;
+
+                    expect(result.document.getText()).to.eql(
+                        "Fake CSS\nMore fake\n"
+                    );
+                    expect(result.document.languageId).to.eql("css");
+                    expect(result.offset).to.eql(38);
                 });
-                expect(mod2Param2).to.eql({
-                    line: 1,
-                    char: 20,
-                    length: 4,
-                    tokenType: ETokenType.parameter,
-                    tokenModifiers: [],
+
+                it("should set a semantic token for a note modifier", () => {
+                    const header = ":: Passage\n";
+                    const passage =
+                        "Content before\n" +
+                        "[mod; n.b. ]\n" +
+                        "A note\nMore note\n" +
+                        "[continue]\nUnnoteable.\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    const [modToken, nbToken, noteToken1, noteToken2] =
+                        callbacks.tokens;
+
+                    expect(callbacks.tokens.length).to.equal(5);
+                    expect(modToken).to.eql({
+                        line: 2,
+                        char: 1,
+                        length: 3,
+                        tokenType: ETokenType.function,
+                        tokenModifiers: [],
+                    });
+                    expect(nbToken).to.eql({
+                        line: 2,
+                        char: 6,
+                        length: 4,
+                        tokenType: ETokenType.comment,
+                        tokenModifiers: [],
+                    });
+                    expect(noteToken1).to.eql({
+                        line: 3,
+                        char: 0,
+                        length: 6,
+                        tokenType: ETokenType.comment,
+                        tokenModifiers: [],
+                    });
+                    expect(noteToken2).to.eql({
+                        line: 4,
+                        char: 0,
+                        length: 9,
+                        tokenType: ETokenType.comment,
+                        tokenModifiers: [],
+                    });
                 });
             });
 
-            it("should set a comment token for a note modifier", () => {
-                const header = ":: Passage\n";
-                const passage = "[ note ]\nContent\n";
-                const callbacks = new MockCallbacks();
-                const state = buildParsingState({
-                    content: header + passage,
-                    callbacks: callbacks,
+            describe("links", () => {
+                it("should produce no semantic tokens for an empty [[]] link", () => {
+                    const header = ":: Passage\n";
+                    const passage =
+                        "We shall introduce: a link!\n" + "Here it is: [[]]\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    const [targetToken] = callbacks.tokens;
+
+                    expect(callbacks.tokens).to.be.empty;
                 });
-                const parser = uut.getChapbookParser(undefined);
 
-                parser?.parsePassageText(passage, header.length, state);
-                const [token] = callbacks.tokens;
+                it("should set semantic tokens for a [[target]] link", () => {
+                    const header = ":: Passage\n";
+                    const passage =
+                        "We shall introduce: a link!\n" +
+                        "Here it is: [[ target passage ]]\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
 
-                expect(callbacks.tokens.length).to.equal(2);
-                expect(token).to.eql({
-                    line: 1,
-                    char: 2,
-                    length: 4,
-                    tokenType: ETokenType.comment,
-                    tokenModifiers: [],
+                    parser?.parsePassageText(passage, header.length, state);
+                    const [targetToken] = callbacks.tokens;
+
+                    expect(callbacks.tokens.length).to.equal(1);
+                    expect(targetToken).to.eql({
+                        line: 2,
+                        char: 15,
+                        length: 14,
+                        tokenType: ETokenType.class,
+                        tokenModifiers: [],
+                    });
                 });
-            });
 
-            it("should set an embedded document for a CSS modifier", () => {
-                const header = ":: Passage\n";
-                const passage =
-                    "Content before\n" +
-                    "[mod; cSs ]\n" +
-                    "Fake CSS\nMore fake\n" +
-                    "[continue]\nNot CSS.\n";
-                const callbacks = new MockCallbacks();
-                const state = buildParsingState({
-                    content: header + passage,
-                    callbacks: callbacks,
+                it("should set semantic tokens for a [[display|target]] link", () => {
+                    const header = ":: Passage\n";
+                    const passage =
+                        "We shall introduce: a link!\n" +
+                        "Here it is: [[display w a string | target passage]]\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    const [displayToken, barToken, targetToken] =
+                        callbacks.tokens;
+
+                    expect(callbacks.tokens.length).to.equal(3);
+                    expect(displayToken).to.eql({
+                        line: 2,
+                        char: 14,
+                        length: 18,
+                        tokenType: ETokenType.string,
+                        tokenModifiers: [],
+                    });
+                    expect(barToken).to.eql({
+                        line: 2,
+                        char: 33,
+                        length: 1,
+                        tokenType: ETokenType.keyword,
+                        tokenModifiers: [],
+                    });
+                    expect(targetToken).to.eql({
+                        line: 2,
+                        char: 35,
+                        length: 14,
+                        tokenType: ETokenType.class,
+                        tokenModifiers: [],
+                    });
                 });
-                const parser = uut.getChapbookParser(undefined);
 
-                parser?.parsePassageText(passage, header.length, state);
-                const [result] = callbacks.embeddedDocuments;
+                it("should set semantic tokens for a [[display->target]] link", () => {
+                    const header = ":: Passage\n";
+                    const passage =
+                        "We shall introduce: a link!\n" +
+                        "Here it is: [[display w a string -> target passage]]\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
 
-                expect(result.document.getText()).to.eql(
-                    "Fake CSS\nMore fake\n"
-                );
-                expect(result.document.languageId).to.eql("css");
-                expect(result.offset).to.eql(38);
-            });
+                    parser?.parsePassageText(passage, header.length, state);
+                    const [displayToken, arrowToken, targetToken] =
+                        callbacks.tokens;
 
-            it("should set a semantic token for a note modifier", () => {
-                const header = ":: Passage\n";
-                const passage =
-                    "Content before\n" +
-                    "[mod; n.b. ]\n" +
-                    "A note\nMore note\n" +
-                    "[continue]\nUnnoteable.\n";
-                const callbacks = new MockCallbacks();
-                const state = buildParsingState({
-                    content: header + passage,
-                    callbacks: callbacks,
+                    expect(callbacks.tokens.length).to.equal(3);
+                    expect(displayToken).to.eql({
+                        line: 2,
+                        char: 14,
+                        length: 18,
+                        tokenType: ETokenType.string,
+                        tokenModifiers: [],
+                    });
+                    expect(arrowToken).to.eql({
+                        line: 2,
+                        char: 33,
+                        length: 2,
+                        tokenType: ETokenType.keyword,
+                        tokenModifiers: [],
+                    });
+                    expect(targetToken).to.eql({
+                        line: 2,
+                        char: 36,
+                        length: 14,
+                        tokenType: ETokenType.class,
+                        tokenModifiers: [],
+                    });
                 });
-                const parser = uut.getChapbookParser(undefined);
 
-                parser?.parsePassageText(passage, header.length, state);
-                const [modToken, nbToken, noteToken1, noteToken2] =
-                    callbacks.tokens;
+                it("should set semantic tokens for a [[target<-display]] link", () => {
+                    const header = ":: Passage\n";
+                    const passage =
+                        "We shall introduce: a link!\n" +
+                        "Here it is: [[ target passage <- display w a string ]]\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
 
-                expect(callbacks.tokens.length).to.equal(5);
-                expect(modToken).to.eql({
-                    line: 2,
-                    char: 1,
-                    length: 3,
-                    tokenType: ETokenType.function,
-                    tokenModifiers: [],
-                });
-                expect(nbToken).to.eql({
-                    line: 2,
-                    char: 6,
-                    length: 4,
-                    tokenType: ETokenType.comment,
-                    tokenModifiers: [],
-                });
-                expect(noteToken1).to.eql({
-                    line: 3,
-                    char: 0,
-                    length: 6,
-                    tokenType: ETokenType.comment,
-                    tokenModifiers: [],
-                });
-                expect(noteToken2).to.eql({
-                    line: 4,
-                    char: 0,
-                    length: 9,
-                    tokenType: ETokenType.comment,
-                    tokenModifiers: [],
+                    parser?.parsePassageText(passage, header.length, state);
+                    const [targetToken, arrowToken, displayToken] =
+                        callbacks.tokens;
+
+                    expect(callbacks.tokens.length).to.equal(3);
+                    expect(targetToken).to.eql({
+                        line: 2,
+                        char: 15,
+                        length: 14,
+                        tokenType: ETokenType.class,
+                        tokenModifiers: [],
+                    });
+                    expect(arrowToken).to.eql({
+                        line: 2,
+                        char: 30,
+                        length: 2,
+                        tokenType: ETokenType.keyword,
+                        tokenModifiers: [],
+                    });
+                    expect(displayToken).to.eql({
+                        line: 2,
+                        char: 33,
+                        length: 18,
+                        tokenType: ETokenType.string,
+                        tokenModifiers: [],
+                    });
                 });
             });
         });

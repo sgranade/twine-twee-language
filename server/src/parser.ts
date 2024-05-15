@@ -108,6 +108,45 @@ export function logWarningFor(
 }
 
 /**
+ * Create tokens associated with text in a document.
+ *
+ * @param text Document text to tokenize.
+ * @param at Index where the text occurs in the document (zero-based).
+ * @param type Token type.
+ * @param modifiers Token modifiers.
+ * @param state Parsing state.
+ * @returns List of created tokens.
+ */
+export function createTokens(
+    text: string,
+    at: number,
+    type: TokenType,
+    modifiers: TokenModifier[],
+    state: ParsingState
+): Token[] {
+    const tokens = [];
+
+    let { line, character } = state.textDocument.positionAt(at);
+    // Tokens can only span a single line, so split on those lines
+    for (const t of text.split(/\r?\n/)) {
+        if (t?.length) {
+            tokens.push({
+                line: line,
+                char: character,
+                length: t.length,
+                tokenType: type,
+                tokenModifiers: modifiers,
+            });
+        }
+
+        line++;
+        character = 0;
+    }
+
+    return tokens;
+}
+
+/**
  * Log a token associated with text in a document.
  *
  * @param text Document text to tokenize.
@@ -123,21 +162,8 @@ export function logTokenFor(
     modifiers: TokenModifier[],
     state: ParsingState
 ): void {
-    let { line, character } = state.textDocument.positionAt(at);
-    // Tokens can only span a single line, so split on those lines
-    for (const t of text.split(/\r?\n/)) {
-        if (t.length) {
-            state.callbacks.onToken({
-                line: line,
-                char: character,
-                length: t.length,
-                tokenType: type,
-                tokenModifiers: modifiers,
-            });
-        }
-
-        line++;
-        character = 0;
+    for (const token of createTokens(text, at, type, modifiers, state)) {
+        state.callbacks.onToken(token);
     }
 }
 

@@ -1,11 +1,12 @@
 import { TextDocument } from "vscode-languageserver-textdocument";
 import {
     ParsingState,
+    createTokens,
     logErrorFor,
     logTokenFor,
     logWarningFor,
 } from "../parser";
-import { ETokenModifier, ETokenType } from "../tokens";
+import { ETokenModifier, ETokenType, Token } from "../tokens";
 import { removeAndCountPadding } from "../utilities";
 import { PassageTextParser } from "./passage-text-parser";
 
@@ -49,6 +50,122 @@ export function getChapbookParser(
     };
 }
 
+function parseInsert(
+    insert: string,
+    insertIndex: number,
+    state: ParsingState,
+    chapbookState: ChapbookParsingState
+): void {
+    // TODO LOOK FOR INSERTS IN EACH LINE.
+    // {var} IS A VARIABLE INSERT
+    // {function name: arg, property: value }
+    // TODO parse the actual contents
+}
+
+/**
+ * Parse Twine links.
+ *
+ * @param subsection Subsection of the passage text section.
+ * @param subsectionIndex Index in the document where the subsection begins (zero-based).
+ * @param state Parsing state.
+ * @param chapbookState Chapbook-specific parsing state.
+ */
+function parseLinks(
+    subsection: string,
+    subsectionIndex: number,
+    state: ParsingState,
+    chapbookState: ChapbookParsingState
+): void {
+    // Parsing code adapted from `renderLinks()` in `links.ts` from Chapbook
+    for (const m of subsection.matchAll(/\[\[(.*?)\]\]/g)) {
+        const linksIndex = m.index + 2; // + 2 for the opening braces
+        let display = m[1];
+        let displayIndex = 0; // Relative to the start of m[1]
+        let target = display;
+        let targetIndex = displayIndex;
+        let dividerIndex: number;
+        let divider = "";
+        let displayFirst = true;
+
+        // [[display|target]] format
+
+        dividerIndex = display.indexOf("|");
+        if (dividerIndex !== -1) {
+            display = target.substring(0, dividerIndex);
+            targetIndex = dividerIndex + 1;
+            target = target.substring(targetIndex);
+            divider = "|";
+        } else {
+            // [[display->target]] format
+
+            dividerIndex = display.indexOf("->");
+
+            if (dividerIndex !== -1) {
+                display = target.substring(0, dividerIndex);
+                targetIndex = dividerIndex + 2;
+                target = target.substring(targetIndex);
+                divider = "->";
+            } else {
+                // [[target<-display]] format
+
+                dividerIndex = display.indexOf("<-");
+
+                if (dividerIndex !== -1) {
+                    target = display.substring(0, dividerIndex);
+                    displayIndex = dividerIndex + 2;
+                    display = display.substring(displayIndex);
+                    divider = "<-";
+                    displayFirst = false;
+                }
+                // Otherwise [[target]] format
+            }
+        }
+
+        // In all the token creation that follows, we're trusting that
+        // each token string spans a single line so produces one token
+        const tokens: Token[] = [];
+        let indexDelta;
+        [target, indexDelta] = removeAndCountPadding(target);
+        targetIndex += indexDelta;
+        const targetToken = createTokens(
+            target,
+            subsectionIndex + linksIndex + targetIndex,
+            ETokenType.class,
+            [],
+            state
+        )[0];
+        if (dividerIndex === -1) {
+            if (targetToken) state.callbacks.onToken(targetToken);
+        } else {
+            const dividerToken = createTokens(
+                divider,
+                subsectionIndex + linksIndex + dividerIndex,
+                ETokenType.keyword,
+                [],
+                state
+            )[0];
+            [display, indexDelta] = removeAndCountPadding(display);
+            displayIndex += indexDelta;
+            const displayToken = createTokens(
+                display,
+                subsectionIndex + linksIndex + displayIndex,
+                ETokenType.string,
+                [],
+                state
+            )[0];
+            if (displayFirst) {
+                if (displayToken) state.callbacks.onToken(displayToken);
+                if (dividerToken) state.callbacks.onToken(dividerToken);
+                if (targetToken) state.callbacks.onToken(targetToken);
+            } else {
+                if (targetToken) state.callbacks.onToken(targetToken);
+                if (dividerToken) state.callbacks.onToken(dividerToken);
+                if (targetToken) state.callbacks.onToken(displayToken);
+            }
+        }
+    }
+}
+
 /**
  * Parse a text subsection of a Chapbook passage text section.
  *
@@ -81,7 +198,84 @@ function parseTextSubsection(
     } else if (chapbookState.modifierType === ModifierType.Note) {
         logTokenFor(subsection, subsectionIndex, ETokenType.comment, [], state);
     } else {
-        // TODO parse the actual contents
+        // Parse Twine links
+        parseLinks(subsection, subsectionIndex, state, chapbookState);
+
+        // Parse inserts
+        // Parsing code taken from `render()` in `render-insert.ts` from Chapbook
+
+        // startText is the index of the text before the opening curly bracket;
+        // startCurly is the index of the bracket.
+
+        let startText = 0;
+        let startCurly = subsection.indexOf("{");
+
+        if (startCurly === -1) {
+            return;
+        }
+        // Scan forward until we reach:
+        // -   another '{', indicating that the original '{' isn't the start of an
+        //     insert
+        // -   a single or double quote, indicating the start of a string value
+        // -   a '}' that isn't inside a string, indicating the end of a possible
+        //     insert
+
+        let inString = false;
+        let stringDelimiter;
+
+        for (let i = startCurly + 1; i < subsection.length; i++) {
+            switch (subsection[i]) {
+                case "{":
+                    startCurly = i;
+                    inString = false;
+                    break;
+
+                case "'":
+                case '"':
+                    // Ignore backslashed quotes.
+
+                    if (i > 0 && subsection[i - 1] !== "\\") {
+                        // Toggle inString status as needed.
+                        if (!inString) {
+                            inString = true;
+                            stringDelimiter = subsection[i];
+                        } else if (
+                            inString &&
+                            stringDelimiter === subsection[i]
+                        ) {
+                            inString = false;
+                        }
+                    }
+                    break;
+
+                case "}":
+                    if (!inString) {
+                        // Extract the raw insert text to parse
+                        const insertSrc = subsection.substring(
+                            startCurly,
+                            i + 1
+                        );
+                        parseInsert(
+                            insertSrc,
+                            subsectionIndex + startCurly,
+                            state,
+                            chapbookState
+                        );
+
+                        // Advance start variables for the next match.
+                        startText = i + 1;
+                        startCurly = subsection.indexOf("{", startText);
+
+                        if (startCurly === -1) {
+                            // There are no more open curly brackets left to examine.
+                            // Short-circuit the for loop to bring it to an end.
+
+                            i = subsection.length;
+                        }
+                    }
+                    break;
+            }
+        }
     }
 }
 

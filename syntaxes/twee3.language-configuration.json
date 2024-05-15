@@ -6,6 +6,7 @@
 	},
     // symbols used as brackets
     "brackets": [
+        ["[[", "]]"], // Twee passage links
         ["{", "}"],
         ["[", "]"],
         ["(", ")"]
