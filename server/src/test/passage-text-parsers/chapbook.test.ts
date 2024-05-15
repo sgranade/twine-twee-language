@@ -189,7 +189,6 @@ describe("Chapbook Passage", () => {
                     const parser = uut.getChapbookParser(undefined);
 
                     parser?.parsePassageText(passage, header.length, state);
-                    const [targetToken] = callbacks.tokens;
 
                     expect(callbacks.tokens).to.be.empty;
                 });
@@ -338,6 +337,216 @@ describe("Chapbook Passage", () => {
                         tokenModifiers: [],
                     });
                 });
+            });
+
+            describe("inserts", () => {
+                it("should produce semantic tokens for a variable insert", () => {
+                    const header = ":: Passage\n";
+                    const passage =
+                        "Some content.\n" + "A variable insert: { var  }.\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    const [insertToken] = callbacks.tokens;
+
+                    expect(callbacks.tokens.length).to.equal(1);
+                    expect(insertToken).to.eql({
+                        line: 2,
+                        char: 21,
+                        length: 3,
+                        tokenType: ETokenType.variable,
+                        tokenModifiers: [],
+                    });
+                });
+
+                it("should produce semantic tokens for a simple insert", () => {
+                    const header = ":: Passage\n";
+                    const passage =
+                        "Some content.\n" +
+                        "A function insert: { back soon  }.\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    const [functionToken] = callbacks.tokens;
+
+                    expect(callbacks.tokens.length).to.equal(1);
+                    expect(functionToken).to.eql({
+                        line: 2,
+                        char: 21,
+                        length: 9,
+                        tokenType: ETokenType.function,
+                        tokenModifiers: [],
+                    });
+                });
+
+                it("should produce semantic tokens for an insert with an empty argument", () => {
+                    const header = ":: Passage\n";
+                    const passage =
+                        "Some content.\n" +
+                        "A function insert: {back soon: }.\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    const [functionToken] = callbacks.tokens;
+
+                    expect(callbacks.tokens.length).to.equal(1);
+                    expect(functionToken).to.eql({
+                        line: 2,
+                        char: 20,
+                        length: 9,
+                        tokenType: ETokenType.function,
+                        tokenModifiers: [],
+                    });
+                });
+
+                it("should produce semantic tokens for an insert with an argument", () => {
+                    const header = ":: Passage\n";
+                    const passage =
+                        "Some content.\n" +
+                        "A function insert: { back soon: arg  }.\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    const [functionToken, argToken] = callbacks.tokens;
+
+                    expect(callbacks.tokens.length).to.equal(1);
+                    expect(functionToken).to.eql({
+                        line: 2,
+                        char: 21,
+                        length: 9,
+                        tokenType: ETokenType.function,
+                        tokenModifiers: [],
+                    });
+                });
+
+                it("should produce semantic tokens for an insert with an incomplete property", () => {
+                    const header = ":: Passage\n";
+                    const passage =
+                        "Some content.\n" +
+                        "A function insert: {back soon, prop}.\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    const [functionToken] = callbacks.tokens;
+
+                    expect(callbacks.tokens.length).to.equal(1);
+                    expect(functionToken).to.eql({
+                        line: 2,
+                        char: 20,
+                        length: 9,
+                        tokenType: ETokenType.function,
+                        tokenModifiers: [],
+                    });
+                });
+
+                it("should produce semantic tokens for an insert with properties", () => {
+                    const header = ":: Passage\n";
+                    const passage =
+                        "Some content.\n" +
+                        "A function insert: { back soon,  prop1: val1, prop2 : val2  }.\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    const [functionToken, prop1Token, prop2Token] =
+                        callbacks.tokens;
+
+                    expect(callbacks.tokens.length).to.equal(3);
+                    expect(functionToken).to.eql({
+                        line: 2,
+                        char: 21,
+                        length: 9,
+                        tokenType: ETokenType.function,
+                        tokenModifiers: [],
+                    });
+                    expect(prop1Token).to.eql({
+                        line: 2,
+                        char: 33,
+                        length: 5,
+                        tokenType: ETokenType.property,
+                        tokenModifiers: [],
+                    });
+                    expect(prop2Token).to.eql({
+                        line: 2,
+                        char: 46,
+                        length: 5,
+                        tokenType: ETokenType.property,
+                        tokenModifiers: [],
+                    });
+                });
+
+                it("should produce semantic tokens for an insert with an arg and properties", () => {
+                    const header = ":: Passage\n";
+                    const passage =
+                        "Some content.\n" +
+                        "A function insert: { back soon: arg,  prop1: val1, prop2 : val2  }.\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    const [functionToken, prop1Token, prop2Token] =
+                        callbacks.tokens;
+
+                    expect(callbacks.tokens.length).to.equal(3);
+                    expect(functionToken).to.eql({
+                        line: 2,
+                        char: 21,
+                        length: 9,
+                        tokenType: ETokenType.function,
+                        tokenModifiers: [],
+                    });
+                    expect(prop1Token).to.eql({
+                        line: 2,
+                        char: 38,
+                        length: 5,
+                        tokenType: ETokenType.property,
+                        tokenModifiers: [],
+                    });
+                    expect(prop2Token).to.eql({
+                        line: 2,
+                        char: 51,
+                        length: 5,
+                        tokenType: ETokenType.property,
+                        tokenModifiers: [],
+                    });
+                });
+            });
+
+            describe("semantic token order", () => {
+                // TODO make sure it produces tokens in text order, so if there's a link then an insert you get link then insert tokens, and vice verse
             });
         });
     });
@@ -489,78 +698,128 @@ describe("Chapbook Passage", () => {
         });
 
         describe("text section", () => {
-            it("should error on spaces before modifiers", () => {
-                const header = ":: Passage\n";
-                const passage = "var1: 17\n--\n" + "  [modifier]\nOther text\n";
-                const callbacks = new MockCallbacks();
-                const state = buildParsingState({
-                    content: header + passage,
-                    callbacks: callbacks,
+            describe("modifiers", () => {
+                it("should error on spaces before modifiers", () => {
+                    const header = ":: Passage\n";
+                    const passage =
+                        "var1: 17\n--\n" + "  [modifier]\nOther text\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    const [result] = callbacks.errors;
+
+                    expect(callbacks.errors.length).to.equal(1);
+                    expect(result.severity).to.eql(DiagnosticSeverity.Error);
+                    expect(result.message).to.include(
+                        "Modifiers can't have spaces before them"
+                    );
+                    expect(result.range).to.eql(Range.create(3, 0, 3, 2));
                 });
-                const parser = uut.getChapbookParser(undefined);
 
-                parser?.parsePassageText(passage, header.length, state);
-                const [result] = callbacks.errors;
+                it("should error on spaces after modifiers", () => {
+                    const header = ":: Passage\n";
+                    const passage =
+                        "var1: 17\n--\n" + " [modifier]  \nOther text\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
 
-                expect(callbacks.errors.length).to.equal(1);
-                expect(result.severity).to.eql(DiagnosticSeverity.Error);
-                expect(result.message).to.include(
-                    "Modifiers can't have spaces before them"
-                );
-                expect(result.range).to.eql(Range.create(3, 0, 3, 2));
+                    parser?.parsePassageText(passage, header.length, state);
+                    const [, result] = callbacks.errors;
+
+                    expect(callbacks.errors.length).to.equal(2);
+                    expect(result.severity).to.eql(DiagnosticSeverity.Error);
+                    expect(result.message).to.include(
+                        "Modifiers can't have spaces after them"
+                    );
+                    expect(result.range).to.eql(Range.create(3, 11, 3, 13));
+                });
+
+                it("should not error on blank lines before or after modifiers", () => {
+                    const header = ":: Passage\n";
+                    const passage =
+                        "var1: 17\n--\n" + "\n[modifier]\nOther text\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
+
+                    parser?.parsePassageText(passage, header.length, state);
+
+                    expect(callbacks.errors).to.be.empty;
+                });
+
+                it("should not error on Windows blank lines before or after modifiers", () => {
+                    const header = ":: Passage\r\n";
+                    const passage =
+                        "var1: 17\r\n--\r\n" +
+                        "\r\n[modifier]\r\nOther text\r\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
+
+                    parser?.parsePassageText(passage, header.length, state);
+
+                    expect(callbacks.errors).to.be.empty;
+                });
             });
 
-            it("should error on spaces after modifiers", () => {
-                const header = ":: Passage\n";
-                const passage =
-                    "var1: 17\n--\n" + " [modifier]  \nOther text\n";
-                const callbacks = new MockCallbacks();
-                const state = buildParsingState({
-                    content: header + passage,
-                    callbacks: callbacks,
+            describe("inserts", () => {
+                it("should error on an array dereference in the middle of a var insert", () => {
+                    const header = ":: Passage\r\n";
+                    const passage =
+                        "var1: 17\r\n--\r\n" + " {var[0].color}  \r\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    const [result] = callbacks.errors;
+
+                    expect(callbacks.errors.length).to.equal(1);
+                    expect(result.severity).to.eql(DiagnosticSeverity.Error);
+                    expect(result.message).to.include(
+                        "Array dereferencing can only be at the end"
+                    );
+                    expect(result.range).to.eql(Range.create(3, 5, 3, 8));
                 });
-                const parser = uut.getChapbookParser(undefined);
 
-                parser?.parsePassageText(passage, header.length, state);
-                const [, result] = callbacks.errors;
+                it("should error on a function insert whose property has spaces", () => {
+                    const header = ":: Passage\n";
+                    const passage = " {fn insert, bad prop: 1}  \n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
 
-                expect(callbacks.errors.length).to.equal(2);
-                expect(result.severity).to.eql(DiagnosticSeverity.Error);
-                expect(result.message).to.include(
-                    "Modifiers can't have spaces after them"
-                );
-                expect(result.range).to.eql(Range.create(3, 11, 3, 13));
-            });
+                    parser?.parsePassageText(passage, header.length, state);
+                    const [result] = callbacks.errors;
 
-            it("should not error on blank lines before or after modifiers", () => {
-                const header = ":: Passage\n";
-                const passage = "var1: 17\n--\n" + "\n[modifier]\nOther text\n";
-                const callbacks = new MockCallbacks();
-                const state = buildParsingState({
-                    content: header + passage,
-                    callbacks: callbacks,
+                    expect(callbacks.errors.length).to.equal(1);
+                    expect(result.severity).to.eql(DiagnosticSeverity.Error);
+                    expect(result.message).to.include(
+                        "Properties can't have spaces"
+                    );
+                    expect(result.range).to.eql(Range.create(1, 13, 1, 17));
                 });
-                const parser = uut.getChapbookParser(undefined);
-
-                parser?.parsePassageText(passage, header.length, state);
-
-                expect(callbacks.errors).to.be.empty;
-            });
-
-            it("should not error on Windows blank lines before or after modifiers", () => {
-                const header = ":: Passage\r\n";
-                const passage =
-                    "var1: 17\r\n--\r\n" + "\r\n[modifier]\r\nOther text\r\n";
-                const callbacks = new MockCallbacks();
-                const state = buildParsingState({
-                    content: header + passage,
-                    callbacks: callbacks,
-                });
-                const parser = uut.getChapbookParser(undefined);
-
-                parser?.parsePassageText(passage, header.length, state);
-
-                expect(callbacks.errors).to.be.empty;
             });
         });
     });

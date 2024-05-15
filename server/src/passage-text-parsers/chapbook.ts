@@ -7,7 +7,7 @@ import {
     logWarningFor,
 } from "../parser";
 import { ETokenModifier, ETokenType, Token } from "../tokens";
-import { removeAndCountPadding } from "../utilities";
+import { removeAndCountPadding, skipSpaces } from "../utilities";
 import { PassageTextParser } from "./passage-text-parser";
 
 const varsSepPattern = /^--(\r?\n|$)/m;
@@ -28,7 +28,7 @@ enum ModifierType {
 /**
  * Chapbook-specific parsing state information.
  */
-interface ChapbookParsingState {
+export interface ChapbookParsingState {
     /**
      * Type of modifier affecting a text block.
      */
@@ -50,16 +50,147 @@ export function getChapbookParser(
     };
 }
 
+const varInsertPattern = /^({\s*)(\S+)\s*}$/;
+
+/**
+ * Parse a Chapbook insert.
+ *
+ * @param insert Text of the insert, including the {}.
+ * @param insertIndex Index in the document where the insert begins (zero-based).
+ * @param state Parsing state.
+ * @param chapbookState Chapbook-specific parsing state.
+ */
 function parseInsert(
     insert: string,
     insertIndex: number,
     state: ParsingState,
     chapbookState: ChapbookParsingState
 ): void {
-    // TODO LOOK FOR INSERTS IN EACH LINE.
-    // {var} IS A VARIABLE INSERT
-    // {function name: arg, property: value }
-    // TODO parse the actual contents
+    // A single word insert is a variable
+    const m = varInsertPattern.exec(insert);
+    if (m !== null) {
+        const invocation = m[2];
+        const invocationIndex = m[1].length;
+        logTokenFor(
+            invocation,
+            insertIndex + invocationIndex,
+            ETokenType.variable,
+            [],
+            state
+        );
+
+        // Variables only allow array dereferencing at the end
+        const bracketMatch = /(\[.+\])\S+/.exec(invocation);
+        if (bracketMatch !== null) {
+            logErrorFor(
+                bracketMatch[1],
+                insertIndex + invocationIndex + bracketMatch.index,
+                "Array dereferencing can only be at the end (that is, myVar[2] is okay but myVar[2].color isn't)",
+                state
+            );
+        }
+
+        // TODO index variable reference
+
+        return;
+    }
+
+    // Functional inserts follow the form: {function name: arg, property: value }
+
+    insertIndex++; // To swallow the opening curly brace
+    const commaIndex = insert.indexOf(",");
+    // Remove the {} when slicing
+    const functionSection = insert.slice(
+        1,
+        commaIndex !== -1 ? commaIndex : -1
+    );
+    const propertySection = insert.slice(
+        commaIndex !== -1 ? commaIndex + 1 : -1,
+        insert.length - 1
+    );
+    let functionName = functionSection,
+        argument = "";
+    let functionIndex = 0,
+        argumentIndex = 0;
+    const colonIndex = functionSection.indexOf(":");
+    if (colonIndex !== -1) {
+        argumentIndex = colonIndex + 1;
+        argument = functionName.slice(argumentIndex);
+        functionName = functionName.slice(0, colonIndex);
+    }
+
+    // Tokenize the function name
+    [functionName, functionIndex] = skipSpaces(functionName, functionIndex);
+    logTokenFor(
+        functionName,
+        insertIndex + functionIndex,
+        ETokenType.function,
+        [],
+        state
+    );
+
+    // TODO handle args
+
+    // Handle properties
+    if (propertySection.trim()) {
+        const propertySectionIndex = functionSection.length + 1; // + 1 for the comma
+        // TODO ideally parse this as JS. In the meantime, tokenize things that
+        // look like properties.
+        let propertyIndex = 0;
+        while (propertyIndex < propertySection.length) {
+            const colonIndex = propertySection.indexOf(":", propertyIndex);
+            if (colonIndex === -1) break;
+
+            const [prop, leftPad] = removeAndCountPadding(
+                propertySection.slice(propertyIndex, colonIndex)
+            );
+            logTokenFor(
+                prop,
+                insertIndex + propertySectionIndex + propertyIndex + leftPad,
+                ETokenType.property,
+                [],
+                state
+            );
+
+            // Properties can't have spaces bee tee dubs
+            const spaceIndex = prop.lastIndexOf(" ");
+            if (spaceIndex !== -1) {
+                logErrorFor(
+                    prop.slice(0, spaceIndex + 1),
+                    insertIndex +
+                        propertySectionIndex +
+                        propertyIndex +
+                        leftPad,
+                    "Properties can't have spaces",
+                    state
+                );
+            }
+
+            // Scan forward to look for a comma that's not in a string,
+            // indicating another property
+            let inString = "";
+            const i = colonIndex + 1;
+            for (
+                propertyIndex = colonIndex + 1;
+                propertyIndex < propertySection.length;
+                ++propertyIndex
+            ) {
+                const c = propertySection[propertyIndex];
+                if (c === "," && inString === "") {
+                    propertyIndex++; // To skip the comma
+                    break;
+                }
+
+                if (inString && c === inString) {
+                    inString = "";
+                } else if (c === '"' || c === "'") {
+                    inString = c;
+                }
+            }
+        }
+    }
+
+    // TODO parse the actual insert contents
 }
 
 /**
@@ -69,15 +200,23 @@ function parseInsert(
  * @param subsectionIndex Index in the document where the subsection begins (zero-based).
  * @param state Parsing state.
  * @param chapbookState Chapbook-specific parsing state.
+ * @returns Updated subsection with the link sections blanked out
  */
-function parseLinks(
+
+export function parseLinks(
     subsection: string,
     subsectionIndex: number,
     state: ParsingState,
     chapbookState: ChapbookParsingState
-): void {
+): string {
     // Parsing code adapted from `renderLinks()` in `links.ts` from Chapbook
     for (const m of subsection.matchAll(/\[\[(.*?)\]\]/g)) {
+        // Get rid of the link from the subsection text so it doesn't get re-parsed when we look for inserts
+        subsection =
+            subsection.slice(0, m.index) +
+            " ".repeat(m[0].length) +
+            subsection.slice(m.index + m[0].length);
+
         const linksIndex = m.index + 2; // + 2 for the opening braces
         let display = m[1];
         let displayIndex = 0; // Relative to the start of m[1]
@@ -88,7 +227,6 @@ function parseLinks(
         let displayFirst = true;
 
         // [[display|target]] format
-
         dividerIndex = display.indexOf("|");
         if (dividerIndex !== -1) {
             display = target.substring(0, dividerIndex);
@@ -97,7 +235,6 @@ function parseLinks(
             divider = "|";
         } else {
             // [[display->target]] format
-
             dividerIndex = display.indexOf("->");
 
             if (dividerIndex !== -1) {
@@ -107,7 +244,6 @@ function parseLinks(
                 divider = "->";
             } else {
                 // [[target<-display]] format
-
                 dividerIndex = display.indexOf("<-");
 
                 if (dividerIndex !== -1) {
@@ -125,8 +261,7 @@ function parseLinks(
         // each token string spans a single line so produces one token
         const tokens: Token[] = [];
         let indexDelta;
-        [target, indexDelta] = removeAndCountPadding(target);
-        targetIndex += indexDelta;
+        [target, targetIndex] = skipSpaces(target, targetIndex);
         const targetToken = createTokens(
             target,
             subsectionIndex + linksIndex + targetIndex,
@@ -164,6 +299,8 @@ function parseLinks(
             }
         }
     }
+
+    return subsection;
 }
 
 /**
@@ -198,8 +335,15 @@ function parseTextSubsection(
     } else if (chapbookState.modifierType === ModifierType.Note) {
         logTokenFor(subsection, subsectionIndex, ETokenType.comment, [], state);
     } else {
-        // Parse Twine links
-        parseLinks(subsection, subsectionIndex, state, chapbookState);
+        // Parse Twine links first
+        // The function replaces the link text with blank spaces so, if any include
+        // curly braces, they don't get parsed as inserts.
+        subsection = parseLinks(
+            subsection,
+            subsectionIndex,
+            state,
+            chapbookState
+        );
 
         // Parse inserts
         // Parsing code taken from `render()` in `render-insert.ts` from Chapbook
@@ -276,6 +420,11 @@ function parseTextSubsection(
                     break;
             }
         }
+
+        // TODO TOKENIZE NODES/LEAFS
+
+        // Since links and inserts may be interleaved, we need to
+        // TODO SORT SEMANTIC TOKENS
     }
 }
 
@@ -299,11 +448,13 @@ function parseModifier(
     let tokenIndex = modifierIndex;
 
     while (remainingModifier) {
-        [remainingModifier, padLeft] = removeAndCountPadding(remainingModifier);
+        [remainingModifier, tokenIndex] = skipSpaces(
+            remainingModifier,
+            tokenIndex
+        );
         if (remainingModifier === "") {
             break;
         }
-        tokenIndex += padLeft;
         const token = remainingModifier.split(/\s/, 1)[0];
         if (firstToken) {
             // The first token can set the following text block's state

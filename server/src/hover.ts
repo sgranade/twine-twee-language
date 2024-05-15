@@ -11,7 +11,7 @@ export async function generateHover(
     index: ProjectIndex
 ): Promise<Hover | null | undefined> {
     const offset = document.offsetAt(position);
-    let hover: Hover | null | undefined;
+    let hover: Hover | null | undefined = undefined;
 
     // Embedded documents get to create their own completions
     for (const embeddedDocument of index.getEmbeddedDocuments(document.uri) ||
@@ -33,6 +33,8 @@ export async function generateHover(
                     embeddedDocument.offset
                 );
             }
+
+            break;
         }
     }
 

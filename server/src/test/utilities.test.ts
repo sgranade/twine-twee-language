@@ -27,7 +27,7 @@ describe("Utilities", () => {
         });
     });
 
-    describe("remove left padding", () => {
+    describe("remove padding", () => {
         it("should return the string without padding on the left and right", () => {
             // No arrange
 
@@ -54,6 +54,24 @@ describe("Utilities", () => {
             );
 
             expect(result).to.eql(1);
+        });
+    });
+
+    describe("move past spaces", () => {
+        it("should return the string without padding on the left and right", () => {
+            // No arrange
+
+            const [result] = uut.skipSpaces(" \t No padding? ", 17);
+
+            expect(result).to.eql("No padding?");
+        });
+
+        it("should advance the passed index value by the padding amount", () => {
+            // No arrange
+
+            const [, result] = uut.skipSpaces(" \t No padding? ", 17);
+
+            expect(result).to.eql(20);
         });
     });
 

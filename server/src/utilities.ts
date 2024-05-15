@@ -61,6 +61,20 @@ export function removeAndCountPadding(s: string): [string, number, number] {
 }
 
 /**
+ * Move a string and its index into a larger string to the first non-space character.
+ *
+ * For example, calling this function with ("  test", 7) would return ["test", 9].
+ *
+ * @param s String to remove leading padding from.
+ * @param n Index into a larger string.
+ * @returns Tuple of the un-padded string and the new index value.
+ */
+export function skipSpaces(s: string, n: number): [string, number] {
+    const [sTrimmed, leftPad] = removeAndCountPadding(s);
+    return [sTrimmed, n + leftPad];
+}
+
+/**
  * Normalize a URI.
  *
  * @param uriString URI to normalize.
