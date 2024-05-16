@@ -1,6 +1,7 @@
 import { TextDocument } from "vscode-languageserver-textdocument";
 import {
     ParsingState,
+    createRangeFor,
     logErrorFor,
     logTokenFor,
     logWarningFor,
@@ -172,7 +173,7 @@ function parseInsert(
         chapbookState
     );
 
-    // TODO handle args
+    // TODO tokenize args & look for variable references
 
     // Handle properties
     if (propertySection.trim()) {
@@ -308,7 +309,14 @@ export function parseLinks(
             chapbookState
         );
 
-        // TODO CAPTURE REFERENCE TO A PASSAGE NAME
+        state.callbacks.onPassageReference(
+            target,
+            createRangeFor(
+                target,
+                subsectionIndex + linksIndex + targetIndex,
+                state
+            )
+        );
 
         if (dividerIndex !== -1) {
             capturePreTokenFor(
