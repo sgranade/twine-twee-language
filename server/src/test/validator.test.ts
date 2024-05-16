@@ -87,4 +87,32 @@ describe("Validator", () => {
             expect(result[0].range).to.eql(Range.create(1, 19, 1, 20));
         });
     });
+
+    describe("Passage References", () => {
+        it("should flag passage references that aren't in the index", async () => {
+            const document = TextDocument.create(
+                "test-uri",
+                "twine",
+                1,
+                '{ "test": 17, }'
+            );
+            const subDocument = TextDocument.create(
+                "file:///fake.json",
+                "json",
+                1,
+                document.getText()
+            );
+            const index = new Index();
+            index.setPassageReferences("test-uri", {
+                "Non-existent passage": [Range.create(1, 2, 3, 4)],
+            });
+
+            const result = await uut.generateDiagnostics(document, index);
+
+            expect(result.length).to.equal(1);
+            expect(result[0].message).to.contain(
+                "Cannot find passage 'Non-existent passage'"
+            );
+        });
+    });
 });

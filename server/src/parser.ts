@@ -50,6 +50,7 @@ export interface ParsingState {
  */
 export interface ParserCallbacks {
     onPassage(passage: Passage): void;
+    onPassageReference(passageName: string, range: Range): void;
     onStoryTitle(title: string, range: Range): void;
     onStoryData(data: StoryData, range: Range): void;
     onEmbeddedDocument(document: EmbeddedDocument): void;

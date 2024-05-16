@@ -45,6 +45,7 @@ export function buildParsingState({
 
 export class MockCallbacks implements ParserCallbacks {
     public passages: Passage[] = [];
+    public passageReferences: Record<string, Range[]> = {};
     public passageContents: string[] = [];
     public storyTitle?: string;
     public storyTitleRange?: Range;
@@ -56,6 +57,11 @@ export class MockCallbacks implements ParserCallbacks {
 
     onPassage(passage: Passage): void {
         this.passages.push(passage);
+    }
+    onPassageReference(passageName: string, range: Range): void {
+        if (this.passageReferences[passageName] === undefined)
+            this.passageReferences[passageName] = [];
+        this.passageReferences[passageName].push(range);
     }
     onStoryTitle(title: string, range: Range): void {
         this.storyTitle = title;

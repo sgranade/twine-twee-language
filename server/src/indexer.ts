@@ -16,6 +16,7 @@ class IndexingState {
     textDocument: TextDocument;
 
     passages: Passage[] = [];
+    passageReferences: Record<string, Range[]> = {};
     parseErrors: Diagnostic[] = [];
     tokens: Token[] = [];
     embeddedDocuments: EmbeddedDocument[] = [];
@@ -48,6 +49,12 @@ export function updateProjectIndex(
     const callbacks: ParserCallbacks = {
         onPassage: function (passage: Passage): void {
             indexingState.passages.push(passage);
+        },
+        onPassageReference(passageName: string, range: Range): void {
+            if (indexingState.passageReferences[passageName] === undefined) {
+                indexingState.passageReferences[passageName] = [];
+            }
+            indexingState.passageReferences[passageName].push(range);
         },
         onStoryTitle: function (title: string, range: Range): void {
             if (index.getStoryTitle() !== undefined) {
@@ -94,6 +101,7 @@ export function updateProjectIndex(
     );
 
     index.setPassages(uri, indexingState.passages);
+    index.setPassageReferences(uri, indexingState.passageReferences);
     index.setEmbeddedDocuments(uri, indexingState.embeddedDocuments);
     index.setTokens(uri, indexingState.tokens);
     index.setParseErrors(uri, indexingState.parseErrors);

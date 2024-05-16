@@ -108,6 +108,32 @@ describe("Project Index", () => {
             });
         });
 
+        describe("Passage References", () => {
+            it("should return undefined for unindexed files", () => {
+                const index = new uut.Index();
+
+                const result = index.getPassageReferences("nopers");
+
+                expect(result).to.be.undefined;
+            });
+
+            it("should return passages for indexed files", () => {
+                const passageReferences = {
+                    "Passage 1": [Range.create(1, 2, 3, 4)],
+                    "Passage 2": [
+                        Range.create(5, 6, 7, 8),
+                        Range.create(9, 10, 11, 12),
+                    ],
+                };
+                const index = new uut.Index();
+                index.setPassageReferences("fake-uri", passageReferences);
+
+                const result = index.getPassageReferences("fake-uri");
+
+                expect(result).to.eql(passageReferences);
+            });
+        });
+
         describe("Embedded Documents", () => {
             it("should return an empty array for an unindexed file", () => {
                 const index = new uut.Index();

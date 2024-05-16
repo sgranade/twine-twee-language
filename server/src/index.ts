@@ -68,6 +68,15 @@ export interface ProjectIndex {
      */
     setPassages(uri: string, newPassages: Passage[]): void;
     /**
+     * Set references to a passage in a document.
+     * @param uri URI to document whose index is to be updated.
+     * @param newPassages New index of references to passages.
+     */
+    setPassageReferences(
+        uri: string,
+        newReferences: Record<string, Range[]>
+    ): void;
+    /**
      * Set a document's list of embedded documents.
      * @param uri URI to document whose index is to be updated.
      * @param errors New list of embedded documents.
@@ -102,10 +111,15 @@ export interface ProjectIndex {
      */
     getStoryDataUri(): string | undefined;
     /**
-     * Get the list of passages in a document, if indexed.
+     * Get a document's list of passages, if indexed.
      * @param uri Document URI.
      */
     getPassages(uri: string): Passage[] | undefined;
+    /**
+     * Get a document's references to passages, if indexed.
+     * @param uri Document URI.
+     */
+    getPassageReferences(uri: string): Record<string, Range[]> | undefined;
     /**
      * Get a document's list of embedded documents.
      * @param uri Document URI.
@@ -141,6 +155,7 @@ export class Index implements ProjectIndex {
     private _storyData?: StoryData;
     private _storyDataUri?: string;
     private _passages: Record<string, Passage[]> = {};
+    private _passageReferences: Record<string, Record<string, Range[]>> = {};
     private _embeddedDocuments: Record<string, EmbeddedDocument[]> = {};
     private _tokens: Record<string, Token[]> = {};
     private _parseErrors: Record<string, Diagnostic[]> = {};
@@ -158,6 +173,13 @@ export class Index implements ProjectIndex {
     setPassages(uri: string, newPassages: Passage[]): void {
         uri = normalizeUri(uri);
         this._passages[uri] = [...newPassages];
+    }
+    setPassageReferences(
+        uri: string,
+        newReferences: Record<string, Range[]>
+    ): void {
+        uri = normalizeUri(uri);
+        this._passageReferences[uri] = newReferences;
     }
     setEmbeddedDocuments(uri: string, documents: EmbeddedDocument[]): void {
         uri = normalizeUri(uri);
@@ -187,6 +209,10 @@ export class Index implements ProjectIndex {
         uri = normalizeUri(uri);
         return this._passages[uri];
     }
+    getPassageReferences(uri: string): Record<string, Range[]> | undefined {
+        uri = normalizeUri(uri);
+        return this._passageReferences[uri];
+    }
     getEmbeddedDocuments(uri: string): EmbeddedDocument[] {
         uri = normalizeUri(uri);
         return this._embeddedDocuments[uri] ?? [];
@@ -211,6 +237,7 @@ export class Index implements ProjectIndex {
     removeDocument(uri: string): void {
         uri = normalizeUri(uri);
         delete this._passages[uri];
+        delete this._passageReferences[uri];
         delete this._embeddedDocuments[uri];
         delete this._tokens[uri];
         delete this._parseErrors[uri];

@@ -1,11 +1,14 @@
 import { expect } from "chai";
 import "mocha";
+import { ImportMock } from "ts-mock-imports";
 import { DiagnosticSeverity, Position, Range } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { Index } from "../index";
 import { buildPassage } from "./builders";
 
+import * as ptpModule from "../passage-text-parsers/passage-text-parser";
+import { ParsingState } from "../parser";
 import * as uut from "../indexer";
 
 function buildDocument({
@@ -56,6 +59,43 @@ describe("Indexer", () => {
                     scope: Range.create(5, 0, 5, 12),
                 }),
             ]);
+        });
+
+        it("should add passage references to the index", () => {
+            const doc = buildDocument({
+                uri: "test-uri",
+                content: "::Passage 1\nYup\n\n",
+            });
+            const index = new Index();
+            // Because passage references only show up in passage contents, we
+            // need to mock the passage text parser to create a reference
+            const mockFunction = ImportMock.mockFunction(
+                ptpModule,
+                "getPassageTextParser"
+            ).callsFake((format) => {
+                return {
+                    id: "FakeFormat",
+                    parsePassageText: (
+                        passageText: string,
+                        textIndex: number,
+                        state: ParsingState
+                    ) => {
+                        if (passageText === "Yup\n\n")
+                            state.callbacks.onPassageReference(
+                                "Other Passage",
+                                Range.create(1, 2, 3, 4)
+                            );
+                    },
+                };
+            });
+
+            uut.updateProjectIndex(doc, true, index);
+            mockFunction.restore();
+            const result = index.getPassageReferences("test-uri");
+
+            expect(result).to.eql({
+                "Other Passage": [Range.create(1, 2, 3, 4)],
+            });
         });
 
         it("should add the story title to the index", () => {

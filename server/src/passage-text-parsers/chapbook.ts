@@ -307,6 +307,9 @@ export function parseLinks(
             [],
             chapbookState
         );
+
+        // TODO CAPTURE REFERENCE TO A PASSAGE NAME
+
         if (dividerIndex !== -1) {
             capturePreTokenFor(
                 divider,
@@ -678,9 +681,7 @@ function parseVarsSection(
         let name = m[2].slice(0, colonIndex).trimEnd();
         const nameIndex = m.index + m[1].length;
         // eslint-disable-next-line prefer-const
-        let [value, valueIndex] = removeAndCountPadding(
-            m[1].slice(colonIndex + 1)
-        );
+        let [, valueIndex] = removeAndCountPadding(m[1].slice(colonIndex + 1));
         valueIndex += m.index + colonIndex;
 
         // Check for a condition
@@ -757,7 +758,7 @@ function parseVarsSection(
 
         // TODO call back on variable
 
-        // Tokenize? the value as a JS expression
+        // TODO Tokenize? the value as a JS expression
     }
 }
 
