@@ -108,7 +108,7 @@ export function logWarningFor(
 }
 
 /**
- * Create tokens associated with text in a document.
+ * Create semantic tokens associated with text in a document.
  *
  * @param text Document text to tokenize.
  * @param at Index where the text occurs in the document (zero-based).

@@ -1,12 +1,16 @@
 import { TextDocument } from "vscode-languageserver-textdocument";
 import {
     ParsingState,
-    createTokens,
     logErrorFor,
     logTokenFor,
     logWarningFor,
 } from "../parser";
-import { ETokenModifier, ETokenType, Token } from "../tokens";
+import {
+    ETokenModifier,
+    ETokenType,
+    TokenModifier,
+    TokenType,
+} from "../tokens";
 import { removeAndCountPadding, skipSpaces } from "../utilities";
 import { PassageTextParser } from "./passage-text-parser";
 
@@ -14,26 +18,6 @@ const varsSepPattern = /^--(\r?\n|$)/m;
 const conditionPattern = /((\((.+?)\)?)\s*)([^)]*)$/;
 const modifierPattern = /^([ \t]*)\[([^[].+[^\]])\](\s*?)(?:\r?\n|$)/gm;
 const lineExtractionPattern = /^(\s*?)\b(.*)$/gm;
-
-/**
- * Type of Chapbook modifier
- */
-enum ModifierType {
-    Javascript,
-    Css,
-    Note,
-    Other,
-}
-
-/**
- * Chapbook-specific parsing state information.
- */
-export interface ChapbookParsingState {
-    /**
-     * Type of modifier affecting a text block.
-     */
-    modifierType: ModifierType;
-}
 
 /**
  * Get passage text parser for the Chapbook story format.
@@ -48,6 +32,65 @@ export function getChapbookParser(
         id: "chapbook-any",
         parsePassageText: parsePassageText,
     };
+}
+
+/**
+ * Type of Chapbook modifier
+ */
+enum ModifierType {
+    Javascript,
+    Css,
+    Note,
+    Other,
+}
+
+/**
+ * Raw contents for a semantic token.
+ */
+interface PreToken {
+    text: string;
+    at: number;
+    type: TokenType;
+    modifiers: TokenModifier[];
+}
+
+/**
+ * Chapbook-specific parsing state information.
+ */
+export interface ChapbookParsingState {
+    /**
+     * Type of modifier affecting a text block.
+     */
+    modifierType: ModifierType;
+    /**
+     * Information for semantic tokens generated in a text subsection.
+     */
+    textSubsectionTokens: Record<number, PreToken>;
+}
+
+/**
+ * Capture pre-semantic-token information for later transmission.
+ *
+ * @param text Document text to tokenize.
+ * @param at Index where the text occurs in the document (zero-based).
+ * @param type Token type.
+ * @param modifiers Token modifiers.
+ * @param chapbookState Parsing state.
+ */
+function capturePreTokenFor(
+    text: string,
+    at: number,
+    type: TokenType,
+    modifiers: TokenModifier[],
+    chapbookState: ChapbookParsingState
+): void {
+    if (text.length)
+        chapbookState.textSubsectionTokens[at] = {
+            text,
+            at,
+            type,
+            modifiers,
+        };
 }
 
 const varInsertPattern = /^({\s*)(\S+)\s*}$/;
@@ -71,12 +114,12 @@ function parseInsert(
     if (m !== null) {
         const invocation = m[2];
         const invocationIndex = m[1].length;
-        logTokenFor(
+        capturePreTokenFor(
             invocation,
             insertIndex + invocationIndex,
             ETokenType.variable,
             [],
-            state
+            chapbookState
         );
 
         // Variables only allow array dereferencing at the end
@@ -121,12 +164,12 @@ function parseInsert(
 
     // Tokenize the function name
     [functionName, functionIndex] = skipSpaces(functionName, functionIndex);
-    logTokenFor(
+    capturePreTokenFor(
         functionName,
         insertIndex + functionIndex,
         ETokenType.function,
         [],
-        state
+        chapbookState
     );
 
     // TODO handle args
@@ -144,12 +187,12 @@ function parseInsert(
             const [prop, leftPad] = removeAndCountPadding(
                 propertySection.slice(propertyIndex, colonIndex)
             );
-            logTokenFor(
+            capturePreTokenFor(
                 prop,
                 insertIndex + propertySectionIndex + propertyIndex + leftPad,
                 ETokenType.property,
                 [],
-                state
+                chapbookState
             );
 
             // Properties can't have spaces bee tee dubs
@@ -224,7 +267,6 @@ export function parseLinks(
         let targetIndex = displayIndex;
         let dividerIndex: number;
         let divider = "";
-        let displayFirst = true;
 
         // [[display|target]] format
         dividerIndex = display.indexOf("|");
@@ -251,52 +293,37 @@ export function parseLinks(
                     displayIndex = dividerIndex + 2;
                     display = display.substring(displayIndex);
                     divider = "<-";
-                    displayFirst = false;
                 }
                 // Otherwise [[target]] format
             }
         }
 
-        // In all the token creation that follows, we're trusting that
-        // each token string spans a single line so produces one token
-        const tokens: Token[] = [];
         let indexDelta;
         [target, targetIndex] = skipSpaces(target, targetIndex);
-        const targetToken = createTokens(
+        capturePreTokenFor(
             target,
             subsectionIndex + linksIndex + targetIndex,
             ETokenType.class,
             [],
-            state
-        )[0];
-        if (dividerIndex === -1) {
-            if (targetToken) state.callbacks.onToken(targetToken);
-        } else {
-            const dividerToken = createTokens(
+            chapbookState
+        );
+        if (dividerIndex !== -1) {
+            capturePreTokenFor(
                 divider,
                 subsectionIndex + linksIndex + dividerIndex,
                 ETokenType.keyword,
                 [],
-                state
-            )[0];
+                chapbookState
+            );
             [display, indexDelta] = removeAndCountPadding(display);
             displayIndex += indexDelta;
-            const displayToken = createTokens(
+            capturePreTokenFor(
                 display,
                 subsectionIndex + linksIndex + displayIndex,
                 ETokenType.string,
                 [],
-                state
-            )[0];
-            if (displayFirst) {
-                if (displayToken) state.callbacks.onToken(displayToken);
-                if (dividerToken) state.callbacks.onToken(dividerToken);
-                if (targetToken) state.callbacks.onToken(targetToken);
-            } else {
-                if (targetToken) state.callbacks.onToken(targetToken);
-                if (dividerToken) state.callbacks.onToken(dividerToken);
-                if (targetToken) state.callbacks.onToken(displayToken);
-            }
+                chapbookState
+            );
         }
     }
 
@@ -335,6 +362,11 @@ function parseTextSubsection(
     } else if (chapbookState.modifierType === ModifierType.Note) {
         logTokenFor(subsection, subsectionIndex, ETokenType.comment, [], state);
     } else {
+        // Semantic tokens have to be submitted in document order,
+        // but we're going to generate them out of order. We'll
+        // capture them and then later submit them in the proper order.
+        chapbookState.textSubsectionTokens = {};
+
         // Parse Twine links first
         // The function replaces the link text with blank spaces so, if any include
         // curly braces, they don't get parsed as inserts.
@@ -354,77 +386,79 @@ function parseTextSubsection(
         let startText = 0;
         let startCurly = subsection.indexOf("{");
 
-        if (startCurly === -1) {
-            return;
-        }
-        // Scan forward until we reach:
-        // -   another '{', indicating that the original '{' isn't the start of an
-        //     insert
-        // -   a single or double quote, indicating the start of a string value
-        // -   a '}' that isn't inside a string, indicating the end of a possible
-        //     insert
+        if (startCurly !== -1) {
+            // Scan forward until we reach:
+            // -   another '{', indicating that the original '{' isn't the start of an
+            //     insert
+            // -   a single or double quote, indicating the start of a string value
+            // -   a '}' that isn't inside a string, indicating the end of a possible
+            //     insert
 
-        let inString = false;
-        let stringDelimiter;
+            let inString = false;
+            let stringDelimiter;
 
-        for (let i = startCurly + 1; i < subsection.length; i++) {
-            switch (subsection[i]) {
-                case "{":
-                    startCurly = i;
-                    inString = false;
-                    break;
+            for (let i = startCurly + 1; i < subsection.length; i++) {
+                switch (subsection[i]) {
+                    case "{":
+                        startCurly = i;
+                        inString = false;
+                        break;
 
-                case "'":
-                case '"':
-                    // Ignore backslashed quotes.
+                    case "'":
+                    case '"':
+                        // Ignore backslashed quotes.
 
-                    if (i > 0 && subsection[i - 1] !== "\\") {
-                        // Toggle inString status as needed.
+                        if (i > 0 && subsection[i - 1] !== "\\") {
+                            // Toggle inString status as needed.
+                            if (!inString) {
+                                inString = true;
+                                stringDelimiter = subsection[i];
+                            } else if (
+                                inString &&
+                                stringDelimiter === subsection[i]
+                            ) {
+                                inString = false;
+                            }
+                        }
+                        break;
+
+                    case "}":
                         if (!inString) {
-                            inString = true;
-                            stringDelimiter = subsection[i];
-                        } else if (
-                            inString &&
-                            stringDelimiter === subsection[i]
-                        ) {
-                            inString = false;
+                            // Extract the raw insert text to parse
+                            const insertSrc = subsection.substring(
+                                startCurly,
+                                i + 1
+                            );
+                            parseInsert(
+                                insertSrc,
+                                subsectionIndex + startCurly,
+                                state,
+                                chapbookState
+                            );
+
+                            // Advance start variables for the next match.
+                            startText = i + 1;
+                            startCurly = subsection.indexOf("{", startText);
+
+                            if (startCurly === -1) {
+                                // There are no more open curly brackets left to examine.
+                                // Short-circuit the for loop to bring it to an end.
+
+                                i = subsection.length;
+                            }
                         }
-                    }
-                    break;
-
-                case "}":
-                    if (!inString) {
-                        // Extract the raw insert text to parse
-                        const insertSrc = subsection.substring(
-                            startCurly,
-                            i + 1
-                        );
-                        parseInsert(
-                            insertSrc,
-                            subsectionIndex + startCurly,
-                            state,
-                            chapbookState
-                        );
-
-                        // Advance start variables for the next match.
-                        startText = i + 1;
-                        startCurly = subsection.indexOf("{", startText);
-
-                        if (startCurly === -1) {
-                            // There are no more open curly brackets left to examine.
-                            // Short-circuit the for loop to bring it to an end.
-
-                            i = subsection.length;
-                        }
-                    }
-                    break;
+                        break;
+                }
             }
         }
 
         // TODO TOKENIZE NODES/LEAFS
 
-        // Since links and inserts may be interleaved, we need to
-        // TODO SORT SEMANTIC TOKENS
+        // Submit semantic tokens in document order
+        // (taking advantage of object own key enumeration order)
+        for (const t of Object.values(chapbookState.textSubsectionTokens)) {
+            logTokenFor(t.text, t.at, t.type, t.modifiers, state);
+        }
     }
 }
 
@@ -515,6 +549,7 @@ function parseTextSection(
     let previousModifierEndIndex = 0;
     const chapbookState: ChapbookParsingState = {
         modifierType: ModifierType.Other,
+        textSubsectionTokens: {},
     };
     for (const m of section.matchAll(modifierPattern)) {
         // Parse the text from just after the previous modifier to just before the current one

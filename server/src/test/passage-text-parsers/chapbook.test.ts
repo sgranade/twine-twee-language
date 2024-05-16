@@ -546,7 +546,44 @@ describe("Chapbook Passage", () => {
             });
 
             describe("semantic token order", () => {
-                // TODO make sure it produces tokens in text order, so if there's a link then an insert you get link then insert tokens, and vice verse
+                it("should interleave tokens in document order", () => {
+                    const header = ":: Passage\n";
+                    const passage =
+                        "Link: [[target]] insert {var} another link [[target2]].";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    const [target1Token, varToken, target2Token] =
+                        callbacks.tokens;
+
+                    expect(callbacks.tokens.length).to.equal(3);
+                    expect(target1Token).to.eql({
+                        line: 1,
+                        char: 8,
+                        length: 6,
+                        tokenType: ETokenType.class,
+                        tokenModifiers: [],
+                    });
+                    expect(varToken).to.eql({
+                        line: 1,
+                        char: 25,
+                        length: 3,
+                        tokenType: ETokenType.variable,
+                        tokenModifiers: [],
+                    });
+                    expect(target2Token).to.eql({
+                        line: 1,
+                        char: 45,
+                        length: 7,
+                        tokenType: ETokenType.class,
+                        tokenModifiers: [],
+                    });
+                });
             });
         });
     });
