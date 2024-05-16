@@ -5,7 +5,7 @@ import {
 } from "vscode-languageclient";
 
 let client: BaseLanguageClient;
-const notificationManagers: Map<string, ListenerManager> = new Map();
+const notificationManagers: Record<string, ListenerManager> = {};
 
 /**
  * Class that keeps track of whether or not it's been disposed.
@@ -64,7 +64,7 @@ export function initNotifications(
     client = newClient;
     return vscode.Disposable.from({
         dispose: function () {
-            for (const manager of notificationManagers.values()) {
+            for (const manager of Object.values(notificationManagers)) {
                 manager.dispose();
             }
         },
@@ -86,14 +86,14 @@ export function addNotificationHandler(
     }
 
     const wrapper = new ListenerWrapper(handler);
-    let manager = notificationManagers.get(method);
+    let manager = notificationManagers[method];
     if (manager === undefined) {
         manager = new ListenerManager();
         const disposable = client.onNotification(method, (...params) => {
             manager?.handleNotification(manager, params);
         });
         manager.disposable = disposable;
-        notificationManagers.set(method, manager);
+        notificationManagers[method] = manager;
     }
     manager.listenMethods.push(wrapper);
     return vscode.Disposable.from(wrapper);

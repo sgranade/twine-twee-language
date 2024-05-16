@@ -622,9 +622,9 @@ describe("Parser", () => {
 
                 uut.parse(doc, undefined, true, callbacks);
 
-                expect(callbacks.storyData?.tagColors).to.eql(
-                    new Map([["tag-1", "black"]])
-                );
+                expect(callbacks.storyData?.tagColors).to.eql({
+                    "tag-1": "black",
+                });
             });
 
             it("should call back on StoryData with the zoom level included", () => {

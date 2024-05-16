@@ -20,14 +20,8 @@ export interface StoryData {
     ifid: string;
     storyFormat?: StoryFormat;
     start?: string;
-    tagColors?: Map<string, string>;
+    tagColors?: Record<string, string>;
     zoom?: number;
-}
-
-export interface PassageMetadata {
-    raw: Label;
-    position?: string;
-    size?: string;
 }
 
 /**
@@ -40,6 +34,15 @@ export interface Passage {
     isStylesheet: boolean;
     tags?: Label[];
     metadata?: PassageMetadata;
+}
+
+/**
+ * Metadata associated with a Twee 3 passage.
+ */
+export interface PassageMetadata {
+    raw: Label;
+    position?: string;
+    size?: string;
 }
 
 /**
@@ -137,10 +140,10 @@ export class Index implements ProjectIndex {
     private _storyTitleUri?: string;
     private _storyData?: StoryData;
     private _storyDataUri?: string;
-    private _passages: Map<string, Passage[]> = new Map();
-    private _embeddedDocuments: Map<string, EmbeddedDocument[]> = new Map();
-    private _tokens: Map<string, Token[]> = new Map();
-    private _parseErrors: Map<string, Diagnostic[]> = new Map();
+    private _passages: Record<string, Passage[]> = {};
+    private _embeddedDocuments: Record<string, EmbeddedDocument[]> = {};
+    private _tokens: Record<string, Token[]> = {};
+    private _parseErrors: Record<string, Diagnostic[]> = {};
 
     setStoryTitle(title: string, uri: string): void {
         uri = normalizeUri(uri);
@@ -154,19 +157,19 @@ export class Index implements ProjectIndex {
     }
     setPassages(uri: string, newPassages: Passage[]): void {
         uri = normalizeUri(uri);
-        this._passages.set(uri, [...newPassages]);
+        this._passages[uri] = [...newPassages];
     }
     setEmbeddedDocuments(uri: string, documents: EmbeddedDocument[]): void {
         uri = normalizeUri(uri);
-        this._embeddedDocuments.set(uri, [...documents]);
+        this._embeddedDocuments[uri] = [...documents];
     }
     setTokens(uri: string, tokens: Token[]): void {
         uri = normalizeUri(uri);
-        this._tokens.set(uri, [...tokens]);
+        this._tokens[uri] = [...tokens];
     }
     setParseErrors(uri: string, errors: Diagnostic[]): void {
         uri = normalizeUri(uri);
-        this._parseErrors.set(uri, [...errors]);
+        this._parseErrors[uri] = [...errors];
     }
     getStoryTitle(): string | undefined {
         return this._storyTitle;
@@ -182,24 +185,24 @@ export class Index implements ProjectIndex {
     }
     getPassages(uri: string): Passage[] | undefined {
         uri = normalizeUri(uri);
-        return this._passages.get(uri);
+        return this._passages[uri];
     }
     getEmbeddedDocuments(uri: string): EmbeddedDocument[] {
         uri = normalizeUri(uri);
-        return this._embeddedDocuments.get(uri) ?? [];
+        return this._embeddedDocuments[uri] ?? [];
     }
     getTokens(uri: string): readonly Token[] {
         uri = normalizeUri(uri);
-        return this._tokens.get(uri) ?? [];
+        return this._tokens[uri] ?? [];
     }
     getParseErrors(uri: string): readonly Diagnostic[] {
         uri = normalizeUri(uri);
-        return this._parseErrors.get(uri) ?? [];
+        return this._parseErrors[uri] ?? [];
     }
     getPassageNames(): readonly string[] {
         const s = new Set<string>();
 
-        for (const passages of this._passages.values()) {
+        for (const passages of Object.values(this._passages)) {
             passages.forEach((p) => s.add(p.name.contents));
         }
 
@@ -207,10 +210,10 @@ export class Index implements ProjectIndex {
     }
     removeDocument(uri: string): void {
         uri = normalizeUri(uri);
-        this._passages.delete(uri);
-        this._embeddedDocuments.delete(uri);
-        this._tokens.delete(uri);
-        this._parseErrors.delete(uri);
+        delete this._passages[uri];
+        delete this._embeddedDocuments[uri];
+        delete this._tokens[uri];
+        delete this._parseErrors[uri];
         if (uri === this._storyTitleUri) {
             this._storyTitle = undefined;
         }

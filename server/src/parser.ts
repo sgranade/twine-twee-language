@@ -435,13 +435,11 @@ function parseStoryDataPassage(
                 kid.valueNode?.type === "object" &&
                 kid.keyNode.value === "tag-colors"
             ) {
-                storyData.tagColors = new Map();
+                storyData.tagColors = {};
                 for (const prop of kid.valueNode.properties) {
                     if (prop.valueNode?.type === "string") {
-                        storyData.tagColors.set(
-                            prop.keyNode.value,
-                            prop.valueNode.value
-                        );
+                        storyData.tagColors[prop.keyNode.value] =
+                            prop.valueNode.value;
                     }
                 }
             }
