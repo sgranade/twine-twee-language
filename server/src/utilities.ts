@@ -23,6 +23,8 @@ export function* pairwise<T>(itr: Iterable<T>) {
     }
 }
 
+/** TEXT AND STRING MANIPULATION **/
+
 /**
  * Scan a document's text to find the end of the current line.
  *
@@ -84,6 +86,8 @@ export function normalizeUri(uriString: string): string {
     return uri.normalize().toString();
 }
 
+/** EMBEDDED DOCUMENTS **/
+
 /**
  * Convert a position in an embedded document to one in its containing document.
  *
@@ -134,6 +138,38 @@ export function containingRange(
         )
     );
 }
+
+/** POSITION AND RANGE UTILITIES **/
+
+/**
+ * Compare two positions.
+ * @param pos1 First position.
+ * @param pos2 Second position.
+ * @returns -1 if pos1 is before pos2, 0 if they're equal, 1 if pos1 is after pos2.
+ */
+export function comparePositions(pos1: Position, pos2: Position): number {
+    if (pos1.line == pos2.line && pos1.character == pos2.character) {
+        return 0;
+    }
+    return pos1.line > pos2.line ||
+        (pos1.line == pos2.line && pos1.character > pos2.character)
+        ? 1
+        : -1;
+}
+
+/**
+ * Determine if a position is inside a range.
+ * @param position Position.
+ * @param range Range.
+ */
+export function positionInRange(position: Position, range: Range): boolean {
+    return (
+        comparePositions(position, range.start) >= 0 &&
+        comparePositions(position, range.end) <= 0
+    );
+}
+
+/** OBJECT CREATION **/
 
 /**
  * Generate a diagnostic message.

@@ -136,6 +136,12 @@ export interface ProjectIndex {
      */
     getParseErrors(uri: string): readonly Diagnostic[];
     /**
+     * Get a passage by name
+     * @param name Name of the passage to find.
+     * @returns Passage, or undefined if not found.
+     */
+    getPassageByName(name: string): Passage | undefined;
+    /**
      * Get all passage names in the index.
      */
     getPassageNames(): readonly string[];
@@ -224,6 +230,13 @@ export class Index implements ProjectIndex {
     getParseErrors(uri: string): readonly Diagnostic[] {
         uri = normalizeUri(uri);
         return this._parseErrors[uri] ?? [];
+    }
+    getPassageByName(name: string): Passage | undefined {
+        for (const passages of Object.values(this._passages)) {
+            const match = passages.find((p) => p.name.contents === name);
+            if (match !== undefined) return match;
+        }
+        return undefined;
     }
     getPassageNames(): readonly string[] {
         const s = new Set<string>();

@@ -17,6 +17,8 @@ import {
     CompletionList,
     HoverParams,
     Hover,
+    DefinitionParams,
+    Definition,
 } from "vscode-languageserver/node";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
@@ -25,6 +27,7 @@ import { generateCompletions } from "./completions";
 import { generateHover } from "./hover";
 import { Index } from "./index";
 import { updateProjectIndex } from "./indexer";
+import { findDefinitions } from "./searches";
 import {
     generateFoldingRanges,
     generateSemanticTokens,
@@ -80,6 +83,7 @@ connection.onInitialize((params: InitializeParams) => {
                 legend: semanticTokensLegend,
                 full: true,
             },
+            definitionProvider: true,
             // TODO implement definitionProvider, referencesProvider, renameProvider
         },
     };
@@ -167,6 +171,14 @@ connection.onCompletion(
         );
     }
 );
+
+connection.onDefinition((params: DefinitionParams): Definition | undefined => {
+    return findDefinitions(
+        params.textDocument.uri,
+        params.position,
+        projectIndex
+    );
+});
 
 connection.onDocumentSymbol(
     (params: DocumentSymbolParams): DocumentSymbol[] | null => {

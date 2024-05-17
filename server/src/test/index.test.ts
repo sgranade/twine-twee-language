@@ -219,6 +219,44 @@ describe("Project Index", () => {
             });
         });
 
+        describe("Passages By Name", () => {
+            it("should return a passage from any indexed file", () => {
+                const passages1 = [
+                    buildPassage({ label: "F1 P1" }),
+                    buildPassage({ label: "F1 P2" }),
+                ];
+                const passages2 = [
+                    buildPassage({ label: "F2 P1" }),
+                    buildPassage({ label: "F2 P2" }),
+                ];
+                const index = new uut.Index();
+                index.setPassages("file1", passages1);
+                index.setPassages("file2", passages2);
+
+                const result = index.getPassageByName("F2 P1");
+
+                expect(result).to.eql(passages2[0]);
+            });
+
+            it("should return undefined for a passage name that's not any indexed file", () => {
+                const passages1 = [
+                    buildPassage({ label: "F1 P1" }),
+                    buildPassage({ label: "F1 P2" }),
+                ];
+                const passages2 = [
+                    buildPassage({ label: "F2 P1" }),
+                    buildPassage({ label: "F2 P2" }),
+                ];
+                const index = new uut.Index();
+                index.setPassages("file1", passages1);
+                index.setPassages("file2", passages2);
+
+                const result = index.getPassageByName("f2 p1");
+
+                expect(result).to.be.undefined;
+            });
+        });
+
         describe("Passage Names", () => {
             it("should return passage names across all indexed files", () => {
                 const passages1 = [

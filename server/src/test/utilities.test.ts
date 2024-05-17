@@ -188,4 +188,85 @@ describe("Utilities", () => {
             });
         });
     });
+
+    describe("position comparison", () => {
+        it("should return -1 for pos1 before pos2", () => {
+            // No arrange
+
+            const result = uut.comparePositions(
+                Position.create(17, 1),
+                Position.create(17, 2)
+            );
+
+            expect(result).to.equal(-1);
+        });
+
+        it("should return 0 for pos1 equalling pos2", () => {
+            // No arrange
+
+            const result = uut.comparePositions(
+                Position.create(17, 2),
+                Position.create(17, 2)
+            );
+
+            expect(result).to.equal(0);
+        });
+
+        it("should return 1 for pos1 after pos2", () => {
+            // No arrange
+
+            const result = uut.comparePositions(
+                Position.create(17, 3),
+                Position.create(17, 2)
+            );
+
+            expect(result).to.equal(1);
+        });
+    });
+
+    describe("position in range", () => {
+        it("should return false for a position before the range", () => {
+            // No arrange
+
+            const result = uut.positionInRange(
+                Position.create(17, 1),
+                Range.create(17, 2, 19, 4)
+            );
+
+            expect(result).to.be.false;
+        });
+
+        it("should return true for a position on the left edge of the range", () => {
+            // No arrange
+
+            const result = uut.positionInRange(
+                Position.create(17, 2),
+                Range.create(17, 2, 19, 4)
+            );
+
+            expect(result).to.be.true;
+        });
+
+        it("should return true for a position on the right edge of the range", () => {
+            // No arrange
+
+            const result = uut.positionInRange(
+                Position.create(19, 4),
+                Range.create(17, 2, 19, 4)
+            );
+
+            expect(result).to.be.true;
+        });
+
+        it("should return false for a position after the range", () => {
+            // No arrange
+
+            const result = uut.positionInRange(
+                Position.create(19, 5),
+                Range.create(17, 2, 19, 4)
+            );
+
+            expect(result).to.be.false;
+        });
+    });
 });
