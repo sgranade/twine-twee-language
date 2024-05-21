@@ -1,36 +1,45 @@
-import { Location, Position } from "vscode-languageserver";
+import { Position, TextEdit, WorkspaceEdit } from "vscode-languageserver";
 
 import { ProjectIndex } from "./index";
-import { positionInRange } from "./utilities";
 
 /**
- * Find where a symbol at a position is defined in the project.
+ * Generate renames for a symbol.
  * @param uri Document URI.
- * @param position Position in the document.
+ * @param position Cursor position.
+ * @param newName New name for the symbol.
  * @param index Project index.
- * @returns Location of the symbol, or undefined if not found.
  */
-export function findDefinitions(
+export function generateRenames(
     uri: string,
     position: Position,
+    newName: string,
     index: ProjectIndex
-): Location | undefined {
-    let definition: Location | undefined = undefined;
+): WorkspaceEdit | null {
+    const referencesToChange = index.getReferencesAt(uri, position, true);
+    if (referencesToChange === undefined) {
+        return null;
+    }
 
-    // See if we have a passage reference at this location
-    const references = index.getPassageReferences(uri);
-    for (const [name, locations] of Object.entries(references || {})) {
-        const match = locations.find((location) => {
-            return positionInRange(position, location);
-        });
-        if (match !== undefined) {
-            const passage = index.getPassageByName(name);
-            if (passage !== undefined) {
-                definition = passage.name.location;
-            }
+    const changes: Map<string, TextEdit[]> = new Map();
 
-            return definition; // Found or not, we had a reference match, so return
+    for (const location of referencesToChange.locations) {
+        const change = TextEdit.replace(location.range, newName);
+        let edits = changes.get(location.uri);
+        if (edits === undefined) {
+            edits = [];
+            changes.set(location.uri, edits);
+        }
+        edits.push(change);
+    }
+
+    const workspaceEdit: WorkspaceEdit = {
+        changes: {},
+    };
+    for (const [uri, edits] of changes) {
+        if (workspaceEdit.changes) {
+            workspaceEdit.changes[uri] = edits;
         }
     }
-    return definition;
+
+    return workspaceEdit;
 }

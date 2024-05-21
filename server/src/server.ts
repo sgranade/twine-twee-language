@@ -1,24 +1,30 @@
 import {
-    createConnection,
-    TextDocuments,
-    Diagnostic,
-    ProposedFeatures,
-    InitializeParams,
-    DidChangeConfigurationNotification,
-    TextDocumentPositionParams,
-    TextDocumentSyncKind,
-    InitializeResult,
-    DocumentDiagnosticReportKind,
-    DocumentDiagnosticReport,
-    DocumentSymbolParams,
-    DocumentSymbol,
-    FoldingRangeParams,
-    FoldingRange,
     CompletionList,
-    HoverParams,
-    Hover,
     DefinitionParams,
     Definition,
+    Diagnostic,
+    DidChangeConfigurationNotification,
+    DocumentDiagnosticReport,
+    DocumentDiagnosticReportKind,
+    DocumentSymbol,
+    DocumentSymbolParams,
+    FoldingRange,
+    FoldingRangeParams,
+    Hover,
+    HoverParams,
+    InitializeParams,
+    InitializeResult,
+    Location,
+    ProposedFeatures,
+    ReferenceParams,
+    RenameParams,
+    TextDocumentPositionParams,
+    TextDocuments,
+    TextDocumentSyncKind,
+    WorkspaceEdit,
+    createConnection,
+    PrepareRenameParams,
+    Range,
 } from "vscode-languageserver/node";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
@@ -27,7 +33,7 @@ import { generateCompletions } from "./completions";
 import { generateHover } from "./hover";
 import { Index } from "./index";
 import { updateProjectIndex } from "./indexer";
-import { findDefinitions } from "./searches";
+import { generateRenames } from "./searches";
 import {
     generateFoldingRanges,
     generateSemanticTokens,
@@ -44,6 +50,7 @@ const projectIndex = new Index();
 
 let hasConfigurationCapability = false;
 let hasDiagnosticRelatedInformationCapability = false;
+let hasPrepareProviderCapability = false;
 
 connection.onInitialize((params: InitializeParams) => {
     const capabilities = params.capabilities;
@@ -56,6 +63,8 @@ connection.onInitialize((params: InitializeParams) => {
         capabilities.textDocument.publishDiagnostics &&
         capabilities.textDocument.publishDiagnostics.relatedInformation
     );
+    hasPrepareProviderCapability =
+        !!capabilities.textDocument?.rename?.prepareSupport;
 
     const result: InitializeResult = {
         capabilities: {
@@ -84,9 +93,13 @@ connection.onInitialize((params: InitializeParams) => {
                 full: true,
             },
             definitionProvider: true,
-            // TODO implement definitionProvider, referencesProvider, renameProvider
+            referencesProvider: true,
+            renameProvider: true,
         },
     };
+    if (hasPrepareProviderCapability) {
+        result.capabilities.renameProvider = { prepareProvider: true };
+    }
     return result;
 });
 
@@ -173,11 +186,12 @@ connection.onCompletion(
 );
 
 connection.onDefinition((params: DefinitionParams): Definition | undefined => {
-    return findDefinitions(
+    const definition = projectIndex.getDefinitionAt(
         params.textDocument.uri,
-        params.position,
-        projectIndex
+        params.position
     );
+    if (definition !== undefined) return definition.location;
+    return undefined;
 });
 
 connection.onDocumentSymbol(
@@ -201,6 +215,36 @@ connection.onHover(
         return await generateHover(document, params.position, projectIndex);
     }
 );
+
+connection.onRenameRequest((params: RenameParams): WorkspaceEdit | null => {
+    return generateRenames(
+        params.textDocument.uri,
+        params.position,
+        params.newName,
+        projectIndex
+    );
+});
+
+connection.onPrepareRename((params: PrepareRenameParams): Range | undefined => {
+    const symbol = projectIndex.getSymbolAt(
+        params.textDocument.uri,
+        params.position
+    );
+    if (symbol !== undefined) {
+        return symbol.location.range;
+    }
+    return undefined;
+});
+
+connection.onReferences((params: ReferenceParams): Location[] | undefined => {
+    const references = projectIndex.getReferencesAt(
+        params.textDocument.uri,
+        params.position,
+        params.context.includeDeclaration
+    );
+    if (references !== undefined) return references.locations;
+    return undefined;
+});
 
 connection.onRequest("textDocument/semanticTokens/full", (params) => {
     return generateSemanticTokens(params.textDocument.uri, projectIndex);

@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import "mocha";
-import { Location, Position, Range } from "vscode-languageserver";
+import { Position, Range, TextEdit } from "vscode-languageserver";
 
 import { Index } from "../index";
 import { buildPassage } from "./builders";
@@ -8,42 +8,113 @@ import { buildPassage } from "./builders";
 import * as uut from "../searches";
 
 describe("Searches", () => {
-    describe("Definitions", () => {
-        it("should return a passage's location at a passage reference", () => {
-            const index = new Index();
-            const passages = [
-                buildPassage({
-                    label: "Passage 1",
-                    location: Location.create(
-                        "test-uri",
-                        Range.create(0, 0, 0, 12)
-                    ),
-                    scope: Range.create(0, 0, 7, 17),
-                }),
-                buildPassage({
-                    label: "Passage 2",
-                    location: Location.create(
-                        "test-uri",
-                        Range.create(8, 0, 8, 9)
-                    ),
-                    scope: Range.create(8, 0, 9, 2),
-                }),
-            ];
-            const passageReferences = {
-                "Passage 2": [Range.create(1, 2, 1, 6)],
-            };
-            index.setPassages("test-uri", passages);
-            index.setPassageReferences("other-uri", passageReferences);
+    describe("Renames", () => {
+        describe("Passages", () => {
+            it("should rename passages at the passage's actual location", () => {
+                const passages = [
+                    buildPassage({
+                        label: "Passage 1",
+                        location: {
+                            uri: "fake-uri",
+                            range: Range.create(1, 1, 2, 2),
+                        },
+                    }),
+                    buildPassage({
+                        label: "Passage 2",
+                        location: {
+                            uri: "fake-uri",
+                            range: Range.create(3, 3, 4, 4),
+                        },
+                    }),
+                ];
+                const passageReferences = {
+                    "Passage 1": [Range.create(5, 2, 5, 4)],
+                    "Passage 2": [
+                        Range.create(5, 6, 7, 8),
+                        Range.create(9, 10, 11, 12),
+                    ],
+                };
+                const index = new Index();
+                index.setPassages("fake-uri", passages);
+                index.setPassageReferences("other-uri", passageReferences);
 
-            const result = uut.findDefinitions(
-                "other-uri",
-                Position.create(1, 2),
-                index
-            );
+                const result = uut.generateRenames(
+                    "fake-uri",
+                    Position.create(1, 2),
+                    "New Passage 1",
+                    index
+                );
 
-            expect(result).to.eql(
-                Location.create("test-uri", Range.create(8, 0, 8, 9))
-            );
+                expect(result).to.eql({
+                    changes: {
+                        "fake-uri": [
+                            TextEdit.replace(
+                                Range.create(1, 1, 2, 2),
+                                "New Passage 1"
+                            ),
+                        ],
+                        "other-uri": [
+                            TextEdit.replace(
+                                Range.create(5, 2, 5, 4),
+                                "New Passage 1"
+                            ),
+                        ],
+                    },
+                });
+            });
+
+            it("should rename passages at a reference to the passage", () => {
+                const passages = [
+                    buildPassage({
+                        label: "Passage 1",
+                        location: {
+                            uri: "fake-uri",
+                            range: Range.create(1, 1, 2, 2),
+                        },
+                    }),
+                    buildPassage({
+                        label: "Passage 2",
+                        location: {
+                            uri: "fake-uri",
+                            range: Range.create(3, 3, 4, 4),
+                        },
+                    }),
+                ];
+                const passageReferences = {
+                    "Passage 1": [Range.create(5, 2, 5, 4)],
+                    "Passage 2": [
+                        Range.create(5, 6, 7, 8),
+                        Range.create(9, 10, 11, 12),
+                    ],
+                };
+                const index = new Index();
+                index.setPassages("fake-uri", passages);
+                index.setPassageReferences("other-uri", passageReferences);
+
+                const result = uut.generateRenames(
+                    "other-uri",
+                    Position.create(5, 4),
+                    "New Passage 1",
+                    index
+                );
+
+                expect(result).to.eql({
+                    changes: {
+                        "fake-uri": [
+                            TextEdit.replace(
+                                Range.create(1, 1, 2, 2),
+                                "New Passage 1"
+                            ),
+                        ],
+                        "other-uri": [
+                            TextEdit.replace(
+                                Range.create(5, 2, 5, 4),
+                                "New Passage 1"
+                            ),
+                        ],
+                    },
+                });
+            });
         });
     });
 });
