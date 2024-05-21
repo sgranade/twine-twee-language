@@ -201,13 +201,15 @@ export interface ProjectIndex {
         includeDeclaration: boolean
     ): References | undefined;
     /**
-     * Get a passage by name
+     * Get a passage by name.
      * @param name Name of the passage to find.
-     * @returns Passage, or undefined if not found.
+     * @returns Passages (which may be more than one if they all have the same name), if found.
      */
-    getPassage(name: string): Passage | undefined;
+    getPassage(name: string): Passage[];
     /**
      * Get all passage names in the index.
+     *
+     * There may be duplicated names if multiple passages share the same name.
      */
     getPassageNames(): readonly string[];
 
@@ -402,21 +404,21 @@ export class Index implements ProjectIndex {
 
         return references;
     }
-    getPassage(name: string): Passage | undefined {
+    getPassage(name: string): Passage[] {
+        const matches: Passage[] = [];
         for (const passages of Object.values(this._passages)) {
-            const match = passages.find((p) => p.name.contents === name);
-            if (match !== undefined) return match;
+            matches.push(...passages.filter((p) => p.name.contents === name));
         }
-        return undefined;
+        return matches;
     }
     getPassageNames(): readonly string[] {
-        const s = new Set<string>();
+        const s = [];
 
         for (const passages of Object.values(this._passages)) {
-            passages.forEach((p) => s.add(p.name.contents));
+            s.push(...passages.map((p) => p.name.contents));
         }
 
-        return [...s];
+        return s;
     }
 
     removeDocument(uri: string): void {

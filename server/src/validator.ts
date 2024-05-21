@@ -1,9 +1,71 @@
-import { Diagnostic, DiagnosticSeverity } from "vscode-languageserver";
+import {
+    Diagnostic,
+    DiagnosticRelatedInformation,
+    DiagnosticSeverity,
+} from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { doValidation } from "./embedded-languages";
 import { ProjectIndex } from "./index";
-import { containingRange } from "./utilities";
+import { comparePositions, containingRange } from "./utilities";
+
+/**
+ * Validate a document's passages.
+ *
+ * @param document Document to validate.
+ * @param index Index of the Twine project.
+ * @returns List of diagnostic messages.
+ */
+function validatePassages(
+    document: TextDocument,
+    index: ProjectIndex
+): Diagnostic[] {
+    const diagnostics: Diagnostic[] = [];
+
+    const documentPassages = index.getPassages(document.uri);
+    const passageNames = index.getPassageNames();
+
+    for (const passage of documentPassages || []) {
+        if (
+            passageNames.indexOf(passage.name.contents) !=
+            passageNames.lastIndexOf(passage.name.contents)
+        ) {
+            const matchingPassages = index.getPassage(passage.name.contents);
+            let otherPassage = matchingPassages[0];
+            if (
+                otherPassage.name.location.uri === passage.name.location.uri &&
+                comparePositions(
+                    otherPassage.name.location.range.start,
+                    passage.name.location.range.start
+                ) === 0 &&
+                comparePositions(
+                    otherPassage.name.location.range.end,
+                    passage.name.location.range.end
+                ) === 0 &&
+                matchingPassages.length > 1
+            ) {
+                otherPassage = matchingPassages[1];
+            }
+            diagnostics.push(
+                Diagnostic.create(
+                    passage.name.location.range,
+                    `Passage "${passage.name.contents}" was defined elsewhere`,
+                    DiagnosticSeverity.Warning,
+                    undefined,
+                    undefined,
+                    [
+                        DiagnosticRelatedInformation.create(
+                            otherPassage.name.location,
+                            `Other creation of passage "${passage.name.contents}"`
+                        ),
+                    ]
+                )
+            );
+        }
+    }
+
+    return diagnostics;
+}
 
 /**
  * Validate a document's references to Twine passages.
@@ -67,6 +129,9 @@ export async function generateDiagnostics(
             diagnostics.push(diagnostic);
         }
     }
+
+    // Validate passages
+    diagnostics.push(...validatePassages(document, index));
 
     // Validate passage references
     diagnostics.push(...validatePassageReferences(document, index));

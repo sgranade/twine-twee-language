@@ -127,9 +127,10 @@ function generateStoryDataCompletions(
 
         // Start
         if (node.parent.keyNode.value === "start") {
+            const uniquePassageNames = new Set<string>(index.getPassageNames());
             completions.push(
                 ...createStringCompletions(
-                    index.getPassageNames(),
+                    [...uniquePassageNames],
                     nodeRange,
                     CompletionItemKind.Class
                 )

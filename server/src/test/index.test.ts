@@ -672,10 +672,28 @@ describe("Project Index", () => {
 
                 const result = index.getPassage("F2 P1");
 
-                expect(result).to.eql(passages2[0]);
+                expect(result).to.eql([passages2[0]]);
             });
 
-            it("should return undefined for a passage name that's not any indexed file", () => {
+            it("should return multiple passages if they share the same name", () => {
+                const passages1 = [
+                    buildPassage({ label: "F1 P1" }),
+                    buildPassage({ label: "F1 P2" }),
+                ];
+                const passages2 = [
+                    buildPassage({ label: "F2 P1" }),
+                    buildPassage({ label: "F1 P2" }),
+                ];
+                const index = new uut.Index();
+                index.setPassages("file1", passages1);
+                index.setPassages("file2", passages2);
+
+                const result = index.getPassage("F1 P2");
+
+                expect(result).to.eql([passages1[1], passages2[1]]);
+            });
+
+            it("should return an empty array for a passage name that's not any indexed file", () => {
                 const passages1 = [
                     buildPassage({ label: "F1 P1" }),
                     buildPassage({ label: "F1 P2" }),
@@ -690,7 +708,7 @@ describe("Project Index", () => {
 
                 const result = index.getPassage("f2 p1");
 
-                expect(result).to.be.undefined;
+                expect(result).to.be.empty;
             });
         });
 
@@ -713,7 +731,7 @@ describe("Project Index", () => {
                 expect(result).to.eql(["F1 P1", "F1 P2", "F2 P1", "F2 P2"]);
             });
 
-            it("should return passage names with no duplicates", () => {
+            it("should return passage names with duplicates", () => {
                 const passages1 = [
                     buildPassage({ label: "F1 P1" }),
                     buildPassage({ label: "spoiler" }),
@@ -728,7 +746,7 @@ describe("Project Index", () => {
 
                 const result = index.getPassageNames();
 
-                expect(result).to.eql(["F1 P1", "spoiler", "F2 P2"]);
+                expect(result).to.eql(["F1 P1", "spoiler", "spoiler", "F2 P2"]);
             });
         });
 
