@@ -1,19 +1,18 @@
 import { TextDocument } from "vscode-languageserver-textdocument";
 import {
     ParsingState,
-    createRangeFor,
     logErrorFor,
     logTokenFor,
     logWarningFor,
+    parseLinks,
 } from "../parser";
-import {
-    ETokenModifier,
-    ETokenType,
-    TokenModifier,
-    TokenType,
-} from "../tokens";
+import { ETokenModifier, ETokenType } from "../tokens";
 import { removeAndCountPadding, skipSpaces } from "../utilities";
-import { PassageTextParser } from "./passage-text-parser";
+import {
+    PassageTextParser,
+    PassageTextParsingState,
+    capturePreTokenFor,
+} from "./passage-text-parser";
 
 const varsSepPattern = /^--(\r?\n|$)/m;
 const conditionPattern = /((\((.+?)\)?)\s*)([^)]*)$/;
@@ -46,52 +45,13 @@ enum ModifierType {
 }
 
 /**
- * Raw contents for a semantic token.
- */
-interface PreToken {
-    text: string;
-    at: number;
-    type: TokenType;
-    modifiers: TokenModifier[];
-}
-
-/**
  * Chapbook-specific parsing state information.
  */
-export interface ChapbookParsingState {
+export interface ChapbookParsingState extends PassageTextParsingState {
     /**
      * Type of modifier affecting a text block.
      */
     modifierType: ModifierType;
-    /**
-     * Information for semantic tokens generated in a text subsection.
-     */
-    textSubsectionTokens: Record<number, PreToken>;
-}
-
-/**
- * Capture pre-semantic-token information for later transmission.
- *
- * @param text Document text to tokenize.
- * @param at Index where the text occurs in the document (zero-based).
- * @param type Token type.
- * @param modifiers Token modifiers.
- * @param chapbookState Parsing state.
- */
-function capturePreTokenFor(
-    text: string,
-    at: number,
-    type: TokenType,
-    modifiers: TokenModifier[],
-    chapbookState: ChapbookParsingState
-): void {
-    if (text.length)
-        chapbookState.textSubsectionTokens[at] = {
-            text,
-            at,
-            type,
-            modifiers,
-        };
 }
 
 const varInsertPattern = /^({\s*)(\S+)\s*}$/;
@@ -235,110 +195,6 @@ function parseInsert(
     }
 
     // TODO parse the actual insert contents
-}
-
-/**
- * Parse Twine links.
- *
- * @param subsection Subsection of the passage text section.
- * @param subsectionIndex Index in the document where the subsection begins (zero-based).
- * @param state Parsing state.
- * @param chapbookState Chapbook-specific parsing state.
- * @returns Updated subsection with the link sections blanked out
- */
-
-export function parseLinks(
-    subsection: string,
-    subsectionIndex: number,
-    state: ParsingState,
-    chapbookState: ChapbookParsingState
-): string {
-    // Parsing code adapted from `renderLinks()` in `links.ts` from Chapbook
-    for (const m of subsection.matchAll(/\[\[(.*?)\]\]/g)) {
-        // Get rid of the link from the subsection text so it doesn't get re-parsed when we look for inserts
-        subsection =
-            subsection.slice(0, m.index) +
-            " ".repeat(m[0].length) +
-            subsection.slice(m.index + m[0].length);
-
-        const linksIndex = m.index + 2; // + 2 for the opening braces
-        let display = m[1];
-        let displayIndex = 0; // Relative to the start of m[1]
-        let target = display;
-        let targetIndex = displayIndex;
-        let dividerIndex: number;
-        let divider = "";
-
-        // [[display|target]] format
-        dividerIndex = display.indexOf("|");
-        if (dividerIndex !== -1) {
-            display = target.substring(0, dividerIndex);
-            targetIndex = dividerIndex + 1;
-            target = target.substring(targetIndex);
-            divider = "|";
-        } else {
-            // [[display->target]] format
-            dividerIndex = display.indexOf("->");
-
-            if (dividerIndex !== -1) {
-                display = target.substring(0, dividerIndex);
-                targetIndex = dividerIndex + 2;
-                target = target.substring(targetIndex);
-                divider = "->";
-            } else {
-                // [[target<-display]] format
-                dividerIndex = display.indexOf("<-");
-
-                if (dividerIndex !== -1) {
-                    target = display.substring(0, dividerIndex);
-                    displayIndex = dividerIndex + 2;
-                    display = display.substring(displayIndex);
-                    divider = "<-";
-                }
-                // Otherwise [[target]] format
-            }
-        }
-
-        let indexDelta;
-        [target, targetIndex] = skipSpaces(target, targetIndex);
-        capturePreTokenFor(
-            target,
-            subsectionIndex + linksIndex + targetIndex,
-            ETokenType.class,
-            [],
-            chapbookState
-        );
-
-        state.callbacks.onPassageReference(
-            target,
-            createRangeFor(
-                target,
-                subsectionIndex + linksIndex + targetIndex,
-                state
-            )
-        );
-
-        if (dividerIndex !== -1) {
-            capturePreTokenFor(
-                divider,
-                subsectionIndex + linksIndex + dividerIndex,
-                ETokenType.keyword,
-                [],
-                chapbookState
-            );
-            [display, indexDelta] = removeAndCountPadding(display);
-            displayIndex += indexDelta;
-            capturePreTokenFor(
-                display,
-                subsectionIndex + linksIndex + displayIndex,
-                ETokenType.string,
-                [],
-                chapbookState
-            );
-        }
-    }
-
-    return subsection;
 }
 
 /**
@@ -489,7 +345,6 @@ function parseModifier(
 ): void {
     let firstToken = true;
     let remainingModifier = modifier;
-    let padLeft: number;
     let tokenIndex = modifierIndex;
 
     while (remainingModifier) {

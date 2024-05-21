@@ -20,10 +20,18 @@ import {
     openMetaCharPattern,
     tagPattern,
 } from "./language";
-import { Token, TokenModifier, TokenType } from "./tokens";
-import { createDiagnostic, nextLineIndex, pairwise } from "./utilities";
+import { ETokenType, Token, TokenModifier, TokenType } from "./tokens";
+import {
+    createDiagnostic,
+    nextLineIndex,
+    pairwise,
+    removeAndCountPadding,
+    skipSpaces,
+} from "./utilities";
 import {
     PassageTextParser,
+    PassageTextParsingState,
+    capturePreTokenFor,
     getPassageTextParser,
 } from "./passage-text-parsers/passage-text-parser";
 
@@ -159,6 +167,115 @@ export function logTokenFor(
         line++;
         character = 0;
     }
+}
+
+/**
+ * Parse Twine links.
+ *
+ * Story formats are responsible for calling this, but since this format is shared among
+ * those formats, it's part of the main parsing code.
+ *
+ * Semantic tokens are captured in the passage text parsing state for them to submit
+ * to the index later, as semantic tokens have to be in document order, and links
+ * may be interspersed with other semantic tokens in a passage.
+ *
+ * @param subsection Subsection of the passage text section.
+ * @param subsectionIndex Index in the document where the subsection begins (zero-based).
+ * @param state Parsing state.
+ * @param passageTextParsingState Story-format-specific parsing state.
+ * @returns Updated subsection with the link sections blanked out
+ */
+export function parseLinks(
+    subsection: string,
+    subsectionIndex: number,
+    state: ParsingState,
+    passageTextParsingState: PassageTextParsingState
+): string {
+    for (const m of subsection.matchAll(/\[\[(.*?)\]\]/g)) {
+        // Get rid of the link from the subsection text so it doesn't get re-parsed when we look for inserts
+        subsection =
+            subsection.slice(0, m.index) +
+            " ".repeat(m[0].length) +
+            subsection.slice(m.index + m[0].length);
+
+        const linksIndex = m.index + 2; // + 2 for the opening braces
+        let display = m[1];
+        let displayIndex = 0; // Relative to the start of m[1]
+        let target = display;
+        let targetIndex = displayIndex;
+        let dividerIndex: number;
+        let divider = "";
+
+        // [[display|target]] format
+        dividerIndex = display.indexOf("|");
+        if (dividerIndex !== -1) {
+            display = target.substring(0, dividerIndex);
+            targetIndex = dividerIndex + 1;
+            target = target.substring(targetIndex);
+            divider = "|";
+        } else {
+            // [[display->target]] format
+            dividerIndex = display.indexOf("->");
+
+            if (dividerIndex !== -1) {
+                display = target.substring(0, dividerIndex);
+                targetIndex = dividerIndex + 2;
+                target = target.substring(targetIndex);
+                divider = "->";
+            } else {
+                // [[target<-display]] format
+                dividerIndex = display.indexOf("<-");
+
+                if (dividerIndex !== -1) {
+                    target = display.substring(0, dividerIndex);
+                    displayIndex = dividerIndex + 2;
+                    display = display.substring(displayIndex);
+                    divider = "<-";
+                }
+                // Otherwise [[target]] format
+            }
+        }
+
+        let indexDelta;
+        [target, targetIndex] = skipSpaces(target, targetIndex);
+        capturePreTokenFor(
+            target,
+            subsectionIndex + linksIndex + targetIndex,
+            ETokenType.class,
+            [],
+            passageTextParsingState
+        );
+
+        state.callbacks.onPassageReference(
+            target,
+            createRangeFor(
+                target,
+                subsectionIndex + linksIndex + targetIndex,
+                state
+            )
+        );
+
+        if (dividerIndex !== -1) {
+            capturePreTokenFor(
+                divider,
+                subsectionIndex + linksIndex + dividerIndex,
+                ETokenType.keyword,
+                [],
+                passageTextParsingState
+            );
+            [display, indexDelta] = removeAndCountPadding(display);
+            displayIndex += indexDelta;
+            capturePreTokenFor(
+                display,
+                subsectionIndex + linksIndex + displayIndex,
+                ETokenType.string,
+                [],
+                passageTextParsingState
+            );
+        }
+    }
+
+    return subsection;
 }
 
 /**

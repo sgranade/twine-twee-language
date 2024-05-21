@@ -5,10 +5,11 @@ import { ImportMock } from "ts-mock-imports";
 import { Range, Position, Location } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
-import { MockCallbacks } from "./builders";
+import { MockCallbacks, buildParsingState } from "./builders";
 import * as ptpModule from "../passage-text-parsers/passage-text-parser";
 import * as uut from "../parser";
 import { StoryFormat } from "../client-server";
+import { ETokenType } from "../tokens";
 
 function buildStoryData({
     ifid = "9F187C0A-AE64-465A-8B13-B30B9DE446E2",
@@ -743,6 +744,240 @@ describe("Parser", () => {
                     "I am the passage contents!\n\n",
                     "Me? Also contents!\n\n",
                 ]);
+            });
+
+            describe("links", () => {
+                it("should produce no semantic tokens for an empty [[]] link", () => {
+                    const header = ":: Passage\n";
+                    const passage =
+                        "We shall introduce: a link!\n" + "Here it is: [[]]\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const passageState = { textSubsectionTokens: {} };
+
+                    uut.parseLinks(passage, header.length, state, passageState);
+
+                    expect(passageState.textSubsectionTokens).to.be.empty;
+                });
+
+                it("should set semantic tokens for a [[target]] link", () => {
+                    const header = ":: Passage\n";
+                    const passage =
+                        "We shall introduce: a link!\n" +
+                        "Here it is: [[ target passage ]]\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const passageState = { textSubsectionTokens: {} };
+
+                    uut.parseLinks(passage, 2, state, passageState);
+                    const result = passageState.textSubsectionTokens;
+
+                    expect(result).to.eql({
+                        45: {
+                            text: "target passage",
+                            at: 45,
+                            type: ETokenType.class,
+                            modifiers: [],
+                        },
+                    });
+                });
+
+                it("should capture the passage reference for a [[target]] link", () => {
+                    const header = ":: Passage\n";
+                    const passage =
+                        "We shall introduce: a link!\n" +
+                        "Here it is: [[ target passage ]]\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const passageState = { textSubsectionTokens: {} };
+
+                    uut.parseLinks(passage, header.length, state, passageState);
+                    const result = callbacks.passageReferences;
+
+                    expect(result).to.eql({
+                        "target passage": [Range.create(2, 15, 2, 29)],
+                    });
+                });
+
+                it("should set semantic tokens for a [[display|target]] link", () => {
+                    const header = ":: Passage\n";
+                    const passage =
+                        "We shall introduce: a link!\n" +
+                        "Here it is: [[display w a string | target passage]]\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const passageState = { textSubsectionTokens: {} };
+
+                    uut.parseLinks(passage, 2, state, passageState);
+                    const result = passageState.textSubsectionTokens;
+
+                    expect(result).to.eql({
+                        44: {
+                            text: "display w a string",
+                            at: 44,
+                            type: ETokenType.string,
+                            modifiers: [],
+                        },
+                        63: {
+                            text: "|",
+                            at: 63,
+                            type: ETokenType.keyword,
+                            modifiers: [],
+                        },
+                        65: {
+                            text: "target passage",
+                            at: 65,
+                            type: ETokenType.class,
+                            modifiers: [],
+                        },
+                    });
+                });
+
+                it("should capture the passage reference for a [[display|target]] link", () => {
+                    const header = ":: Passage\n";
+                    const passage =
+                        "We shall introduce: a link!\n" +
+                        "Here it is: [[display w a string | target passage ]]\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const passageState = { textSubsectionTokens: {} };
+
+                    uut.parseLinks(passage, header.length, state, passageState);
+                    const result = callbacks.passageReferences;
+
+                    expect(result).to.eql({
+                        "target passage": [Range.create(2, 35, 2, 49)],
+                    });
+                });
+
+                it("should set semantic tokens for a [[display->target]] link", () => {
+                    const header = ":: Passage\n";
+                    const passage =
+                        "We shall introduce: a link!\n" +
+                        "Here it is: [[display w a string -> target passage]]\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const passageState = { textSubsectionTokens: {} };
+
+                    uut.parseLinks(passage, 2, state, passageState);
+                    const result = passageState.textSubsectionTokens;
+
+                    expect(result).to.eql({
+                        44: {
+                            text: "display w a string",
+                            at: 44,
+                            type: ETokenType.string,
+                            modifiers: [],
+                        },
+                        63: {
+                            text: "->",
+                            at: 63,
+                            type: ETokenType.keyword,
+                            modifiers: [],
+                        },
+                        66: {
+                            text: "target passage",
+                            at: 66,
+                            type: ETokenType.class,
+                            modifiers: [],
+                        },
+                    });
+                });
+
+                it("should capture the passage reference for a [[display->target]] link", () => {
+                    const header = ":: Passage\n";
+                    const passage =
+                        "We shall introduce: a link!\n" +
+                        "Here it is: [[display w a string -> target passage ]]\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const passageState = { textSubsectionTokens: {} };
+
+                    uut.parseLinks(passage, header.length, state, passageState);
+                    const result = callbacks.passageReferences;
+
+                    expect(result).to.eql({
+                        "target passage": [Range.create(2, 36, 2, 50)],
+                    });
+                });
+
+                it("should set semantic tokens for a [[target<-display]] link", () => {
+                    const header = ":: Passage\n";
+                    const passage =
+                        "We shall introduce: a link!\n" +
+                        "Here it is: [[ target passage <- display w a string ]]\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const passageState = { textSubsectionTokens: {} };
+
+                    uut.parseLinks(passage, 2, state, passageState);
+                    const result = passageState.textSubsectionTokens;
+
+                    expect(result).to.eql({
+                        45: {
+                            text: "target passage",
+                            at: 45,
+                            type: ETokenType.class,
+                            modifiers: [],
+                        },
+                        60: {
+                            text: "<-",
+                            at: 60,
+                            type: ETokenType.keyword,
+                            modifiers: [],
+                        },
+                        63: {
+                            text: "display w a string",
+                            at: 63,
+                            type: ETokenType.string,
+                            modifiers: [],
+                        },
+                    });
+                });
+
+                it("should capture the passage reference for a [[target<-display]] link", () => {
+                    const header = ":: Passage\n";
+                    const passage =
+                        "We shall introduce: a link!\n" +
+                        "Here it is: [[ target passage <- display w a string ]]\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const passageState = { textSubsectionTokens: {} };
+
+                    uut.parseLinks(passage, header.length, state, passageState);
+                    const result = callbacks.passageReferences;
+
+                    expect(result).to.eql({
+                        "target passage": [Range.create(2, 15, 2, 29)],
+                    });
+                });
             });
         });
     });
