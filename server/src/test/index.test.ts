@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import "mocha";
-import { Diagnostic, Range } from "vscode-languageserver";
+import { Diagnostic, Location, Position, Range } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { buildPassage } from "./builders";
@@ -134,6 +134,443 @@ describe("Project Index", () => {
             });
         });
 
+        describe("Symbol Locations", () => {
+            it("should return undefined for a non-existent passage", () => {
+                const index = new uut.Index();
+
+                const result = index.getSymbolLocation(
+                    "nopers",
+                    uut.TwineSymbolKind.Passage
+                );
+
+                expect(result).to.be.undefined;
+            });
+
+            it("should return the location of an indexed passage", () => {
+                const passages = [
+                    buildPassage({ label: "Passage 1" }),
+                    buildPassage({
+                        label: "Passage 2",
+                        location: {
+                            uri: "fake-uri",
+                            range: Range.create(1, 1, 2, 2),
+                        },
+                    }),
+                ];
+                const index = new uut.Index();
+                index.setPassages("fake-uri", passages);
+
+                const result = index.getSymbolLocation(
+                    "Passage 2",
+                    uut.TwineSymbolKind.Passage
+                );
+
+                expect(result).to.eql(
+                    Location.create("fake-uri", Range.create(1, 1, 2, 2))
+                );
+            });
+        });
+
+        describe("Symbol At", () => {
+            it("should return undefined for a position where no passage name is defined", () => {
+                const passages = [
+                    buildPassage({ label: "Passage 1" }),
+                    buildPassage({
+                        label: "Passage 2",
+                        location: {
+                            uri: "fake-uri",
+                            range: Range.create(1, 1, 2, 2),
+                        },
+                    }),
+                ];
+                const index = new uut.Index();
+                index.setPassages("fake-uri", passages);
+
+                const result = index.getSymbolAt(
+                    "fake-uri",
+                    Position.create(2, 3)
+                );
+
+                expect(result).to.be.undefined;
+            });
+
+            it("should return the passage for a position in its name", () => {
+                const passages = [
+                    buildPassage({
+                        label: "Passage 1",
+                        location: {
+                            uri: "fake-uri",
+                            range: Range.create(1, 1, 2, 2),
+                        },
+                    }),
+                    buildPassage({
+                        label: "Passage 2",
+                        location: {
+                            uri: "fake-uri",
+                            range: Range.create(3, 3, 4, 4),
+                        },
+                    }),
+                ];
+                const index = new uut.Index();
+                index.setPassages("fake-uri", passages);
+
+                const result = index.getSymbolAt(
+                    "fake-uri",
+                    Position.create(4, 4)
+                );
+
+                expect(result).to.eql({
+                    contents: "Passage 2",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(3, 3, 4, 4)
+                    ),
+                    kind: uut.TwineSymbolKind.Passage,
+                });
+            });
+        });
+
+        describe("Definition At", () => {
+            it("should return undefined for a position where no symbol or reference exists", () => {
+                const passages = [
+                    buildPassage({
+                        label: "Passage 1",
+                        location: {
+                            uri: "fake-uri",
+                            range: Range.create(1, 1, 2, 2),
+                        },
+                    }),
+                    buildPassage({
+                        label: "Passage 2",
+                        location: {
+                            uri: "fake-uri",
+                            range: Range.create(3, 3, 4, 4),
+                        },
+                    }),
+                ];
+                const passageReferences = {
+                    "Passage 1": [Range.create(5, 2, 5, 4)],
+                    "Passage 2": [
+                        Range.create(5, 6, 7, 8),
+                        Range.create(9, 10, 11, 12),
+                    ],
+                };
+                const index = new uut.Index();
+                index.setPassages("fake-uri", passages);
+                index.setPassageReferences("fake-uri", passageReferences);
+
+                const result = index.getDefinitionAt(
+                    "fake-uri",
+                    Position.create(2, 3)
+                );
+
+                expect(result).to.be.undefined;
+            });
+
+            it("should return the passage for a position located at a reference to it", () => {
+                const passages = [
+                    buildPassage({
+                        label: "Passage 1",
+                        location: {
+                            uri: "fake-uri",
+                            range: Range.create(1, 1, 2, 2),
+                        },
+                    }),
+                    buildPassage({
+                        label: "Passage 2",
+                        location: {
+                            uri: "fake-uri",
+                            range: Range.create(3, 3, 4, 4),
+                        },
+                    }),
+                ];
+                const passageReferences = {
+                    "Passage 1": [Range.create(5, 2, 5, 4)],
+                    "Passage 2": [
+                        Range.create(5, 6, 7, 8),
+                        Range.create(9, 10, 11, 12),
+                    ],
+                };
+                const index = new uut.Index();
+                index.setPassages("fake-uri", passages);
+                index.setPassageReferences("fake-uri", passageReferences);
+
+                const result = index.getDefinitionAt(
+                    "fake-uri",
+                    Position.create(7, 8)
+                );
+
+                expect(result).to.eql({
+                    contents: "Passage 2",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(3, 3, 4, 4)
+                    ),
+                    kind: uut.TwineSymbolKind.Passage,
+                });
+            });
+
+            it("should return the passage for a position located at the actual passage", () => {
+                const passages = [
+                    buildPassage({
+                        label: "Passage 1",
+                        location: {
+                            uri: "fake-uri",
+                            range: Range.create(1, 1, 2, 2),
+                        },
+                    }),
+                    buildPassage({
+                        label: "Passage 2",
+                        location: {
+                            uri: "fake-uri",
+                            range: Range.create(3, 3, 4, 4),
+                        },
+                    }),
+                ];
+                const passageReferences = {
+                    "Passage 1": [Range.create(5, 2, 5, 4)],
+                    "Passage 2": [
+                        Range.create(5, 6, 7, 8),
+                        Range.create(9, 10, 11, 12),
+                    ],
+                };
+                const index = new uut.Index();
+                index.setPassages("fake-uri", passages);
+                index.setPassageReferences("fake-uri", passageReferences);
+
+                const result = index.getDefinitionAt(
+                    "fake-uri",
+                    Position.create(1, 8)
+                );
+
+                expect(result).to.eql({
+                    contents: "Passage 1",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(1, 1, 2, 2)
+                    ),
+                    kind: uut.TwineSymbolKind.Passage,
+                });
+            });
+        });
+
+        describe("References At", () => {
+            it("should return undefined for a position where no symbol or reference exists", () => {
+                const passages = [
+                    buildPassage({
+                        label: "Passage 1",
+                        location: {
+                            uri: "fake-uri",
+                            range: Range.create(1, 1, 2, 2),
+                        },
+                    }),
+                    buildPassage({
+                        label: "Passage 2",
+                        location: {
+                            uri: "fake-uri",
+                            range: Range.create(3, 3, 4, 4),
+                        },
+                    }),
+                ];
+                const passageReferences = {
+                    "Passage 1": [Range.create(5, 2, 5, 4)],
+                    "Passage 2": [
+                        Range.create(5, 6, 7, 8),
+                        Range.create(9, 10, 11, 12),
+                    ],
+                };
+                const index = new uut.Index();
+                index.setPassages("fake-uri", passages);
+                index.setPassageReferences("fake-uri", passageReferences);
+
+                const result = index.getReferencesAt(
+                    "fake-uri",
+                    Position.create(2, 3),
+                    false
+                );
+
+                expect(result).to.be.undefined;
+            });
+
+            it("should return references for a position located at a reference to it, without the definition", () => {
+                const passages = [
+                    buildPassage({
+                        label: "Passage 1",
+                        location: {
+                            uri: "fake-uri",
+                            range: Range.create(1, 1, 2, 2),
+                        },
+                    }),
+                    buildPassage({
+                        label: "Passage 2",
+                        location: {
+                            uri: "fake-uri",
+                            range: Range.create(3, 3, 4, 4),
+                        },
+                    }),
+                ];
+                const passageReferences = {
+                    "Passage 1": [Range.create(5, 2, 5, 4)],
+                    "Passage 2": [
+                        Range.create(5, 6, 7, 8),
+                        Range.create(9, 10, 11, 12),
+                    ],
+                };
+                const index = new uut.Index();
+                index.setPassages("fake-uri", passages);
+                index.setPassageReferences("fake-uri", passageReferences);
+
+                const result = index.getReferencesAt(
+                    "fake-uri",
+                    Position.create(7, 8),
+                    false
+                );
+
+                expect(result).to.eql({
+                    contents: "Passage 2",
+                    locations: [
+                        Location.create("fake-uri", Range.create(5, 6, 7, 8)),
+                        Location.create(
+                            "fake-uri",
+                            Range.create(9, 10, 11, 12)
+                        ),
+                    ],
+                });
+            });
+
+            it("should return references for a position located at a reference to it, including the definition", () => {
+                const passages = [
+                    buildPassage({
+                        label: "Passage 1",
+                        location: {
+                            uri: "fake-uri",
+                            range: Range.create(1, 1, 2, 2),
+                        },
+                    }),
+                    buildPassage({
+                        label: "Passage 2",
+                        location: {
+                            uri: "fake-uri",
+                            range: Range.create(3, 3, 4, 4),
+                        },
+                    }),
+                ];
+                const passageReferences = {
+                    "Passage 1": [Range.create(5, 2, 5, 4)],
+                    "Passage 2": [
+                        Range.create(5, 6, 7, 8),
+                        Range.create(9, 10, 11, 12),
+                    ],
+                };
+                const index = new uut.Index();
+                index.setPassages("fake-uri", passages);
+                index.setPassageReferences("fake-uri", passageReferences);
+
+                const result = index.getReferencesAt(
+                    "fake-uri",
+                    Position.create(7, 8),
+                    true
+                );
+
+                expect(result).to.eql({
+                    contents: "Passage 2",
+                    locations: [
+                        Location.create("fake-uri", Range.create(5, 6, 7, 8)),
+                        Location.create(
+                            "fake-uri",
+                            Range.create(9, 10, 11, 12)
+                        ),
+                        Location.create("fake-uri", Range.create(3, 3, 4, 4)),
+                    ],
+                });
+            });
+
+            it("should return references for a position located at the actual passage, without the definition", () => {
+                const passages = [
+                    buildPassage({
+                        label: "Passage 1",
+                        location: {
+                            uri: "fake-uri",
+                            range: Range.create(1, 1, 2, 2),
+                        },
+                    }),
+                    buildPassage({
+                        label: "Passage 2",
+                        location: {
+                            uri: "fake-uri",
+                            range: Range.create(3, 3, 4, 4),
+                        },
+                    }),
+                ];
+                const passageReferences = {
+                    "Passage 1": [Range.create(5, 2, 5, 4)],
+                    "Passage 2": [
+                        Range.create(5, 6, 7, 8),
+                        Range.create(9, 10, 11, 12),
+                    ],
+                };
+                const index = new uut.Index();
+                index.setPassages("fake-uri", passages);
+                index.setPassageReferences("fake-uri", passageReferences);
+
+                const result = index.getReferencesAt(
+                    "fake-uri",
+                    Position.create(1, 8),
+                    false
+                );
+
+                expect(result).to.eql({
+                    contents: "Passage 1",
+                    locations: [
+                        Location.create("fake-uri", Range.create(5, 2, 5, 4)),
+                    ],
+                });
+            });
+
+            it("should return references for a position located at the actual passage, including the definition", () => {
+                const passages = [
+                    buildPassage({
+                        label: "Passage 1",
+                        location: {
+                            uri: "fake-uri",
+                            range: Range.create(1, 1, 2, 2),
+                        },
+                    }),
+                    buildPassage({
+                        label: "Passage 2",
+                        location: {
+                            uri: "fake-uri",
+                            range: Range.create(3, 3, 4, 4),
+                        },
+                    }),
+                ];
+                const passageReferences = {
+                    "Passage 1": [Range.create(5, 2, 5, 4)],
+                    "Passage 2": [
+                        Range.create(5, 6, 7, 8),
+                        Range.create(9, 10, 11, 12),
+                    ],
+                };
+                const index = new uut.Index();
+                index.setPassages("fake-uri", passages);
+                index.setPassageReferences("fake-uri", passageReferences);
+
+                const result = index.getReferencesAt(
+                    "fake-uri",
+                    Position.create(1, 8),
+                    true
+                );
+
+                expect(result).to.eql({
+                    contents: "Passage 1",
+                    locations: [
+                        Location.create("fake-uri", Range.create(5, 2, 5, 4)),
+                        Location.create("fake-uri", Range.create(1, 1, 2, 2)),
+                    ],
+                });
+            });
+        });
+
         describe("Embedded Documents", () => {
             it("should return an empty array for an unindexed file", () => {
                 const index = new uut.Index();
@@ -233,7 +670,7 @@ describe("Project Index", () => {
                 index.setPassages("file1", passages1);
                 index.setPassages("file2", passages2);
 
-                const result = index.getPassageByName("F2 P1");
+                const result = index.getPassage("F2 P1");
 
                 expect(result).to.eql(passages2[0]);
             });
@@ -251,7 +688,7 @@ describe("Project Index", () => {
                 index.setPassages("file1", passages1);
                 index.setPassages("file2", passages2);
 
-                const result = index.getPassageByName("f2 p1");
+                const result = index.getPassage("f2 p1");
 
                 expect(result).to.be.undefined;
             });
