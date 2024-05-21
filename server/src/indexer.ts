@@ -2,7 +2,7 @@ import { Diagnostic, DiagnosticSeverity, Range } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { EmbeddedDocument } from "./embedded-languages";
-import { Passage, ProjectIndex, StoryData } from "./index";
+import { Passage, ProjectIndex, StoryData } from "./project-index";
 import { ParserCallbacks, parse } from "./parser";
 import { Token } from "./tokens";
 

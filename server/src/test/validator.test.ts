@@ -4,7 +4,7 @@ import { Diagnostic, Location, Range } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { EmbeddedDocument } from "../embedded-languages";
-import { Index } from "../index";
+import { Index } from "../project-index";
 import * as uut from "../validator";
 import { buildPassage } from "./builders";
 

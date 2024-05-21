@@ -6,7 +6,7 @@ import { Range, Position, Location } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { MockCallbacks, buildParsingState } from "./builders";
-import * as ptpModule from "../passage-text-parsers/passage-text-parser";
+import * as ptpModule from "../passage-text-parsers";
 import * as uut from "../parser";
 import { StoryFormat } from "../client-server";
 import { ETokenType } from "../tokens";

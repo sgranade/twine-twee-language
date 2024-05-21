@@ -2,7 +2,7 @@ import { Hover, Position } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { doHover } from "./embedded-languages";
-import { ProjectIndex } from "./index";
+import { ProjectIndex } from "./project-index";
 import { containingRange } from "./utilities";
 
 export async function generateHover(

@@ -5,14 +5,14 @@ import {
     logTokenFor,
     logWarningFor,
     parseLinks,
-} from "../parser";
-import { ETokenModifier, ETokenType } from "../tokens";
-import { removeAndCountPadding, skipSpaces } from "../utilities";
+} from "../../parser";
+import { ETokenModifier, ETokenType } from "../../tokens";
+import { removeAndCountPadding, skipSpaces } from "../../utilities";
 import {
     PassageTextParser,
     PassageTextParsingState,
     capturePreTokenFor,
-} from "./passage-text-parser";
+} from "..";
 
 const varsSepPattern = /^--(\r?\n|$)/m;
 const conditionPattern = /((\((.+?)\)?)\s*)([^)]*)$/;

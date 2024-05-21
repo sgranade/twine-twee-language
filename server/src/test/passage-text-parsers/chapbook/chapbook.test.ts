@@ -2,9 +2,9 @@ import "mocha";
 import { expect } from "chai";
 import { DiagnosticSeverity, Range } from "vscode-languageserver";
 
-import { ETokenModifier, ETokenType } from "../../tokens";
-import { MockCallbacks, buildParsingState } from "../builders";
-import * as uut from "../../passage-text-parsers/chapbook";
+import { ETokenModifier, ETokenType } from "../../../tokens";
+import { MockCallbacks, buildParsingState } from "../../builders";
+import * as uut from "../../../passage-text-parsers/chapbook";
 
 describe("Chapbook Passage", () => {
     describe("Parsing", () => {

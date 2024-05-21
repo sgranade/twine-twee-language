@@ -1,6 +1,6 @@
 import { Position, TextEdit, WorkspaceEdit } from "vscode-languageserver";
 
-import { ProjectIndex } from "./index";
+import { ProjectIndex } from "./project-index";
 
 /**
  * Generate renames for a symbol.

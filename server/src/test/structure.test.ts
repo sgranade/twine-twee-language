@@ -8,7 +8,7 @@ import {
     SymbolKind,
 } from "vscode-languageserver";
 
-import { Index } from "../index";
+import { Index } from "../project-index";
 import { buildPassage } from "./builders";
 
 import * as uut from "../structure";

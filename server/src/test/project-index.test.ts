@@ -6,7 +6,7 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 import { buildPassage } from "./builders";
 
 import { EmbeddedDocument } from "../embedded-languages";
-import * as uut from "../index";
+import * as uut from "../project-index";
 import { Token } from "../tokens";
 
 describe("Project Index", () => {

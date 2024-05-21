@@ -31,8 +31,8 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 import { CustomMessages, StoryFormat } from "./client-server";
 import { generateCompletions } from "./completions";
 import { generateHover } from "./hover";
-import { Index } from "./index";
 import { updateProjectIndex } from "./indexer";
+import { Index } from "./project-index";
 import { generateRenames } from "./searches";
 import {
     generateFoldingRanges,

@@ -13,7 +13,7 @@ import {
     parseJSON,
     storyDataJSONUri,
 } from "./embedded-languages";
-import { Label, Passage, PassageMetadata, StoryData } from "./index";
+import { Label, Passage, PassageMetadata, StoryData } from "./project-index";
 import {
     closeMetaCharPattern,
     metadataPattern,
@@ -33,7 +33,7 @@ import {
     PassageTextParsingState,
     capturePreTokenFor,
     getPassageTextParser,
-} from "./passage-text-parsers/passage-text-parser";
+} from "./passage-text-parsers";
 
 /**
  * Captures information about the current state of parsing

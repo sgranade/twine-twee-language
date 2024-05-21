@@ -6,7 +6,7 @@ import {
     SymbolKind,
 } from "vscode-languageserver";
 
-import { ProjectIndex } from "./index";
+import { ProjectIndex } from "./project-index";
 
 /**
  * Generate symbols for a document.

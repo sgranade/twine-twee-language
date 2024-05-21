@@ -15,7 +15,7 @@ import {
     parseJSON,
     storyDataJSONUri,
 } from "./embedded-languages";
-import { ProjectIndex } from "./index";
+import { ProjectIndex } from "./project-index";
 import { containingRange } from "./utilities";
 
 /**

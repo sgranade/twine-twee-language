@@ -2,7 +2,7 @@ import { expect } from "chai";
 import "mocha";
 import { Position, Range, TextEdit } from "vscode-languageserver";
 
-import { Index } from "../index";
+import { Index } from "../project-index";
 import { buildPassage } from "./builders";
 
 import * as uut from "../searches";

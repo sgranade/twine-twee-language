@@ -6,7 +6,7 @@ import {
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { doValidation } from "./embedded-languages";
-import { ProjectIndex } from "./index";
+import { ProjectIndex } from "./project-index";
 import { comparePositions, containingRange } from "./utilities";
 
 /**

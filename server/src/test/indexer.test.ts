@@ -4,10 +4,10 @@ import { ImportMock } from "ts-mock-imports";
 import { DiagnosticSeverity, Position, Range } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
-import { Index } from "../index";
+import { Index } from "../project-index";
 import { buildPassage } from "./builders";
 
-import * as ptpModule from "../passage-text-parsers/passage-text-parser";
+import * as ptpModule from "../passage-text-parsers";
 import { ParsingState } from "../parser";
 import * as uut from "../indexer";
 
