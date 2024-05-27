@@ -1,9 +1,15 @@
 import "mocha";
 import { expect } from "chai";
+import { ImportMock } from "ts-mock-imports";
 import { DiagnosticSeverity, Range } from "vscode-languageserver";
 
 import { ETokenModifier, ETokenType } from "../../../tokens";
-import { MockCallbacks, buildParsingState } from "../../builders";
+import {
+    MockCallbacks,
+    buildInsertParser,
+    buildParsingState,
+} from "../../builders";
+import * as insertsModule from "../../../passage-text-parsers/chapbook/inserts";
 import * as uut from "../../../passage-text-parsers/chapbook";
 
 describe("Chapbook Passage", () => {
@@ -420,248 +426,366 @@ describe("Chapbook Passage", () => {
             });
 
             describe("inserts", () => {
-                it("should produce semantic tokens for a variable insert", () => {
-                    const header = ":: Passage\n";
-                    const passage =
-                        "Some content.\n" + "A variable insert: { var  }.\n";
-                    const callbacks = new MockCallbacks();
-                    const state = buildParsingState({
-                        content: header + passage,
-                        callbacks: callbacks,
+                describe("basic semantic tokens", () => {
+                    it("should produce semantic tokens for a variable insert", () => {
+                        const header = ":: Passage\n";
+                        const passage =
+                            "Some content.\n" +
+                            "A variable insert: { var  }.\n";
+                        const callbacks = new MockCallbacks();
+                        const state = buildParsingState({
+                            content: header + passage,
+                            callbacks: callbacks,
+                        });
+                        const parser = uut.getChapbookParser(undefined);
+
+                        parser?.parsePassageText(passage, header.length, state);
+                        const [insertToken] = callbacks.tokens;
+
+                        expect(callbacks.tokens.length).to.equal(1);
+                        expect(insertToken).to.eql({
+                            line: 2,
+                            char: 21,
+                            length: 3,
+                            tokenType: ETokenType.variable,
+                            tokenModifiers: [],
+                        });
                     });
-                    const parser = uut.getChapbookParser(undefined);
 
-                    parser?.parsePassageText(passage, header.length, state);
-                    const [insertToken] = callbacks.tokens;
+                    it("should produce semantic tokens for a simple insert", () => {
+                        const header = ":: Passage\n";
+                        const passage =
+                            "Some content.\n" +
+                            "A function insert: { back soon  }.\n";
+                        const callbacks = new MockCallbacks();
+                        const state = buildParsingState({
+                            content: header + passage,
+                            callbacks: callbacks,
+                        });
+                        const parser = uut.getChapbookParser(undefined);
 
-                    expect(callbacks.tokens.length).to.equal(1);
-                    expect(insertToken).to.eql({
-                        line: 2,
-                        char: 21,
-                        length: 3,
-                        tokenType: ETokenType.variable,
-                        tokenModifiers: [],
+                        parser?.parsePassageText(passage, header.length, state);
+                        const [functionToken] = callbacks.tokens;
+
+                        expect(callbacks.tokens.length).to.equal(1);
+                        expect(functionToken).to.eql({
+                            line: 2,
+                            char: 21,
+                            length: 9,
+                            tokenType: ETokenType.function,
+                            tokenModifiers: [],
+                        });
+                    });
+
+                    it("should produce semantic tokens for an insert with an empty argument", () => {
+                        const header = ":: Passage\n";
+                        const passage =
+                            "Some content.\n" +
+                            "A function insert: {back soon: }.\n";
+                        const callbacks = new MockCallbacks();
+                        const state = buildParsingState({
+                            content: header + passage,
+                            callbacks: callbacks,
+                        });
+                        const parser = uut.getChapbookParser(undefined);
+
+                        parser?.parsePassageText(passage, header.length, state);
+                        const [functionToken] = callbacks.tokens;
+
+                        expect(callbacks.tokens.length).to.equal(1);
+                        expect(functionToken).to.eql({
+                            line: 2,
+                            char: 20,
+                            length: 9,
+                            tokenType: ETokenType.function,
+                            tokenModifiers: [],
+                        });
+                    });
+
+                    it("should produce semantic tokens for an insert with an argument", () => {
+                        const header = ":: Passage\n";
+                        const passage =
+                            "Some content.\n" +
+                            "A function insert: { back soon: arg  }.\n";
+                        const callbacks = new MockCallbacks();
+                        const state = buildParsingState({
+                            content: header + passage,
+                            callbacks: callbacks,
+                        });
+                        const parser = uut.getChapbookParser(undefined);
+
+                        parser?.parsePassageText(passage, header.length, state);
+                        const [functionToken, argToken] = callbacks.tokens;
+
+                        expect(callbacks.tokens.length).to.equal(1);
+                        expect(functionToken).to.eql({
+                            line: 2,
+                            char: 21,
+                            length: 9,
+                            tokenType: ETokenType.function,
+                            tokenModifiers: [],
+                        });
+                    });
+
+                    it("should produce semantic tokens for an insert with an incomplete property", () => {
+                        const header = ":: Passage\n";
+                        const passage =
+                            "Some content.\n" +
+                            "A function insert: {back soon, prop}.\n";
+                        const callbacks = new MockCallbacks();
+                        const state = buildParsingState({
+                            content: header + passage,
+                            callbacks: callbacks,
+                        });
+                        const parser = uut.getChapbookParser(undefined);
+
+                        parser?.parsePassageText(passage, header.length, state);
+                        const [functionToken] = callbacks.tokens;
+
+                        expect(callbacks.tokens.length).to.equal(1);
+                        expect(functionToken).to.eql({
+                            line: 2,
+                            char: 20,
+                            length: 9,
+                            tokenType: ETokenType.function,
+                            tokenModifiers: [],
+                        });
+                    });
+
+                    it("should produce semantic tokens for an insert with properties", () => {
+                        const header = ":: Passage\n";
+                        const passage =
+                            "Some content.\n" +
+                            "A function insert: { back soon,  prop1: val1, prop2 : val2  }.\n";
+                        const callbacks = new MockCallbacks();
+                        const state = buildParsingState({
+                            content: header + passage,
+                            callbacks: callbacks,
+                        });
+                        const parser = uut.getChapbookParser(undefined);
+
+                        parser?.parsePassageText(passage, header.length, state);
+                        const [functionToken, prop1Token, prop2Token] =
+                            callbacks.tokens;
+
+                        expect(callbacks.tokens.length).to.equal(3);
+                        expect(functionToken).to.eql({
+                            line: 2,
+                            char: 21,
+                            length: 9,
+                            tokenType: ETokenType.function,
+                            tokenModifiers: [],
+                        });
+                        expect(prop1Token).to.eql({
+                            line: 2,
+                            char: 33,
+                            length: 5,
+                            tokenType: ETokenType.property,
+                            tokenModifiers: [],
+                        });
+                        expect(prop2Token).to.eql({
+                            line: 2,
+                            char: 46,
+                            length: 5,
+                            tokenType: ETokenType.property,
+                            tokenModifiers: [],
+                        });
+                    });
+
+                    it("should produce semantic tokens for an insert with an arg and properties", () => {
+                        const header = ":: Passage\n";
+                        const passage =
+                            "Some content.\n" +
+                            "A function insert: { back soon: arg,  prop1: val1, prop2 : val2  }.\n";
+                        const callbacks = new MockCallbacks();
+                        const state = buildParsingState({
+                            content: header + passage,
+                            callbacks: callbacks,
+                        });
+                        const parser = uut.getChapbookParser(undefined);
+
+                        parser?.parsePassageText(passage, header.length, state);
+                        const [functionToken, prop1Token, prop2Token] =
+                            callbacks.tokens;
+
+                        expect(callbacks.tokens.length).to.equal(3);
+                        expect(functionToken).to.eql({
+                            line: 2,
+                            char: 21,
+                            length: 9,
+                            tokenType: ETokenType.function,
+                            tokenModifiers: [],
+                        });
+                        expect(prop1Token).to.eql({
+                            line: 2,
+                            char: 38,
+                            length: 5,
+                            tokenType: ETokenType.property,
+                            tokenModifiers: [],
+                        });
+                        expect(prop2Token).to.eql({
+                            line: 2,
+                            char: 51,
+                            length: 5,
+                            tokenType: ETokenType.property,
+                            tokenModifiers: [],
+                        });
                     });
                 });
 
-                it("should produce semantic tokens for a simple insert", () => {
-                    const header = ":: Passage\n";
-                    const passage =
-                        "Some content.\n" +
-                        "A function insert: { back soon  }.\n";
-                    const callbacks = new MockCallbacks();
-                    const state = buildParsingState({
-                        content: header + passage,
-                        callbacks: callbacks,
-                    });
-                    const parser = uut.getChapbookParser(undefined);
+                describe("semantic token order", () => {
+                    it("should interleave tokens in document order", () => {
+                        const header = ":: Passage\n";
+                        const passage =
+                            "Link: [[target]] insert {var} another link [[target2]].";
+                        const callbacks = new MockCallbacks();
+                        const state = buildParsingState({
+                            content: header + passage,
+                            callbacks: callbacks,
+                        });
+                        const parser = uut.getChapbookParser(undefined);
 
-                    parser?.parsePassageText(passage, header.length, state);
-                    const [functionToken] = callbacks.tokens;
+                        parser?.parsePassageText(passage, header.length, state);
+                        const [target1Token, varToken, target2Token] =
+                            callbacks.tokens;
 
-                    expect(callbacks.tokens.length).to.equal(1);
-                    expect(functionToken).to.eql({
-                        line: 2,
-                        char: 21,
-                        length: 9,
-                        tokenType: ETokenType.function,
-                        tokenModifiers: [],
-                    });
-                });
-
-                it("should produce semantic tokens for an insert with an empty argument", () => {
-                    const header = ":: Passage\n";
-                    const passage =
-                        "Some content.\n" +
-                        "A function insert: {back soon: }.\n";
-                    const callbacks = new MockCallbacks();
-                    const state = buildParsingState({
-                        content: header + passage,
-                        callbacks: callbacks,
-                    });
-                    const parser = uut.getChapbookParser(undefined);
-
-                    parser?.parsePassageText(passage, header.length, state);
-                    const [functionToken] = callbacks.tokens;
-
-                    expect(callbacks.tokens.length).to.equal(1);
-                    expect(functionToken).to.eql({
-                        line: 2,
-                        char: 20,
-                        length: 9,
-                        tokenType: ETokenType.function,
-                        tokenModifiers: [],
+                        expect(callbacks.tokens.length).to.equal(3);
+                        expect(target1Token).to.eql({
+                            line: 1,
+                            char: 8,
+                            length: 6,
+                            tokenType: ETokenType.class,
+                            tokenModifiers: [],
+                        });
+                        expect(varToken).to.eql({
+                            line: 1,
+                            char: 25,
+                            length: 3,
+                            tokenType: ETokenType.variable,
+                            tokenModifiers: [],
+                        });
+                        expect(target2Token).to.eql({
+                            line: 1,
+                            char: 45,
+                            length: 7,
+                            tokenType: ETokenType.class,
+                            tokenModifiers: [],
+                        });
                     });
                 });
 
-                it("should produce semantic tokens for an insert with an argument", () => {
-                    const header = ":: Passage\n";
-                    const passage =
-                        "Some content.\n" +
-                        "A function insert: { back soon: arg  }.\n";
-                    const callbacks = new MockCallbacks();
-                    const state = buildParsingState({
-                        content: header + passage,
-                        callbacks: callbacks,
-                    });
-                    const parser = uut.getChapbookParser(undefined);
+                describe("contents parsing", () => {
+                    it("should send the first arg to the matching insert", () => {
+                        const header = ":: Passage\n";
+                        const passage = "Insert: {mock insert:  'arg'}";
+                        const callbacks = new MockCallbacks();
+                        const insert = buildInsertParser({
+                            match: /^mock insert/,
+                        });
+                        const allTokens: insertsModule.InsertTokens[] = [];
+                        insert.parse = (tokens) => {
+                            allTokens.push(tokens);
+                        };
+                        const state = buildParsingState({
+                            content: header + passage,
+                            callbacks: callbacks,
+                        });
+                        const parser = uut.getChapbookParser(undefined);
+                        const mockFunction = ImportMock.mockFunction(
+                            insertsModule,
+                            "all"
+                        ).returns([insert]);
 
-                    parser?.parsePassageText(passage, header.length, state);
-                    const [functionToken, argToken] = callbacks.tokens;
+                        parser?.parsePassageText(passage, header.length, state);
+                        mockFunction.restore();
 
-                    expect(callbacks.tokens.length).to.equal(1);
-                    expect(functionToken).to.eql({
-                        line: 2,
-                        char: 21,
-                        length: 9,
-                        tokenType: ETokenType.function,
-                        tokenModifiers: [],
+                        expect(allTokens.length).to.equal(1);
+                        expect(allTokens[0].firstArgument).to.eql({
+                            text: "'arg'",
+                            at: 34,
+                        });
+                        expect(allTokens[0].props).to.be.empty;
                     });
-                });
 
-                it("should produce semantic tokens for an insert with an incomplete property", () => {
-                    const header = ":: Passage\n";
-                    const passage =
-                        "Some content.\n" +
-                        "A function insert: {back soon, prop}.\n";
-                    const callbacks = new MockCallbacks();
-                    const state = buildParsingState({
-                        content: header + passage,
-                        callbacks: callbacks,
-                    });
-                    const parser = uut.getChapbookParser(undefined);
+                    it("should send all properties to the matching insert", () => {
+                        const header = ":: Passage\n";
+                        const passage =
+                            "Insert: {mock insert ,  prop1: 'yes', prop2: 'no'}";
+                        const callbacks = new MockCallbacks();
+                        const insert = buildInsertParser({
+                            match: /^mock insert/,
+                        });
+                        const allTokens: insertsModule.InsertTokens[] = [];
+                        insert.parse = (tokens) => {
+                            allTokens.push(tokens);
+                        };
+                        const state = buildParsingState({
+                            content: header + passage,
+                            callbacks: callbacks,
+                        });
+                        const parser = uut.getChapbookParser(undefined);
+                        const mockFunction = ImportMock.mockFunction(
+                            insertsModule,
+                            "all"
+                        ).returns([insert]);
 
-                    parser?.parsePassageText(passage, header.length, state);
-                    const [functionToken] = callbacks.tokens;
+                        parser?.parsePassageText(passage, header.length, state);
+                        mockFunction.restore();
 
-                    expect(callbacks.tokens.length).to.equal(1);
-                    expect(functionToken).to.eql({
-                        line: 2,
-                        char: 20,
-                        length: 9,
-                        tokenType: ETokenType.function,
-                        tokenModifiers: [],
+                        expect(allTokens.length).to.equal(1);
+                        expect(allTokens[0].firstArgument).to.be.undefined;
+                        expect(allTokens[0].props).to.eql([
+                            [
+                                { text: "prop1", at: 35 },
+                                { text: "'yes'", at: 42 },
+                            ],
+                            [
+                                { text: "prop2", at: 49 },
+                                { text: "'no'", at: 56 },
+                            ],
+                        ]);
                     });
-                });
 
-                it("should produce semantic tokens for an insert with properties", () => {
-                    const header = ":: Passage\n";
-                    const passage =
-                        "Some content.\n" +
-                        "A function insert: { back soon,  prop1: val1, prop2 : val2  }.\n";
-                    const callbacks = new MockCallbacks();
-                    const state = buildParsingState({
-                        content: header + passage,
-                        callbacks: callbacks,
-                    });
-                    const parser = uut.getChapbookParser(undefined);
+                    it("should send all contents to the matching insert", () => {
+                        const header = ":: Passage\n";
+                        const passage =
+                            "Insert: {mock insert: 'arg', prop1: 'yes', prop2: 'no'}";
+                        const callbacks = new MockCallbacks();
+                        const insert = buildInsertParser({
+                            match: /^mock insert/,
+                        });
+                        const allTokens: insertsModule.InsertTokens[] = [];
+                        insert.parse = (tokens) => {
+                            allTokens.push(tokens);
+                        };
+                        const state = buildParsingState({
+                            content: header + passage,
+                            callbacks: callbacks,
+                        });
+                        const parser = uut.getChapbookParser(undefined);
+                        const mockFunction = ImportMock.mockFunction(
+                            insertsModule,
+                            "all"
+                        ).returns([insert]);
 
-                    parser?.parsePassageText(passage, header.length, state);
-                    const [functionToken, prop1Token, prop2Token] =
-                        callbacks.tokens;
+                        parser?.parsePassageText(passage, header.length, state);
+                        mockFunction.restore();
 
-                    expect(callbacks.tokens.length).to.equal(3);
-                    expect(functionToken).to.eql({
-                        line: 2,
-                        char: 21,
-                        length: 9,
-                        tokenType: ETokenType.function,
-                        tokenModifiers: [],
-                    });
-                    expect(prop1Token).to.eql({
-                        line: 2,
-                        char: 33,
-                        length: 5,
-                        tokenType: ETokenType.property,
-                        tokenModifiers: [],
-                    });
-                    expect(prop2Token).to.eql({
-                        line: 2,
-                        char: 46,
-                        length: 5,
-                        tokenType: ETokenType.property,
-                        tokenModifiers: [],
-                    });
-                });
-
-                it("should produce semantic tokens for an insert with an arg and properties", () => {
-                    const header = ":: Passage\n";
-                    const passage =
-                        "Some content.\n" +
-                        "A function insert: { back soon: arg,  prop1: val1, prop2 : val2  }.\n";
-                    const callbacks = new MockCallbacks();
-                    const state = buildParsingState({
-                        content: header + passage,
-                        callbacks: callbacks,
-                    });
-                    const parser = uut.getChapbookParser(undefined);
-
-                    parser?.parsePassageText(passage, header.length, state);
-                    const [functionToken, prop1Token, prop2Token] =
-                        callbacks.tokens;
-
-                    expect(callbacks.tokens.length).to.equal(3);
-                    expect(functionToken).to.eql({
-                        line: 2,
-                        char: 21,
-                        length: 9,
-                        tokenType: ETokenType.function,
-                        tokenModifiers: [],
-                    });
-                    expect(prop1Token).to.eql({
-                        line: 2,
-                        char: 38,
-                        length: 5,
-                        tokenType: ETokenType.property,
-                        tokenModifiers: [],
-                    });
-                    expect(prop2Token).to.eql({
-                        line: 2,
-                        char: 51,
-                        length: 5,
-                        tokenType: ETokenType.property,
-                        tokenModifiers: [],
-                    });
-                });
-            });
-
-            describe("semantic token order", () => {
-                it("should interleave tokens in document order", () => {
-                    const header = ":: Passage\n";
-                    const passage =
-                        "Link: [[target]] insert {var} another link [[target2]].";
-                    const callbacks = new MockCallbacks();
-                    const state = buildParsingState({
-                        content: header + passage,
-                        callbacks: callbacks,
-                    });
-                    const parser = uut.getChapbookParser(undefined);
-
-                    parser?.parsePassageText(passage, header.length, state);
-                    const [target1Token, varToken, target2Token] =
-                        callbacks.tokens;
-
-                    expect(callbacks.tokens.length).to.equal(3);
-                    expect(target1Token).to.eql({
-                        line: 1,
-                        char: 8,
-                        length: 6,
-                        tokenType: ETokenType.class,
-                        tokenModifiers: [],
-                    });
-                    expect(varToken).to.eql({
-                        line: 1,
-                        char: 25,
-                        length: 3,
-                        tokenType: ETokenType.variable,
-                        tokenModifiers: [],
-                    });
-                    expect(target2Token).to.eql({
-                        line: 1,
-                        char: 45,
-                        length: 7,
-                        tokenType: ETokenType.class,
-                        tokenModifiers: [],
+                        expect(allTokens.length).to.equal(1);
+                        expect(allTokens[0].firstArgument).to.eql({
+                            text: "'arg'",
+                            at: 33,
+                        });
+                        expect(allTokens[0].props).to.eql([
+                            [
+                                { text: "prop1", at: 40 },
+                                { text: "'yes'", at: 47 },
+                            ],
+                            [
+                                { text: "prop2", at: 54 },
+                                { text: "'no'", at: 61 },
+                            ],
+                        ]);
                     });
                 });
             });
@@ -930,12 +1054,211 @@ describe("Chapbook Passage", () => {
                     parser?.parsePassageText(passage, header.length, state);
                     const [result] = callbacks.errors;
 
+                    expect(callbacks.errors.length).to.equal(2); // Second error is b/c "fn insert" doesn't exist
+                    expect(result.severity).to.eql(DiagnosticSeverity.Error);
+                    expect(result.message).to.include(
+                        "Properties can't have spaces"
+                    );
+                    expect(result.range).to.eql(Range.create(1, 13, 1, 21));
+                });
+
+                it("should warn on an unrecognized insert", () => {
+                    const header = ":: Passage\n";
+                    const passage = "Insert: {mock insert: 'arg'}";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
+                    const mockFunction = ImportMock.mockFunction(
+                        insertsModule,
+                        "all"
+                    ).returns([]);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    mockFunction.restore();
+                    const [result] = callbacks.errors;
+
+                    expect(callbacks.errors.length).to.equal(1);
+                    expect(result.severity).to.eql(DiagnosticSeverity.Warning);
+                    expect(result.message).to.include(
+                        'Insert "mock insert" not recognized'
+                    );
+                    expect(result.range).to.eql(Range.create(1, 9, 1, 20));
+                });
+
+                it("should flag a property with a space", () => {
+                    const header = ":: Passage\n";
+                    const passage = "Insert: {mock insert, prop 1 a: 'arg'}";
+                    const callbacks = new MockCallbacks();
+                    const insert = buildInsertParser({
+                        match: /^mock insert/,
+                    });
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
+                    const mockFunction = ImportMock.mockFunction(
+                        insertsModule,
+                        "all"
+                    ).returns([insert]);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    mockFunction.restore();
+                    const [result] = callbacks.errors;
+
                     expect(callbacks.errors.length).to.equal(1);
                     expect(result.severity).to.eql(DiagnosticSeverity.Error);
                     expect(result.message).to.include(
                         "Properties can't have spaces"
                     );
-                    expect(result.range).to.eql(Range.create(1, 13, 1, 17));
+                    expect(result.range).to.eql(Range.create(1, 22, 1, 30));
+                });
+
+                it("should flag a missing required first argument", () => {
+                    const header = ":: Passage\n";
+                    const passage = "Insert: { mock insert }";
+                    const callbacks = new MockCallbacks();
+                    const insert = buildInsertParser({
+                        match: /^mock insert/,
+                        firstArgRequired: true,
+                    });
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
+                    const mockFunction = ImportMock.mockFunction(
+                        insertsModule,
+                        "all"
+                    ).returns([insert]);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    mockFunction.restore();
+                    const [result] = callbacks.errors;
+
+                    expect(callbacks.errors.length).to.equal(1);
+                    expect(result.severity).to.eql(DiagnosticSeverity.Error);
+                    expect(result.message).to.include(
+                        'Insert "Mock Insert" requires a first argument'
+                    );
+                    expect(result.range).to.eql(Range.create(1, 10, 1, 21));
+                });
+
+                it("should warn about an unneeded first argument", () => {
+                    const header = ":: Passage\n";
+                    const passage = "Insert: { mock insert: 'arg' }";
+                    const callbacks = new MockCallbacks();
+                    const insert = buildInsertParser({
+                        match: /^mock insert/,
+                    });
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
+                    const mockFunction = ImportMock.mockFunction(
+                        insertsModule,
+                        "all"
+                    ).returns([insert]);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    mockFunction.restore();
+                    const [result] = callbacks.errors;
+
+                    expect(callbacks.errors.length).to.equal(1);
+                    expect(result.severity).to.eql(DiagnosticSeverity.Warning);
+                    expect(result.message).to.include(
+                        'Insert "Mock Insert" will ignore this first argument'
+                    );
+                    expect(result.range).to.eql(Range.create(1, 23, 1, 28));
+                });
+
+                it("should flag a missing required property", () => {
+                    const header = ":: Passage\n";
+                    const passage = "Insert: { mock insert }";
+                    const callbacks = new MockCallbacks();
+                    const insert = buildInsertParser({
+                        match: /^mock insert/,
+                        requiredProps: { expected: null, also: null },
+                    });
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
+                    const mockFunction = ImportMock.mockFunction(
+                        insertsModule,
+                        "all"
+                    ).returns([insert]);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    mockFunction.restore();
+                    const [result] = callbacks.errors;
+
+                    expect(callbacks.errors.length).to.equal(1);
+                    expect(result.severity).to.eql(DiagnosticSeverity.Error);
+                    expect(result.message).to.include(
+                        'Insert "Mock Insert" missing expected properties: expected, also'
+                    );
+                    expect(result.range).to.eql(Range.create(1, 10, 1, 21));
+                });
+
+                it("should not flag missing optional properties", () => {
+                    const header = ":: Passage\n";
+                    const passage = "Insert: { mock insert }";
+                    const callbacks = new MockCallbacks();
+                    const insert = buildInsertParser({
+                        match: /^mock insert/,
+                        optionalProps: { expected: null, also: null },
+                    });
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
+                    const mockFunction = ImportMock.mockFunction(
+                        insertsModule,
+                        "all"
+                    ).returns([insert]);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    mockFunction.restore();
+                    const [result] = callbacks.errors;
+
+                    expect(callbacks.errors.length).to.equal(0);
+                });
+
+                it("should warn about unexpected properties", () => {
+                    const header = ":: Passage\n";
+                    const passage = "Insert: { mock insert, nope: 2 }";
+                    const callbacks = new MockCallbacks();
+                    const insert = buildInsertParser({
+                        match: /^mock insert/,
+                        optionalProps: { unneeded: null },
+                    });
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
+                    const mockFunction = ImportMock.mockFunction(
+                        insertsModule,
+                        "all"
+                    ).returns([insert]);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    mockFunction.restore();
+                    const [result] = callbacks.errors;
+
+                    expect(callbacks.errors.length).to.equal(1);
+                    expect(result.severity).to.eql(DiagnosticSeverity.Warning);
+                    expect(result.message).to.include(
+                        'Insert "Mock Insert" will ignore this property'
+                    );
+                    expect(result.range).to.eql(Range.create(1, 23, 1, 27));
                 });
             });
         });

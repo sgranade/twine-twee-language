@@ -13,6 +13,7 @@ import {
     PassageTextParsingState,
     capturePreTokenFor,
 } from "..";
+import { InsertTokens, all as allInserts } from "./inserts";
 
 const varsSepPattern = /^--(\r?\n|$)/m;
 const conditionPattern = /((\((.+?)\)?)\s*)([^)]*)$/;
@@ -55,6 +56,81 @@ export interface ChapbookParsingState extends PassageTextParsingState {
 }
 
 const varInsertPattern = /^({\s*)(\S+)\s*}$/;
+
+/**
+ * Parse the contents of an insert.
+ *
+ * @param tokens Tokenized insert information.
+ * @param state Parsing state.
+ * @param chapbookState Chapbook-specific parsing state.
+ */
+function parseInsertContents(
+    tokens: InsertTokens,
+    state: ParsingState,
+    chapbookState: ChapbookParsingState
+): void {
+    const insert = allInserts().find((i) => i.match.test(tokens.name.text));
+    if (insert === undefined) {
+        logWarningFor(
+            tokens.name.text,
+            tokens.name.at,
+            `Insert "${tokens.name.text}" not recognized`,
+            state
+        );
+        return;
+    }
+
+    // Check for required and unknown arguments
+
+    // First up, first argument
+    if (insert.arguments.firstArgument && tokens.firstArgument === undefined) {
+        logErrorFor(
+            tokens.name.text,
+            tokens.name.at,
+            `Insert "${insert.name}" requires a first argument`,
+            state
+        );
+    } else if (
+        !insert.arguments.firstArgument &&
+        tokens.firstArgument !== undefined
+    ) {
+        logWarningFor(
+            tokens.firstArgument.text,
+            tokens.firstArgument.at,
+            `Insert "${insert.name}" will ignore this first argument`,
+            state
+        );
+    }
+
+    // Second up, properties
+    const seenProperties: Set<string> = new Set();
+    for (const [propName] of tokens.props) {
+        if (propName.text in insert.arguments.requiredProps) {
+            seenProperties.add(propName.text);
+        } else if (!(propName.text in insert.arguments.optionalProps)) {
+            logWarningFor(
+                propName.text,
+                propName.at,
+                `Insert "${insert.name}" will ignore this property`,
+                state
+            );
+        }
+    }
+    const unseenProperties = Object.keys(insert.arguments.requiredProps).filter(
+        (k) => !seenProperties.has(k)
+    );
+    if (unseenProperties.length > 0) {
+        logErrorFor(
+            tokens.name.text,
+            tokens.name.at,
+            `Insert "${insert.name}" missing expected properties: ${unseenProperties.join(", ")}`,
+            state
+        );
+    }
+
+    // Third up, whatever additional checks the insert wants to do
+    insert.parse(tokens, state, chapbookState);
+}
 
 /**
  * Parse a Chapbook insert.
@@ -123,16 +199,34 @@ function parseInsert(
         functionName = functionName.slice(0, colonIndex);
     }
 
-    // Tokenize the function name
+    // Handle the function name
     [functionName, functionIndex] = skipSpaces(functionName, functionIndex);
+
+    // Tokenized insert information
+    // Note that the token's given locations are relative to the entire document
+    // instead of being relative to the insert's index.
+    const insertTokens: InsertTokens = {
+        name: { text: functionName, at: insertIndex + functionIndex },
+        firstArgument: undefined,
+        props: [],
+    };
+
     capturePreTokenFor(
-        functionName,
-        insertIndex + functionIndex,
+        insertTokens.name.text,
+        insertTokens.name.at,
         ETokenType.function,
         [],
         chapbookState
     );
 
+    // Handle the first argument
+    [argument, argumentIndex] = skipSpaces(argument, argumentIndex);
+    if (argument !== "") {
+        insertTokens.firstArgument = {
+            text: argument,
+            at: insertIndex + argumentIndex,
+        };
+    }
     // TODO tokenize args & look for variable references
 
     // Handle properties
@@ -140,31 +234,29 @@ function parseInsert(
         const propertySectionIndex = functionSection.length + 1; // + 1 for the comma
         // TODO ideally parse this as JS. In the meantime, tokenize things that
         // look like properties.
-        let propertyIndex = 0;
+        let propertyIndex = 0; // Relative to propertySection
         while (propertyIndex < propertySection.length) {
             const colonIndex = propertySection.indexOf(":", propertyIndex);
             if (colonIndex === -1) break;
 
-            const [prop, leftPad] = removeAndCountPadding(
+            const [currentProperty, leftPad] = removeAndCountPadding(
                 propertySection.slice(propertyIndex, colonIndex)
             );
+            const currentPropertyIndex = propertyIndex + leftPad; // Relative to propertySection
             capturePreTokenFor(
-                prop,
-                insertIndex + propertySectionIndex + propertyIndex + leftPad,
+                currentProperty,
+                insertIndex + propertySectionIndex + currentPropertyIndex,
                 ETokenType.property,
                 [],
                 chapbookState
             );
 
             // Properties can't have spaces bee tee dubs
-            const spaceIndex = prop.lastIndexOf(" ");
+            const spaceIndex = currentProperty.lastIndexOf(" ");
             if (spaceIndex !== -1) {
                 logErrorFor(
-                    prop.slice(0, spaceIndex + 1),
-                    insertIndex +
-                        propertySectionIndex +
-                        propertyIndex +
-                        leftPad,
+                    currentProperty,
+                    insertIndex + propertySectionIndex + currentPropertyIndex,
                     "Properties can't have spaces",
                     state
                 );
@@ -173,15 +265,16 @@ function parseInsert(
             // Scan forward to look for a comma that's not in a string,
             // indicating another property
             let inString = "";
-            const i = colonIndex + 1;
+            const currentValueIndex = colonIndex + 1; // Relative to propertySection
+            let currentValueEndIndex = currentValueIndex;
+            let c = "";
             for (
-                propertyIndex = colonIndex + 1;
-                propertyIndex < propertySection.length;
-                ++propertyIndex
+                ;
+                currentValueEndIndex < propertySection.length;
+                ++currentValueEndIndex
             ) {
-                const c = propertySection[propertyIndex];
+                c = propertySection[currentValueEndIndex];
                 if (c === "," && inString === "") {
-                    propertyIndex++; // To skip the comma
                     break;
                 }
 
@@ -191,10 +284,43 @@ function parseInsert(
                     inString = c;
                 }
             }
+            propertyIndex = currentValueEndIndex;
+            // Skip the comma (if it exists)
+            if (c === ",") propertyIndex++;
+
+            // If the property is well formed, capture it to pass to invidual inserts
+            if (spaceIndex === -1) {
+                const [currentValue, leftPad] = removeAndCountPadding(
+                    propertySection.slice(
+                        currentValueIndex,
+                        currentValueEndIndex
+                    )
+                );
+                // N.B. that currentPropertyIndex has taken a left pad into account,
+                // while currentValueIndex hasn't
+                insertTokens.props.push([
+                    {
+                        text: currentProperty,
+                        at:
+                            insertIndex +
+                            propertySectionIndex +
+                            currentPropertyIndex,
+                    },
+                    {
+                        text: currentValue,
+                        at:
+                            insertIndex +
+                            propertySectionIndex +
+                            currentValueIndex +
+                            leftPad,
+                    },
+                ]);
+            }
         }
     }
 
-    // TODO parse the actual insert contents
+    // Parse the insert contents
+    parseInsertContents(insertTokens, state, chapbookState);
 }
 
 /**
