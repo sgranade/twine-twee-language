@@ -515,10 +515,10 @@ describe("Chapbook Passage", () => {
                         const parser = uut.getChapbookParser(undefined);
 
                         parser?.parsePassageText(passage, header.length, state);
-                        const [functionToken, argToken] = callbacks.tokens;
+                        const [result] = callbacks.tokens;
 
                         expect(callbacks.tokens.length).to.equal(1);
-                        expect(functionToken).to.eql({
+                        expect(result).to.eql({
                             line: 2,
                             char: 21,
                             length: 9,
@@ -1226,7 +1226,6 @@ describe("Chapbook Passage", () => {
 
                     parser?.parsePassageText(passage, header.length, state);
                     mockFunction.restore();
-                    const [result] = callbacks.errors;
 
                     expect(callbacks.errors.length).to.equal(0);
                 });

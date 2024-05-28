@@ -490,9 +490,6 @@ describe("Parser", () => {
 
             it("should call back on StoryData with the data's range, even on Windows", () => {
                 const callbacks = new MockCallbacks();
-                const storyData = buildStoryData({
-                    ifid: "62891577-8D8E-496F-B46C-9FF0194C0EAC",
-                });
                 const doc = TextDocument.create(
                     "fake-uri",
                     "",
@@ -683,11 +680,7 @@ describe("Parser", () => {
                     if (format?.format == "FakeFormat") {
                         return {
                             id: "FakeFormat",
-                            parsePassageText: (
-                                passageText: string,
-                                textIndex: number,
-                                state: uut.ParsingState
-                            ) => {
+                            parsePassageText: (passageText: string) => {
                                 receivedContents.push(passageText);
                             },
                         };
@@ -725,11 +718,7 @@ describe("Parser", () => {
                     if (format?.format == "FakeFormat") {
                         return {
                             id: "FakeFormat",
-                            parsePassageText: (
-                                passageText: string,
-                                textIndex: number,
-                                state: uut.ParsingState
-                            ) => {
+                            parsePassageText: (passageText: string) => {
                                 receivedContents.push(passageText);
                             },
                         };

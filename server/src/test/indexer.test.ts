@@ -72,7 +72,7 @@ describe("Indexer", () => {
             const mockFunction = ImportMock.mockFunction(
                 ptpModule,
                 "getPassageTextParser"
-            ).callsFake((format) => {
+            ).callsFake(() => {
                 return {
                     id: "FakeFormat",
                     parsePassageText: (

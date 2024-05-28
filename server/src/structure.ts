@@ -66,8 +66,6 @@ export function generateFoldingRanges(
     return ranges;
 }
 
-const stringRegex = /(?<!\\)"(.*?)(?<!\\)"/g;
-
 /**
  * Generate semantic tokens for a document.
  *

@@ -27,6 +27,7 @@ const lineExtractionPattern = /^(\s*?)\b(.*)$/gm;
  * @returns Parser, or undefined if none is available.
  */
 export function getChapbookParser(
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     formatVersion: string | undefined
 ): PassageTextParser | undefined {
     return {
@@ -669,9 +670,10 @@ function parseVarsSection(
         }
         let name = m[2].slice(0, colonIndex).trimEnd();
         const nameIndex = m.index + m[1].length;
-        // eslint-disable-next-line prefer-const
-        let [, valueIndex] = removeAndCountPadding(m[1].slice(colonIndex + 1));
-        valueIndex += m.index + colonIndex;
+
+        // TODO this section extracts the value
+        // let [value, valueIndex] = removeAndCountPadding(m[1].slice(colonIndex + 1));
+        // valueIndex += m.index + colonIndex;
 
         // Check for a condition
         const conditionMatch = conditionPattern.exec(name);
