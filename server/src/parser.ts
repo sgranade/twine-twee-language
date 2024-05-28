@@ -170,6 +170,34 @@ export function logTokenFor(
 }
 
 /**
+ * Parse a reference to a passage.
+ *
+ * @param passage Text name of the referenced passage.
+ * @param at Index in the document where the passage reference occurs.
+ * @param state Parsing state.
+ * @param passageTextParsingState Story-format-specific parsing state.
+ */
+export function parsePassageReference(
+    passage: string,
+    at: number,
+    state: ParsingState,
+    passageTextParsingState: PassageTextParsingState
+): void {
+    capturePreTokenFor(
+        passage,
+        at,
+        ETokenType.class,
+        [],
+        passageTextParsingState
+    );
+
+    state.callbacks.onPassageReference(
+        passage,
+        createRangeFor(passage, at, state)
+    );
+}
+
+/**
  * Parse Twine links.
  *
  * Story formats are responsible for calling this, but since this format is shared among
@@ -238,21 +266,11 @@ export function parseLinks(
 
         let indexDelta;
         [target, targetIndex] = skipSpaces(target, targetIndex);
-        capturePreTokenFor(
+        parsePassageReference(
             target,
             subsectionIndex + linksIndex + targetIndex,
-            ETokenType.class,
-            [],
+            state,
             passageTextParsingState
-        );
-
-        state.callbacks.onPassageReference(
-            target,
-            createRangeFor(
-                target,
-                subsectionIndex + linksIndex + targetIndex,
-                state
-            )
         );
 
         if (dividerIndex !== -1) {

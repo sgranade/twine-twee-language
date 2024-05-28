@@ -13,7 +13,7 @@ import {
     PassageTextParsingState,
     capturePreTokenFor,
 } from "..";
-import { InsertTokens, all as allInserts } from "./inserts";
+import { InsertTokens, Token, all as allInserts } from "./inserts";
 
 const varsSepPattern = /^--(\r?\n|$)/m;
 const conditionPattern = /((\((.+?)\)?)\s*)([^)]*)$/;
@@ -40,6 +40,7 @@ export function getChapbookParser(
  * Type of Chapbook modifier
  */
 enum ModifierType {
+    None,
     Javascript,
     Css,
     Note,
@@ -105,13 +106,16 @@ function parseInsertContents(
 
     // Second up, properties
     const seenProperties: Set<string> = new Set();
-    for (const [propName] of tokens.props) {
-        if (propName.text in insert.arguments.requiredProps) {
-            seenProperties.add(propName.text);
-        } else if (!(propName.text in insert.arguments.optionalProps)) {
+    for (const [propName, [propToken]] of Object.entries(tokens.props) as [
+        string,
+        [Token, Token],
+    ][]) {
+        if (propName in insert.arguments.requiredProps) {
+            seenProperties.add(propName);
+        } else if (!(propName in insert.arguments.optionalProps)) {
             logWarningFor(
-                propName.text,
-                propName.at,
+                propToken.text,
+                propToken.at,
                 `Insert "${insert.name}" will ignore this property`,
                 state
             );
@@ -209,7 +213,7 @@ function parseInsert(
     const insertTokens: InsertTokens = {
         name: { text: functionName, at: insertIndex + functionIndex },
         firstArgument: undefined,
-        props: [],
+        props: {},
     };
 
     capturePreTokenFor(
@@ -299,7 +303,7 @@ function parseInsert(
                 );
                 // N.B. that currentPropertyIndex has taken a left pad into account,
                 // while currentValueIndex hasn't
-                insertTokens.props.push([
+                insertTokens.props[currentProperty] = [
                     {
                         text: currentProperty,
                         at:
@@ -315,7 +319,7 @@ function parseInsert(
                             currentValueIndex +
                             leftPad,
                     },
-                ]);
+                ];
             }
         }
     }
@@ -541,7 +545,7 @@ function parseTextSection(
     modifierPattern.lastIndex = 0;
     let previousModifierEndIndex = 0;
     const chapbookState: ChapbookParsingState = {
-        modifierType: ModifierType.Other,
+        modifierType: ModifierType.None,
         textSubsectionTokens: {},
     };
     for (const m of section.matchAll(modifierPattern)) {
@@ -554,7 +558,7 @@ function parseTextSection(
         );
 
         // Reset the modifier type
-        chapbookState.modifierType = ModifierType.Other;
+        chapbookState.modifierType = ModifierType.None;
 
         // Check for spaces before/after the modifier, which causes Chapbook to ignore them
         if (m[1] !== "") {

@@ -23,7 +23,7 @@ export interface Token {
  */
 export interface InsertTokens {
     /**
-     * Insert's name.
+     * Insert's name as invoked.
      */
     name: Token;
     /**
@@ -31,9 +31,10 @@ export interface InsertTokens {
      */
     firstArgument: Token | undefined;
     /**
-     * Properties as an array of [property name, property value] tokens.
+     * Properties as an object whose keys are the property name text and values
+     * are [property name, property value] tokens.
      */
-    props: [Token, Token][];
+    props: Record<string, [Token, Token]>;
 }
 
 /**

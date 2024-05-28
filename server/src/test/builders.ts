@@ -5,7 +5,6 @@ import { EmbeddedDocument } from "../embedded-languages";
 import { Passage, StoryData } from "../project-index";
 import { ParserCallbacks, ParsingState } from "../parser";
 import { Token } from "../tokens";
-import { InsertParser } from "../passage-text-parsers/chapbook/inserts";
 
 export function buildPassage({
     label = "Passage",
@@ -81,23 +80,4 @@ export class MockCallbacks implements ParserCallbacks {
     onParseError(error: Diagnostic): void {
         this.errors.push(error);
     }
-}
-
-export function buildInsertParser({
-    name = "Mock Insert",
-    match = /^mock insert/,
-    firstArgRequired = false,
-    requiredProps = {},
-    optionalProps = {},
-}): InsertParser {
-    return {
-        name: name,
-        match: match,
-        arguments: {
-            firstArgument: firstArgRequired,
-            requiredProps: requiredProps,
-            optionalProps: optionalProps,
-        },
-        parse: () => {},
-    };
 }

@@ -4,11 +4,8 @@ import { ImportMock } from "ts-mock-imports";
 import { DiagnosticSeverity, Range } from "vscode-languageserver";
 
 import { ETokenModifier, ETokenType } from "../../../tokens";
-import {
-    MockCallbacks,
-    buildInsertParser,
-    buildParsingState,
-} from "../../builders";
+import { MockCallbacks, buildParsingState } from "../../builders";
+import { buildInsertParser } from "./inserts/insert-builders";
 import * as insertsModule from "../../../passage-text-parsers/chapbook/inserts";
 import * as uut from "../../../passage-text-parsers/chapbook";
 
@@ -734,16 +731,16 @@ describe("Chapbook Passage", () => {
 
                         expect(allTokens.length).to.equal(1);
                         expect(allTokens[0].firstArgument).to.be.undefined;
-                        expect(allTokens[0].props).to.eql([
-                            [
+                        expect(allTokens[0].props).to.eql({
+                            prop1: [
                                 { text: "prop1", at: 35 },
                                 { text: "'yes'", at: 42 },
                             ],
-                            [
+                            prop2: [
                                 { text: "prop2", at: 49 },
                                 { text: "'no'", at: 56 },
                             ],
-                        ]);
+                        });
                     });
 
                     it("should send all contents to the matching insert", () => {
@@ -776,16 +773,16 @@ describe("Chapbook Passage", () => {
                             text: "'arg'",
                             at: 33,
                         });
-                        expect(allTokens[0].props).to.eql([
-                            [
+                        expect(allTokens[0].props).to.eql({
+                            prop1: [
                                 { text: "prop1", at: 40 },
                                 { text: "'yes'", at: 47 },
                             ],
-                            [
+                            prop2: [
                                 { text: "prop2", at: 54 },
                                 { text: "'no'", at: 61 },
                             ],
-                        ]);
+                        });
                     });
                 });
             });
