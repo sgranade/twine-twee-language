@@ -16,7 +16,32 @@ describe("Completions", () => {
             const index = new Index();
             index.setPassages("fake-uri", [buildPassage({ label: "Testy" })]);
 
-            const results = await uut.generateCompletions(doc, position, index);
+            const results = await uut.generateCompletions(
+                doc,
+                position,
+                index,
+                true
+            );
+
+            expect(results?.items.length).to.equal(1);
+            expect(results?.items[0].label).to.eql("Testy");
+            expect(results?.itemDefaults?.editRange).to.eql(
+                Range.create(0, 3, 0, 4)
+            );
+        });
+
+        it("should suggest a passage just after a [[ (without item defaults)", async () => {
+            const doc = TextDocument.create("fake-uri", "", 0, " [[ ");
+            const position = Position.create(0, 4);
+            const index = new Index();
+            index.setPassages("fake-uri", [buildPassage({ label: "Testy" })]);
+
+            const results = await uut.generateCompletions(
+                doc,
+                position,
+                index,
+                false // Return without CompletionList.itemDefaults
+            );
 
             expect(results?.items.length).to.equal(1);
             expect(results?.items[0].textEdit).to.eql({
@@ -31,13 +56,18 @@ describe("Completions", () => {
             const index = new Index();
             index.setPassages("fake-uri", [buildPassage({ label: "Testy" })]);
 
-            const results = await uut.generateCompletions(doc, position, index);
+            const results = await uut.generateCompletions(
+                doc,
+                position,
+                index,
+                true
+            );
 
             expect(results?.items.length).to.equal(1);
-            expect(results?.items[0].textEdit).to.eql({
-                range: Range.create(0, 3, 0, 9),
-                newText: "Testy",
-            });
+            expect(results?.items[0].label).to.eql("Testy");
+            expect(results?.itemDefaults?.editRange).to.eql(
+                Range.create(0, 3, 0, 9)
+            );
         });
 
         it("should not suggest a passage within a [[ ... |", async () => {
@@ -46,7 +76,12 @@ describe("Completions", () => {
             const index = new Index();
             index.setPassages("fake-uri", [buildPassage({ label: "Testy" })]);
 
-            const results = await uut.generateCompletions(doc, position, index);
+            const results = await uut.generateCompletions(
+                doc,
+                position,
+                index,
+                true
+            );
 
             expect(results).to.be.null;
         });
@@ -62,13 +97,18 @@ describe("Completions", () => {
             const index = new Index();
             index.setPassages("fake-uri", [buildPassage({ label: "Testy" })]);
 
-            const results = await uut.generateCompletions(doc, position, index);
+            const results = await uut.generateCompletions(
+                doc,
+                position,
+                index,
+                true
+            );
 
             expect(results?.items.length).to.equal(1);
-            expect(results?.items[0].textEdit).to.eql({
-                range: Range.create(0, 11, 0, 26),
-                newText: "Testy",
-            });
+            expect(results?.items[0].label).to.eql("Testy");
+            expect(results?.itemDefaults?.editRange).to.eql(
+                Range.create(0, 11, 0, 26)
+            );
         });
 
         it("should not suggest a passage within a [[ ... ->", async () => {
@@ -77,7 +117,12 @@ describe("Completions", () => {
             const index = new Index();
             index.setPassages("fake-uri", [buildPassage({ label: "Testy" })]);
 
-            const results = await uut.generateCompletions(doc, position, index);
+            const results = await uut.generateCompletions(
+                doc,
+                position,
+                index,
+                true
+            );
 
             expect(results).to.be.null;
         });
@@ -93,13 +138,18 @@ describe("Completions", () => {
             const index = new Index();
             index.setPassages("fake-uri", [buildPassage({ label: "Testy" })]);
 
-            const results = await uut.generateCompletions(doc, position, index);
+            const results = await uut.generateCompletions(
+                doc,
+                position,
+                index,
+                true
+            );
 
             expect(results?.items.length).to.equal(1);
-            expect(results?.items[0].textEdit).to.eql({
-                range: Range.create(0, 12, 0, 27),
-                newText: "Testy",
-            });
+            expect(results?.items[0].label).to.eql("Testy");
+            expect(results?.itemDefaults?.editRange).to.eql(
+                Range.create(0, 12, 0, 27)
+            );
         });
 
         it("should suggest a passage replacement within the limits of [[ ... ]]", async () => {
@@ -113,13 +163,18 @@ describe("Completions", () => {
             const index = new Index();
             index.setPassages("fake-uri", [buildPassage({ label: "Testy" })]);
 
-            const results = await uut.generateCompletions(doc, position, index);
+            const results = await uut.generateCompletions(
+                doc,
+                position,
+                index,
+                true
+            );
 
             expect(results?.items.length).to.equal(1);
-            expect(results?.items[0].textEdit).to.eql({
-                range: Range.create(0, 3, 0, 24),
-                newText: "Testy",
-            });
+            expect(results?.items[0].label).to.eql("Testy");
+            expect(results?.itemDefaults?.editRange).to.eql(
+                Range.create(0, 3, 0, 24)
+            );
         });
 
         it("should suggest a replacement passage within [[...| here ]]", async () => {
@@ -133,13 +188,18 @@ describe("Completions", () => {
             const index = new Index();
             index.setPassages("fake-uri", [buildPassage({ label: "Testy" })]);
 
-            const results = await uut.generateCompletions(doc, position, index);
+            const results = await uut.generateCompletions(
+                doc,
+                position,
+                index,
+                true
+            );
 
             expect(results?.items.length).to.equal(1);
-            expect(results?.items[0].textEdit).to.eql({
-                range: Range.create(0, 11, 0, 25),
-                newText: "Testy",
-            });
+            expect(results?.items[0].label).to.eql("Testy");
+            expect(results?.itemDefaults?.editRange).to.eql(
+                Range.create(0, 11, 0, 25)
+            );
         });
 
         it("should suggest a replacement passage within [[...-> here ]]", async () => {
@@ -153,13 +213,18 @@ describe("Completions", () => {
             const index = new Index();
             index.setPassages("fake-uri", [buildPassage({ label: "Testy" })]);
 
-            const results = await uut.generateCompletions(doc, position, index);
+            const results = await uut.generateCompletions(
+                doc,
+                position,
+                index,
+                true
+            );
 
             expect(results?.items.length).to.equal(1);
-            expect(results?.items[0].textEdit).to.eql({
-                range: Range.create(0, 12, 0, 27),
-                newText: "Testy",
-            });
+            expect(results?.items[0].label).to.eql("Testy");
+            expect(results?.itemDefaults?.editRange).to.eql(
+                Range.create(0, 12, 0, 27)
+            );
         });
     });
 });

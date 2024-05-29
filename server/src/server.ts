@@ -49,6 +49,7 @@ const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
 const projectIndex = new Index();
 
 let hasConfigurationCapability = false;
+let hasCompletionListItemDefaults = false;
 let hasDiagnosticRelatedInformationCapability = false;
 let hasPrepareProviderCapability = false;
 
@@ -63,6 +64,13 @@ connection.onInitialize((params: InitializeParams) => {
         capabilities.textDocument.publishDiagnostics &&
         capabilities.textDocument.publishDiagnostics.relatedInformation
     );
+    const itemDefaults =
+        capabilities.textDocument?.completion?.completionList?.itemDefaults;
+    if (itemDefaults) {
+        hasCompletionListItemDefaults = !!(
+            "editRange" in itemDefaults && "insertTextFormat" in itemDefaults
+        );
+    }
     hasPrepareProviderCapability =
         !!capabilities.textDocument?.rename?.prepareSupport;
 
@@ -180,7 +188,8 @@ connection.onCompletion(
         return await generateCompletions(
             document,
             params.position,
-            projectIndex
+            projectIndex,
+            hasDiagnosticRelatedInformationCapability
         );
     }
 );

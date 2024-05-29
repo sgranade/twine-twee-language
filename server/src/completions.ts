@@ -6,6 +6,7 @@ import {
     InsertTextFormat,
     Position,
     Range,
+    TextEdit,
 } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
@@ -156,10 +157,48 @@ function generateStoryDataCompletions(
     return completions;
 }
 
+/**
+ * Remove item defaults from a completion list.
+ *
+ * Not all clients support completion item defaults. For those, add the default
+ * values to each individual completion item.
+ * @param completionList Completion list with item defaults.
+ * @returns List with defaults added to each individual completion item.
+ */
+function removeCompletionListItemDefaults(
+    completionList: CompletionList
+): CompletionList {
+    const insertTextFormat = completionList.itemDefaults?.insertTextFormat;
+    const editRange = completionList.itemDefaults?.editRange;
+    if (
+        insertTextFormat !== undefined &&
+        editRange !== undefined &&
+        Range.is(editRange)
+    ) {
+        completionList.items = completionList.items.map((item) => {
+            item.insertTextFormat = insertTextFormat;
+            item.textEdit = TextEdit.replace(editRange, item.label);
+            return item;
+        });
+    }
+    completionList.itemDefaults = undefined;
+    return completionList;
+}
+
+/**
+ * Generate completions for a document.
+ *
+ * @param document Document to generate completions for.
+ * @param position Where to generate the completions.
+ * @param index Twine project index.
+ * @param hasCompletionListItemDefaults Whether the client supports CompletionList.itemDefaults
+ * @returns Completion list, or null if no completions.
+ */
 export async function generateCompletions(
     document: TextDocument,
     position: Position,
-    index: ProjectIndex
+    index: ProjectIndex,
+    hasCompletionListItemDefaults: boolean
 ): Promise<CompletionList | null> {
     const offset = document.offsetAt(position);
 
@@ -269,22 +308,24 @@ export async function generateCompletions(
                 document.positionAt(linkEndOffset)
             );
 
-            return CompletionList.create(
+            let completionList = CompletionList.create(
                 index.getPassageNames().map((p): CompletionItem => {
                     return {
                         label: p,
                         kind: CompletionItemKind.Class,
-                        insertText: p,
-                        insertTextFormat: InsertTextFormat.Snippet,
-                        filterText: p,
-                        textEdit: {
-                            range: replacementRange,
-                            newText: p,
-                        },
                     };
                 }),
                 false
             );
+            completionList.itemDefaults = {
+                editRange: replacementRange,
+                insertTextFormat: InsertTextFormat.Snippet,
+            };
+            if (!hasCompletionListItemDefaults) {
+                completionList =
+                    removeCompletionListItemDefaults(completionList);
+            }
+            return completionList;
         }
     }
 
@@ -293,7 +334,16 @@ export async function generateCompletions(
     if (storyFormat !== undefined) {
         const parser = getPassageTextParser(storyFormat);
         if (parser !== undefined) {
-            return parser.generateCompletions(document, position, index);
+            let completionList = parser.generateCompletions(
+                document,
+                position,
+                index
+            );
+            if (completionList !== null && !hasCompletionListItemDefaults) {
+                completionList =
+                    removeCompletionListItemDefaults(completionList);
+            }
+            return completionList;
         }
     }
 
