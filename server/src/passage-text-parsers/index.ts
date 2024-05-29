@@ -1,5 +1,9 @@
+import { CompletionList, Position } from "vscode-languageserver";
+import { TextDocument } from "vscode-languageserver-textdocument";
+
 import { StoryFormat } from "../client-server";
 import { ParsingState } from "../parser";
+import { ProjectIndex } from "../project-index";
 import { TokenModifier, TokenType } from "../tokens";
 import { getChapbookParser } from "./chapbook";
 
@@ -7,12 +11,35 @@ import { getChapbookParser } from "./chapbook";
  * Story-format-specific parsers that parse passage text.
  */
 export interface PassageTextParser {
+    /**
+     * ID for the parser: "format-version"
+     */
     id: string;
+    /**
+     * Parse a Twine passage's text.
+     *
+     * @param passageText Text of the passage to parse.
+     * @param textIndex Index of the passage in the document (zero-based).
+     * @param state Parsing state.
+     */
     parsePassageText(
         passageText: string,
         textIndex: number,
         state: ParsingState
     ): void;
+    /**
+     * Generate completions at a position.
+     *
+     * @param document Document to generate completions in.
+     * @param position Position in the document to generate completions.
+     * @param index Twine project index.
+     * @returns Completion list, or null.
+     */
+    generateCompletions(
+        document: TextDocument,
+        position: Position,
+        index: ProjectIndex
+    ): CompletionList | null;
 }
 
 /**

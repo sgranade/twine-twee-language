@@ -15,6 +15,7 @@ import {
     parseJSON,
     storyDataJSONUri,
 } from "./embedded-languages";
+import { getPassageTextParser } from "./passage-text-parsers";
 import { ProjectIndex } from "./project-index";
 import { containingRange } from "./utilities";
 
@@ -161,7 +162,6 @@ export async function generateCompletions(
     index: ProjectIndex
 ): Promise<CompletionList | null> {
     const offset = document.offsetAt(position);
-    let completions: CompletionList | null = null;
 
     // Embedded documents get to create their own completions
     for (const embeddedDocument of index.getEmbeddedDocuments(document.uri) ||
@@ -172,7 +172,7 @@ export async function generateCompletions(
                 embeddedDocument.offset +
                     embeddedDocument.document.getText().length
         ) {
-            completions =
+            const completions =
                 (await doComplete(embeddedDocument, offset)) ||
                 CompletionList.create([], false);
 
@@ -269,7 +269,7 @@ export async function generateCompletions(
                 document.positionAt(linkEndOffset)
             );
 
-            completions = CompletionList.create(
+            return CompletionList.create(
                 index.getPassageNames().map((p): CompletionItem => {
                     return {
                         label: p,
@@ -285,10 +285,17 @@ export async function generateCompletions(
                 }),
                 false
             );
-
-            return completions;
         }
     }
 
-    return completions;
+    // If there's a story format, let its parser provide optional completions
+    const storyFormat = index.getStoryData()?.storyFormat;
+    if (storyFormat !== undefined) {
+        const parser = getPassageTextParser(storyFormat);
+        if (parser !== undefined) {
+            return parser.generateCompletions(document, position, index);
+        }
+    }
+
+    return null;
 }

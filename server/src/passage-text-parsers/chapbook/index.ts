@@ -1,4 +1,6 @@
+import { CompletionList, Position } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
+
 import {
     ParsingState,
     logErrorFor,
@@ -6,6 +8,7 @@ import {
     logWarningFor,
     parseLinks,
 } from "../../parser";
+import { ProjectIndex } from "../../project-index";
 import { ETokenModifier, ETokenType } from "../../tokens";
 import { removeAndCountPadding, skipSpaces } from "../../utilities";
 import {
@@ -33,6 +36,7 @@ export function getChapbookParser(
     return {
         id: "chapbook-any",
         parsePassageText: parsePassageText,
+        generateCompletions: generateCompletions,
     };
 }
 
@@ -782,4 +786,20 @@ function parsePassageText(
         content = passageText;
     }
     parseTextSection(content, textIndex + contentIndex, state);
+}
+
+/**
+ * Generate completions at a position.
+ *
+ * @param document Document to generate completions in.
+ * @param position Position in the document to generate completions.
+ * @param index Twine project index.
+ * @returns Completion list, or null.
+ */
+function generateCompletions(
+    document: TextDocument,
+    position: Position,
+    index: ProjectIndex
+): CompletionList | null {
+    return null;
 }
