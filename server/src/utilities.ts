@@ -25,6 +25,8 @@ export function* pairwise<T>(itr: Iterable<T>) {
 
 /** TEXT AND STRING MANIPULATION **/
 
+const lineEndPattern = /\r?\n|$/g;
+
 /**
  * Scan a document's text to find the end of the current line.
  *
@@ -34,7 +36,6 @@ export function* pairwise<T>(itr: Iterable<T>) {
  */
 export function nextLineIndex(document: string, startIndex: number): number {
     let lineEnd: number;
-    const lineEndPattern = /\r?\n|$/g;
     lineEndPattern.lastIndex = startIndex;
     const m = lineEndPattern.exec(document);
     if (m) {

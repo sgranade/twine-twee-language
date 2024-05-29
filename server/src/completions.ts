@@ -40,12 +40,10 @@ function createStringCompletion(
 ): CompletionItem {
     const newText = `"${label}"`;
     const item = {
-        label: label,
+        label: newText,
         kind: kind,
         documentation: documentation,
-        insertText: newText,
         insertTextFormat: InsertTextFormat.Snippet,
-        filterText: newText,
         textEdit: {
             range: range,
             newText: newText,
@@ -276,13 +274,13 @@ export async function generateCompletions(
             linkBeginOffset = arrowOrPipeOffset;
         }
 
-        // Find where the link should end: either ]], <-, or (if none of those), at the end of the current word
+        // Find where the link should end: ]], <-, or the end of the line
         let linkEndOffset: number | undefined;
         let suggestAPassage = true;
         for (i = offset; i < text.length; i++) {
             // Don't go further forward than the current line,
             // the pipe character, or a ->
-            if (text[i] === "\n") break;
+            if (text[i] === "\r" || text[i] === "\n") break;
             if (text[i] === "|" || (text[i] === "-" && text[i + 1] === ">")) {
                 suggestAPassage = false;
                 break;

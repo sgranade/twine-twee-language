@@ -1,4 +1,4 @@
-import { ChapbookParsingState } from "..";
+import { ChapbookParsingState } from "../chapbook-parser";
 import { ParsingState } from "../../../parser";
 
 /**

@@ -33,7 +33,7 @@ export interface PassageTextParser {
      * @param document Document to generate completions in.
      * @param position Position in the document to generate completions.
      * @param index Twine project index.
-     * @returns Completion list, or null.
+     * @returns Completion list, or null for no completions.
      */
     generateCompletions(
         document: TextDocument,

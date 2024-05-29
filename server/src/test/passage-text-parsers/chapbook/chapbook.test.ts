@@ -1,12 +1,14 @@
 import "mocha";
 import { expect } from "chai";
 import { ImportMock } from "ts-mock-imports";
-import { DiagnosticSeverity, Range } from "vscode-languageserver";
+import { DiagnosticSeverity, Position, Range } from "vscode-languageserver";
+import { TextDocument } from "vscode-languageserver-textdocument";
 
-import { ETokenModifier, ETokenType } from "../../../tokens";
 import { MockCallbacks, buildParsingState } from "../../builders";
 import { buildInsertParser } from "./inserts/insert-builders";
+import { ETokenModifier, ETokenType } from "../../../tokens";
 import * as insertsModule from "../../../passage-text-parsers/chapbook/inserts";
+import { Index } from "../../../project-index";
 import * as uut from "../../../passage-text-parsers/chapbook";
 
 describe("Chapbook Passage", () => {
@@ -785,6 +787,115 @@ describe("Chapbook Passage", () => {
                         });
                     });
                 });
+            });
+        });
+    });
+
+    describe("Completions", () => {
+        describe("modifiers", () => {
+            it("should suggest modifiers after a [ at the start of the line", () => {
+                const doc = TextDocument.create("fake-uri", "", 0, "[ here ");
+                const position = Position.create(0, 4);
+                const index = new Index();
+                const parser = uut.getChapbookParser(undefined);
+
+                const results = parser?.generateCompletions(
+                    doc,
+                    position,
+                    index
+                );
+
+                expect(results?.itemDefaults?.editRange).to.eql(
+                    Range.create(0, 1, 0, 7)
+                );
+            });
+
+            it("should suggest modifiers within [ ...;", () => {
+                const doc = TextDocument.create(
+                    "fake-uri",
+                    "",
+                    0,
+                    "[ here; not here "
+                );
+                const position = Position.create(0, 4);
+                const index = new Index();
+                const parser = uut.getChapbookParser(undefined);
+
+                const results = parser?.generateCompletions(
+                    doc,
+                    position,
+                    index
+                );
+
+                expect(results?.itemDefaults?.editRange).to.eql(
+                    Range.create(0, 1, 0, 6)
+                );
+            });
+
+            it("should suggest modifiers within [...; here", () => {
+                const doc = TextDocument.create(
+                    "fake-uri",
+                    "",
+                    0,
+                    "[ not here; here \nnot here"
+                );
+                const position = Position.create(0, 12);
+                const index = new Index();
+                const parser = uut.getChapbookParser(undefined);
+
+                const results = parser?.generateCompletions(
+                    doc,
+                    position,
+                    index
+                );
+
+                expect(results?.itemDefaults?.editRange).to.eql(
+                    Range.create(0, 11, 0, 17)
+                );
+            });
+
+            it("should suggest modifiers within [...]", () => {
+                const doc = TextDocument.create(
+                    "fake-uri",
+                    "",
+                    0,
+                    "[ here ] not here"
+                );
+                const position = Position.create(0, 4);
+                const index = new Index();
+                const parser = uut.getChapbookParser(undefined);
+
+                const results = parser?.generateCompletions(
+                    doc,
+                    position,
+                    index
+                );
+
+                expect(results?.itemDefaults?.editRange).to.eql(
+                    Range.create(0, 1, 0, 7)
+                );
+            });
+
+            it("should suggest modifiers within [...; here]", () => {
+                const doc = TextDocument.create(
+                    "fake-uri",
+                    "",
+                    0,
+                    "[ not here; here] not here"
+                );
+                const position = Position.create(0, 12);
+                const index = new Index();
+                const parser = uut.getChapbookParser(undefined);
+
+                const results = parser?.generateCompletions(
+                    doc,
+                    position,
+                    index
+                );
+
+                expect(results?.itemDefaults?.editRange).to.eql(
+                    Range.create(0, 11, 0, 16)
+                );
             });
         });
     });
