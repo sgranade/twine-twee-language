@@ -473,18 +473,22 @@ function parseModifier(
             break;
         }
 
-        // See if we recognize the modifier
-        const modifier = modifiers.find((i) => i.match.test(remainingModifier));
-        if (modifier === undefined) {
-            logWarningFor(
-                remainingModifier,
-                tokenIndex,
-                `Modifier "${remainingModifier}" not recognized`,
-                state
+        // See if we recognize the modifier (only on the first token!)
+        if (firstToken) {
+            const modifier = modifiers.find((i) =>
+                i.match.test(remainingModifier)
             );
-        } else {
-            // Handle modifier-specific parsing, which can set the text block state in chapbookState
-            modifier.parse(remainingModifier, state, chapbookState);
+            if (modifier === undefined) {
+                logWarningFor(
+                    remainingModifier,
+                    tokenIndex,
+                    `Modifier "${remainingModifier}" not recognized`,
+                    state
+                );
+            } else {
+                // Handle modifier-specific parsing, which can set the text block state in chapbookState
+                modifier.parse(remainingModifier, state, chapbookState);
+            }
         }
 
         const token = remainingModifier.split(/\s/, 1)[0];
