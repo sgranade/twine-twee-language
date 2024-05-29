@@ -1,4 +1,5 @@
 import {
+    ArgumentRequirement,
     InsertParser,
     InsertTokens,
 } from "../../../../passage-text-parsers/chapbook/inserts";
@@ -6,7 +7,7 @@ import {
 export function buildInsertParser({
     name = "Mock Insert",
     match = /^mock insert/,
-    firstArgRequired = false,
+    firstArgRequired = ArgumentRequirement.optional,
     requiredProps = {},
     optionalProps = {},
 }): InsertParser {
@@ -18,6 +19,7 @@ export function buildInsertParser({
             requiredProps: requiredProps,
             optionalProps: optionalProps,
         },
+        completions: [],
         parse: () => {},
     };
 }

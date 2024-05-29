@@ -1261,7 +1261,8 @@ describe("Chapbook Passage", () => {
                     const callbacks = new MockCallbacks();
                     const insert = buildInsertParser({
                         match: /^mock insert/,
-                        firstArgRequired: true,
+                        firstArgRequired:
+                            insertsModule.ArgumentRequirement.required,
                     });
                     const state = buildParsingState({
                         content: header + passage,
@@ -1285,12 +1286,14 @@ describe("Chapbook Passage", () => {
                     expect(result.range).to.eql(Range.create(1, 10, 1, 21));
                 });
 
-                it("should warn about an unneeded first argument", () => {
+                it("should warn about an ignored first argument", () => {
                     const header = ":: Passage\n";
                     const passage = "Insert: { mock insert: 'arg' }";
                     const callbacks = new MockCallbacks();
                     const insert = buildInsertParser({
                         match: /^mock insert/,
+                        firstArgRequired:
+                            insertsModule.ArgumentRequirement.ignored,
                     });
                     const state = buildParsingState({
                         content: header + passage,

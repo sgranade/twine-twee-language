@@ -1,16 +1,17 @@
 import { capturePreTokenFor } from "../..";
 import { parsePassageReference } from "../../../parser";
 import { ETokenType } from "../../../tokens";
-import { InsertParser } from "./types";
+import { ArgumentRequirement, InsertParser } from "./types";
 
 export const link: InsertParser = {
     name: "link",
     match: /^link\s+to/i,
     arguments: {
-        firstArgument: true,
+        firstArgument: ArgumentRequirement.required,
         requiredProps: {},
         optionalProps: { label: null },
     },
+    completions: ["link to"],
     parse(args, state, chapbookState) {
         // If the first arg isn't a URL, then it's a passage
         if (args.firstArgument) {

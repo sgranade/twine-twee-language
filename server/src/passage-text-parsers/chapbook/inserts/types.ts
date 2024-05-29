@@ -14,6 +14,16 @@ export interface Token {
      */
     at: number;
 }
+export namespace Token {
+    /**
+     * Create a new Token literal.
+     * @param text The token's text.
+     * @param at The token's index in the document.
+     */
+    export function create(text: string, at: number): Token {
+        return { text: text, at: at };
+    }
+}
 
 /**
  * Tokenized insert information.
@@ -38,11 +48,29 @@ export interface InsertTokens {
 }
 
 /**
+ * Whether an insert's argument is required.
+ */
+export enum ArgumentRequirement {
+    required,
+    optional,
+    ignored,
+}
+
+/**
  * An insert's expected arguments.
  */
 export interface InsertArguments {
-    firstArgument: boolean;
+    /**
+     * Is a first argument required?
+     */
+    firstArgument: ArgumentRequirement;
+    /**
+     * Properties that must be present.
+     */
     requiredProps: Record<string, null>;
+    /**
+     * Properties that may be present.
+     */
     optionalProps: Record<string, null>;
 }
 
@@ -62,6 +90,10 @@ export interface InsertParser {
      * Which arguments the insert expects.
      */
     arguments: InsertArguments;
+    /**
+     * List of completions corresponding to this insert.
+     */
+    completions: string[];
     /**
      * Parses the insert.
      * @param tokens Tokenized insert information.

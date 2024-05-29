@@ -10,7 +10,12 @@ import {
 } from "../../parser";
 import { ETokenType, ETokenModifier } from "../../tokens";
 import { skipSpaces, removeAndCountPadding } from "../../utilities";
-import { InsertTokens, all as allInserts, Token } from "./inserts";
+import {
+    InsertTokens,
+    all as allInserts,
+    Token,
+    ArgumentRequirement,
+} from "./inserts";
 import { all as allModifiers } from "./modifiers";
 
 const varsSepPattern = /^--(\r?\n|$)/m;
@@ -66,7 +71,10 @@ function parseInsertContents(
 
     // Check for required and unknown arguments
     // First up, first argument
-    if (insert.arguments.firstArgument && tokens.firstArgument === undefined) {
+    if (
+        insert.arguments.firstArgument === ArgumentRequirement.required &&
+        tokens.firstArgument === undefined
+    ) {
         logErrorFor(
             tokens.name.text,
             tokens.name.at,
@@ -74,7 +82,7 @@ function parseInsertContents(
             state
         );
     } else if (
-        !insert.arguments.firstArgument &&
+        insert.arguments.firstArgument === ArgumentRequirement.ignored &&
         tokens.firstArgument !== undefined
     ) {
         logWarningFor(
@@ -190,7 +198,7 @@ function parseInsert(
     // Note that the token's given locations are relative to the entire document
     // instead of being relative to the insert's index.
     const insertTokens: InsertTokens = {
-        name: { text: functionName, at: insertIndex + functionIndex },
+        name: Token.create(functionName, insertIndex + functionIndex),
         firstArgument: undefined,
         props: {},
     };
@@ -206,10 +214,10 @@ function parseInsert(
     // Handle the first argument
     [argument, argumentIndex] = skipSpaces(argument, argumentIndex);
     if (argument !== "") {
-        insertTokens.firstArgument = {
-            text: argument,
-            at: insertIndex + argumentIndex,
-        };
+        insertTokens.firstArgument = Token.create(
+            argument,
+            insertIndex + argumentIndex
+        );
     }
     // TODO tokenize args & look for variable references
     // Handle properties
@@ -283,21 +291,19 @@ function parseInsert(
                 // N.B. that currentPropertyIndex has taken a left pad into account,
                 // while currentValueIndex hasn't
                 insertTokens.props[currentProperty] = [
-                    {
-                        text: currentProperty,
-                        at:
-                            insertIndex +
+                    Token.create(
+                        currentProperty,
+                        insertIndex +
                             propertySectionIndex +
-                            currentPropertyIndex,
-                    },
-                    {
-                        text: currentValue,
-                        at:
-                            insertIndex +
+                            currentPropertyIndex
+                    ),
+                    Token.create(
+                        currentValue,
+                        insertIndex +
                             propertySectionIndex +
                             currentValueIndex +
-                            leftPad,
-                    },
+                            leftPad
+                    ),
                 ];
             }
         }
