@@ -206,7 +206,87 @@ export async function generateCompletions(
             }
 
             // Embedded documents aren't nested, so we can quit looking
+            return completions;
+        }
+    }
+
+    // See if we're potentially inside a Twine link
+    const text = document.getText();
+    let i = offset;
+    let linkBeginOffset: number | undefined;
+    let arrowOrPipeOffset: number | undefined;
+    // Find where the link should begin: [[, -> or |
+    for (; i >= 1; i--) {
+        // Don't go further back than the current line
+        if (text[i] === "\n") break;
+
+        // Go until we find a leading [[, but note if we see a -> or | along the way
+        if (text[i - 1] === "[" && text[i] === "[") {
+            linkBeginOffset = i + 1;
             break;
+        } else if (
+            text[i] === "|" ||
+            (text[i - 1] === "-" && text[i] === ">")
+        ) {
+            arrowOrPipeOffset = i + 1;
+        }
+    }
+    if (linkBeginOffset !== undefined) {
+        // If we found an arrow or pipe, that's where the link should begin
+        if (arrowOrPipeOffset !== undefined) {
+            linkBeginOffset = arrowOrPipeOffset;
+        }
+
+        // Find where the link should end: either ]], <-, or (if none of those), at the end of the current word
+        let linkEndOffset: number | undefined;
+        let suggestAPassage = true;
+        for (i = offset; i < text.length; i++) {
+            // Don't go further forward than the current line,
+            // the pipe character, or a ->
+            if (text[i] === "\n") break;
+            if (text[i] === "|" || (text[i] === "-" && text[i + 1] === ">")) {
+                suggestAPassage = false;
+                break;
+            }
+
+            if (
+                (text[i] === "]" && text[i + 1] === "]") ||
+                (text[i] === "<" && text[i + 1] === "-") ||
+                text[i] === "|"
+            ) {
+                linkEndOffset = i;
+                break;
+            }
+        }
+
+        // If we didn't a pipe or -> to the right, suggest passage names
+        if (suggestAPassage) {
+            if (linkEndOffset === undefined) {
+                linkEndOffset = i;
+            }
+            const replacementRange = Range.create(
+                document.positionAt(linkBeginOffset),
+                document.positionAt(linkEndOffset)
+            );
+
+            completions = CompletionList.create(
+                index.getPassageNames().map((p): CompletionItem => {
+                    return {
+                        label: p,
+                        kind: CompletionItemKind.Class,
+                        insertText: p,
+                        insertTextFormat: InsertTextFormat.Snippet,
+                        filterText: p,
+                        textEdit: {
+                            range: replacementRange,
+                            newText: p,
+                        },
+                    };
+                }),
+                false
+            );
+
+            return completions;
         }
     }
 
