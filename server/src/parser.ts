@@ -20,7 +20,7 @@ import {
     openMetaCharPattern,
     tagPattern,
 } from "./language";
-import { ETokenType, Token, TokenModifier, TokenType } from "./tokens";
+import { ETokenType, SemanticToken, TokenModifier, TokenType } from "./tokens";
 import {
     createDiagnostic,
     nextLineIndex,
@@ -62,7 +62,7 @@ export interface ParserCallbacks {
     onStoryTitle(title: string, range: Range): void;
     onStoryData(data: StoryData, range: Range): void;
     onEmbeddedDocument(document: EmbeddedDocument): void;
-    onToken(token: Token): void;
+    onSemanticToken(token: SemanticToken): void;
     onParseError(error: Diagnostic): void;
 }
 
@@ -136,15 +136,15 @@ export function logWarningFor(
 }
 
 /**
- * Log a token associated with text in a document.
+ * Log a semantic token associated with text in a document.
  *
  * @param text Document text to tokenize.
  * @param at Index where the text occurs in the document (zero-based).
- * @param type Token type.
+ * @param type Semantic token type.
  * @param modifiers Token modifiers.
  * @param state Parsing state.
  */
-export function logTokenFor(
+export function logSemanticTokenFor(
     text: string,
     at: number,
     type: TokenType,
@@ -155,7 +155,7 @@ export function logTokenFor(
     // Tokens can only span a single line, so split on those lines
     for (const t of text.split(/\r?\n/)) {
         if (t?.length) {
-            state.callbacks.onToken({
+            state.callbacks.onSemanticToken({
                 line: line,
                 char: character,
                 length: t.length,

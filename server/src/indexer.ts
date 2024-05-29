@@ -4,7 +4,7 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 import { EmbeddedDocument } from "./embedded-languages";
 import { Passage, ProjectIndex, StoryData } from "./project-index";
 import { ParserCallbacks, parse } from "./parser";
-import { Token } from "./tokens";
+import { SemanticToken } from "./tokens";
 
 /**
  * Captures information about the current state of indexing
@@ -18,7 +18,7 @@ class IndexingState {
     passages: Passage[] = [];
     passageReferences: Record<string, Range[]> = {};
     parseErrors: Diagnostic[] = [];
-    tokens: Token[] = [];
+    semanticTokens: SemanticToken[] = [];
     embeddedDocuments: EmbeddedDocument[] = [];
 
     constructor(textDocument: TextDocument) {
@@ -85,8 +85,8 @@ export function updateProjectIndex(
         onEmbeddedDocument: function (document: EmbeddedDocument): void {
             indexingState.embeddedDocuments.push(document);
         },
-        onToken: function (token: Token): void {
-            indexingState.tokens.push(token);
+        onSemanticToken: function (token: SemanticToken): void {
+            indexingState.semanticTokens.push(token);
         },
         onParseError: function (error: Diagnostic): void {
             indexingState.parseErrors.push(error);
@@ -103,6 +103,6 @@ export function updateProjectIndex(
     index.setPassages(uri, indexingState.passages);
     index.setPassageReferences(uri, indexingState.passageReferences);
     index.setEmbeddedDocuments(uri, indexingState.embeddedDocuments);
-    index.setTokens(uri, indexingState.tokens);
+    index.setSemanticTokens(uri, indexingState.semanticTokens);
     index.setParseErrors(uri, indexingState.parseErrors);
 }

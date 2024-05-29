@@ -2,7 +2,7 @@ import { Diagnostic, Location, Position, Range } from "vscode-languageserver";
 
 import { StoryFormat } from "./client-server";
 import { EmbeddedDocument } from "./embedded-languages";
-import { Token } from "./tokens";
+import { SemanticToken } from "./tokens";
 import { normalizeUri, positionInRange } from "./utilities";
 
 /**
@@ -116,7 +116,7 @@ export interface ProjectIndex {
      * @param uri URI to document whose index is to be updated.
      * @param tokens New list of semantic tokens.
      */
-    setTokens(uri: string, tokens: Token[]): void;
+    setSemanticTokens(uri: string, tokens: SemanticToken[]): void;
     /**
      * Set a document's list of errors that occured during parsing.
      * @param uri URI to document whose index is to be updated.
@@ -159,7 +159,7 @@ export interface ProjectIndex {
      * Get a document's semantic tokens.
      * @param uri Document URI.
      */
-    getTokens(uri: string): readonly Token[];
+    getSemanticTokens(uri: string): readonly SemanticToken[];
     /**
      * Get a document's parse errors.
      * @param uri Document URI.
@@ -231,7 +231,7 @@ export class Index implements ProjectIndex {
     private _passages: Record<string, Passage[]> = {};
     private _references: DocumentReferences = {};
     private _embeddedDocuments: Record<string, EmbeddedDocument[]> = {};
-    private _tokens: Record<string, Token[]> = {};
+    private _semanticTokens: Record<string, SemanticToken[]> = {};
     private _parseErrors: Record<string, Diagnostic[]> = {};
 
     setStoryTitle(title: string, uri: string): void {
@@ -259,9 +259,9 @@ export class Index implements ProjectIndex {
         uri = normalizeUri(uri);
         this._embeddedDocuments[uri] = [...documents];
     }
-    setTokens(uri: string, tokens: Token[]): void {
+    setSemanticTokens(uri: string, tokens: SemanticToken[]): void {
         uri = normalizeUri(uri);
-        this._tokens[uri] = [...tokens];
+        this._semanticTokens[uri] = [...tokens];
     }
     setParseErrors(uri: string, errors: Diagnostic[]): void {
         uri = normalizeUri(uri);
@@ -294,9 +294,9 @@ export class Index implements ProjectIndex {
         uri = normalizeUri(uri);
         return this._embeddedDocuments[uri] ?? [];
     }
-    getTokens(uri: string): readonly Token[] {
+    getSemanticTokens(uri: string): readonly SemanticToken[] {
         uri = normalizeUri(uri);
-        return this._tokens[uri] ?? [];
+        return this._semanticTokens[uri] ?? [];
     }
     getParseErrors(uri: string): readonly Diagnostic[] {
         uri = normalizeUri(uri);
@@ -426,7 +426,7 @@ export class Index implements ProjectIndex {
         delete this._passages[uri];
         delete this._references[uri];
         delete this._embeddedDocuments[uri];
-        delete this._tokens[uri];
+        delete this._semanticTokens[uri];
         delete this._parseErrors[uri];
         if (uri === this._storyTitleUri) {
             this._storyTitle = undefined;

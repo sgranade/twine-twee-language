@@ -5,12 +5,13 @@ import {
     ParsingState,
     logWarningFor,
     logErrorFor,
-    logTokenFor,
+    logSemanticTokenFor,
     parseLinks,
 } from "../../parser";
 import { ETokenType, ETokenModifier } from "../../tokens";
 import { skipSpaces, removeAndCountPadding } from "../../utilities";
 import { InsertTokens, all as allInserts, Token } from "./inserts";
+import { all as allModifiers } from "./modifiers";
 
 const varsSepPattern = /^--(\r?\n|$)/m;
 const conditionPattern = /((\((.+?)\)?)\s*)([^)]*)$/;
@@ -20,7 +21,7 @@ const lineExtractionPattern = /^(\s*?)\b(.*)$/gm;
 /**
  * Type of Chapbook modifier
  */
-enum ModifierType {
+export enum ModifierType {
     None,
     Javascript,
     Css,
@@ -336,7 +337,13 @@ function parseTextSubsection(
             offset: subsectionIndex,
         });
     } else if (chapbookState.modifierType === ModifierType.Note) {
-        logTokenFor(subsection, subsectionIndex, ETokenType.comment, [], state);
+        logSemanticTokenFor(
+            subsection,
+            subsectionIndex,
+            ETokenType.comment,
+            [],
+            state
+        );
     } else {
         // Semantic tokens have to be submitted in document order,
         // but we're going to generate them out of order. We'll
@@ -427,7 +434,7 @@ function parseTextSubsection(
         // Submit semantic tokens in document order
         // (taking advantage of object own key enumeration order)
         for (const t of Object.values(chapbookState.textSubsectionTokens)) {
-            logTokenFor(t.text, t.at, t.type, t.modifiers, state);
+            logSemanticTokenFor(t.text, t.at, t.type, t.modifiers, state);
         }
     }
 }
@@ -449,6 +456,7 @@ function parseModifier(
     let firstToken = true;
     let remainingModifier = modifier;
     let tokenIndex = modifierIndex;
+    const modifiers = allModifiers();
 
     while (remainingModifier) {
         [remainingModifier, tokenIndex] = skipSpaces(
@@ -458,29 +466,25 @@ function parseModifier(
         if (remainingModifier === "") {
             break;
         }
+
+        // See if we recognize the modifier
+        const modifier = modifiers.find((i) => i.match.test(remainingModifier));
+        if (modifier === undefined) {
+            logWarningFor(
+                remainingModifier,
+                tokenIndex,
+                `Modifier "${remainingModifier}" not recognized`,
+                state
+            );
+        } else {
+            // Handle modifier-specific parsing, which can set the text block state in chapbookState
+            modifier.parse(remainingModifier, state, chapbookState);
+        }
+
         const token = remainingModifier.split(/\s/, 1)[0];
         if (firstToken) {
-            // The first token can set the following text block's state
-            switch (token.toLowerCase()) {
-                case "javascript":
-                    chapbookState.modifierType = ModifierType.Javascript;
-                    break;
-
-                case "css":
-                    chapbookState.modifierType = ModifierType.Css;
-                    break;
-
-                case "note":
-                case "note to myself":
-                case "n.b.":
-                case "fixme":
-                case "todo":
-                    chapbookState.modifierType = ModifierType.Note;
-                    break;
-            }
-
             // Tokenize the first token as a function, unless the modifier is a note
-            logTokenFor(
+            logSemanticTokenFor(
                 token,
                 tokenIndex,
                 chapbookState.modifierType == ModifierType.Note
@@ -493,7 +497,13 @@ function parseModifier(
             firstToken = false;
         } else {
             // All other components of the modifier get treated as parameters
-            logTokenFor(token, tokenIndex, ETokenType.parameter, [], state);
+            logSemanticTokenFor(
+                token,
+                tokenIndex,
+                ETokenType.parameter,
+                [],
+                state
+            );
         }
 
         remainingModifier = remainingModifier.substring(token.length);
@@ -713,7 +723,7 @@ function parseVarsSection(
             );
         }
 
-        logTokenFor(
+        logSemanticTokenFor(
             name,
             sectionIndex + nameIndex,
             ETokenType.variable,

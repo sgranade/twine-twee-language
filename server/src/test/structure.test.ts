@@ -12,7 +12,7 @@ import { Index } from "../project-index";
 import { buildPassage } from "./builders";
 
 import * as uut from "../structure";
-import { Token } from "../tokens";
+import { SemanticToken } from "../tokens";
 
 describe("Structure", () => {
     describe("Symbols", () => {
@@ -140,7 +140,7 @@ describe("Structure", () => {
 
         it("should generate tokens for indexed files", () => {
             const index = new Index();
-            const tokens: Token[] = [
+            const tokens: SemanticToken[] = [
                 {
                     line: 5,
                     char: 4,
@@ -149,7 +149,7 @@ describe("Structure", () => {
                     tokenModifiers: [0b1, 0b10],
                 },
             ];
-            index.setTokens("test-uri", tokens);
+            index.setSemanticTokens("test-uri", tokens);
 
             const result = uut.generateSemanticTokens("test-uri", index);
 

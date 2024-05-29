@@ -7,7 +7,7 @@ import { buildPassage } from "./builders";
 
 import { EmbeddedDocument } from "../embedded-languages";
 import * as uut from "../project-index";
-import { Token } from "../tokens";
+import { SemanticToken } from "../tokens";
 
 describe("Project Index", () => {
     describe("Index", () => {
@@ -606,13 +606,13 @@ describe("Project Index", () => {
             it("should return an empty array for an unindexed file", () => {
                 const index = new uut.Index();
 
-                const result = index.getTokens("nopers");
+                const result = index.getSemanticTokens("nopers");
 
                 expect(result).to.be.empty;
             });
 
             it("should return tokens for indexed files", () => {
-                const fakeTokens: Token[] = [
+                const fakeTokens: SemanticToken[] = [
                     {
                         line: 1,
                         char: 2,
@@ -622,9 +622,9 @@ describe("Project Index", () => {
                     },
                 ];
                 const index = new uut.Index();
-                index.setTokens("fake-uri", fakeTokens);
+                index.setSemanticTokens("fake-uri", fakeTokens);
 
-                const result = index.getTokens("fake-uri");
+                const result = index.getSemanticTokens("fake-uri");
 
                 expect(result).to.eql(fakeTokens);
             });
@@ -843,7 +843,7 @@ describe("Project Index", () => {
             });
 
             it("should remove tokens for a deleted document", () => {
-                const fakeTokens: Token[] = [
+                const fakeTokens: SemanticToken[] = [
                     {
                         line: 1,
                         char: 2,
@@ -853,10 +853,10 @@ describe("Project Index", () => {
                     },
                 ];
                 const index = new uut.Index();
-                index.setTokens("fake-uri", fakeTokens);
+                index.setSemanticTokens("fake-uri", fakeTokens);
 
                 index.removeDocument("fake-uri");
-                const result = index.getTokens("fake-uri");
+                const result = index.getSemanticTokens("fake-uri");
 
                 expect(result).to.be.empty;
             });

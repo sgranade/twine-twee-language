@@ -8,6 +8,7 @@ import { MockCallbacks, buildParsingState } from "../../builders";
 import { buildInsertParser } from "./inserts/insert-builders";
 import { ETokenModifier, ETokenType } from "../../../tokens";
 import * as insertsModule from "../../../passage-text-parsers/chapbook/inserts";
+import * as modifiersModule from "../../../passage-text-parsers/chapbook/modifiers";
 import { Index } from "../../../project-index";
 import * as uut from "../../../passage-text-parsers/chapbook";
 
@@ -1050,8 +1051,7 @@ describe("Chapbook Passage", () => {
             describe("modifiers", () => {
                 it("should error on spaces before modifiers", () => {
                     const header = ":: Passage\n";
-                    const passage =
-                        "var1: 17\n--\n" + "  [modifier]\nOther text\n";
+                    const passage = "var1: 17\n--\n" + "  [note]\nOther text\n";
                     const callbacks = new MockCallbacks();
                     const state = buildParsingState({
                         content: header + passage,
@@ -1073,7 +1073,7 @@ describe("Chapbook Passage", () => {
                 it("should error on spaces after modifiers", () => {
                     const header = ":: Passage\n";
                     const passage =
-                        "var1: 17\n--\n" + " [modifier]  \nOther text\n";
+                        "var1: 17\n--\n" + " [note]  \nOther text\n";
                     const callbacks = new MockCallbacks();
                     const state = buildParsingState({
                         content: header + passage,
@@ -1089,13 +1089,12 @@ describe("Chapbook Passage", () => {
                     expect(result.message).to.include(
                         "Modifiers can't have spaces after them"
                     );
-                    expect(result.range).to.eql(Range.create(3, 11, 3, 13));
+                    expect(result.range).to.eql(Range.create(3, 7, 3, 9));
                 });
 
                 it("should not error on blank lines before or after modifiers", () => {
                     const header = ":: Passage\n";
-                    const passage =
-                        "var1: 17\n--\n" + "\n[modifier]\nOther text\n";
+                    const passage = "var1: 17\n--\n" + "\n[note]\nOther text\n";
                     const callbacks = new MockCallbacks();
                     const state = buildParsingState({
                         content: header + passage,
@@ -1111,8 +1110,7 @@ describe("Chapbook Passage", () => {
                 it("should not error on Windows blank lines before or after modifiers", () => {
                     const header = ":: Passage\r\n";
                     const passage =
-                        "var1: 17\r\n--\r\n" +
-                        "\r\n[modifier]\r\nOther text\r\n";
+                        "var1: 17\r\n--\r\n" + "\r\n[note]\r\nOther text\r\n";
                     const callbacks = new MockCallbacks();
                     const state = buildParsingState({
                         content: header + passage,
@@ -1123,6 +1121,38 @@ describe("Chapbook Passage", () => {
                     parser?.parsePassageText(passage, header.length, state);
 
                     expect(callbacks.errors).to.be.empty;
+                });
+
+                it("should warn on an unrecognized modifier", () => {
+                    const header = ":: Passage\n";
+                    const passage = "[okay; modifier]\nOther text";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
+                    const modifier: modifiersModule.ModifierParser = {
+                        name: "okay",
+                        match: /^okay/i,
+                        completions: ["okay"],
+                        parse: () => {},
+                    };
+                    const mockFunction = ImportMock.mockFunction(
+                        modifiersModule,
+                        "all"
+                    ).returns([modifier]);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    mockFunction.restore();
+                    const [result] = callbacks.errors;
+
+                    expect(callbacks.errors.length).to.equal(1);
+                    expect(result.severity).to.eql(DiagnosticSeverity.Warning);
+                    expect(result.message).to.include(
+                        'Modifier "modifier" not recognized'
+                    );
+                    expect(result.range).to.eql(Range.create(1, 7, 1, 15));
                 });
             });
 

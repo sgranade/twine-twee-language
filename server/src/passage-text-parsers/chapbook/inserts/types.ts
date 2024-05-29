@@ -67,7 +67,6 @@ export interface InsertParser {
      * @param tokens Tokenized insert information.
      * @param state Parsing state.
      * @param chapbookState Chapbook-specific parsing state.
-     * @returns Any properties that the insert requires.
      */
     parse: (
         tokens: InsertTokens,

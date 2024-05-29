@@ -4,7 +4,7 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 import { EmbeddedDocument } from "../embedded-languages";
 import { Passage, StoryData } from "../project-index";
 import { ParserCallbacks, ParsingState } from "../parser";
-import { Token } from "../tokens";
+import { SemanticToken } from "../tokens";
 
 export function buildPassage({
     label = "Passage",
@@ -52,7 +52,7 @@ export class MockCallbacks implements ParserCallbacks {
     public storyData?: StoryData;
     public storyDataRange?: Range;
     public embeddedDocuments: EmbeddedDocument[] = [];
-    public tokens: Token[] = [];
+    public tokens: SemanticToken[] = [];
     public errors: Diagnostic[] = [];
 
     onPassage(passage: Passage): void {
@@ -74,7 +74,7 @@ export class MockCallbacks implements ParserCallbacks {
     onEmbeddedDocument(document: EmbeddedDocument): void {
         this.embeddedDocuments.push(document);
     }
-    onToken(token: Token): void {
+    onSemanticToken(token: SemanticToken): void {
         this.tokens.push(token);
     }
     onParseError(error: Diagnostic): void {

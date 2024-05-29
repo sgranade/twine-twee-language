@@ -28,7 +28,7 @@ export type TokenModifier =
 /**
  * Semantic token.
  */
-export interface Token {
+export interface SemanticToken {
     line: number;
     char: number;
     length: number;

@@ -85,7 +85,7 @@ export function generateSemanticTokens(
         length,
         tokenType,
         tokenModifiers,
-    } of projectIndex.getTokens(uri)) {
+    } of projectIndex.getSemanticTokens(uri)) {
         let modifier = 0;
         for (const m of tokenModifiers) {
             modifier |= m;
