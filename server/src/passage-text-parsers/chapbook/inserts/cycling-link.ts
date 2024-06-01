@@ -4,9 +4,12 @@ export const cyclingLink: InsertParser = {
     name: "cycling link",
     match: /^cycling\s+link(\s+for)?/i,
     arguments: {
-        firstArgument: ArgumentRequirement.optional,
-        requiredProps: {},
-        optionalProps: { choices: null },
+        firstArgument: {
+            required: ArgumentRequirement.optional,
+            placeholder: "'variableName'",
+        },
+        requiredProps: { choices: "['one', 'two', 'three']" },
+        optionalProps: {},
     },
     completions: ["cycling link"],
     parse(args, state, chapbookState) {

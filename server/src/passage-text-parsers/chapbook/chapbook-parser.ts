@@ -72,7 +72,8 @@ function parseInsertContents(
     // Check for required and unknown arguments
     // First up, first argument
     if (
-        insert.arguments.firstArgument === ArgumentRequirement.required &&
+        insert.arguments.firstArgument.required ===
+            ArgumentRequirement.required &&
         tokens.firstArgument === undefined
     ) {
         logErrorFor(
@@ -82,7 +83,8 @@ function parseInsertContents(
             state
         );
     } else if (
-        insert.arguments.firstArgument === ArgumentRequirement.ignored &&
+        insert.arguments.firstArgument.required ===
+            ArgumentRequirement.ignored &&
         tokens.firstArgument !== undefined
     ) {
         logWarningFor(

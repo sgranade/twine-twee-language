@@ -15,7 +15,7 @@ export function buildInsertParser({
         name: name,
         match: match,
         arguments: {
-            firstArgument: firstArgRequired,
+            firstArgument: { required: firstArgRequired },
             requiredProps: requiredProps,
             optionalProps: optionalProps,
         },

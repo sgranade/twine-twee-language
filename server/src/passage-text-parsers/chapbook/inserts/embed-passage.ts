@@ -1,11 +1,15 @@
 import { logErrorFor, parsePassageReference } from "../../../parser";
-import { ArgumentRequirement, InsertParser } from "./types";
+import { ArgumentRequirement, InsertParser, ValueType } from "./types";
 
 export const embedPassage: InsertParser = {
     name: "embed passage",
     match: /^embed\s+passage(\s+named)?/i,
     arguments: {
-        firstArgument: ArgumentRequirement.required,
+        firstArgument: {
+            required: ArgumentRequirement.required,
+            placeholder: "'passage name'",
+            type: ValueType.passage,
+        },
         requiredProps: {},
         optionalProps: {},
     },

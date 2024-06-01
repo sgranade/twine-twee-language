@@ -3,15 +3,21 @@ import {
     logWarningFor,
     parsePassageReference,
 } from "../../../parser";
-import { ArgumentRequirement, InsertParser } from "./types";
+import { ArgumentRequirement, InsertParser, ValueType } from "./types";
 
 export const revealLink: InsertParser = {
     name: "reveal link",
     match: /^reveal\s+link/i,
     arguments: {
-        firstArgument: ArgumentRequirement.required,
+        firstArgument: {
+            required: ArgumentRequirement.required,
+            placeholder: "'label'",
+        },
         requiredProps: {},
-        optionalProps: { text: null, passage: null },
+        optionalProps: {
+            text: "'revealed text'",
+            passage: { placeholder: "'passage name'", type: ValueType.passage },
+        },
     },
     completions: ["reveal link"],
     parse(args, state, chapbookState) {

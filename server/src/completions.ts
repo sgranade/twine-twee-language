@@ -160,6 +160,7 @@ function generateStoryDataCompletions(
  *
  * Not all clients support completion item defaults. For those, add the default
  * values to each individual completion item.
+ *
  * @param completionList Completion list with item defaults.
  * @returns List with defaults added to each individual completion item.
  */
@@ -176,6 +177,9 @@ function removeCompletionListItemDefaults(
         completionList.items = completionList.items.map((item) => {
             item.insertTextFormat = insertTextFormat;
             item.textEdit = TextEdit.replace(editRange, item.label);
+            if (item.textEditText !== undefined) {
+                item.label = item.textEditText;
+            }
             return item;
         });
     }

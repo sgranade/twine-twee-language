@@ -4,9 +4,9 @@ export const backLink: InsertParser = {
     name: "back link",
     match: /^back\s+link/i,
     arguments: {
-        firstArgument: ArgumentRequirement.ignored,
+        firstArgument: { required: ArgumentRequirement.ignored },
         requiredProps: {},
-        optionalProps: { label: null },
+        optionalProps: { label: "'Back'" },
     },
     completions: ["back link"],
     parse(args, state, chapbookState) {

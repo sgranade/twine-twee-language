@@ -4,9 +4,12 @@ export const dropdownMenu: InsertParser = {
     name: "dropdown menu",
     match: /^dropdown\s+menu(\s+for)?/i,
     arguments: {
-        firstArgument: ArgumentRequirement.optional,
-        requiredProps: {},
-        optionalProps: { choices: null },
+        firstArgument: {
+            required: ArgumentRequirement.optional,
+            placeholder: "'variableName'",
+        },
+        requiredProps: { choices: "['one', 'two', 'three']" },
+        optionalProps: {},
     },
     completions: ["dropdown menu"],
     parse(args, state, chapbookState) {

@@ -4,9 +4,12 @@ export const embedUnsplashImage: InsertParser = {
     name: "embed Unsplash image",
     match: /^embed\s+unsplash(\s+image)?/i,
     arguments: {
-        firstArgument: ArgumentRequirement.required,
+        firstArgument: {
+            required: ArgumentRequirement.required,
+            placeholder: "'url'",
+        },
         requiredProps: {},
-        optionalProps: { alt: null },
+        optionalProps: { alt: "'alternate text'" },
     },
     completions: ["embed Unsplash"],
     // eslint-disable-next-line @typescript-eslint/no-unused-vars

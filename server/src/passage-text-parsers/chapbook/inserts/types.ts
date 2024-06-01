@@ -57,21 +57,61 @@ export enum ArgumentRequirement {
 }
 
 /**
- * An insert's expected arguments.
+ * What kind of value an insert argument or property takes.
+ */
+export enum ValueType {
+    /**
+     * Javascript expression
+     */
+    expression,
+    /**
+     * Number
+     */
+    number,
+    /**
+     * A Twine passage
+     */
+    passage,
+}
+
+/**
+ * Information about an insert property.
+ */
+export interface InsertProperty {
+    type?: ValueType;
+    placeholder: string;
+}
+export namespace InsertProperty {
+    /**
+     * Type guard for InsertProperty.
+     */
+    export function is(val: any): val is InsertProperty {
+        if (typeof val !== "object" || Array.isArray(val) || val === null)
+            return false;
+        return (val as InsertProperty).placeholder !== undefined;
+    }
+}
+
+/**
+ * An insert's expected arguments and completion/placeholder information.
  */
 export interface InsertArguments {
     /**
      * Is a first argument required?
      */
-    firstArgument: ArgumentRequirement;
+    firstArgument: {
+        required: ArgumentRequirement;
+        placeholder?: string;
+        type?: ValueType;
+    };
     /**
-     * Properties that must be present.
+     * Properties that must be present, with their placeholder (string) or full optional info.
      */
-    requiredProps: Record<string, null>;
+    requiredProps: Record<string, string | InsertProperty | null>;
     /**
-     * Properties that may be present.
+     * Properties that may be present, with their optional info.
      */
-    optionalProps: Record<string, null>;
+    optionalProps: Record<string, string | InsertProperty | null>;
 }
 
 /**
@@ -87,7 +127,7 @@ export interface InsertParser {
      */
     match: RegExp;
     /**
-     * Which arguments the insert expects.
+     * Which arguments the insert expects and completion/placeholder information about them.
      */
     arguments: InsertArguments;
     /**

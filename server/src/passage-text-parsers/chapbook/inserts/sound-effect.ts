@@ -1,12 +1,17 @@
-import { ArgumentRequirement, InsertParser } from "./types";
+import { ArgumentRequirement, InsertParser, ValueType } from "./types";
 
 export const soundEffect: InsertParser = {
     name: "sound effect",
     match: /^sound\s+effect/i,
     arguments: {
-        firstArgument: ArgumentRequirement.required,
+        firstArgument: {
+            required: ArgumentRequirement.required,
+            placeholder: "'sound name'",
+        },
         requiredProps: {},
-        optionalProps: { volume: null },
+        optionalProps: {
+            volume: { placeholder: "0.5", type: ValueType.number },
+        },
     },
     completions: ["sound effect"],
     parse(args, state, chapbookState) {

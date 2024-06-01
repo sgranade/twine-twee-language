@@ -1,14 +1,19 @@
 import { capturePreTokenFor } from "../..";
 import { ETokenType } from "../../../tokens";
-import { ArgumentRequirement, InsertParser } from "./types";
+import { ArgumentRequirement, InsertParser, ValueType } from "./types";
 
 export const ambientSound: InsertParser = {
     name: "ambient sound",
     match: /^ambient\s+sound/i,
     arguments: {
-        firstArgument: ArgumentRequirement.required,
+        firstArgument: {
+            required: ArgumentRequirement.required,
+            placeholder: "'sound name'",
+        },
         requiredProps: {},
-        optionalProps: { volume: null },
+        optionalProps: {
+            volume: { placeholder: "0.5", type: ValueType.number },
+        },
     },
     completions: ["ambient sound"],
     parse(args, state, chapbookState) {
@@ -40,7 +45,7 @@ export const noAmbientSound: InsertParser = {
     name: "no ambient sound",
     match: /^no ambient\s+sound/i,
     arguments: {
-        firstArgument: ArgumentRequirement.optional,
+        firstArgument: { required: ArgumentRequirement.optional },
         requiredProps: {},
         optionalProps: {},
     },

@@ -4,12 +4,12 @@ import { ImportMock } from "ts-mock-imports";
 import { DiagnosticSeverity, Position, Range } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
-import { MockCallbacks, buildParsingState } from "../../builders";
+import { MockCallbacks, buildParsingState, buildPassage } from "../../builders";
 import { buildInsertParser } from "./inserts/insert-builders";
+import { Index } from "../../../project-index";
 import { ETokenModifier, ETokenType } from "../../../tokens";
 import * as insertsModule from "../../../passage-text-parsers/chapbook/inserts";
 import * as modifiersModule from "../../../passage-text-parsers/chapbook/modifiers";
-import { Index } from "../../../project-index";
 import * as uut from "../../../passage-text-parsers/chapbook";
 
 describe("Chapbook Passage", () => {
@@ -793,7 +793,7 @@ describe("Chapbook Passage", () => {
     });
 
     describe("Completions", () => {
-        describe("modifiers", () => {
+        describe("Modifiers", () => {
             it("should suggest modifiers after a [ at the start of the line", () => {
                 const doc = TextDocument.create("fake-uri", "", 0, "[ here ");
                 const position = Position.create(0, 4);
@@ -896,6 +896,733 @@ describe("Chapbook Passage", () => {
 
                 expect(results?.itemDefaults?.editRange).to.eql(
                     Range.create(0, 11, 0, 16)
+                );
+            });
+        });
+
+        describe("Inserts", () => {
+            it("should suggest insert names after a {", () => {
+                const doc = TextDocument.create(
+                    "fake-uri",
+                    "",
+                    0,
+                    "Let's try {te"
+                );
+                const position = Position.create(0, 12);
+                const index = new Index();
+                const insert: insertsModule.InsertParser = {
+                    name: "test insert",
+                    match: /^test\s+insert/i,
+                    completions: ["test insert"],
+                    arguments: {
+                        firstArgument: {
+                            required:
+                                insertsModule.ArgumentRequirement.optional,
+                        },
+                        requiredProps: {},
+                        optionalProps: {},
+                    },
+                    parse: () => {},
+                };
+                const mockFunction = ImportMock.mockFunction(
+                    insertsModule,
+                    "all"
+                ).returns([insert]);
+                const parser = uut.getChapbookParser(undefined);
+
+                const results = parser?.generateCompletions(
+                    doc,
+                    position,
+                    index
+                );
+                mockFunction.restore();
+
+                expect(results?.items[0].label).to.eql("test insert");
+                expect(results?.itemDefaults?.editRange).to.eql(
+                    Range.create(0, 11, 0, 13)
+                );
+            });
+
+            it("should suggest insert names after a { and only replace the word the position is in", () => {
+                const doc = TextDocument.create(
+                    "fake-uri",
+                    "",
+                    0,
+                    "Let's try {te nope"
+                );
+                const position = Position.create(0, 12);
+                const index = new Index();
+                const insert: insertsModule.InsertParser = {
+                    name: "test insert",
+                    match: /^test\s+insert/i,
+                    completions: ["test insert"],
+                    arguments: {
+                        firstArgument: {
+                            required:
+                                insertsModule.ArgumentRequirement.optional,
+                        },
+                        requiredProps: {},
+                        optionalProps: {},
+                    },
+                    parse: () => {},
+                };
+                const mockFunction = ImportMock.mockFunction(
+                    insertsModule,
+                    "all"
+                ).returns([insert]);
+                const parser = uut.getChapbookParser(undefined);
+
+                const results = parser?.generateCompletions(
+                    doc,
+                    position,
+                    index
+                );
+                mockFunction.restore();
+
+                expect(results?.items[0].label).to.eql("test insert");
+                expect(results?.itemDefaults?.editRange).to.eql(
+                    Range.create(0, 11, 0, 13)
+                );
+            });
+
+            it("should suggest insert names after a { and before a ,", () => {
+                const doc = TextDocument.create(
+                    "fake-uri",
+                    "",
+                    0,
+                    "Let's try {te, prop: 'yep'"
+                );
+                const position = Position.create(0, 12);
+                const index = new Index();
+                const insert: insertsModule.InsertParser = {
+                    name: "test insert",
+                    match: /^test\s+insert/i,
+                    completions: ["test insert"],
+                    arguments: {
+                        firstArgument: {
+                            required:
+                                insertsModule.ArgumentRequirement.optional,
+                        },
+                        requiredProps: {},
+                        optionalProps: {},
+                    },
+                    parse: () => {},
+                };
+                const mockFunction = ImportMock.mockFunction(
+                    insertsModule,
+                    "all"
+                ).returns([insert]);
+                const parser = uut.getChapbookParser(undefined);
+
+                const results = parser?.generateCompletions(
+                    doc,
+                    position,
+                    index
+                );
+                mockFunction.restore();
+
+                expect(results?.items[0].label).to.eql("test insert");
+                expect(results?.itemDefaults?.editRange).to.eql(
+                    Range.create(0, 11, 0, 13)
+                );
+            });
+
+            it("should suggest insert names after a { and before a :", () => {
+                const doc = TextDocument.create(
+                    "fake-uri",
+                    "",
+                    0,
+                    "Let's try {te: 'first arg'"
+                );
+                const position = Position.create(0, 12);
+                const index = new Index();
+                const insert: insertsModule.InsertParser = {
+                    name: "test insert",
+                    match: /^test\s+insert/i,
+                    completions: ["test insert"],
+                    arguments: {
+                        firstArgument: {
+                            required:
+                                insertsModule.ArgumentRequirement.optional,
+                        },
+                        requiredProps: {},
+                        optionalProps: {},
+                    },
+                    parse: () => {},
+                };
+                const mockFunction = ImportMock.mockFunction(
+                    insertsModule,
+                    "all"
+                ).returns([insert]);
+                const parser = uut.getChapbookParser(undefined);
+
+                const results = parser?.generateCompletions(
+                    doc,
+                    position,
+                    index
+                );
+                mockFunction.restore();
+
+                expect(results?.items[0].label).to.eql("test insert");
+                expect(results?.items[0].textEditText).to.eql("test insert");
+                expect(results?.itemDefaults?.editRange).to.eql(
+                    Range.create(0, 11, 0, 13)
+                );
+            });
+
+            it("should add a colon for an insert with a required first argument after a { with no colon of its own", () => {
+                const doc = TextDocument.create(
+                    "fake-uri",
+                    "",
+                    0,
+                    "Let's try {te"
+                );
+                const position = Position.create(0, 12);
+                const index = new Index();
+                const insert: insertsModule.InsertParser = {
+                    name: "test insert",
+                    match: /^test\s+insert/i,
+                    completions: ["test insert"],
+                    arguments: {
+                        firstArgument: {
+                            required:
+                                insertsModule.ArgumentRequirement.required,
+                        },
+                        requiredProps: {},
+                        optionalProps: {},
+                    },
+                    parse: () => {},
+                };
+                const mockFunction = ImportMock.mockFunction(
+                    insertsModule,
+                    "all"
+                ).returns([insert]);
+                const parser = uut.getChapbookParser(undefined);
+
+                const results = parser?.generateCompletions(
+                    doc,
+                    position,
+                    index
+                );
+                mockFunction.restore();
+
+                expect(results?.items[0].textEditText).to.eql(
+                    "test insert: '${1:arg}'"
+                );
+                expect(results?.itemDefaults?.editRange).to.eql(
+                    Range.create(0, 11, 0, 13)
+                );
+            });
+
+            it("should add a colon for an insert with a required first argument after a { with a comma", () => {
+                const doc = TextDocument.create(
+                    "fake-uri",
+                    "",
+                    0,
+                    "Let's try {te ,"
+                );
+                const position = Position.create(0, 12);
+                const index = new Index();
+                const insert: insertsModule.InsertParser = {
+                    name: "test insert",
+                    match: /^test\s+insert/i,
+                    completions: ["test insert"],
+                    arguments: {
+                        firstArgument: {
+                            required:
+                                insertsModule.ArgumentRequirement.required,
+                        },
+                        requiredProps: {},
+                        optionalProps: {},
+                    },
+                    parse: () => {},
+                };
+                const mockFunction = ImportMock.mockFunction(
+                    insertsModule,
+                    "all"
+                ).returns([insert]);
+                const parser = uut.getChapbookParser(undefined);
+
+                const results = parser?.generateCompletions(
+                    doc,
+                    position,
+                    index
+                );
+                mockFunction.restore();
+
+                expect(results?.items[0].textEditText).to.eql(
+                    "test insert: '${1:arg}'"
+                );
+                expect(results?.itemDefaults?.editRange).to.eql(
+                    Range.create(0, 11, 0, 14)
+                );
+            });
+
+            it("should include an insert's required first argument's placeholder after a { with a comma", () => {
+                const doc = TextDocument.create(
+                    "fake-uri",
+                    "",
+                    0,
+                    "Let's try {te ,"
+                );
+                const position = Position.create(0, 12);
+                const index = new Index();
+                const insert: insertsModule.InsertParser = {
+                    name: "test insert",
+                    match: /^test\s+insert/i,
+                    completions: ["test insert"],
+                    arguments: {
+                        firstArgument: {
+                            required:
+                                insertsModule.ArgumentRequirement.required,
+                            placeholder: "'URL'",
+                        },
+                        requiredProps: {},
+                        optionalProps: {},
+                    },
+                    parse: () => {},
+                };
+                const mockFunction = ImportMock.mockFunction(
+                    insertsModule,
+                    "all"
+                ).returns([insert]);
+                const parser = uut.getChapbookParser(undefined);
+
+                const results = parser?.generateCompletions(
+                    doc,
+                    position,
+                    index
+                );
+                mockFunction.restore();
+
+                expect(results?.items[0].textEditText).to.eql(
+                    "test insert: '${1:URL}'"
+                );
+                expect(results?.itemDefaults?.editRange).to.eql(
+                    Range.create(0, 11, 0, 14)
+                );
+            });
+
+            it("should include an insert's required first argument and properties' placeholders after a {", () => {
+                const doc = TextDocument.create(
+                    "fake-uri",
+                    "",
+                    0,
+                    "Let's try {te "
+                );
+                const position = Position.create(0, 12);
+                const index = new Index();
+                const insert: insertsModule.InsertParser = {
+                    name: "test insert",
+                    match: /^test\s+insert/i,
+                    completions: ["test insert"],
+                    arguments: {
+                        firstArgument: {
+                            required:
+                                insertsModule.ArgumentRequirement.required,
+                            placeholder: "'URL'",
+                        },
+                        requiredProps: {
+                            one: "true",
+                            two: "'falsy'",
+                        },
+                        optionalProps: {},
+                    },
+                    parse: () => {},
+                };
+                const mockFunction = ImportMock.mockFunction(
+                    insertsModule,
+                    "all"
+                ).returns([insert]);
+                const parser = uut.getChapbookParser(undefined);
+
+                const results = parser?.generateCompletions(
+                    doc,
+                    position,
+                    index
+                );
+                mockFunction.restore();
+
+                expect(results?.items[0].textEditText).to.eql(
+                    "test insert: '${1:URL}', one: ${2:true}, two: '${3:falsy}'"
+                );
+                expect(results?.itemDefaults?.editRange).to.eql(
+                    Range.create(0, 11, 0, 13)
+                );
+            });
+
+            it("should include an insert's required first argument's placeholder but no required properties' placeholders after a { with a comma", () => {
+                const doc = TextDocument.create(
+                    "fake-uri",
+                    "",
+                    0,
+                    "Let's try {te ,"
+                );
+                const position = Position.create(0, 12);
+                const index = new Index();
+                const insert: insertsModule.InsertParser = {
+                    name: "test insert",
+                    match: /^test\s+insert/i,
+                    completions: ["test insert"],
+                    arguments: {
+                        firstArgument: {
+                            required:
+                                insertsModule.ArgumentRequirement.required,
+                            placeholder: "'URL'",
+                        },
+                        requiredProps: {
+                            one: "true",
+                            two: "'falsy'",
+                        },
+                        optionalProps: {},
+                    },
+                    parse: () => {},
+                };
+                const mockFunction = ImportMock.mockFunction(
+                    insertsModule,
+                    "all"
+                ).returns([insert]);
+                const parser = uut.getChapbookParser(undefined);
+
+                const results = parser?.generateCompletions(
+                    doc,
+                    position,
+                    index
+                );
+                mockFunction.restore();
+
+                expect(results?.items[0].textEditText).to.eql(
+                    "test insert: '${1:URL}'"
+                );
+                expect(results?.itemDefaults?.editRange).to.eql(
+                    Range.create(0, 11, 0, 14)
+                );
+            });
+
+            it("should not add a colon after a { with a colon already there for an insert with a required first argument", () => {
+                const doc = TextDocument.create(
+                    "fake-uri",
+                    "",
+                    0,
+                    "Let's try {te :"
+                );
+                const position = Position.create(0, 12);
+                const index = new Index();
+                const insert: insertsModule.InsertParser = {
+                    name: "test insert",
+                    match: /^test\s+insert/i,
+                    completions: ["test insert"],
+                    arguments: {
+                        firstArgument: {
+                            required:
+                                insertsModule.ArgumentRequirement.required,
+                            placeholder: "'URL'",
+                        },
+                        requiredProps: {},
+                        optionalProps: {},
+                    },
+                    parse: () => {},
+                };
+                const mockFunction = ImportMock.mockFunction(
+                    insertsModule,
+                    "all"
+                ).returns([insert]);
+                const parser = uut.getChapbookParser(undefined);
+
+                const results = parser?.generateCompletions(
+                    doc,
+                    position,
+                    index
+                );
+                mockFunction.restore();
+
+                expect(results?.items[0].textEditText).to.eql("test insert");
+                expect(results?.itemDefaults?.editRange).to.eql(
+                    Range.create(0, 11, 0, 14)
+                );
+            });
+
+            it("should suggest passages after a { and a , and a : for first arguments that take a passage", () => {
+                const doc = TextDocument.create(
+                    "fake-uri",
+                    "",
+                    0,
+                    "Let's try {test insert: }"
+                );
+                const position = Position.create(0, 24);
+                const index = new Index();
+                index.setPassages("fake-uri", [
+                    buildPassage({ label: "I'm a passage!" }),
+                ]);
+                const insert: insertsModule.InsertParser = {
+                    name: "test insert",
+                    match: /^test\s+insert/i,
+                    completions: ["test insert"],
+                    arguments: {
+                        firstArgument: {
+                            required:
+                                insertsModule.ArgumentRequirement.optional,
+                            type: insertsModule.ValueType.passage,
+                        },
+                        requiredProps: {},
+                        optionalProps: {},
+                    },
+                    parse: () => {},
+                };
+                const mockFunction = ImportMock.mockFunction(
+                    insertsModule,
+                    "all"
+                ).returns([insert]);
+                const parser = uut.getChapbookParser(undefined);
+
+                const results = parser?.generateCompletions(
+                    doc,
+                    position,
+                    index
+                );
+                mockFunction.restore();
+
+                expect(results?.items[0].label).to.eql("I'm a passage!");
+                expect(results?.items[0].textEditText).to.eql(
+                    "'I'm a passage!'"
+                );
+                expect(results?.itemDefaults?.editRange).to.eql(
+                    Range.create(0, 24, 0, 24)
+                );
+            });
+
+            it("should suggest first argument passages inside existing quote marks", () => {
+                const doc = TextDocument.create(
+                    "fake-uri",
+                    "",
+                    0,
+                    "Let's try {test insert: 'placeholder' }"
+                );
+                const position = Position.create(0, 27);
+                const index = new Index();
+                index.setPassages("fake-uri", [
+                    buildPassage({ label: "I'm a passage!" }),
+                ]);
+                const insert: insertsModule.InsertParser = {
+                    name: "test insert",
+                    match: /^test\s+insert/i,
+                    completions: ["test insert"],
+                    arguments: {
+                        firstArgument: {
+                            required:
+                                insertsModule.ArgumentRequirement.optional,
+                            type: insertsModule.ValueType.passage,
+                        },
+                        requiredProps: {},
+                        optionalProps: {},
+                    },
+                    parse: () => {},
+                };
+                const mockFunction = ImportMock.mockFunction(
+                    insertsModule,
+                    "all"
+                ).returns([insert]);
+                const parser = uut.getChapbookParser(undefined);
+
+                const results = parser?.generateCompletions(
+                    doc,
+                    position,
+                    index
+                );
+                mockFunction.restore();
+
+                expect(results?.items[0].label).to.eql("I'm a passage!");
+                expect(results?.items[0].textEditText).to.eql("I'm a passage!");
+                expect(results?.itemDefaults?.editRange).to.eql(
+                    Range.create(0, 25, 0, 36)
+                );
+            });
+
+            it("should suggest insert properties after a { and a ,", () => {
+                const doc = TextDocument.create(
+                    "fake-uri",
+                    "",
+                    0,
+                    "Let's try {test insert, "
+                );
+                const position = Position.create(0, 23);
+                const index = new Index();
+                const insert: insertsModule.InsertParser = {
+                    name: "test insert",
+                    match: /^test\s+insert/i,
+                    completions: ["test insert"],
+                    arguments: {
+                        firstArgument: {
+                            required:
+                                insertsModule.ArgumentRequirement.optional,
+                        },
+                        requiredProps: { one: null },
+                        optionalProps: { two: { placeholder: "'value'" } },
+                    },
+                    parse: () => {},
+                };
+                const mockFunction = ImportMock.mockFunction(
+                    insertsModule,
+                    "all"
+                ).returns([insert]);
+                const parser = uut.getChapbookParser(undefined);
+
+                const results = parser?.generateCompletions(
+                    doc,
+                    position,
+                    index
+                );
+                mockFunction.restore();
+
+                expect(results?.items[0].label).to.eql("one");
+                expect(results?.items[0].textEditText).to.eql(
+                    " one: '${1:arg}'"
+                );
+                expect(results?.items[1].label).to.eql("two");
+                expect(results?.items[1].textEditText).to.eql(
+                    " two: '${1:value}'"
+                );
+                expect(results?.itemDefaults?.editRange).to.eql(
+                    Range.create(0, 23, 0, 23)
+                );
+            });
+
+            it("should suggest insert properties after a { and a , changing only the property at the completion position", () => {
+                const doc = TextDocument.create(
+                    "fake-uri",
+                    "",
+                    0,
+                    "Let's try {test insert, :"
+                );
+                const position = Position.create(0, 23);
+                const index = new Index();
+                const insert: insertsModule.InsertParser = {
+                    name: "test insert",
+                    match: /^test\s+insert/i,
+                    completions: ["test insert"],
+                    arguments: {
+                        firstArgument: {
+                            required:
+                                insertsModule.ArgumentRequirement.optional,
+                        },
+                        requiredProps: { one: null },
+                        optionalProps: { two: null },
+                    },
+                    parse: () => {},
+                };
+                const mockFunction = ImportMock.mockFunction(
+                    insertsModule,
+                    "all"
+                ).returns([insert]);
+                const parser = uut.getChapbookParser(undefined);
+
+                const results = parser?.generateCompletions(
+                    doc,
+                    position,
+                    index
+                );
+                mockFunction.restore();
+
+                expect(results?.items[0].label).to.eql("one");
+                expect(results?.items[0].textEditText).to.eql(
+                    " one: '${1:arg}'"
+                );
+                expect(results?.items[1].label).to.eql("two");
+                expect(results?.items[1].textEditText).to.eql(
+                    " two: '${1:arg}'"
+                );
+                expect(results?.itemDefaults?.editRange).to.eql(
+                    Range.create(0, 23, 0, 25)
+                );
+            });
+
+            it("should not suggest insert property values after a { and a , and a : for general properties", () => {
+                const doc = TextDocument.create(
+                    "fake-uri",
+                    "",
+                    0,
+                    "Let's try {test insert, : 'here'"
+                );
+                const position = Position.create(0, 28);
+                const index = new Index();
+                const insert: insertsModule.InsertParser = {
+                    name: "test insert",
+                    match: /^test\s+insert/i,
+                    completions: ["test insert"],
+                    arguments: {
+                        firstArgument: {
+                            required:
+                                insertsModule.ArgumentRequirement.optional,
+                        },
+                        requiredProps: { one: null },
+                        optionalProps: { two: null },
+                    },
+                    parse: () => {},
+                };
+                const mockFunction = ImportMock.mockFunction(
+                    insertsModule,
+                    "all"
+                ).returns([insert]);
+                const parser = uut.getChapbookParser(undefined);
+
+                const results = parser?.generateCompletions(
+                    doc,
+                    position,
+                    index
+                );
+                mockFunction.restore();
+
+                expect(results).to.be.null;
+            });
+
+            it("should suggest passages for insert property values that take a passage after a { and a , and a :", () => {
+                const doc = TextDocument.create(
+                    "fake-uri",
+                    "",
+                    0,
+                    "Let's try {test insert, one: 'here',"
+                );
+                const position = Position.create(0, 30);
+                const index = new Index();
+                index.setPassages("fake-uri", [
+                    buildPassage({ label: "I'm a passage!" }),
+                ]);
+                const insert: insertsModule.InsertParser = {
+                    name: "test insert",
+                    match: /^test\s+insert/i,
+                    completions: ["test insert"],
+                    arguments: {
+                        firstArgument: {
+                            required:
+                                insertsModule.ArgumentRequirement.optional,
+                        },
+                        requiredProps: {
+                            one: {
+                                placeholder: "arg",
+                                type: insertsModule.ValueType.passage,
+                            },
+                        },
+                        optionalProps: { two: null },
+                    },
+                    parse: () => {},
+                };
+                const mockFunction = ImportMock.mockFunction(
+                    insertsModule,
+                    "all"
+                ).returns([insert]);
+                const parser = uut.getChapbookParser(undefined);
+
+                const results = parser?.generateCompletions(
+                    doc,
+                    position,
+                    index
+                );
+                mockFunction.restore();
+
+                expect(results?.items[0].label).to.eql("I'm a passage!");
+                expect(results?.items[0].textEditText).to.eql("I'm a passage!");
+                expect(results?.itemDefaults?.editRange).to.eql(
+                    Range.create(0, 30, 0, 34)
                 );
             });
         });

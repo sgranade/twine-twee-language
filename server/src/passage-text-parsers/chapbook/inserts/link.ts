@@ -7,9 +7,12 @@ export const link: InsertParser = {
     name: "link",
     match: /^link\s+to/i,
     arguments: {
-        firstArgument: ArgumentRequirement.required,
+        firstArgument: {
+            required: ArgumentRequirement.required,
+            placeholder: "'passage name or URL'",
+        },
         requiredProps: {},
-        optionalProps: { label: null },
+        optionalProps: { label: "'label'" },
     },
     completions: ["link to"],
     parse(args, state, chapbookState) {

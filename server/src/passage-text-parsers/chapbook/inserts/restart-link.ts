@@ -4,9 +4,9 @@ export const restartLink: InsertParser = {
     name: "restart link",
     match: /^restart\s+link/i,
     arguments: {
-        firstArgument: ArgumentRequirement.ignored,
+        firstArgument: { required: ArgumentRequirement.ignored },
         requiredProps: {},
-        optionalProps: { label: null },
+        optionalProps: { label: "'label'" },
     },
     completions: ["restart link"],
     parse(args, state, chapbookState) {

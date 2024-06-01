@@ -4,9 +4,12 @@ export const embedYouTubeVideo: InsertParser = {
     name: "embed YouTube video",
     match: /^embed\s+youtube(\s+video)?/i,
     arguments: {
-        firstArgument: ArgumentRequirement.required,
+        firstArgument: {
+            required: ArgumentRequirement.required,
+            placeholder: "'url'",
+        },
         requiredProps: {},
-        optionalProps: { autoplay: null, loop: null },
+        optionalProps: { autoplay: "true", loop: "true" },
     },
     completions: ["embed YouTube"],
     parse(args, state, chapbookState) {

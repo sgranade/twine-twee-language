@@ -4,9 +4,12 @@ export const textInput: InsertParser = {
     name: "text input",
     match: /^text\s+input(\s+for)?/i,
     arguments: {
-        firstArgument: ArgumentRequirement.optional,
+        firstArgument: {
+            required: ArgumentRequirement.optional,
+            placeholder: "'variable name'",
+        },
         requiredProps: {},
-        optionalProps: { required: null },
+        optionalProps: { required: "false" },
     },
     completions: ["text input"],
     parse(args, state, chapbookState) {

@@ -4,9 +4,12 @@ export const embedImage: InsertParser = {
     name: "embed image",
     match: /^embed\s+image/i,
     arguments: {
-        firstArgument: ArgumentRequirement.required,
+        firstArgument: {
+            required: ArgumentRequirement.required,
+            placeholder: "'url'",
+        },
         requiredProps: {},
-        optionalProps: { alt: null },
+        optionalProps: { alt: "'alternate text'" },
     },
     completions: ["embed image"],
     parse(args, state, chapbookState) {

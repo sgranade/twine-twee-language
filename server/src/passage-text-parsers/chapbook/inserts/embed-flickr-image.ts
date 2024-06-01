@@ -4,9 +4,12 @@ export const embedFlickrImage: InsertParser = {
     name: "embed Flickr",
     match: /^embed\s+flickr(\s+image)?/i,
     arguments: {
-        firstArgument: ArgumentRequirement.required,
+        firstArgument: {
+            required: ArgumentRequirement.required,
+            placeholder: "'embed code'",
+        },
         requiredProps: {},
-        optionalProps: { alt: null },
+        optionalProps: { alt: "'alternate text'" },
     },
     completions: ["embed Flickr"],
     parse(args, state, chapbookState) {
