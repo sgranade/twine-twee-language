@@ -869,6 +869,38 @@ describe("Chapbook Passage", () => {
                         expect(allTokens[0].props).to.be.empty;
                     });
 
+                    it("should create a passage reference for a first arg that's a passage", () => {
+                        const header = ":: Passage\n";
+                        const passage = "Insert: {mock insert:  'arg'}";
+                        const callbacks = new MockCallbacks();
+                        const insert = buildInsertParser({
+                            match: /^mock insert/,
+                        });
+                        insert.arguments.firstArgument.type =
+                            insertsModule.ValueType.passage;
+                        const allTokens: insertsModule.InsertTokens[] = [];
+                        insert.parse = (tokens) => {
+                            allTokens.push(tokens);
+                        };
+                        const state = buildParsingState({
+                            content: header + passage,
+                            callbacks: callbacks,
+                        });
+                        const parser = uut.getChapbookParser(undefined);
+                        const mockFunction = ImportMock.mockFunction(
+                            insertsModule,
+                            "all"
+                        ).returns([insert]);
+
+                        parser?.parsePassageText(passage, header.length, state);
+                        mockFunction.restore();
+                        const result = callbacks.passageReferences;
+
+                        expect(result).to.eql({
+                            arg: [Range.create(1, 24, 1, 27)],
+                        });
+                    });
+
                     it("should create a passage semantic token for a first arg that's a passage", () => {
                         const header = ":: Passage\n";
                         const passage = "Insert: {mock insert:  'arg'}";
@@ -901,6 +933,177 @@ describe("Chapbook Passage", () => {
                             char: 24,
                             length: 3,
                             tokenType: ETokenType.class,
+                            tokenModifiers: [],
+                        });
+                    });
+
+                    it("should create a passage reference for a non-link first arg that's a urlOrPassage", () => {
+                        const header = ":: Passage\n";
+                        const passage = "Insert: {mock insert:  'arg'}";
+                        const callbacks = new MockCallbacks();
+                        const insert = buildInsertParser({
+                            match: /^mock insert/,
+                        });
+                        insert.arguments.firstArgument.type =
+                            insertsModule.ValueType.urlOrPassage;
+                        const allTokens: insertsModule.InsertTokens[] = [];
+                        insert.parse = (tokens) => {
+                            allTokens.push(tokens);
+                        };
+                        const state = buildParsingState({
+                            content: header + passage,
+                            callbacks: callbacks,
+                        });
+                        const parser = uut.getChapbookParser(undefined);
+                        const mockFunction = ImportMock.mockFunction(
+                            insertsModule,
+                            "all"
+                        ).returns([insert]);
+
+                        parser?.parsePassageText(passage, header.length, state);
+                        mockFunction.restore();
+                        const result = callbacks.passageReferences;
+
+                        expect(result).to.eql({
+                            arg: [Range.create(1, 24, 1, 27)],
+                        });
+                    });
+
+                    it("should create a passage semantic token for a non-link first arg that's a urlOrPassage", () => {
+                        const header = ":: Passage\n";
+                        const passage = "Insert: {mock insert:  'arg'}";
+                        const callbacks = new MockCallbacks();
+                        const insert = buildInsertParser({
+                            match: /^mock insert/,
+                        });
+                        insert.arguments.firstArgument.type =
+                            insertsModule.ValueType.urlOrPassage;
+                        const allTokens: insertsModule.InsertTokens[] = [];
+                        insert.parse = (tokens) => {
+                            allTokens.push(tokens);
+                        };
+                        const state = buildParsingState({
+                            content: header + passage,
+                            callbacks: callbacks,
+                        });
+                        const parser = uut.getChapbookParser(undefined);
+                        const mockFunction = ImportMock.mockFunction(
+                            insertsModule,
+                            "all"
+                        ).returns([insert]);
+
+                        parser?.parsePassageText(passage, header.length, state);
+                        mockFunction.restore();
+                        const [, firstArgToken] = callbacks.tokens;
+
+                        expect(firstArgToken).to.eql({
+                            line: 1,
+                            char: 24,
+                            length: 3,
+                            tokenType: ETokenType.class,
+                            tokenModifiers: [],
+                        });
+                    });
+
+                    it("should not create a passage reference for a link first arg that's a urlOrPassage", () => {
+                        const header = ":: Passage\n";
+                        const passage =
+                            "Insert: {mock insert:  'https://link.com'}";
+                        const callbacks = new MockCallbacks();
+                        const insert = buildInsertParser({
+                            match: /^mock insert/,
+                        });
+                        insert.arguments.firstArgument.type =
+                            insertsModule.ValueType.urlOrPassage;
+                        const allTokens: insertsModule.InsertTokens[] = [];
+                        insert.parse = (tokens) => {
+                            allTokens.push(tokens);
+                        };
+                        const state = buildParsingState({
+                            content: header + passage,
+                            callbacks: callbacks,
+                        });
+                        const parser = uut.getChapbookParser(undefined);
+                        const mockFunction = ImportMock.mockFunction(
+                            insertsModule,
+                            "all"
+                        ).returns([insert]);
+
+                        parser?.parsePassageText(passage, header.length, state);
+                        mockFunction.restore();
+                        const result = callbacks.passageReferences;
+
+                        expect(result).to.be.empty;
+                    });
+                    it("should create a string semantic token for a link first arg that's a urlOrPassage", () => {
+                        const header = ":: Passage\n";
+                        const passage =
+                            "Insert: {mock insert:  'https://link.com'}";
+                        const callbacks = new MockCallbacks();
+                        const insert = buildInsertParser({
+                            match: /^mock insert/,
+                        });
+                        insert.arguments.firstArgument.type =
+                            insertsModule.ValueType.urlOrPassage;
+                        const allTokens: insertsModule.InsertTokens[] = [];
+                        insert.parse = (tokens) => {
+                            allTokens.push(tokens);
+                        };
+                        const state = buildParsingState({
+                            content: header + passage,
+                            callbacks: callbacks,
+                        });
+                        const parser = uut.getChapbookParser(undefined);
+                        const mockFunction = ImportMock.mockFunction(
+                            insertsModule,
+                            "all"
+                        ).returns([insert]);
+
+                        parser?.parsePassageText(passage, header.length, state);
+                        mockFunction.restore();
+                        const [, firstArgToken] = callbacks.tokens;
+
+                        expect(firstArgToken).to.eql({
+                            line: 1,
+                            char: 23,
+                            length: 18,
+                            tokenType: ETokenType.string,
+                            tokenModifiers: [],
+                        });
+                    });
+
+                    it("should create a variable semantic token for a non-string first arg that's a urlOrPassage", () => {
+                        const header = ":: Passage\n";
+                        const passage = "Insert: {mock insert:  arg}";
+                        const callbacks = new MockCallbacks();
+                        const insert = buildInsertParser({
+                            match: /^mock insert/,
+                        });
+                        insert.arguments.firstArgument.type =
+                            insertsModule.ValueType.urlOrPassage;
+                        const allTokens: insertsModule.InsertTokens[] = [];
+                        insert.parse = (tokens) => {
+                            allTokens.push(tokens);
+                        };
+                        const state = buildParsingState({
+                            content: header + passage,
+                            callbacks: callbacks,
+                        });
+                        const parser = uut.getChapbookParser(undefined);
+                        const mockFunction = ImportMock.mockFunction(
+                            insertsModule,
+                            "all"
+                        ).returns([insert]);
+
+                        parser?.parsePassageText(passage, header.length, state);
+                        mockFunction.restore();
+                        const [, firstArgToken] = callbacks.tokens;
+
+                        expect(firstArgToken).to.eql({
+                            line: 1,
+                            char: 23,
+                            length: 3,
+                            tokenType: ETokenType.variable,
                             tokenModifiers: [],
                         });
                     });
@@ -1891,7 +2094,7 @@ describe("Chapbook Passage", () => {
         describe("vars section", () => {
             it("should warn on a missing colon", () => {
                 const header = ":: Passage\n";
-                const passage = "var1 = wrong\n--\n";
+                const passage = "var0: right\nvar1 = wrong\n--\n";
                 const callbacks = new MockCallbacks();
                 const state = buildParsingState({
                     content: header + passage,
@@ -1905,7 +2108,26 @@ describe("Chapbook Passage", () => {
                 expect(callbacks.errors.length).to.equal(1);
                 expect(result.severity).to.eql(DiagnosticSeverity.Warning);
                 expect(result.message).to.include("Missing colon");
-                expect(result.range).to.eql(Range.create(1, 0, 1, 12));
+                expect(result.range).to.eql(Range.create(2, 0, 2, 12));
+            });
+
+            it("should warn on a missing colon even on Windows", () => {
+                const header = ":: Passage\r\n";
+                const passage = "var0: right\r\nvar1 = wrong\r\n--\r\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const parser = uut.getChapbookParser(undefined);
+
+                parser?.parsePassageText(passage, header.length, state);
+                const [result] = callbacks.errors;
+
+                expect(callbacks.errors.length).to.equal(1);
+                expect(result.severity).to.eql(DiagnosticSeverity.Warning);
+                expect(result.message).to.include("Missing colon");
+                expect(result.range).to.eql(Range.create(2, 0, 2, 12));
             });
 
             it("should error on spaces before a colon", () => {

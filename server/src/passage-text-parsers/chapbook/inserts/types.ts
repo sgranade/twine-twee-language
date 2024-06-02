@@ -72,6 +72,10 @@ export enum ValueType {
      * A Twine passage
      */
     passage,
+    /**
+     * Either a Twine passage or a URL link
+     */
+    urlOrPassage,
 }
 
 /**
@@ -131,7 +135,7 @@ export interface InsertParser {
      */
     arguments: InsertArguments;
     /**
-     * List of completions corresponding to this insert.
+     * List of completions corresponding to this insert's name.
      */
     completions: string[];
     /**

@@ -1,7 +1,7 @@
 import { capturePreTokenFor } from "../..";
 import { parsePassageReference } from "../../../parser";
 import { ETokenType } from "../../../tokens";
-import { ArgumentRequirement, InsertParser } from "./types";
+import { ArgumentRequirement, InsertParser, ValueType } from "./types";
 
 export const link: InsertParser = {
     name: "link",
@@ -10,6 +10,7 @@ export const link: InsertParser = {
         firstArgument: {
             required: ArgumentRequirement.required,
             placeholder: "'passage name or URL'",
+            type: ValueType.urlOrPassage,
         },
         requiredProps: {},
         optionalProps: { label: "'label'" },

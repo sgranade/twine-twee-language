@@ -7,6 +7,7 @@ import {
     logErrorFor,
     logSemanticTokenFor,
     parseLinks,
+    parsePassageReference,
 } from "../../parser";
 import { ETokenType, ETokenModifier } from "../../tokens";
 import { skipSpaces, removeAndCountPadding } from "../../utilities";
@@ -54,28 +55,36 @@ const varInsertPattern = /^({\s*)(\S+)\s*}$/;
  *
  * @param token Token for the insert argument.
  * @param argType Expected type of argument.
+ * @param state Parsing state.
  * @param chapbookState Chapbook-specific parsing state.
  */
 function parseInsertArgument(
     token: Token | undefined,
     argType: ValueType | undefined,
+    state: ParsingState,
     chapbookState: ChapbookParsingState
 ): void {
     if (
         token !== undefined &&
-        argType === ValueType.passage &&
         (token.text.startsWith("'") || token.text.startsWith("'"))
     ) {
-        // For the token to show up, we've got to get rid of the
-        // one that would overlap (and override) this one
-        delete chapbookState.passageTokens[token.at];
-        capturePreTokenFor(
-            token.text.slice(1, -1),
-            token.at + 1,
-            ETokenType.class,
-            [],
-            chapbookState
-        );
+        if (
+            argType === ValueType.passage ||
+            (argType === ValueType.urlOrPassage &&
+                !/^\w+:\/\/\/?\w/i.test(token.text.slice(1, -1))) // Link regex taken from Chapbook, `renderLink()`, links.ts
+        ) {
+            // Capture the passage reference
+            // For the passage's semantic token to show up, we've got to get rid of the
+            // one that would overlap (and override) this one
+            delete chapbookState.passageTokens[token.at];
+
+            parsePassageReference(
+                token.text.slice(1, -1),
+                token.at + 1,
+                state,
+                chapbookState
+            );
+        }
     }
 }
 
@@ -131,6 +140,7 @@ function parseInsertContents(
     parseInsertArgument(
         tokens.firstArgument,
         insert.arguments.firstArgument.type,
+        state,
         chapbookState
     );
 
@@ -156,7 +166,12 @@ function parseInsertContents(
         }
 
         if (InsertProperty.is(propInfo)) {
-            parseInsertArgument(propValueToken, propInfo.type, chapbookState);
+            parseInsertArgument(
+                propValueToken,
+                propInfo.type,
+                state,
+                chapbookState
+            );
         }
     }
     const unseenProperties = Object.keys(insert.arguments.requiredProps).filter(
