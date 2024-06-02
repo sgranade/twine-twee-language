@@ -24,7 +24,7 @@ import { parseJSExpression } from "../../js-parser";
 const varsSepPattern = /^--(\r?\n|$)/m;
 const conditionPattern = /((\((.+?)\)?)\s*)([^)]*)$/;
 const modifierPattern = /^([ \t]*)\[([^[].+[^\]])\](\s*?)(?:\r?\n|$)/gm;
-const lineExtractionPattern = /^(\s*?)\b(.*)$/gm;
+const lineExtractionPattern = /^([ \t]*?)\b(.*)$/gm;
 
 /**
  * Type of Chapbook modifier
