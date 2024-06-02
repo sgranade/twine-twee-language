@@ -12,7 +12,9 @@
 		"url": "https://github.com/sgranade/twine-twee-language"
 	},
 	"dependencies": {
-		"@types/urijs": "^1.19.25",
+		"acorn": "^8.11.3",
+		"acorn-loose": "^8.4.0",
+		"acorn-walk": "^8.3.2",
 		"urijs": "^1.19.11",
 		"uuid": "^9.0.1",
 		"vscode-css-languageservice": "^6.2.14",
@@ -23,6 +25,7 @@
 	},
 	"scripts": {},
 	"devDependencies": {
+		"@types/urijs": "^1.19.25",
 		"@types/uuid": "^9.0.8"
 	}
 }

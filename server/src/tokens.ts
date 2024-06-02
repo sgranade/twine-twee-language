@@ -14,6 +14,7 @@ export const ETokenType = {
     keyword: 6,
     string: 7,
     number: 8,
+    operator: 9,
 } as const;
 export type TokenType = (typeof ETokenType)[keyof typeof ETokenType];
 
