@@ -86,7 +86,7 @@ connection.onInitialize((params: InitializeParams) => {
                 },
             },
             completionProvider: {
-                triggerCharacters: ["{", "[", "<"],
+                triggerCharacters: ["{", "[", "<", "'", '"'],
                 // TODO create a resolve provider
                 resolveProvider: false,
             },

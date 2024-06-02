@@ -1853,6 +1853,55 @@ describe("Chapbook Passage", () => {
                 );
             });
 
+            it("should suggest passages after a { and a , and a : for first arguments that take a urlOrPassage", () => {
+                const doc = TextDocument.create(
+                    "fake-uri",
+                    "",
+                    0,
+                    "Let's try {test insert: }"
+                );
+                const position = Position.create(0, 24);
+                const index = new Index();
+                index.setPassages("fake-uri", [
+                    buildPassage({ label: "I'm a passage!" }),
+                ]);
+                const insert: insertsModule.InsertParser = {
+                    name: "test insert",
+                    match: /^test\s+insert/i,
+                    completions: ["test insert"],
+                    arguments: {
+                        firstArgument: {
+                            required:
+                                insertsModule.ArgumentRequirement.optional,
+                            type: insertsModule.ValueType.urlOrPassage,
+                        },
+                        requiredProps: {},
+                        optionalProps: {},
+                    },
+                    parse: () => {},
+                };
+                const mockFunction = ImportMock.mockFunction(
+                    insertsModule,
+                    "all"
+                ).returns([insert]);
+                const parser = uut.getChapbookParser(undefined);
+
+                const results = parser?.generateCompletions(
+                    doc,
+                    position,
+                    index
+                );
+                mockFunction.restore();
+
+                expect(results?.items[0].label).to.eql("I'm a passage!");
+                expect(results?.items[0].textEditText).to.eql(
+                    "'I'm a passage!'"
+                );
+                expect(results?.itemDefaults?.editRange).to.eql(
+                    Range.create(0, 24, 0, 24)
+                );
+            });
+
             it("should suggest first argument passages inside existing quote marks", () => {
                 const doc = TextDocument.create(
                     "fake-uri",

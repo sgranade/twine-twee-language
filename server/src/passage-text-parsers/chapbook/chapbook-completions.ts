@@ -338,7 +338,10 @@ function generateInsertCompletions(
         // First argument
 
         // Create completions if the first argument's type supports it
-        if (insert.arguments.firstArgument.type === ValueType.passage) {
+        if (
+            insert.arguments.firstArgument.type === ValueType.passage ||
+            insert.arguments.firstArgument.type === ValueType.urlOrPassage
+        ) {
             return generatePassageCompletions(
                 document,
                 text.slice(insertSectionStart, insertSectionEnd),
