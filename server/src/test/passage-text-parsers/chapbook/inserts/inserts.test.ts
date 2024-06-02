@@ -20,7 +20,7 @@ describe("Inserts", () => {
                 callbacks: callbacks,
             });
             const chapbookState: ChapbookParsingState = {
-                textSubsectionTokens: {},
+                passageTokens: {},
                 modifierType: 0,
             };
             const args = buildInsertTokens({
@@ -30,7 +30,7 @@ describe("Inserts", () => {
 
             uutEmbedPassage.embedPassage.parse(args, state, chapbookState);
 
-            expect(chapbookState.textSubsectionTokens).to.eql({
+            expect(chapbookState.passageTokens).to.eql({
                 18: {
                     text: "Passage Ref",
                     at: 18,
@@ -47,7 +47,7 @@ describe("Inserts", () => {
                 callbacks: callbacks,
             });
             const chapbookState: ChapbookParsingState = {
-                textSubsectionTokens: {},
+                passageTokens: {},
                 modifierType: 0,
             };
             const args = buildInsertTokens({
@@ -69,7 +69,7 @@ describe("Inserts", () => {
                 callbacks: callbacks,
             });
             const chapbookState: ChapbookParsingState = {
-                textSubsectionTokens: {},
+                passageTokens: {},
                 modifierType: 0,
             };
             const args = buildInsertTokens({
@@ -91,7 +91,7 @@ describe("Inserts", () => {
         it("should set a string token for a first argument that's a link", () => {
             const state = buildParsingState({});
             const chapbookState: ChapbookParsingState = {
-                textSubsectionTokens: {},
+                passageTokens: {},
                 modifierType: 0,
             };
             const args = buildInsertTokens({
@@ -101,7 +101,7 @@ describe("Inserts", () => {
 
             uutLink.link.parse(args, state, chapbookState);
 
-            expect(chapbookState.textSubsectionTokens).to.eql({
+            expect(chapbookState.passageTokens).to.eql({
                 17: {
                     text: "'https://google.com/'",
                     at: 17,
@@ -118,7 +118,7 @@ describe("Inserts", () => {
                 callbacks: callbacks,
             });
             const chapbookState: ChapbookParsingState = {
-                textSubsectionTokens: {},
+                passageTokens: {},
                 modifierType: 0,
             };
             const args = buildInsertTokens({
@@ -128,7 +128,7 @@ describe("Inserts", () => {
 
             uutLink.link.parse(args, state, chapbookState);
 
-            expect(chapbookState.textSubsectionTokens).to.eql({
+            expect(chapbookState.passageTokens).to.eql({
                 18: {
                     text: "Passage Ref",
                     at: 18,
@@ -145,7 +145,7 @@ describe("Inserts", () => {
                 callbacks: callbacks,
             });
             const chapbookState: ChapbookParsingState = {
-                textSubsectionTokens: {},
+                passageTokens: {},
                 modifierType: 0,
             };
             const args = buildInsertTokens({
@@ -167,7 +167,7 @@ describe("Inserts", () => {
                 callbacks: callbacks,
             });
             const chapbookState: ChapbookParsingState = {
-                textSubsectionTokens: {},
+                passageTokens: {},
                 modifierType: 0,
             };
             const args = buildInsertTokens({
@@ -179,7 +179,7 @@ describe("Inserts", () => {
             };
 
             uutLink.link.parse(args, state, chapbookState);
-            const result = chapbookState.textSubsectionTokens[32];
+            const result = chapbookState.passageTokens[32];
 
             expect(result).to.eql({
                 text: '"Go!"',
@@ -198,7 +198,7 @@ describe("Inserts", () => {
                 callbacks: callbacks,
             });
             const chapbookState: ChapbookParsingState = {
-                textSubsectionTokens: {},
+                passageTokens: {},
                 modifierType: 0,
             };
             const args = buildInsertTokens({ name: "reveal link", nameAt: 1 });
@@ -221,7 +221,7 @@ describe("Inserts", () => {
                 callbacks: callbacks,
             });
             const chapbookState: ChapbookParsingState = {
-                textSubsectionTokens: {},
+                passageTokens: {},
                 modifierType: 0,
             };
             const args = buildInsertTokens({});
@@ -251,7 +251,7 @@ describe("Inserts", () => {
                 callbacks: callbacks,
             });
             const chapbookState: ChapbookParsingState = {
-                textSubsectionTokens: {},
+                passageTokens: {},
                 modifierType: 0,
             };
             const args = buildInsertTokens({});

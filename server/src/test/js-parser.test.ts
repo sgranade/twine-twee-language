@@ -191,4 +191,40 @@ describe("JS Parser", () => {
             modifiers: [],
         });
     });
+
+    it("should set semantic tokens for a set of properties", () => {
+        const expression = " {prop1: val1, prop2: 'val2'}";
+        const offset = 12;
+        const state: PassageTextParsingState = {
+            passageTokens: {},
+        };
+
+        uut.parseJSExpression(expression, offset, state);
+        const result = state.passageTokens;
+
+        expect(result[14]).to.eql({
+            text: "prop1",
+            at: 14,
+            type: ETokenType.property,
+            modifiers: [],
+        });
+        expect(result[21]).to.eql({
+            text: "val1",
+            at: 21,
+            type: ETokenType.variable,
+            modifiers: [],
+        });
+        expect(result[27]).to.eql({
+            text: "prop2",
+            at: 27,
+            type: ETokenType.property,
+            modifiers: [],
+        });
+        expect(result[34]).to.eql({
+            text: "'val2'",
+            at: 34,
+            type: ETokenType.string,
+            modifiers: [],
+        });
+    });
 });

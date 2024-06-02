@@ -745,11 +745,11 @@ describe("Parser", () => {
                         content: header + passage,
                         callbacks: callbacks,
                     });
-                    const passageState = { textSubsectionTokens: {} };
+                    const passageState = { passageTokens: {} };
 
                     uut.parseLinks(passage, header.length, state, passageState);
 
-                    expect(passageState.textSubsectionTokens).to.be.empty;
+                    expect(passageState.passageTokens).to.be.empty;
                 });
 
                 it("should set semantic tokens for a [[target]] link", () => {
@@ -762,10 +762,10 @@ describe("Parser", () => {
                         content: header + passage,
                         callbacks: callbacks,
                     });
-                    const passageState = { textSubsectionTokens: {} };
+                    const passageState = { passageTokens: {} };
 
                     uut.parseLinks(passage, 2, state, passageState);
-                    const result = passageState.textSubsectionTokens;
+                    const result = passageState.passageTokens;
 
                     expect(result).to.eql({
                         45: {
@@ -787,7 +787,7 @@ describe("Parser", () => {
                         content: header + passage,
                         callbacks: callbacks,
                     });
-                    const passageState = { textSubsectionTokens: {} };
+                    const passageState = { passageTokens: {} };
 
                     uut.parseLinks(passage, header.length, state, passageState);
                     const result = callbacks.passageReferences;
@@ -807,10 +807,10 @@ describe("Parser", () => {
                         content: header + passage,
                         callbacks: callbacks,
                     });
-                    const passageState = { textSubsectionTokens: {} };
+                    const passageState = { passageTokens: {} };
 
                     uut.parseLinks(passage, 2, state, passageState);
-                    const result = passageState.textSubsectionTokens;
+                    const result = passageState.passageTokens;
 
                     expect(result).to.eql({
                         44: {
@@ -844,7 +844,7 @@ describe("Parser", () => {
                         content: header + passage,
                         callbacks: callbacks,
                     });
-                    const passageState = { textSubsectionTokens: {} };
+                    const passageState = { passageTokens: {} };
 
                     uut.parseLinks(passage, header.length, state, passageState);
                     const result = callbacks.passageReferences;
@@ -864,10 +864,10 @@ describe("Parser", () => {
                         content: header + passage,
                         callbacks: callbacks,
                     });
-                    const passageState = { textSubsectionTokens: {} };
+                    const passageState = { passageTokens: {} };
 
                     uut.parseLinks(passage, 2, state, passageState);
-                    const result = passageState.textSubsectionTokens;
+                    const result = passageState.passageTokens;
 
                     expect(result).to.eql({
                         44: {
@@ -901,7 +901,7 @@ describe("Parser", () => {
                         content: header + passage,
                         callbacks: callbacks,
                     });
-                    const passageState = { textSubsectionTokens: {} };
+                    const passageState = { passageTokens: {} };
 
                     uut.parseLinks(passage, header.length, state, passageState);
                     const result = callbacks.passageReferences;
@@ -921,10 +921,10 @@ describe("Parser", () => {
                         content: header + passage,
                         callbacks: callbacks,
                     });
-                    const passageState = { textSubsectionTokens: {} };
+                    const passageState = { passageTokens: {} };
 
                     uut.parseLinks(passage, 2, state, passageState);
-                    const result = passageState.textSubsectionTokens;
+                    const result = passageState.passageTokens;
 
                     expect(result).to.eql({
                         45: {
@@ -958,7 +958,7 @@ describe("Parser", () => {
                         content: header + passage,
                         callbacks: callbacks,
                     });
-                    const passageState = { textSubsectionTokens: {} };
+                    const passageState = { passageTokens: {} };
 
                     uut.parseLinks(passage, header.length, state, passageState);
                     const result = callbacks.passageReferences;

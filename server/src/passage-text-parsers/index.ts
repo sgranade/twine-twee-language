@@ -86,7 +86,7 @@ export interface PassageTextParsingState {
     /**
      * Information for semantic tokens generated in a text subsection.
      */
-    textSubsectionTokens: Record<number, PreToken>;
+    passageTokens: Record<number, PreToken>;
 }
 
 /**
@@ -106,7 +106,7 @@ export function capturePreTokenFor(
     state: PassageTextParsingState
 ): void {
     if (text.length)
-        state.textSubsectionTokens[at] = {
+        state.passageTokens[at] = {
             text,
             at,
             type,

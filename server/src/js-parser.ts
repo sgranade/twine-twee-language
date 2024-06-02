@@ -97,6 +97,18 @@ const astParser: acornWalk.SimpleVisitors<unknown> = {
             }
         }
     },
+    Property(node) {
+        if (node.key.type === "Literal" && this.Literal !== undefined) {
+            this.Literal(node.key, undefined);
+        } else if (node.key.type === "Identifier") {
+            unprocessedTokens.push({
+                text: node.key.name,
+                at: node.start,
+                type: ETokenType.property,
+                modifiers: [],
+            });
+        }
+    },
     UnaryExpression(node) {
         unprocessedTokens.push({
             text: node.operator,
@@ -127,19 +139,16 @@ export function parseJSExpression(
     offset: number,
     passageState: PassageTextParsingState
 ): void {
-    const tokens: acorn.Token[] = [];
     let ast: acorn.Node | undefined;
 
     try {
         ast = acorn.parseExpressionAt(expression, 0, {
             ecmaVersion: 2020,
-            onToken: tokens,
         });
     } catch (err) {
         if (err instanceof SyntaxError) {
             ast = acornLoose.parse(expression, {
                 ecmaVersion: 2020,
-                onToken: tokens,
             });
         }
     }

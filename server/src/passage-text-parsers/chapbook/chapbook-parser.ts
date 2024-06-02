@@ -15,8 +15,11 @@ import {
     all as allInserts,
     Token,
     ArgumentRequirement,
+    ValueType,
+    InsertProperty,
 } from "./inserts";
 import { all as allModifiers } from "./modifiers";
+import { parseJSExpression } from "../../js-parser";
 
 const varsSepPattern = /^--(\r?\n|$)/m;
 const conditionPattern = /((\((.+?)\)?)\s*)([^)]*)$/;
@@ -45,6 +48,36 @@ export interface ChapbookParsingState extends PassageTextParsingState {
 }
 
 const varInsertPattern = /^({\s*)(\S+)\s*}$/;
+
+/**
+ * Parse an argument to an insert (either 1st argument or property value).
+ *
+ * @param token Token for the insert argument.
+ * @param argType Expected type of argument.
+ * @param chapbookState Chapbook-specific parsing state.
+ */
+function parseInsertArgument(
+    token: Token | undefined,
+    argType: ValueType | undefined,
+    chapbookState: ChapbookParsingState
+): void {
+    if (
+        token !== undefined &&
+        argType === ValueType.passage &&
+        (token.text.startsWith("'") || token.text.startsWith("'"))
+    ) {
+        // For the token to show up, we've got to get rid of the
+        // one that would overlap (and override) this one
+        delete chapbookState.passageTokens[token.at];
+        capturePreTokenFor(
+            token.text.slice(1, -1),
+            token.at + 1,
+            ETokenType.class,
+            [],
+            chapbookState
+        );
+    }
+}
 
 /**
  * Parse the contents of an insert.
@@ -95,21 +128,35 @@ function parseInsertContents(
         );
     }
 
+    parseInsertArgument(
+        tokens.firstArgument,
+        insert.arguments.firstArgument.type,
+        chapbookState
+    );
+
     // Second up, properties
     const seenProperties: Set<string> = new Set();
-    for (const [propName, [propToken]] of Object.entries(tokens.props) as [
-        string,
-        [Token, Token],
-    ][]) {
-        if (propName in insert.arguments.requiredProps) {
+    for (const [propName, [propNameToken, propValueToken]] of Object.entries(
+        tokens.props
+    ) as [string, [Token, Token]][]) {
+        let propInfo: string | InsertProperty | null | undefined =
+            insert.arguments.requiredProps[propName];
+
+        if (propInfo !== undefined) {
             seenProperties.add(propName);
-        } else if (!(propName in insert.arguments.optionalProps)) {
-            logWarningFor(
-                propToken.text,
-                propToken.at,
-                `Insert "${insert.name}" will ignore this property`,
-                state
-            );
+        } else {
+            propInfo = insert.arguments.optionalProps[propName];
+            if (propInfo === undefined)
+                logWarningFor(
+                    propNameToken.text,
+                    propNameToken.at,
+                    `Insert "${insert.name}" will ignore this property`,
+                    state
+                );
+        }
+
+        if (InsertProperty.is(propInfo)) {
+            parseInsertArgument(propValueToken, propInfo.type, chapbookState);
         }
     }
     const unseenProperties = Object.keys(insert.arguments.requiredProps).filter(
@@ -221,7 +268,9 @@ function parseInsert(
             insertIndex + argumentIndex
         );
     }
-    // TODO tokenize args & look for variable references
+    parseJSExpression(argument, insertIndex + argumentIndex, chapbookState);
+    // TODO look for variable references
+
     // Handle properties
     if (propertySection.trim()) {
         const propertySectionIndex = functionSection.length + 1; // + 1 for the comma
@@ -259,7 +308,8 @@ function parseInsert(
             // Scan forward to look for a comma that's not in a string,
             // indicating another property
             let inString = "";
-            const currentValueIndex = colonIndex + 1; // Relative to propertySection
+            let currentValue = "";
+            let currentValueIndex = colonIndex + 1; // Relative to propertySection
             let currentValueEndIndex = currentValueIndex;
             let c = "";
             for (
@@ -284,14 +334,14 @@ function parseInsert(
 
             // If the property is well formed, capture it to pass to invidual inserts
             if (spaceIndex === -1) {
-                const [currentValue, leftPad] = removeAndCountPadding(
+                [currentValue, currentValueIndex] = skipSpaces(
                     propertySection.slice(
                         currentValueIndex,
                         currentValueEndIndex
-                    )
+                    ),
+                    currentValueIndex
                 );
-                // N.B. that currentPropertyIndex has taken a left pad into account,
-                // while currentValueIndex hasn't
+
                 insertTokens.props[currentProperty] = [
                     Token.create(
                         currentProperty,
@@ -301,12 +351,16 @@ function parseInsert(
                     ),
                     Token.create(
                         currentValue,
-                        insertIndex +
-                            propertySectionIndex +
-                            currentValueIndex +
-                            leftPad
+                        insertIndex + propertySectionIndex + currentValueIndex
                     ),
                 ];
+
+                // Parse the value as JavaScript
+                parseJSExpression(
+                    currentValue,
+                    insertIndex + propertySectionIndex + currentValueIndex,
+                    chapbookState
+                );
             }
         }
     }
@@ -345,19 +399,14 @@ function parseTextSubsection(
             offset: subsectionIndex,
         });
     } else if (chapbookState.modifierType === ModifierType.Note) {
-        logSemanticTokenFor(
+        capturePreTokenFor(
             subsection,
             subsectionIndex,
             ETokenType.comment,
             [],
-            state
+            chapbookState
         );
     } else {
-        // Semantic tokens have to be submitted in document order,
-        // but we're going to generate them out of order. We'll
-        // capture them and then later submit them in the proper order.
-        chapbookState.textSubsectionTokens = {};
-
         // Parse Twine links first
         // The function replaces the link text with blank spaces so, if any include
         // curly braces, they don't get parsed as inserts.
@@ -439,11 +488,6 @@ function parseTextSubsection(
         }
 
         // TODO TOKENIZE NODES/LEAFS
-        // Submit semantic tokens in document order
-        // (taking advantage of object own key enumeration order)
-        for (const t of Object.values(chapbookState.textSubsectionTokens)) {
-            logSemanticTokenFor(t.text, t.at, t.type, t.modifiers, state);
-        }
     }
 }
 
@@ -496,25 +540,25 @@ function parseModifier(
         const token = remainingModifier.split(/\s/, 1)[0];
         if (firstToken) {
             // Tokenize the first token as a function, unless the modifier is a note
-            logSemanticTokenFor(
+            capturePreTokenFor(
                 token,
                 tokenIndex,
                 chapbookState.modifierType == ModifierType.Note
                     ? ETokenType.comment
                     : ETokenType.function,
                 [],
-                state
+                chapbookState
             );
 
             firstToken = false;
         } else {
             // All other components of the modifier get treated as parameters
-            logSemanticTokenFor(
+            capturePreTokenFor(
                 token,
                 tokenIndex,
                 ETokenType.parameter,
                 [],
-                state
+                chapbookState
             );
         }
 
@@ -533,15 +577,15 @@ function parseModifier(
 function parseTextSection(
     section: string,
     sectionIndex: number,
-    state: ParsingState
+    state: ParsingState,
+    chapbookState: ChapbookParsingState
 ): void {
-    // Go through the text modifier block by modifier block
+    // Go through the text modifier block by modifier block,
+    // starting with no modifier
+    chapbookState.modifierType = ModifierType.None;
     modifierPattern.lastIndex = 0;
     let previousModifierEndIndex = 0;
-    const chapbookState: ChapbookParsingState = {
-        modifierType: ModifierType.None,
-        textSubsectionTokens: {},
-    };
+
     for (const m of section.matchAll(modifierPattern)) {
         // Parse the text from just after the previous modifier to just before the current one
         parseTextSubsection(
@@ -646,7 +690,8 @@ function parseTextSection(
 function parseVarsSection(
     section: string,
     sectionIndex: number,
-    state: ParsingState
+    state: ParsingState,
+    chapbookState: ChapbookParsingState
 ): void {
     // Parse line by line
     lineExtractionPattern.lastIndex = 0;
@@ -669,9 +714,13 @@ function parseVarsSection(
         let name = m[2].slice(0, colonIndex).trimEnd();
         const nameIndex = m.index + m[1].length;
 
-        // TODO this section extracts the value
-        // let [value, valueIndex] = removeAndCountPadding(m[1].slice(colonIndex + 1));
-        // valueIndex += m.index + colonIndex;
+        // Handle the value
+        let [value, valueIndex] = skipSpaces(
+            m[2].slice(colonIndex + 1),
+            m.index + m[1].length + colonIndex + 1
+        );
+        parseJSExpression(value, sectionIndex + valueIndex, chapbookState);
+
         // Check for a condition
         const conditionMatch = conditionPattern.exec(name);
         if (conditionMatch !== null) {
@@ -690,7 +739,14 @@ function parseVarsSection(
                     state
                 );
             } else {
-                // TODO tokenize the condition as JS
+                parseJSExpression(
+                    conditionMatch[3],
+                    sectionIndex +
+                        conditionMatchIndex +
+                        conditionMatch[0].indexOf(conditionMatch[3]),
+                    chapbookState
+                );
+
                 // Check for ignored text
                 if (conditionMatch[4] !== "") {
                     logWarningFor(
@@ -735,12 +791,12 @@ function parseVarsSection(
             );
         }
 
-        logSemanticTokenFor(
+        capturePreTokenFor(
             name,
             sectionIndex + nameIndex,
             ETokenType.variable,
             [ETokenModifier.modification],
-            state
+            chapbookState
         );
 
         // TODO call back on variable
@@ -760,17 +816,26 @@ export function parsePassageText(
     textIndex: number,
     state: ParsingState
 ): void {
-    let vars,
-        content,
-        contentIndex = 0;
+    let content = passageText,
+        contentIndex = 0,
+        chapbookState: ChapbookParsingState = {
+            modifierType: ModifierType.None,
+            passageTokens: {},
+        };
+
     const varSeparatorMatch = varsSepPattern.exec(passageText);
     if (varSeparatorMatch !== null) {
-        vars = passageText.slice(0, varSeparatorMatch.index);
+        const vars = passageText.slice(0, varSeparatorMatch.index);
         contentIndex = varSeparatorMatch.index + varSeparatorMatch[0].length;
         content = passageText.slice(contentIndex);
-        parseVarsSection(vars, textIndex + 0, state);
-    } else {
-        content = passageText;
+        parseVarsSection(vars, textIndex + 0, state, chapbookState);
     }
-    parseTextSection(content, textIndex + contentIndex, state);
+
+    parseTextSection(content, textIndex + contentIndex, state, chapbookState);
+
+    // Submit semantic tokens in document order
+    // (taking advantage of object own key enumeration order)
+    for (const t of Object.values(chapbookState.passageTokens)) {
+        logSemanticTokenFor(t.text, t.at, t.type, t.modifiers, state);
+    }
 }
