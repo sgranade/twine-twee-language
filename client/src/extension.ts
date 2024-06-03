@@ -1,14 +1,20 @@
 import * as path from "path";
-import { workspace, ExtensionContext } from "vscode";
+import { workspace, ExtensionContext, Uri } from "vscode";
 
 import {
     LanguageClient,
     LanguageClientOptions,
     ServerOptions,
     TransportKind,
+    URI,
 } from "vscode-languageclient/node";
 
-import { CustomMessages, StoryFormat } from "./client-server";
+import {
+    CustomMessages,
+    FindFilesRequest,
+    ReadFileRequest,
+    StoryFormat,
+} from "./client-server";
 import * as notifications from "./notifications";
 
 let client: LanguageClient;
@@ -55,9 +61,29 @@ export function activate(context: ExtensionContext) {
     // Be ready to handle notifications
     context.subscriptions.push(notifications.initNotifications(client));
 
+    // TODO REMOVE
     notifications.addNotificationHandler(
         CustomMessages.UpdatedStoryFormat,
         (e) => _onUpdatedStoryFormat(e[0])
+    );
+
+    // Handle file requests
+    client.onRequest(
+        FindFilesRequest,
+        async (args: { pattern: string; rootPath?: URI }) => {
+            // TODO handle paths relative to rootPath
+            return (await workspace.findFiles(args.pattern)).map((f) =>
+                f.toString()
+            );
+        }
+    );
+    client.onRequest(
+        ReadFileRequest,
+        async (args: { uri: URI; encoding?: string }) => {
+            return new TextDecoder().decode(
+                await workspace.fs.readFile(Uri.parse(args.uri))
+            );
+        }
     );
 
     // Start the client. This will also launch the server

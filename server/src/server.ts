@@ -1,5 +1,6 @@
 import {
     CompletionList,
+    Connection,
     DefinitionParams,
     Definition,
     Diagnostic,
@@ -25,10 +26,16 @@ import {
     createConnection,
     PrepareRenameParams,
     Range,
+    ResponseError,
 } from "vscode-languageserver/node";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
-import { CustomMessages, StoryFormat } from "./client-server";
+import {
+    CustomMessages,
+    FindFilesRequest,
+    ReadFileRequest,
+    StoryFormat,
+} from "./client-server";
 import { generateCompletions } from "./completions";
 import { generateHover } from "./hover";
 import { updateProjectIndex } from "./indexer";
@@ -42,7 +49,7 @@ import {
 import { semanticTokensLegend } from "./tokens";
 import { generateDiagnostics } from "./validator";
 
-const connection = createConnection(ProposedFeatures.all);
+const connection: Connection = createConnection(ProposedFeatures.all);
 
 const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
 
@@ -91,7 +98,7 @@ connection.onInitialize((params: InitializeParams) => {
                 resolveProvider: false,
             },
             diagnosticProvider: {
-                interFileDependencies: false,
+                interFileDependencies: true,
                 workspaceDiagnostics: false,
             },
             documentSymbolProvider: true,
@@ -112,7 +119,7 @@ connection.onInitialize((params: InitializeParams) => {
     return result;
 });
 
-connection.onInitialized(() => {
+connection.onInitialized(async () => {
     if (hasConfigurationCapability) {
         // Register for all configuration changes.
         connection.client.register(
@@ -120,6 +127,9 @@ connection.onInitialized(() => {
             undefined
         );
     }
+
+    // Index all Twee files in the workspace
+    await indexAllTweeFiles();
 });
 
 connection.onDidChangeConfiguration((change) => {
@@ -147,6 +157,8 @@ connection.languages.diagnostics.on(async (params) => {
 documents.onDidChangeContent((change) => {
     processChangedDocument(change.document);
 });
+
+documents.onDidClose;
 
 async function validateTextDocument(
     textDocument: TextDocument
@@ -259,6 +271,41 @@ connection.onReferences((params: ReferenceParams): Location[] | undefined => {
 connection.onRequest("textDocument/semanticTokens/full", (params) => {
     return generateSemanticTokens(params.textDocument.uri, projectIndex);
 });
+
+async function indexAllTweeFiles() {
+    try {
+        const tweeFiles = await connection.sendRequest(FindFilesRequest, {
+            pattern: "{**/*.tw,**/*.twee}",
+        });
+
+        for (const uri of tweeFiles) {
+            try {
+                const content = await connection.sendRequest(ReadFileRequest, {
+                    uri: uri,
+                });
+                if (content.length > 0) {
+                    const doc = TextDocument.create(uri, "twee3", 1, content);
+                    updateProjectIndex(doc, false, projectIndex);
+                }
+            } catch (err) {
+                connection.console.error(
+                    `Client didn't read file ${uri}: ${err}`
+                );
+                if (!(err instanceof ResponseError)) throw err;
+            }
+        }
+
+        // Re-calculate diagnostics for all open documents
+        for (const doc of documents.all()) {
+            processChangedDocument(doc);
+        }
+
+        // Request that the client re-do diagnostics
+        connection.languages.diagnostics.refresh();
+    } catch (err) {
+        connection.console.error(`Client couldn't find Twee files: ${err}`);
+    }
+}
 
 // Make the text document manager listen on the connection
 // for open, change and close text document events
