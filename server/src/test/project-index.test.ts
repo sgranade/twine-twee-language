@@ -750,6 +750,66 @@ describe("Project Index", () => {
             });
         });
 
+        describe("Getting indexed URIs", () => {
+            it("should return URIs from passages", () => {
+                const index = new uut.Index();
+                index.setPassages("fake-uri", []);
+
+                const result = index.getIndexedUris();
+
+                expect(result).to.eql(["fake-uri"]);
+            });
+
+            it("should return URIs from references", () => {
+                const index = new uut.Index();
+                index.setPassageReferences("fake-uri", {});
+
+                const result = index.getIndexedUris();
+
+                expect(result).to.eql(["fake-uri"]);
+            });
+
+            it("should return URIs from embedded documents", () => {
+                const index = new uut.Index();
+                index.setEmbeddedDocuments("fake-uri", []);
+
+                const result = index.getIndexedUris();
+
+                expect(result).to.eql(["fake-uri"]);
+            });
+
+            it("should return URIs from semantic tokens", () => {
+                const index = new uut.Index();
+                index.setSemanticTokens("fake-uri", []);
+
+                const result = index.getIndexedUris();
+
+                expect(result).to.eql(["fake-uri"]);
+            });
+
+            it("should return URIs from parse errors", () => {
+                const index = new uut.Index();
+                index.setParseErrors("fake-uri", []);
+
+                const result = index.getIndexedUris();
+
+                expect(result).to.eql(["fake-uri"]);
+            });
+
+            it("should return each URI once", () => {
+                const index = new uut.Index();
+                index.setPassages("fake-uri", []);
+                index.setPassageReferences("fake-uri", {});
+                index.setEmbeddedDocuments("fake-uri", []);
+                index.setSemanticTokens("fake-uri", []);
+                index.setParseErrors("fake-uri", []);
+
+                const result = index.getIndexedUris();
+
+                expect(result).to.eql(["fake-uri"]);
+            });
+        });
+
         describe("Removing Documents", () => {
             it("should remove the story title if a deleted document contained it", () => {
                 const index = new uut.Index();

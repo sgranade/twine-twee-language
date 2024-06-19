@@ -32,7 +32,7 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 
 import {
     CustomMessages,
-    FindFilesRequest,
+    FindTweeFilesRequest,
     ReadFileRequest,
     StoryFormat,
 } from "./client-server";
@@ -145,8 +145,7 @@ connection.languages.diagnostics.on(async (params) => {
             items: await validateTextDocument(document),
         } satisfies DocumentDiagnosticReport;
     } else {
-        // We don't know the document. We can either try to read it from disk
-        // or we don't report problems for it.
+        // We don't know the document.
         return {
             kind: DocumentDiagnosticReportKind.Full,
             items: [],
@@ -169,7 +168,7 @@ async function validateTextDocument(
 }
 
 connection.onDidChangeWatchedFiles((_change) => {
-    // TODO Monitored files have changed in VSCode
+    // TODO Monitored files have changed in VSCode. Handle deleted file.
     connection.console.log("We received a file change event");
 });
 
@@ -238,6 +237,10 @@ connection.onHover(
     }
 );
 
+connection.onNotification(CustomMessages.RequestReindex, async () => {
+    await indexAllTweeFiles();
+});
+
 connection.onRenameRequest((params: RenameParams): WorkspaceEdit | null => {
     return generateRenames(
         params.textDocument.uri,
@@ -272,11 +275,21 @@ connection.onRequest("textDocument/semanticTokens/full", (params) => {
     return generateSemanticTokens(params.textDocument.uri, projectIndex);
 });
 
+/**
+ * Index all Twee files in an opened project, as reported by the client.
+ */
 async function indexAllTweeFiles() {
+    // Remove all indexed files that aren't in our document store,
+    // as we've not opened them and aren't tracking them, and thus
+    // only fast-indexed them
+    for (const uri of projectIndex.getIndexedUris()) {
+        if (documents.get(uri) === undefined) {
+            projectIndex.removeDocument(uri);
+        }
+    }
+
     try {
-        const tweeFiles = await connection.sendRequest(FindFilesRequest, {
-            pattern: "{**/*.tw,**/*.twee}",
-        });
+        const tweeFiles = await connection.sendRequest(FindTweeFilesRequest);
 
         for (const uri of tweeFiles) {
             try {

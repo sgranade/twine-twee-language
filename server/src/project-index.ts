@@ -214,6 +214,11 @@ export interface ProjectIndex {
     getPassageNames(): readonly string[];
 
     /**
+     * Get all URIs in the index.
+     */
+    getIndexedUris(): readonly string[];
+
+    /**
      * Remove a document from the project index.
      * @param uri URI of document to remove.
      */
@@ -405,6 +410,17 @@ export class Index implements ProjectIndex {
         }
 
         return s;
+    }
+
+    getIndexedUris(): readonly string[] {
+        const s = new Set([
+            ...Object.keys(this._passages),
+            ...Object.keys(this._references),
+            ...Object.keys(this._embeddedDocuments),
+            ...Object.keys(this._semanticTokens),
+            ...Object.keys(this._parseErrors),
+        ]);
+        return [...s];
     }
 
     removeDocument(uri: string): void {

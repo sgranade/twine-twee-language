@@ -11,10 +11,11 @@ import {
 
 import {
     CustomMessages,
-    FindFilesRequest,
+    FindTweeFilesRequest,
     ReadFileRequest,
     StoryFormat,
 } from "./client-server";
+import { Configuration } from "./constants";
 import * as notifications from "./notifications";
 
 let client: LanguageClient;
@@ -23,6 +24,15 @@ let currentStoryFormat: StoryFormat;
 function _onUpdatedStoryFormat(e: StoryFormat): void {
     currentStoryFormat = e;
 }
+
+const includeFiles = (): string =>
+    workspace
+        .getConfiguration(Configuration.BaseSection)
+        .get(Configuration.FilesInclude);
+const excludeFiles = (): string =>
+    workspace
+        .getConfiguration(Configuration.BaseSection)
+        .get(Configuration.FilesExclude);
 
 export function activate(context: ExtensionContext) {
     // The server is implemented in node
@@ -45,7 +55,7 @@ export function activate(context: ExtensionContext) {
         // Register the server for plain text documents
         documentSelector: [{ scheme: "file", language: "twee3" }],
         synchronize: {
-            // Notify the server about file changes to '.clientrc files contained in the workspace
+            // TODO Notify the server about file changes to '.clientrc files contained in the workspace
             fileEvents: workspace.createFileSystemWatcher("**/.clientrc"),
         },
     };
@@ -58,7 +68,7 @@ export function activate(context: ExtensionContext) {
         clientOptions
     );
 
-    // Be ready to handle notifications
+    // Handle notifications
     context.subscriptions.push(notifications.initNotifications(client));
 
     // TODO REMOVE
@@ -67,16 +77,27 @@ export function activate(context: ExtensionContext) {
         (e) => _onUpdatedStoryFormat(e[0])
     );
 
-    // Handle file requests
-    client.onRequest(
-        FindFilesRequest,
-        async (args: { pattern: string; rootPath?: URI }) => {
-            // TODO handle paths relative to rootPath
-            return (await workspace.findFiles(args.pattern)).map((f) =>
-                f.toString()
-            );
+    // Handle configuration changes
+    workspace.onDidChangeConfiguration((e) => {
+        // If the user changes what files to include or exclude, request a re-index
+        if (
+            e.affectsConfiguration(
+                `${Configuration.BaseSection}.${Configuration.FilesInclude}`
+            ) ||
+            e.affectsConfiguration(
+                `${Configuration.BaseSection}.${Configuration.FilesExclude}`
+            )
+        ) {
+            client.sendNotification(CustomMessages.RequestReindex);
         }
-    );
+    });
+
+    // Handle file requests
+    client.onRequest(FindTweeFilesRequest, async () => {
+        return (await workspace.findFiles(includeFiles(), excludeFiles())).map(
+            (f) => f.toString()
+        );
+    });
     client.onRequest(
         ReadFileRequest,
         async (args: { uri: URI; encoding?: string }) => {

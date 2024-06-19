@@ -97,9 +97,26 @@
 			}
 		],
 		"configuration": {
-			"type": "object",
 			"title": "Twine (Twee 3) Language",
-			"properties": {}
+			"properties": {
+				"twineTweeLanguage.twee-3.warning.unknownMacro" : {
+					"type": "boolean",
+					"default": "true",
+					"description": "Warn about unrecognized macros (like in Sugarcube) or inserts (like in Chapbook)."
+				},
+				"twineTweeLanguage.files.include": {
+					"type": "string",
+					"default": "**/*.{tw,twee}",
+					"order": 1,
+					"markdownDescription": "Files to include as Twee files. Supports [glob patterns](https://code.visualstudio.com/docs/editor/glob-patterns), which should be *relative* to the workspace folders (e.g. `src/static/*.{tw,twee}`)."
+				},
+				"twineTweeLanguage.files.exclude": {
+					"type": "string",
+					"default": "",
+					"order": 2,
+					"markdownDescription": "Files and directories to exclude from Twee files searches. Supports [glob patterns](https://code.visualstudio.com/docs/editor/glob-patterns). For example, to exclude the directories `skip` and `ignore`, use `{skip/**,ignore/**}`."
+				}
+			}
 		}
 	},
 	"scripts": {
