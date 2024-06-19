@@ -1,4 +1,3 @@
-import * as URI from "urijs";
 import {
     Diagnostic,
     DiagnosticSeverity,
@@ -75,16 +74,6 @@ export function removeAndCountPadding(s: string): [string, number, number] {
 export function skipSpaces(s: string, n: number): [string, number] {
     const [sTrimmed, leftPad] = removeAndCountPadding(s);
     return [sTrimmed, n + leftPad];
-}
-
-/**
- * Normalize a URI.
- *
- * @param uriString URI to normalize.
- */
-export function normalizeUri(uriString: string): string {
-    const uri = new URI(uriString);
-    return uri.normalize().toString();
 }
 
 /** EMBEDDED DOCUMENTS **/

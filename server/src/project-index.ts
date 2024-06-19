@@ -3,7 +3,7 @@ import { Diagnostic, Location, Position, Range } from "vscode-languageserver";
 import { StoryFormat } from "./client-server";
 import { EmbeddedDocument } from "./embedded-languages";
 import { SemanticToken } from "./tokens";
-import { normalizeUri, positionInRange } from "./utilities";
+import { positionInRange } from "./utilities";
 
 /**
  * A label, which has a name and a location.
@@ -235,36 +235,29 @@ export class Index implements ProjectIndex {
     private _parseErrors: Record<string, Diagnostic[]> = {};
 
     setStoryTitle(title: string, uri: string): void {
-        uri = normalizeUri(uri);
         this._storyTitle = title;
         this._storyTitleUri = uri;
     }
     setStoryData(data: StoryData, uri: string): void {
-        uri = normalizeUri(uri);
         this._storyData = data;
         this._storyDataUri = uri;
     }
     setPassages(uri: string, newPassages: Passage[]): void {
-        uri = normalizeUri(uri);
         this._passages[uri] = [...newPassages];
     }
     setPassageReferences(uri: string, newReferences: LocalReferences): void {
-        uri = normalizeUri(uri);
         if (this._references[uri] === undefined) {
             this._references[uri] = {};
         }
         this._references[uri][TwineSymbolKind.Passage] = newReferences;
     }
     setEmbeddedDocuments(uri: string, documents: EmbeddedDocument[]): void {
-        uri = normalizeUri(uri);
         this._embeddedDocuments[uri] = [...documents];
     }
     setSemanticTokens(uri: string, tokens: SemanticToken[]): void {
-        uri = normalizeUri(uri);
         this._semanticTokens[uri] = [...tokens];
     }
     setParseErrors(uri: string, errors: Diagnostic[]): void {
-        uri = normalizeUri(uri);
         this._parseErrors[uri] = [...errors];
     }
     getStoryTitle(): string | undefined {
@@ -280,26 +273,21 @@ export class Index implements ProjectIndex {
         return this._storyDataUri;
     }
     getPassages(uri: string): Passage[] | undefined {
-        uri = normalizeUri(uri);
         return this._passages[uri];
     }
     getPassageReferences(uri: string): LocalReferences | undefined {
-        uri = normalizeUri(uri);
         const documentReferences = this._references[uri];
         if (documentReferences !== undefined)
             return documentReferences[TwineSymbolKind.Passage];
         return undefined;
     }
     getEmbeddedDocuments(uri: string): EmbeddedDocument[] {
-        uri = normalizeUri(uri);
         return this._embeddedDocuments[uri] ?? [];
     }
     getSemanticTokens(uri: string): readonly SemanticToken[] {
-        uri = normalizeUri(uri);
         return this._semanticTokens[uri] ?? [];
     }
     getParseErrors(uri: string): readonly Diagnostic[] {
-        uri = normalizeUri(uri);
         return this._parseErrors[uri] ?? [];
     }
 
@@ -334,8 +322,6 @@ export class Index implements ProjectIndex {
         return undefined;
     }
     getDefinitionAt(uri: string, position: Position): TwineSymbol | undefined {
-        uri = normalizeUri(uri);
-
         // Do we have a reference at the position?
         const referencesPerType = this._references[uri] || {};
         for (const [symbolTypeAsString, localReferences] of Object.entries(
@@ -422,7 +408,6 @@ export class Index implements ProjectIndex {
     }
 
     removeDocument(uri: string): void {
-        uri = normalizeUri(uri);
         delete this._passages[uri];
         delete this._references[uri];
         delete this._embeddedDocuments[uri];
