@@ -60,6 +60,110 @@ let hasCompletionListItemDefaults = false;
 let hasDiagnosticRelatedInformationCapability = false;
 let hasPrepareProviderCapability = false;
 
+/**
+ * Handle potentially long-running tasks that shouldn't run concurrently.
+ */
+namespace Heartbeat {
+    const interval = 200; // Interval between calling the heartbeat run function, in ms
+    const minTimeBetween = 50; // Minimum time to wait between heartbeat calls, in ms
+    let lastTime = -1; // Last time the heartbeat ran, in ms since epoch
+    let heartbeatId: ReturnType<typeof setInterval> | undefined;
+    let running = false;
+
+    let workspaceReindexRequested = false; // Whether a project re-index has been requested
+
+    /**
+     * Start the heartbeat.
+     */
+    export function start() {
+        heartbeatId = setInterval(run, interval);
+    }
+
+    /**
+     * Stop the heartbeat.
+     */
+    export function stop() {
+        clearInterval(heartbeatId);
+    }
+
+    /**
+     * Reindex the workspace.
+     */
+    export function indexWorkspace(): void {
+        workspaceReindexRequested = true;
+    }
+
+    async function run() {
+        if (running || Date.now() < lastTime + minTimeBetween) {
+            return;
+        }
+        try {
+            running = true;
+            if (workspaceReindexRequested) {
+                await indexAllTweeFiles();
+                workspaceReindexRequested = false;
+            }
+        } finally {
+            running = false;
+            lastTime = Date.now();
+        }
+    }
+
+    /**
+     * Index all Twee files in an opened project, as reported by the client.
+     */
+    async function indexAllTweeFiles() {
+        // Remove all indexed files that aren't in our document store,
+        // as we've not opened them and aren't tracking them, and thus
+        // only fast-indexed them
+        for (const uri of projectIndex.getIndexedUris()) {
+            if (documents.get(uri) === undefined) {
+                projectIndex.removeDocument(uri);
+            }
+        }
+
+        try {
+            const tweeFiles =
+                await connection.sendRequest(FindTweeFilesRequest);
+
+            for (const uri of tweeFiles) {
+                try {
+                    const content = await connection.sendRequest(
+                        ReadFileRequest,
+                        {
+                            uri: uri,
+                        }
+                    );
+                    if (content.length > 0) {
+                        const doc = TextDocument.create(
+                            uri,
+                            "twee3",
+                            1,
+                            content
+                        );
+                        updateProjectIndex(doc, false, projectIndex);
+                    }
+                } catch (err) {
+                    connection.console.error(
+                        `Client didn't read file ${uri}: ${err}`
+                    );
+                    if (!(err instanceof ResponseError)) throw err;
+                }
+            }
+
+            // Re-calculate diagnostics for all open documents
+            for (const doc of documents.all()) {
+                processChangedDocument(doc);
+            }
+
+            // Request that the client re-do diagnostics
+            connection.languages.diagnostics.refresh();
+        } catch (err) {
+            connection.console.error(`Client couldn't find Twee files: ${err}`);
+        }
+    }
+}
+
 connection.onInitialize((params: InitializeParams) => {
     const capabilities = params.capabilities;
 
@@ -128,8 +232,11 @@ connection.onInitialized(async () => {
         );
     }
 
+    // Set up the heartbeat
+    Heartbeat.start();
+
     // Index all Twee files in the workspace
-    await indexAllTweeFiles();
+    Heartbeat.indexWorkspace();
 });
 
 connection.onDidChangeConfiguration((change) => {
@@ -237,8 +344,8 @@ connection.onHover(
     }
 );
 
-connection.onNotification(CustomMessages.RequestReindex, async () => {
-    await indexAllTweeFiles();
+connection.onNotification(CustomMessages.RequestReindex, () => {
+    Heartbeat.indexWorkspace();
 });
 
 connection.onRenameRequest((params: RenameParams): WorkspaceEdit | null => {
@@ -275,50 +382,9 @@ connection.onRequest("textDocument/semanticTokens/full", (params) => {
     return generateSemanticTokens(params.textDocument.uri, projectIndex);
 });
 
-/**
- * Index all Twee files in an opened project, as reported by the client.
- */
-async function indexAllTweeFiles() {
-    // Remove all indexed files that aren't in our document store,
-    // as we've not opened them and aren't tracking them, and thus
-    // only fast-indexed them
-    for (const uri of projectIndex.getIndexedUris()) {
-        if (documents.get(uri) === undefined) {
-            projectIndex.removeDocument(uri);
-        }
-    }
-
-    try {
-        const tweeFiles = await connection.sendRequest(FindTweeFilesRequest);
-
-        for (const uri of tweeFiles) {
-            try {
-                const content = await connection.sendRequest(ReadFileRequest, {
-                    uri: uri,
-                });
-                if (content.length > 0) {
-                    const doc = TextDocument.create(uri, "twee3", 1, content);
-                    updateProjectIndex(doc, false, projectIndex);
-                }
-            } catch (err) {
-                connection.console.error(
-                    `Client didn't read file ${uri}: ${err}`
-                );
-                if (!(err instanceof ResponseError)) throw err;
-            }
-        }
-
-        // Re-calculate diagnostics for all open documents
-        for (const doc of documents.all()) {
-            processChangedDocument(doc);
-        }
-
-        // Request that the client re-do diagnostics
-        connection.languages.diagnostics.refresh();
-    } catch (err) {
-        connection.console.error(`Client couldn't find Twee files: ${err}`);
-    }
-}
+connection.onShutdown(() => {
+    Heartbeat.stop();
+});
 
 // Make the text document manager listen on the connection
 // for open, change and close text document events
