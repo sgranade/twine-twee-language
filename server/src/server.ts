@@ -281,7 +281,10 @@ connection.onDidChangeConfiguration(async (change) => {
     // Only re-parse if our parse-affecting options have changed
     const prev = lastSettings["twee-3"];
     const cur = (await getSettings())["twee-3"];
-    if (prev.warnings.unknownMacro != cur.warnings.unknownMacro) {
+    if (
+        prev.warnings.unknownMacro != cur.warnings.unknownMacro ||
+        prev.warnings.unknownPassage != cur.warnings.unknownPassage
+    ) {
         await processAllOpenDocuments();
     }
 });
@@ -397,10 +400,10 @@ async function processChangedDocument(
 ) {
     // We'll only get the diagnostic options if we're parsing passage
     // contents, since otherwise we're just collecting passage names
-    let diagnosticOptions = defaultDiagnosticsOptions;
+    let diagnosticsOptions = defaultDiagnosticsOptions;
     if (parsePassageContents) {
         const settings = await getSettings();
-        diagnosticOptions = settings["twee-3"];
+        diagnosticsOptions = settings["twee-3"];
     }
 
     // Keep track of the story format so, if it changes, we can notify listeners
@@ -409,7 +412,7 @@ async function processChangedDocument(
         document,
         parsePassageContents,
         projectIndex,
-        diagnosticOptions
+        diagnosticsOptions
     );
     const newStoryFormat = projectIndex.getStoryData()?.storyFormat;
     if (newStoryFormat?.format !== storyFormat && newStoryFormat?.format) {
@@ -444,9 +447,13 @@ async function processAllOpenDocuments() {
 async function validateTextDocument(
     textDocument: TextDocument
 ): Promise<Diagnostic[]> {
-    const settings = await getSettings();
+    const diagnosticsOptions = (await getSettings())["twee-3"];
 
-    const diagnostics = await generateDiagnostics(textDocument, projectIndex);
+    const diagnostics = await generateDiagnostics(
+        textDocument,
+        projectIndex,
+        diagnosticsOptions
+    );
 
     return diagnostics;
 }

@@ -41,11 +41,12 @@ import {
 export interface DiagnosticsOptions {
     warnings: {
         unknownMacro: boolean;
+        unknownPassage: boolean;
     };
 }
 
 export const defaultDiagnosticsOptions: DiagnosticsOptions = {
-    warnings: { unknownMacro: true },
+    warnings: { unknownMacro: true, unknownPassage: true },
 };
 
 /**

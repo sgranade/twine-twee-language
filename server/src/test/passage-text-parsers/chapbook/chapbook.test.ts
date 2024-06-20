@@ -2420,7 +2420,10 @@ describe("Chapbook Passage", () => {
                         content: header + passage,
                         callbacks: callbacks,
                         diagnosticsOptions: {
-                            warnings: { unknownMacro: false },
+                            warnings: {
+                                unknownMacro: false,
+                                unknownPassage: true,
+                            },
                         },
                     });
                     const parser = uut.getChapbookParser(undefined);
@@ -2547,7 +2550,10 @@ describe("Chapbook Passage", () => {
                         content: header + passage,
                         callbacks: callbacks,
                         diagnosticsOptions: {
-                            warnings: { unknownMacro: false },
+                            warnings: {
+                                unknownMacro: false,
+                                unknownPassage: true,
+                            },
                         },
                     });
                     const parser = uut.getChapbookParser(undefined);

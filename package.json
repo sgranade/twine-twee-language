@@ -104,6 +104,11 @@
 					"default": "true",
 					"description": "Warn about unrecognized macros (in Sugarcube) or inserts and modifiers (in Chapbook)."
 				},
+				"twineTweeLanguage.twee-3.warnings.unknownPassage" : {
+					"type": "boolean",
+					"default": "true",
+					"markdownDescription": "Warn about references to unrecognized passages, such as in `[[passage]]` links."
+				},
 				"twineTweeLanguage.files.include": {
 					"type": "string",
 					"default": "**/*.{tw,twee}",

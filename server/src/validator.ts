@@ -8,6 +8,7 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 import { doValidation } from "./embedded-languages";
 import { ProjectIndex } from "./project-index";
 import { comparePositions, containingRange } from "./utilities";
+import { DiagnosticsOptions } from "./parser";
 
 /**
  * Validate a document's passages.
@@ -72,28 +73,32 @@ function validatePassages(
  *
  * @param document Document to validate.
  * @param index Index of the Twine project.
+ * @param diagnosticsOptions Options for what optional diagnostics to report.
  * @returns List of diagnostic messages.
  */
 function validatePassageReferences(
     document: TextDocument,
-    index: ProjectIndex
+    index: ProjectIndex,
+    diagnosticsOptions: DiagnosticsOptions
 ): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];
 
-    const references = index.getPassageReferences(document.uri);
-    const names = index.getPassageNames();
-    for (const [name, ranges] of Object.entries(references || {})) {
-        if (!names.includes(name)) {
-            for (const range of ranges) {
-                diagnostics.push(
-                    Diagnostic.create(
-                        range,
-                        `Cannot find passage '${name}'`,
-                        DiagnosticSeverity.Error,
-                        undefined,
-                        "Twine"
-                    )
-                );
+    if (diagnosticsOptions.warnings.unknownPassage) {
+        const references = index.getPassageReferences(document.uri);
+        const names = index.getPassageNames();
+        for (const [name, ranges] of Object.entries(references || {})) {
+            if (!names.includes(name)) {
+                for (const range of ranges) {
+                    diagnostics.push(
+                        Diagnostic.create(
+                            range,
+                            `Cannot find passage '${name}'`,
+                            DiagnosticSeverity.Warning,
+                            undefined,
+                            "Twine"
+                        )
+                    );
+                }
             }
         }
     }
@@ -106,11 +111,13 @@ function validatePassageReferences(
  *
  * @param document Document to validate and generate diagnostics against.
  * @param index Index of the Twine project.
+ * @param diagnosticsOptions Options for what optional diagnostics to report.
  * @returns List of diagnostic messages.
  */
 export async function generateDiagnostics(
     document: TextDocument,
-    index: ProjectIndex
+    index: ProjectIndex,
+    diagnosticsOptions: DiagnosticsOptions
 ): Promise<Diagnostic[]> {
     // Start with parse errors
     const diagnostics: Diagnostic[] = [...index.getParseErrors(document.uri)];
@@ -134,7 +141,9 @@ export async function generateDiagnostics(
     diagnostics.push(...validatePassages(document, index));
 
     // Validate passage references
-    diagnostics.push(...validatePassageReferences(document, index));
+    diagnostics.push(
+        ...validatePassageReferences(document, index, diagnosticsOptions)
+    );
 
     return diagnostics;
 }

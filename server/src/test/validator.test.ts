@@ -7,6 +7,7 @@ import { EmbeddedDocument } from "../embedded-languages";
 import { Index } from "../project-index";
 import * as uut from "../validator";
 import { buildPassage } from "./builders";
+import { defaultDiagnosticsOptions } from "../parser";
 
 describe("Validator", () => {
     describe("Parse Error", () => {
@@ -30,7 +31,11 @@ describe("Validator", () => {
             const index = new Index();
             index.setParseErrors("test-uri", errors);
 
-            const result = await uut.generateDiagnostics(doc, index);
+            const result = await uut.generateDiagnostics(
+                doc,
+                index,
+                defaultDiagnosticsOptions
+            );
 
             expect(result).to.eql(errors);
         });
@@ -57,7 +62,11 @@ describe("Validator", () => {
             const index = new Index();
             index.setEmbeddedDocuments("test-uri", [embeddedDocument]);
 
-            const result = await uut.generateDiagnostics(document, index);
+            const result = await uut.generateDiagnostics(
+                document,
+                index,
+                defaultDiagnosticsOptions
+            );
 
             expect(result.length).to.equal(1);
             expect(result[0].message).to.equal("Trailing comma");
@@ -83,7 +92,11 @@ describe("Validator", () => {
             const index = new Index();
             index.setEmbeddedDocuments("test-uri", [embeddedDocument]);
 
-            const result = await uut.generateDiagnostics(document, index);
+            const result = await uut.generateDiagnostics(
+                document,
+                index,
+                defaultDiagnosticsOptions
+            );
 
             expect(result[0].range).to.eql(Range.create(1, 19, 1, 20));
         });
@@ -117,7 +130,11 @@ describe("Validator", () => {
             const index = new Index();
             index.setPassages("test-uri", passages);
 
-            const result = await uut.generateDiagnostics(document, index);
+            const result = await uut.generateDiagnostics(
+                document,
+                index,
+                defaultDiagnosticsOptions
+            );
 
             expect(result.length).to.equal(2);
             expect(result[0].message).to.contain(
@@ -171,7 +188,11 @@ describe("Validator", () => {
             index.setPassages("uri-one", passages1);
             index.setPassages("test-uri", passages2);
 
-            const result = await uut.generateDiagnostics(document, index);
+            const result = await uut.generateDiagnostics(
+                document,
+                index,
+                defaultDiagnosticsOptions
+            );
 
             expect(result.length).to.equal(1);
             expect(result[0].message).to.contain(
@@ -199,12 +220,35 @@ describe("Validator", () => {
                 "Non-existent passage": [Range.create(1, 2, 3, 4)],
             });
 
-            const result = await uut.generateDiagnostics(document, index);
+            const result = await uut.generateDiagnostics(
+                document,
+                index,
+                defaultDiagnosticsOptions
+            );
 
             expect(result.length).to.equal(1);
             expect(result[0].message).to.contain(
                 "Cannot find passage 'Non-existent passage'"
             );
+        });
+
+        it("should not flag passage references that aren't in the index if that warning is disabled in options", async () => {
+            const document = TextDocument.create(
+                "test-uri",
+                "twine",
+                1,
+                '{ "test": 17, }'
+            );
+            const index = new Index();
+            index.setPassageReferences("test-uri", {
+                "Non-existent passage": [Range.create(1, 2, 3, 4)],
+            });
+
+            const result = await uut.generateDiagnostics(document, index, {
+                warnings: { unknownMacro: true, unknownPassage: false },
+            });
+
+            expect(result).to.be.empty;
         });
     });
 });
