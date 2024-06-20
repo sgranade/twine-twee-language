@@ -102,12 +102,14 @@ function parseInsertContents(
 ): void {
     const insert = allInserts().find((i) => i.match.test(tokens.name.text));
     if (insert === undefined) {
-        logWarningFor(
-            tokens.name.text,
-            tokens.name.at,
-            `Insert "${tokens.name.text}" not recognized`,
-            state
-        );
+        if (state.diagnosticsOptions.warnings.unknownMacro) {
+            logWarningFor(
+                tokens.name.text,
+                tokens.name.at,
+                `Insert "${tokens.name.text}" not recognized`,
+                state
+            );
+        }
         return;
     }
 
@@ -540,12 +542,14 @@ function parseModifier(
                 i.match.test(remainingModifier)
             );
             if (modifier === undefined) {
-                logWarningFor(
-                    remainingModifier,
-                    tokenIndex,
-                    `Modifier "${remainingModifier}" not recognized`,
-                    state
-                );
+                if (state.diagnosticsOptions.warnings.unknownMacro) {
+                    logWarningFor(
+                        remainingModifier,
+                        tokenIndex,
+                        `Modifier "${remainingModifier}" not recognized`,
+                        state
+                    );
+                }
             } else {
                 // Handle modifier-specific parsing, which can set the text block state in chapbookState
                 modifier.parse(remainingModifier, state, chapbookState);

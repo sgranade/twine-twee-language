@@ -24,7 +24,6 @@
 	},
 	"scripts": {},
 	"devDependencies": {
-		"@types/urijs": "^1.19.25",
 		"@types/uuid": "^9.0.8"
 	}
 }

@@ -99,10 +99,10 @@
 		"configuration": {
 			"title": "Twine (Twee 3) Language",
 			"properties": {
-				"twineTweeLanguage.twee-3.warning.unknownMacro" : {
+				"twineTweeLanguage.twee-3.warnings.unknownMacro" : {
 					"type": "boolean",
 					"default": "true",
-					"description": "Warn about unrecognized macros (like in Sugarcube) or inserts (like in Chapbook)."
+					"description": "Warn about unrecognized macros (in Sugarcube) or inserts and modifiers (in Chapbook)."
 				},
 				"twineTweeLanguage.files.include": {
 					"type": "string",

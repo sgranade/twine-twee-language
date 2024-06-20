@@ -48,6 +48,7 @@ import {
 } from "./structure";
 import { semanticTokensLegend } from "./tokens";
 import { generateDiagnostics } from "./validator";
+import { DiagnosticsOptions, defaultDiagnosticsOptions } from "./parser";
 
 const connection: Connection = createConnection(ProposedFeatures.all);
 
@@ -141,7 +142,7 @@ namespace Heartbeat {
                             1,
                             content
                         );
-                        updateProjectIndex(doc, false, projectIndex);
+                        await processChangedDocument(doc, false);
                     }
                 } catch (err) {
                     connection.console.error(
@@ -151,13 +152,7 @@ namespace Heartbeat {
                 }
             }
 
-            // Re-calculate diagnostics for all open documents
-            for (const doc of documents.all()) {
-                processChangedDocument(doc);
-            }
-
-            // Request that the client re-do diagnostics
-            connection.languages.diagnostics.refresh();
+            await processAllOpenDocuments();
         } catch (err) {
             connection.console.error(`Client couldn't find Twee files: ${err}`);
         }
@@ -239,10 +234,6 @@ connection.onInitialized(async () => {
     Heartbeat.indexWorkspace();
 });
 
-connection.onDidChangeConfiguration((change) => {
-    // TODO implement later -- lsp demo has an example
-});
-
 // Diagnostics -- pull interface
 connection.languages.diagnostics.on(async (params) => {
     const document = documents.get(params.textDocument.uri);
@@ -259,42 +250,6 @@ connection.languages.diagnostics.on(async (params) => {
         } satisfies DocumentDiagnosticReport;
     }
 });
-
-documents.onDidChangeContent((change) => {
-    processChangedDocument(change.document);
-});
-
-documents.onDidClose;
-
-async function validateTextDocument(
-    textDocument: TextDocument
-): Promise<Diagnostic[]> {
-    const diagnostics = await generateDiagnostics(textDocument, projectIndex);
-
-    return diagnostics;
-}
-
-connection.onDidChangeWatchedFiles((_change) => {
-    // TODO Monitored files have changed in VSCode. Handle deleted file.
-    connection.console.log("We received a file change event");
-});
-
-/**
- * Process a document whose content has changed.
- */
-function processChangedDocument(document: TextDocument) {
-    // Keep track of the story format so, if it changes, we can notify listeners
-    const storyFormat = projectIndex.getStoryData()?.storyFormat?.format;
-    updateProjectIndex(document, true, projectIndex);
-    const newStoryFormat = projectIndex.getStoryData()?.storyFormat;
-    if (newStoryFormat?.format !== storyFormat && newStoryFormat?.format) {
-        const e: StoryFormat = {
-            format: newStoryFormat.format,
-            formatVersion: newStoryFormat.formatVersion,
-        };
-        connection.sendNotification(CustomMessages.UpdatedStoryFormat, e);
-    }
-}
 
 connection.onCompletion(
     async (
@@ -320,6 +275,26 @@ connection.onDefinition((params: DefinitionParams): Definition | undefined => {
     );
     if (definition !== undefined) return definition.location;
     return undefined;
+});
+
+connection.onDidChangeConfiguration(async (change) => {
+    // Only re-parse if our parse-affecting options have changed
+    const prev = lastSettings["twee-3"];
+    const cur = (await getSettings())["twee-3"];
+    if (prev.warnings.unknownMacro != cur.warnings.unknownMacro) {
+        await processAllOpenDocuments();
+    }
+});
+
+documents.onDidChangeContent(async (change) => {
+    await processChangedDocument(change.document, true);
+});
+
+documents.onDidClose;
+
+connection.onDidChangeWatchedFiles((_change) => {
+    // TODO Monitored files have changed in VSCode. Handle deleted file.
+    connection.console.log("We received a file change event");
 });
 
 connection.onDocumentSymbol(
@@ -348,15 +323,6 @@ connection.onNotification(CustomMessages.RequestReindex, () => {
     Heartbeat.indexWorkspace();
 });
 
-connection.onRenameRequest((params: RenameParams): WorkspaceEdit | null => {
-    return generateRenames(
-        params.textDocument.uri,
-        params.position,
-        params.newName,
-        projectIndex
-    );
-});
-
 connection.onPrepareRename((params: PrepareRenameParams): Range | undefined => {
     const symbol = projectIndex.getSymbolAt(
         params.textDocument.uri,
@@ -366,6 +332,15 @@ connection.onPrepareRename((params: PrepareRenameParams): Range | undefined => {
         return symbol.location.range;
     }
     return undefined;
+});
+
+connection.onRenameRequest((params: RenameParams): WorkspaceEdit | null => {
+    return generateRenames(
+        params.textDocument.uri,
+        params.position,
+        params.newName,
+        projectIndex
+    );
 });
 
 connection.onReferences((params: ReferenceParams): Location[] | undefined => {
@@ -385,6 +360,96 @@ connection.onRequest("textDocument/semanticTokens/full", (params) => {
 connection.onShutdown(() => {
     Heartbeat.stop();
 });
+
+/**
+ * Settings for the server. Synchronize with "configuration" in the main package.json.
+ */
+interface ServerSettings {
+    "twee-3": DiagnosticsOptions;
+}
+
+const defaultSettings: ServerSettings = {
+    "twee-3": defaultDiagnosticsOptions,
+};
+
+let lastSettings = defaultSettings;
+
+async function getSettings(): Promise<ServerSettings> {
+    if (!hasConfigurationCapability) {
+        return Promise.resolve(defaultSettings);
+    }
+    lastSettings = await connection.workspace.getConfiguration({
+        section: "twineTweeLanguage", // From the package.json file
+    });
+
+    return lastSettings;
+}
+
+/**
+ * Process a document whose content has changed.
+ *
+ * @param document Document to process.
+ * @param parsePassageContents Whether to parse passage contents.
+ */
+async function processChangedDocument(
+    document: TextDocument,
+    parsePassageContents: boolean
+) {
+    // We'll only get the diagnostic options if we're parsing passage
+    // contents, since otherwise we're just collecting passage names
+    let diagnosticOptions = defaultDiagnosticsOptions;
+    if (parsePassageContents) {
+        const settings = await getSettings();
+        diagnosticOptions = settings["twee-3"];
+    }
+
+    // Keep track of the story format so, if it changes, we can notify listeners
+    const storyFormat = projectIndex.getStoryData()?.storyFormat?.format;
+    updateProjectIndex(
+        document,
+        parsePassageContents,
+        projectIndex,
+        diagnosticOptions
+    );
+    const newStoryFormat = projectIndex.getStoryData()?.storyFormat;
+    if (newStoryFormat?.format !== storyFormat && newStoryFormat?.format) {
+        const e: StoryFormat = {
+            format: newStoryFormat.format,
+            formatVersion: newStoryFormat.formatVersion,
+        };
+        connection.sendNotification(CustomMessages.UpdatedStoryFormat, e);
+    }
+}
+
+/**
+ * Process all open documents that we're tracking.
+ *
+ * Used when there's a change (such as re-indexing or changing validation
+ * options) that could affect parsing.
+ */
+async function processAllOpenDocuments() {
+    for (const doc of documents.all()) {
+        await processChangedDocument(doc, true);
+    }
+    // Request that the client re-do diagnostics since we've re-processed
+    connection.languages.diagnostics.refresh();
+}
+
+/**
+ * Validate a document and get any diagnostics arising from that validation.
+ *
+ * @param textDocument Document to validate.
+ * @returns Diagnostics for the given document.
+ */
+async function validateTextDocument(
+    textDocument: TextDocument
+): Promise<Diagnostic[]> {
+    const settings = await getSettings();
+
+    const diagnostics = await generateDiagnostics(textDocument, projectIndex);
+
+    return diagnostics;
+}
 
 // Make the text document manager listen on the connection
 // for open, change and close text document events

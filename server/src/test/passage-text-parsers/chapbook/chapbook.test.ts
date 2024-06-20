@@ -2412,6 +2412,36 @@ describe("Chapbook Passage", () => {
                     expect(result.range).to.eql(Range.create(1, 7, 1, 15));
                 });
 
+                it("should not warn on an unrecognized modifier if that warning is disabled in options", () => {
+                    const header = ":: Passage\n";
+                    const passage = "[okay; modifier]\nOther text";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                        diagnosticsOptions: {
+                            warnings: { unknownMacro: false },
+                        },
+                    });
+                    const parser = uut.getChapbookParser(undefined);
+                    const modifier: modifiersModule.ModifierParser = {
+                        name: "okay",
+                        match: /^okay/i,
+                        completions: ["okay"],
+                        parse: () => {},
+                    };
+                    const mockFunction = ImportMock.mockFunction(
+                        modifiersModule,
+                        "all"
+                    ).returns([modifier]);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    mockFunction.restore();
+                    const [result] = callbacks.errors;
+
+                    expect(callbacks.errors).to.be.empty;
+                });
+
                 it("should not warn on a modifier because of its additional parameters", () => {
                     const header = ":: Passage\n";
                     const passage = "[okay and also this; okay]\nOther text";
@@ -2507,6 +2537,30 @@ describe("Chapbook Passage", () => {
                         'Insert "mock insert" not recognized'
                     );
                     expect(result.range).to.eql(Range.create(1, 9, 1, 20));
+                });
+
+                it("should not warn on an unrecognized insert if that warning is disabled in options", () => {
+                    const header = ":: Passage\n";
+                    const passage = "Insert: {mock insert: 'arg'}";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                        diagnosticsOptions: {
+                            warnings: { unknownMacro: false },
+                        },
+                    });
+                    const parser = uut.getChapbookParser(undefined);
+                    const mockFunction = ImportMock.mockFunction(
+                        insertsModule,
+                        "all"
+                    ).returns([]);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    mockFunction.restore();
+                    const [result] = callbacks.errors;
+
+                    expect(callbacks.errors).to.be.empty;
                 });
 
                 it("should flag a property with a space", () => {

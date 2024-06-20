@@ -3,7 +3,7 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { EmbeddedDocument } from "./embedded-languages";
 import { Passage, ProjectIndex, StoryData } from "./project-index";
-import { ParserCallbacks, parse } from "./parser";
+import { DiagnosticsOptions, ParserCallbacks, parse } from "./parser";
 import { SemanticToken } from "./tokens";
 
 /**
@@ -36,11 +36,13 @@ class IndexingState {
  * @param textDocument Document to index.
  * @param parsePassageContents Whether to parse passage contents.
  * @param index Project index to update.
+ * @param diagnosticsOptions Options for what optional diagnostics to report
  */
 export function updateProjectIndex(
     textDocument: TextDocument,
     parsePassageContents: boolean,
-    index: ProjectIndex
+    index: ProjectIndex,
+    diagnosticsOptions?: DiagnosticsOptions
 ): void {
     const indexingState = new IndexingState(textDocument);
     const uri = textDocument.uri;
@@ -95,9 +97,10 @@ export function updateProjectIndex(
 
     parse(
         textDocument,
-        index.getStoryData()?.storyFormat,
+        callbacks,
         parsePassageContents,
-        callbacks
+        index.getStoryData()?.storyFormat,
+        diagnosticsOptions
     );
 
     index.setPassages(uri, indexingState.passages);

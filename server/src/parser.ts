@@ -36,13 +36,30 @@ import {
 } from "./passage-text-parsers";
 
 /**
+ * Options about what diagnostics to report.
+ */
+export interface DiagnosticsOptions {
+    warnings: {
+        unknownMacro: boolean;
+    };
+}
+
+export const defaultDiagnosticsOptions: DiagnosticsOptions = {
+    warnings: { unknownMacro: true },
+};
+
+/**
  * Captures information about the current state of parsing
  */
 export interface ParsingState {
     /**
-     * Document being validated
+     * Document being validated.
      */
     textDocument: TextDocument;
+    /**
+     * Diagnostics options.
+     */
+    diagnosticsOptions: DiagnosticsOptions;
     /**
      * The parser to parse passage contents (other than the StoryTitle and StoryData passages).
      */
@@ -734,20 +751,23 @@ function parseTwee3(state: ParsingState): void {
  * is skipped, though, the StoryTitle and StoryData passages are still parsed.
  *
  * @param textDocument Document to parse.
- * @param storyFormat Previous story format (if any) to use in parsing.
- * @param parsePassageContents Whether to parse passage contents.
  * @param callbacks Parser event callbacks.
+ * @param parsePassageContents Whether to parse passage contents.
+ * @param storyFormat Previous story format (if any) to use in parsing.
+ * @param diagnosticsOptions Options for what optional diagnostics to report.
  */
 export function parse(
     textDocument: TextDocument,
-    storyFormat: StoryFormat | undefined,
+    callbacks: ParserCallbacks,
     parsePassageContents: boolean,
-    callbacks: ParserCallbacks
+    storyFormat?: StoryFormat,
+    diagnosticsOptions?: DiagnosticsOptions
 ): void {
     const state: ParsingState = {
         textDocument,
         passageTextParser: undefined, // No passage text parser to begin with
-        callbacks,
+        callbacks: callbacks,
+        diagnosticsOptions: diagnosticsOptions || defaultDiagnosticsOptions,
     };
 
     // Before anything else, see if we've got a story data passage, as,
