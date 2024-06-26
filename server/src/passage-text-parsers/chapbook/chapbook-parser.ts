@@ -10,7 +10,11 @@ import {
     parsePassageReference,
 } from "../../parser";
 import { ETokenType, ETokenModifier } from "../../tokens";
-import { skipSpaces, removeAndCountPadding } from "../../utilities";
+import {
+    skipSpaces,
+    removeAndCountPadding,
+    extractToMatchingDelimiter,
+} from "../../utilities";
 import {
     InsertTokens,
     all as allInserts,
@@ -49,6 +53,67 @@ export interface ChapbookParsingState extends PassageTextParsingState {
 }
 
 const varInsertPattern = /^({\s*)(\S+)\s*}$/;
+
+function parseEngineExtension(
+    contents: string,
+    contentsIndex: number,
+    state: ParsingState,
+    chapbookState: ChapbookParsingState
+): void {
+    // The contents should be ('version', function())
+    // where the function adds the new insert or modifier
+    if (contents[0] !== '"' && contents[0] !== "'") return;
+    const version = extractToMatchingDelimiter(
+        contents,
+        contents[0],
+        contents[0],
+        1
+    );
+    if (version === undefined) return;
+
+    // Make sure the story format meets the extension's required minimum version
+    if (state.storyFormat?.formatVersion !== undefined) {
+        const minVersion = version.split(".").map((n) => parseInt(n, 10));
+        if (minVersion.includes(NaN)) {
+            logErrorFor(
+                version,
+                contentsIndex + 1,
+                "The extension's version must be a number like '2.0.0'",
+                state
+            );
+            return;
+        }
+
+        const curVersion = state.storyFormat.formatVersion
+            .split(".")
+            .map((n) => parseInt(n, 10));
+
+        const end = Math.min(minVersion.length, curVersion.length);
+        for (let ndx = 0; ndx < end; ++ndx) {
+            if (curVersion[ndx] > minVersion[ndx]) {
+                logWarningFor(
+                    version,
+                    contentsIndex + 1,
+                    `The current story format version is ${state.storyFormat.formatVersion}, so this extension will be ignored`,
+                    state
+                );
+                return;
+            }
+        }
+
+        if (minVersion.length < curVersion.length) {
+            logWarningFor(
+                version,
+                contentsIndex + 1,
+                `The current story format version is ${state.storyFormat.formatVersion}, so this extension will be ignored`,
+                state
+            );
+            return;
+        }
+    }
+
+    // TODO see if this is engine.template.inserts.add or engine.template.modifiers.add and deal accordingly
+}
 
 /**
  * Parse an argument to an insert (either 1st argument or property value).
@@ -404,6 +469,27 @@ function parseTextSubsection(
     chapbookState: ChapbookParsingState
 ): void {
     if (chapbookState.modifierType === ModifierType.Javascript) {
+        // Look for engine extensions (`engine.extend()`)
+        let ndx = subsection.indexOf("engine.extend(");
+        if (ndx >= 0) {
+            ndx += "engine.extend(".length;
+            let extendContents = extractToMatchingDelimiter(
+                subsection,
+                "(",
+                ")",
+                ndx
+            );
+            if (extendContents !== undefined) {
+                [extendContents, ndx] = skipSpaces(extendContents, ndx);
+                parseEngineExtension(
+                    extendContents,
+                    subsectionIndex + ndx,
+                    state,
+                    chapbookState
+                );
+            }
+        }
+
         // TODO tokenize javascript
     } else if (chapbookState.modifierType === ModifierType.Css) {
         state.callbacks.onEmbeddedDocument({
@@ -835,9 +921,15 @@ export function parsePassageText(
     textIndex: number,
     state: ParsingState
 ): void {
+    if (!state.parsePassageContents) {
+        // TODO handle finding engine extensions
+
+        return;
+    }
+
     let content = passageText,
-        contentIndex = 0,
-        chapbookState: ChapbookParsingState = {
+        contentIndex = 0;
+    const chapbookState: ChapbookParsingState = {
             modifierType: ModifierType.None,
             passageTokens: {},
         };

@@ -27,6 +27,32 @@ describe("Utilities", () => {
         });
     });
 
+    describe("next line index", () => {
+        it("should find the next line after a \\n", () => {
+            const text = "line1\nline2";
+
+            const result = uut.nextLineIndex(text, 0);
+
+            expect(result).to.equal(6);
+        });
+
+        it("should find the next line after a CRLF", () => {
+            const text = "line1\r\nline2";
+
+            const result = uut.nextLineIndex(text, 0);
+
+            expect(result).to.equal(7);
+        });
+
+        it("should find the next line even in the middle of a string", () => {
+            const text = "line1\r\nline2\r\nline3\r\n";
+
+            const result = uut.nextLineIndex(text, 7);
+
+            expect(result).to.equal(14);
+        });
+    });
+
     describe("remove padding", () => {
         it("should return the string without padding on the left and right", () => {
             // No arrange
@@ -57,7 +83,7 @@ describe("Utilities", () => {
         });
     });
 
-    describe("move past spaces", () => {
+    describe("skip spaces", () => {
         it("should return the string without padding on the left and right", () => {
             // No arrange
 
@@ -75,29 +101,45 @@ describe("Utilities", () => {
         });
     });
 
-    describe("next line index", () => {
-        it("should find the next line after a \\n", () => {
-            const text = "line1\nline2";
+    describe("delimiter extraction", () => {
+        it("should handle strings", () => {
+            const text = 'string" and not';
 
-            const endLocation = uut.nextLineIndex(text, 0);
+            const result = uut.extractToMatchingDelimiter(text, '"', '"');
 
-            expect(endLocation).to.equal(6);
+            expect(result).to.equal("string");
         });
 
-        it("should find the next line after a CRLF", () => {
-            const text = "line1\r\nline2";
+        it("should handle strings with a start index", () => {
+            const text = '"string" and not';
 
-            const endLocation = uut.nextLineIndex(text, 0);
+            const result = uut.extractToMatchingDelimiter(text, '"', '"', 1);
 
-            expect(endLocation).to.equal(7);
+            expect(result).to.equal("string");
         });
 
-        it("should find the next line even in the middle of a string", () => {
-            const text = "line1\r\nline2\r\nline3\r\n";
+        it("should handle parentheses in parentheses", () => {
+            const text = "out (in) out) and so on";
 
-            const endLocation = uut.nextLineIndex(text, 7);
+            const result = uut.extractToMatchingDelimiter(text, "(", ")");
 
-            expect(endLocation).to.equal(14);
+            expect(result).to.equal("out (in) out");
+        });
+
+        it("should handle braces in braces", () => {
+            const text = "out {in} out} and so on";
+
+            const result = uut.extractToMatchingDelimiter(text, "{", "}");
+
+            expect(result).to.equal("out {in} out");
+        });
+
+        it("should only match starting at a pased index", () => {
+            const text = "(outer (inner) outer) and so on";
+
+            const result = uut.extractToMatchingDelimiter(text, "(", ")", 8);
+
+            expect(result).to.equal("inner");
         });
     });
 

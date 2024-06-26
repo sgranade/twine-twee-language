@@ -76,6 +76,67 @@ export function skipSpaces(s: string, n: number): [string, number] {
     return [sTrimmed, n + leftPad];
 }
 
+const doubleQuoteSearch = /(?<!\\)"/g;
+const singleQuoteSearch = /(?<!\\)'/g;
+const bracketSearch = /[{}]/g;
+const parensSearch = /[()]/g;
+
+/**
+ * Scan string to find a matching delimiter, skipping escaped delimiters.
+ *
+ * @param s String to scan.
+ * @param openDelimiter Delimiter that opens the group.
+ * @param closeDelimiter Delimiter that closes the group.
+ * @param startIndex Index inside of text where the delimited contents begin (after the opening delimiter).
+ * @returns String contained within the delimiters, not including the closing delimiter.
+ */
+export function extractToMatchingDelimiter(
+    s: string,
+    openDelimiter: string,
+    closeDelimiter: string,
+    startIndex = 0
+): string | undefined {
+    let matchEnd: number | undefined = undefined;
+    let delimiterCount = 0;
+    let m: RegExpExecArray | null;
+    let match: RegExp;
+
+    if (closeDelimiter === "}") {
+        match = bracketSearch;
+    } else if (closeDelimiter === '"') {
+        match = doubleQuoteSearch;
+    } else if (closeDelimiter === "'") {
+        match = singleQuoteSearch;
+    } else if (closeDelimiter === ")") {
+        match = parensSearch;
+    } else if (openDelimiter === closeDelimiter) {
+        match = RegExp(`(?<!\\\\)\\${openDelimiter})`, "g");
+    } else {
+        match = RegExp(
+            `(?<!\\\\)(\\${openDelimiter}|\\${closeDelimiter})`,
+            "g"
+        );
+    }
+
+    match.lastIndex = startIndex;
+
+    while ((m = match.exec(s))) {
+        if (m[0] === closeDelimiter) {
+            if (delimiterCount) delimiterCount--;
+            else {
+                matchEnd = m.index;
+                break;
+            }
+        } else if (m[0] === openDelimiter) {
+            delimiterCount++;
+        }
+    }
+    if (matchEnd === undefined) {
+        return undefined;
+    }
+    return s.slice(startIndex, matchEnd);
+}
+
 /** EMBEDDED DOCUMENTS **/
 
 /**

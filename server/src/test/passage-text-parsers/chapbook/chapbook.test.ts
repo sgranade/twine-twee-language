@@ -2745,5 +2745,100 @@ describe("Chapbook Passage", () => {
                 });
             });
         });
+
+        describe("javascript", () => {
+            it("should error on engine extensions whose version isn't a number", () => {
+                const header = ":: Passage\n";
+                const passage = "[javascript]\nengine.extend('bork', true);\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                state.storyFormat = {
+                    format: "Chapbook",
+                    formatVersion: "2.0.1",
+                };
+                const parser = uut.getChapbookParser(undefined);
+
+                parser?.parsePassageText(passage, header.length, state);
+                const [result] = callbacks.errors;
+
+                expect(callbacks.errors.length).to.equal(1);
+                expect(result.severity).to.eql(DiagnosticSeverity.Error);
+                expect(result.message).to.include(
+                    "The extension's version must be a number like '2.0.0'"
+                );
+                expect(result.range).to.eql(Range.create(2, 15, 2, 19));
+            });
+
+            it("should not warn on engine extensions if the story format doesn't have a version", () => {
+                const header = ":: Passage\n";
+                const passage = "[javascript]\nengine.extend('2.0.0', true);\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                state.storyFormat = {
+                    format: "Chapbook",
+                };
+                const parser = uut.getChapbookParser(undefined);
+
+                parser?.parsePassageText(passage, header.length, state);
+
+                expect(callbacks.errors.length).to.equal(0);
+            });
+
+            it("should warn on engine extensions whose version is less than the story format's version", () => {
+                const header = ":: Passage\n";
+                const passage = "[javascript]\nengine.extend('2.0.0', true);\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                state.storyFormat = {
+                    format: "Chapbook",
+                    formatVersion: "2.0.1",
+                };
+                const parser = uut.getChapbookParser(undefined);
+
+                parser?.parsePassageText(passage, header.length, state);
+                const [result] = callbacks.errors;
+
+                expect(callbacks.errors.length).to.equal(1);
+                expect(result.severity).to.eql(DiagnosticSeverity.Warning);
+                expect(result.message).to.include(
+                    "The current story format version is 2.0.1, so this extension will be ignored"
+                );
+                expect(result.range).to.eql(Range.create(2, 15, 2, 20));
+            });
+
+            it("should warn on engine extensions whose version is shorter than the story format's version", () => {
+                const header = ":: Passage\n";
+                const passage = "[javascript]\nengine.extend('2.0', true);\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                state.storyFormat = {
+                    format: "Chapbook",
+                    formatVersion: "2.0.1",
+                };
+                const parser = uut.getChapbookParser(undefined);
+
+                parser?.parsePassageText(passage, header.length, state);
+                const [result] = callbacks.errors;
+
+                expect(callbacks.errors.length).to.equal(1);
+                expect(result.severity).to.eql(DiagnosticSeverity.Warning);
+                expect(result.message).to.include(
+                    "The current story format version is 2.0.1, so this extension will be ignored"
+                );
+                expect(result.range).to.eql(Range.create(2, 15, 2, 18));
+            });
+        });
     });
 });

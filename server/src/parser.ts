@@ -58,9 +58,17 @@ export interface ParsingState {
      */
     textDocument: TextDocument;
     /**
+     * Are we to parse passage contents?
+     */
+    parsePassageContents: boolean;
+    /**
      * Diagnostics options.
      */
     diagnosticsOptions: DiagnosticsOptions;
+    /**
+     * Story format (if known).
+     */
+    storyFormat?: StoryFormat;
     /**
      * The parser to parse passage contents (other than the StoryTitle and StoryData passages).
      */
@@ -765,10 +773,11 @@ export function parse(
     diagnosticsOptions?: DiagnosticsOptions
 ): void {
     const state: ParsingState = {
-        textDocument,
+        textDocument: textDocument,
+        parsePassageContents: parsePassageContents,
+        diagnosticsOptions: diagnosticsOptions || defaultDiagnosticsOptions,
         passageTextParser: undefined, // No passage text parser to begin with
         callbacks: callbacks,
-        diagnosticsOptions: diagnosticsOptions || defaultDiagnosticsOptions,
     };
 
     // Before anything else, see if we've got a story data passage, as,
@@ -809,9 +818,9 @@ export function parse(
         }
     }
 
-    if (parsePassageContents) {
-        state.passageTextParser = getPassageTextParser(storyFormat);
-    }
+    state.storyFormat = storyFormat;
+
+    state.passageTextParser = getPassageTextParser(storyFormat);
 
     parseTwee3(state);
 }

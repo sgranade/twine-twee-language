@@ -12,7 +12,7 @@ import { getChapbookParser } from "./chapbook";
  */
 export interface PassageTextParser {
     /**
-     * ID for the parser: "format-version"
+     * ID for the parser: "format-version" where "version" is the e.g. "1.0.0" version.
      */
     id: string;
     /**
@@ -51,7 +51,7 @@ export interface PassageTextParser {
 export function getPassageTextParser(
     format: StoryFormat | undefined
 ): PassageTextParser | undefined {
-    if (format?.format.toLowerCase() == "chapbook") {
+    if (format?.format.toLowerCase() === "chapbook") {
         return getChapbookParser(format.formatVersion);
     }
     return undefined;

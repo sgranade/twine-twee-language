@@ -38,11 +38,13 @@ export function buildPassage({
 export function buildParsingState({
     uri = "fake-uri",
     content = "content",
+    parsePassageContents = true,
     callbacks = new MockCallbacks(),
     diagnosticsOptions = defaultDiagnosticsOptions,
 }): ParsingState {
     return {
         textDocument: TextDocument.create(uri, "twee3", 1, content),
+        parsePassageContents: parsePassageContents,
         passageTextParser: undefined,
         callbacks: callbacks,
         diagnosticsOptions: diagnosticsOptions,
