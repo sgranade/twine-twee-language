@@ -7,7 +7,7 @@ import { EmbeddedDocument } from "../embedded-languages";
 import { Index } from "../project-index";
 import * as uut from "../validator";
 import { buildPassage } from "./builders";
-import { defaultDiagnosticsOptions } from "../parser";
+import { defaultDiagnosticsOptions } from "../server-options";
 
 describe("Validator", () => {
     describe("Parse Error", () => {

@@ -16,7 +16,7 @@ import {
     parseJSON,
     storyDataJSONUri,
 } from "./embedded-languages";
-import { getPassageTextParser } from "./passage-text-parsers";
+import { getStoryFormatParser } from "./passage-text-parsers";
 import { ProjectIndex } from "./project-index";
 import { containingRange } from "./utilities";
 
@@ -334,7 +334,7 @@ export async function generateCompletions(
     // If there's a story format, let its parser provide optional completions
     const storyFormat = index.getStoryData()?.storyFormat;
     if (storyFormat !== undefined) {
-        const parser = getPassageTextParser(storyFormat);
+        const parser = getStoryFormatParser(storyFormat);
         if (parser !== undefined) {
             let completionList = parser.generateCompletions(
                 document,

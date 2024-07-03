@@ -10,7 +10,7 @@ import { getChapbookParser } from "./chapbook";
 /**
  * Story-format-specific parsers that parse passage text.
  */
-export interface PassageTextParser {
+export interface StoryFormatParser {
     /**
      * ID for the parser: "format-version" where "version" is the e.g. "1.0.0" version.
      */
@@ -48,9 +48,9 @@ export interface PassageTextParser {
  * @param format Story format.
  * @returns Parser, or undefined if no parser is available for the story format.
  */
-export function getPassageTextParser(
+export function getStoryFormatParser(
     format: StoryFormat | undefined
-): PassageTextParser | undefined {
+): StoryFormatParser | undefined {
     if (format?.format.toLowerCase() === "chapbook") {
         return getChapbookParser(format.formatVersion);
     }
@@ -82,7 +82,7 @@ export interface PreToken {
 /**
  * Story-format-specific parsing state information
  */
-export interface PassageTextParsingState {
+export interface StoryFormatParsingState {
     /**
      * Information for semantic tokens generated in a text subsection.
      */
@@ -103,7 +103,7 @@ export function capturePreTokenFor(
     at: number,
     type: TokenType,
     modifiers: TokenModifier[],
-    state: PassageTextParsingState
+    state: StoryFormatParsingState
 ): void {
     if (text.length)
         state.passageTokens[at] = {

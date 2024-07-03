@@ -3,7 +3,8 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { EmbeddedDocument } from "./embedded-languages";
 import { Passage, ProjectIndex, StoryData } from "./project-index";
-import { DiagnosticsOptions, ParserCallbacks, parse } from "./parser";
+import { ParserCallbacks, parse } from "./parser";
+import { DiagnosticsOptions } from "./server-options";
 import { SemanticToken } from "./tokens";
 
 /**

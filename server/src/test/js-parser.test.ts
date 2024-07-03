@@ -2,14 +2,14 @@ import { expect } from "chai";
 import "mocha";
 
 import { ETokenType } from "../tokens";
-import { PassageTextParsingState } from "../passage-text-parsers";
+import { StoryFormatParsingState } from "../passage-text-parsers";
 import * as uut from "../js-parser";
 
 describe("JS Parser", () => {
     it("should set a semantic token for a numeric value", () => {
         const expression = "17";
         const offset = 12;
-        const state: PassageTextParsingState = {
+        const state: StoryFormatParsingState = {
             passageTokens: {},
         };
 
@@ -29,7 +29,7 @@ describe("JS Parser", () => {
     it("should set a semantic token for a string value", () => {
         const expression = "'hiya'";
         const offset = 12;
-        const state: PassageTextParsingState = {
+        const state: StoryFormatParsingState = {
             passageTokens: {},
         };
 
@@ -49,7 +49,7 @@ describe("JS Parser", () => {
     it("should set a semantic token for a boolean value", () => {
         const expression = "true";
         const offset = 12;
-        const state: PassageTextParsingState = {
+        const state: StoryFormatParsingState = {
             passageTokens: {},
         };
 
@@ -69,7 +69,7 @@ describe("JS Parser", () => {
     it("should set a semantic token for an assignment operator", () => {
         const expression = " var +=";
         const offset = 12;
-        const state: PassageTextParsingState = {
+        const state: StoryFormatParsingState = {
             passageTokens: {},
         };
 
@@ -87,7 +87,7 @@ describe("JS Parser", () => {
     it("should set a semantic token for a binary operator", () => {
         const expression = " 1 +";
         const offset = 12;
-        const state: PassageTextParsingState = {
+        const state: StoryFormatParsingState = {
             passageTokens: {},
         };
 
@@ -105,7 +105,7 @@ describe("JS Parser", () => {
     it("should set a semantic token for a logical operator", () => {
         const expression = " var ||";
         const offset = 12;
-        const state: PassageTextParsingState = {
+        const state: StoryFormatParsingState = {
             passageTokens: {},
         };
 
@@ -123,7 +123,7 @@ describe("JS Parser", () => {
     it("should set a semantic token for a function call", () => {
         const expression = " func(true)";
         const offset = 12;
-        const state: PassageTextParsingState = {
+        const state: StoryFormatParsingState = {
             passageTokens: {},
         };
 
@@ -141,7 +141,7 @@ describe("JS Parser", () => {
     it("should set a semantic token for an (apparent) variable", () => {
         const expression = " var1";
         const offset = 12;
-        const state: PassageTextParsingState = {
+        const state: StoryFormatParsingState = {
             passageTokens: {},
         };
 
@@ -159,7 +159,7 @@ describe("JS Parser", () => {
     it("should set a semantic token for a property", () => {
         const expression = " var1.prop";
         const offset = 12;
-        const state: PassageTextParsingState = {
+        const state: StoryFormatParsingState = {
             passageTokens: {},
         };
 
@@ -177,7 +177,7 @@ describe("JS Parser", () => {
     it("should set a semantic token for a computed property", () => {
         const expression = " var1[prop]";
         const offset = 12;
-        const state: PassageTextParsingState = {
+        const state: StoryFormatParsingState = {
             passageTokens: {},
         };
 
@@ -195,7 +195,7 @@ describe("JS Parser", () => {
     it("should set semantic tokens for a set of properties", () => {
         const expression = " {prop1: val1, prop2: 'val2'}";
         const offset = 12;
-        const state: PassageTextParsingState = {
+        const state: StoryFormatParsingState = {
             passageTokens: {},
         };
 

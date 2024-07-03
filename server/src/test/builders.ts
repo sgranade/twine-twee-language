@@ -3,11 +3,8 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { EmbeddedDocument } from "../embedded-languages";
 import { Passage, StoryData } from "../project-index";
-import {
-    ParserCallbacks,
-    ParsingState,
-    defaultDiagnosticsOptions,
-} from "../parser";
+import { ParserCallbacks, ParsingState } from "../parser";
+import { defaultDiagnosticsOptions } from "../server-options";
 import { SemanticToken } from "../tokens";
 
 export function buildPassage({
@@ -45,7 +42,7 @@ export function buildParsingState({
     return {
         textDocument: TextDocument.create(uri, "twee3", 1, content),
         parsePassageContents: parsePassageContents,
-        passageTextParser: undefined,
+        storyFormatParser: undefined,
         callbacks: callbacks,
         diagnosticsOptions: diagnosticsOptions,
     };

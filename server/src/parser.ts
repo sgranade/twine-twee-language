@@ -29,25 +29,15 @@ import {
     skipSpaces,
 } from "./utilities";
 import {
-    PassageTextParser,
-    PassageTextParsingState,
+    StoryFormatParser,
+    StoryFormatParsingState,
     capturePreTokenFor,
-    getPassageTextParser,
+    getStoryFormatParser,
 } from "./passage-text-parsers";
-
-/**
- * Options about what diagnostics to report.
- */
-export interface DiagnosticsOptions {
-    warnings: {
-        unknownMacro: boolean;
-        unknownPassage: boolean;
-    };
-}
-
-export const defaultDiagnosticsOptions: DiagnosticsOptions = {
-    warnings: { unknownMacro: true, unknownPassage: true },
-};
+import {
+    DiagnosticsOptions,
+    defaultDiagnosticsOptions,
+} from "./server-options";
 
 /**
  * Captures information about the current state of parsing
@@ -72,7 +62,7 @@ export interface ParsingState {
     /**
      * The parser to parse passage contents (other than the StoryTitle and StoryData passages).
      */
-    passageTextParser: PassageTextParser | undefined;
+    storyFormatParser: StoryFormatParser | undefined;
     /**
      * Callbacks for parsing events
      */
@@ -201,20 +191,20 @@ export function logSemanticTokenFor(
  * @param passage Text name of the referenced passage.
  * @param at Index in the document where the passage reference occurs.
  * @param state Parsing state.
- * @param passageTextParsingState Story-format-specific parsing state.
+ * @param storyFormatParsingState Story-format-specific parsing state.
  */
 export function parsePassageReference(
     passage: string,
     at: number,
     state: ParsingState,
-    passageTextParsingState: PassageTextParsingState
+    storyFormatParsingState: StoryFormatParsingState
 ): void {
     capturePreTokenFor(
         passage,
         at,
         ETokenType.class,
         [],
-        passageTextParsingState
+        storyFormatParsingState
     );
 
     state.callbacks.onPassageReference(
@@ -236,14 +226,14 @@ export function parsePassageReference(
  * @param subsection Subsection of the passage text section.
  * @param subsectionIndex Index in the document where the subsection begins (zero-based).
  * @param state Parsing state.
- * @param passageTextParsingState Story-format-specific parsing state.
+ * @param storyFormatParsingState Story-format-specific parsing state.
  * @returns Updated subsection with the link sections blanked out
  */
 export function parseLinks(
     subsection: string,
     subsectionIndex: number,
     state: ParsingState,
-    passageTextParsingState: PassageTextParsingState
+    storyFormatParsingState: StoryFormatParsingState
 ): string {
     for (const m of subsection.matchAll(/\[\[(.*?)\]\]/g)) {
         // Get rid of the link from the subsection text so it doesn't get re-parsed when we look for inserts
@@ -296,7 +286,7 @@ export function parseLinks(
             target,
             subsectionIndex + linksIndex + targetIndex,
             state,
-            passageTextParsingState
+            storyFormatParsingState
         );
 
         if (dividerIndex !== -1) {
@@ -305,7 +295,7 @@ export function parseLinks(
                 subsectionIndex + linksIndex + dividerIndex,
                 ETokenType.keyword,
                 [],
-                passageTextParsingState
+                storyFormatParsingState
             );
             [display, indexDelta] = removeAndCountPadding(display);
             displayIndex += indexDelta;
@@ -314,7 +304,7 @@ export function parseLinks(
                 subsectionIndex + linksIndex + displayIndex,
                 ETokenType.string,
                 [],
-                passageTextParsingState
+                storyFormatParsingState
             );
         }
     }
@@ -667,7 +657,7 @@ function parsePassageText(
     } else if (passage.isStylesheet) {
         parseStylesheetPassage(passageText, textIndex, state);
     } else {
-        state.passageTextParser?.parsePassageText(
+        state.storyFormatParser?.parsePassageText(
             passageText,
             textIndex,
             state
@@ -776,7 +766,7 @@ export function parse(
         textDocument: textDocument,
         parsePassageContents: parsePassageContents,
         diagnosticsOptions: diagnosticsOptions || defaultDiagnosticsOptions,
-        passageTextParser: undefined, // No passage text parser to begin with
+        storyFormatParser: undefined, // No story format parser to begin with
         callbacks: callbacks,
     };
 
@@ -820,7 +810,7 @@ export function parse(
 
     state.storyFormat = storyFormat;
 
-    state.passageTextParser = getPassageTextParser(storyFormat);
+    state.storyFormatParser = getStoryFormatParser(storyFormat);
 
     parseTwee3(state);
 }

@@ -675,7 +675,7 @@ describe("Parser", () => {
                 const receivedContents: string[] = [];
                 const mockFunction = ImportMock.mockFunction(
                     ptpModule,
-                    "getPassageTextParser"
+                    "getStoryFormatParser"
                 ).callsFake((format: StoryFormat | undefined) => {
                     if (format?.format == "FakeFormat") {
                         return {
@@ -713,7 +713,7 @@ describe("Parser", () => {
                 const receivedContents: string[] = [];
                 const mockFunction = ImportMock.mockFunction(
                     ptpModule,
-                    "getPassageTextParser"
+                    "getStoryFormatParser"
                 ).callsFake((format: StoryFormat | undefined) => {
                     if (format?.format == "FakeFormat") {
                         return {

@@ -1,4 +1,4 @@
-import { PassageTextParser } from "..";
+import { StoryFormatParser } from "..";
 import { parsePassageText } from "./chapbook-parser";
 import { generateCompletions } from "./chapbook-completions";
 
@@ -11,7 +11,7 @@ import { generateCompletions } from "./chapbook-completions";
 export function getChapbookParser(
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     formatVersion: string | undefined
-): PassageTextParser | undefined {
+): StoryFormatParser | undefined {
     return {
         id: "chapbook-any",
         parsePassageText: parsePassageText,

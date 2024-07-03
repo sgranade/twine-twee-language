@@ -3,7 +3,7 @@ import * as acornLoose from "acorn-loose";
 import * as acornWalk from "acorn-walk";
 
 import {
-    PassageTextParsingState,
+    StoryFormatParsingState,
     capturePreTokenFor,
 } from "./passage-text-parsers";
 import { ETokenType, TokenModifier, TokenType } from "./tokens";
@@ -137,7 +137,7 @@ const astParser: acornWalk.SimpleVisitors<unknown> = {
 export function parseJSExpression(
     expression: string,
     offset: number,
-    passageState: PassageTextParsingState
+    passageState: StoryFormatParsingState
 ): void {
     let ast: acorn.Node | undefined;
 

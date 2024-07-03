@@ -71,7 +71,7 @@ describe("Indexer", () => {
             // need to mock the passage text parser to create a reference
             const mockFunction = ImportMock.mockFunction(
                 ptpModule,
-                "getPassageTextParser"
+                "getStoryFormatParser"
             ).callsFake(() => {
                 return {
                     id: "FakeFormat",

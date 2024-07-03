@@ -2,6 +2,7 @@ import { Diagnostic, Location, Position, Range } from "vscode-languageserver";
 
 import { StoryFormat } from "./client-server";
 import { EmbeddedDocument } from "./embedded-languages";
+import { DiagnosticsOptions } from "./server-options";
 import { SemanticToken } from "./tokens";
 import { positionInRange } from "./utilities";
 

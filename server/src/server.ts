@@ -48,7 +48,10 @@ import {
 } from "./structure";
 import { semanticTokensLegend } from "./tokens";
 import { generateDiagnostics } from "./validator";
-import { DiagnosticsOptions, defaultDiagnosticsOptions } from "./parser";
+import {
+    DiagnosticsOptions,
+    defaultDiagnosticsOptions,
+} from "./server-options";
 
 const connection: Connection = createConnection(ProposedFeatures.all);
 

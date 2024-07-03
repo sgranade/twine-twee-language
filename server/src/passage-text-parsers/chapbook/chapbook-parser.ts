@@ -1,6 +1,6 @@
 import { TextDocument } from "vscode-languageserver-textdocument";
 
-import { PassageTextParsingState, capturePreTokenFor } from "..";
+import { StoryFormatParsingState, capturePreTokenFor } from "..";
 import {
     ParsingState,
     logWarningFor,
@@ -45,7 +45,7 @@ export enum ModifierType {
 /**
  * Chapbook-specific parsing state information.
  */
-export interface ChapbookParsingState extends PassageTextParsingState {
+export interface ChapbookParsingState extends StoryFormatParsingState {
     /**
      * Type of modifier affecting a text block.
      */

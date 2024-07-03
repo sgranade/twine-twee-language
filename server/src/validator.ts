@@ -8,7 +8,7 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 import { doValidation } from "./embedded-languages";
 import { ProjectIndex } from "./project-index";
 import { comparePositions, containingRange } from "./utilities";
-import { DiagnosticsOptions } from "./parser";
+import { DiagnosticsOptions } from "./server-options";
 
 /**
  * Validate a document's passages.
