@@ -98,7 +98,7 @@ function parseEngineExtension(
                     state
                 );
                 return;
-            }
+            } else if (curVersion[ndx] < minVersion[ndx]) break;
         }
 
         if (minVersion.length < curVersion.length) {
@@ -112,7 +112,33 @@ function parseEngineExtension(
         }
     }
 
-    // TODO see if this is engine.template.inserts.add or engine.template.modifiers.add and deal accordingly
+    // Look for new inserts or modifiers
+    const engineTemplatePattern = /engine\.template\.([^\.]+)\.add\(/g;
+    let m: RegExpExecArray | null;
+    while ((m = engineTemplatePattern.exec(contents)) !== null) {
+        const addedContents = extractToMatchingDelimiter(
+            contents,
+            "(",
+            ")",
+            engineTemplatePattern.lastIndex
+        );
+        if (addedContents === undefined) continue;
+
+        if (m[1] === "modifiers") {
+            // TODO handle new modifier
+        } else if (m[1] === "inserts") {
+            // TODO handle new insert
+        } else {
+            logWarningFor(
+                `engine.template.${m[1]}`,
+                contentsIndex + m.index,
+                "Unrecognized engine template function",
+                state
+            );
+        }
+
+        engineTemplatePattern.lastIndex += addedContents.length + 1;
+    }
 }
 
 /**
@@ -930,9 +956,9 @@ export function parsePassageText(
     let content = passageText,
         contentIndex = 0;
     const chapbookState: ChapbookParsingState = {
-            modifierType: ModifierType.None,
-            passageTokens: {},
-        };
+        modifierType: ModifierType.None,
+        passageTokens: {},
+    };
 
     const varSeparatorMatch = varsSepPattern.exec(passageText);
     if (varSeparatorMatch !== null) {
