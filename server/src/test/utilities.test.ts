@@ -62,6 +62,14 @@ describe("Utilities", () => {
             expect(result).to.eql("No padding?");
         });
 
+        it("should return the string without padding on the left and right for multi-line strings", () => {
+            // No arrange
+
+            const [result] = uut.removeAndCountPadding(" \t No\npadding? ");
+
+            expect(result).to.eql("No\npadding?");
+        });
+
         it("should return the number of padding characters removed from the left", () => {
             // No arrange
 

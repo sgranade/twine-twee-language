@@ -46,7 +46,7 @@ export function nextLineIndex(document: string, startIndex: number): number {
     return lineEnd;
 }
 
-const paddingAndTextPattern = /^(\s*)(.*?)(\s*)$/;
+const paddingAndTextPattern = /^(\s*)(.*?)(\s*)$/s;
 
 /**
  * Remove padding from a string and capture how many pad characters were removed.
