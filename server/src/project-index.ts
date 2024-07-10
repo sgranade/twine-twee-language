@@ -2,9 +2,15 @@ import { Diagnostic, Location, Position, Range } from "vscode-languageserver";
 
 import { StoryFormat } from "./client-server";
 import { EmbeddedDocument } from "./embedded-languages";
-import { DiagnosticsOptions } from "./server-options";
 import { SemanticToken } from "./tokens";
 import { positionInRange } from "./utilities";
+
+/**
+ * A number that identifies the kind of a symbol or reference.
+ */
+export interface Kind {
+    kind: number;
+}
 
 /**
  * A label, which has a name and a location.
@@ -15,36 +21,25 @@ export interface Label {
 }
 
 /**
- * References, which have a name and locations.
+ * A label with a number that identifies the kind of label it is.
  */
-export interface References {
-    contents: string;
-    locations: Location[];
-}
-
-interface TwineSymbol extends Label {
-    kind: TwineSymbolKind;
-}
+export interface Symbol extends Label, Kind {}
 
 /**
  * Kind of a Twine symbol.
  */
 export enum TwineSymbolKind {
-    Passage = 0,
+    Passage = 1,
+    _end, // So story-format parsers can de-conflict their values
 }
 
 /**
- * References inside a document. A mapping of symbol names to ranges in a document.
+ * References, which have contents, locations, and an identifier for its kind.
  */
-type LocalReferences = Record<string, Range[]>;
-/**
- * References per symbol type in a document. A mapping of symbol kind to local references.
- */
-type LocalReferencesPerType = Record<number, LocalReferences>;
-/**
- * References per document. A mapping of URIs to local references per type.
- */
-type DocumentReferences = Record<string, LocalReferencesPerType>;
+export interface References extends Kind {
+    contents: string;
+    locations: Location[];
+}
 
 /**
  * Corresponds to the Twee 3 StoryData passage.
@@ -96,31 +91,37 @@ export interface ProjectIndex {
     setStoryData(data: StoryData, uri: string): void;
     /**
      * Set the list of passages in a document.
-     * @param uri URI to document whose index is to be updated.
-     * @param newPassages New index of labels.
+     * @param uri URI of the document whose index is to be updated.
+     * @param passages New list of passages.
      */
-    setPassages(uri: string, newPassages: Passage[]): void;
+    setPassages(uri: string, passages: Passage[]): void;
     /**
-     * Set references to a passage in a document.
-     * @param uri URI to document whose index is to be updated.
-     * @param newPassages New index of references to passages.
+     * Set symbol definitions in a document.
+     * @param uri URI of the document whose index is to be updated.
+     * @param definitions New list of symbols.
      */
-    setPassageReferences(uri: string, newReferences: LocalReferences): void;
+    setDefinitions(uri: string, definitions: Symbol[]): void;
+    /**
+     * Set references to symbols in a document.
+     * @param uri URI of the document whose index is to be updated.
+     * @param newPassages New list of references.
+     */
+    setReferences(uri: string, references: References[]): void;
     /**
      * Set a document's list of embedded documents.
-     * @param uri URI to document whose index is to be updated.
+     * @param uri URI of the document whose index is to be updated.
      * @param errors New list of embedded documents.
      */
     setEmbeddedDocuments(uri: string, documents: EmbeddedDocument[]): void;
     /**
      * Set a document's semantic tokens.
-     * @param uri URI to document whose index is to be updated.
+     * @param uri URI of the document whose index is to be updated.
      * @param tokens New list of semantic tokens.
      */
     setSemanticTokens(uri: string, tokens: SemanticToken[]): void;
     /**
      * Set a document's list of errors that occured during parsing.
-     * @param uri URI to document whose index is to be updated.
+     * @param uri URI of the document whose index is to be updated.
      * @param errors New list of errors.
      */
     setParseErrors(uri: string, errors: Diagnostic[]): void;
@@ -147,10 +148,17 @@ export interface ProjectIndex {
      */
     getPassages(uri: string): Passage[] | undefined;
     /**
-     * Get a document's references to passages, if indexed.
+     * Get a document's definitions, if indexed.
      * @param uri Document URI.
+     * @param kind Kind of symbol definitions to get.
      */
-    getPassageReferences(uri: string): LocalReferences | undefined;
+    getDefinitions(uri: string, kind: number): Symbol[] | undefined;
+    /**
+     * Get a document's references, if indexed.
+     * @param uri Document URI.
+     * @param kind Kind of symbol reference to get.
+     */
+    getReferences(uri: string, kind: number): References[] | undefined;
     /**
      * Get a document's list of embedded documents.
      * @param uri Document URI.
@@ -183,18 +191,19 @@ export interface ProjectIndex {
      * @param position Position.
      * @returns Symbol, or undefined if not found.
      */
-    getSymbolAt(uri: string, position: Position): TwineSymbol | undefined;
+    getSymbolAt(uri: string, position: Position): Symbol | undefined;
     /**
      * Get the location of a symbol's definition based on a symbol or single reference at a location in a document.
      * @param uri Document URI.
      * @param position Position in the document where the symbol or symbol reference should be.
      */
-    getDefinitionAt(uri: string, position: Position): TwineSymbol | undefined;
+    getDefinitionAt(uri: string, position: Position): Symbol | undefined;
     /**
      * Get all references to a symbol based on a symbol or single reference in a document.
      * @param uri Document URI.
      * @param position Position in the document where the symbol or symbol reference should be.
      * @param includeDeclaration True if the symbol declaration should be included as a reference.
+     * @returns The references, if there is a symbol with references at the position.
      */
     getReferencesAt(
         uri: string,
@@ -226,6 +235,8 @@ export interface ProjectIndex {
     removeDocument(uri: string): void;
 }
 
+type RepositoryPerKind<T> = Record<number, T[]>;
+
 /**
  * Instantiable index class
  */
@@ -235,7 +246,8 @@ export class Index implements ProjectIndex {
     private _storyData?: StoryData;
     private _storyDataUri?: string;
     private _passages: Record<string, Passage[]> = {};
-    private _references: DocumentReferences = {};
+    private _definitions: Record<string, RepositoryPerKind<Symbol>> = {};
+    private _references: Record<string, RepositoryPerKind<References>> = {};
     private _embeddedDocuments: Record<string, EmbeddedDocument[]> = {};
     private _semanticTokens: Record<string, SemanticToken[]> = {};
     private _parseErrors: Record<string, Diagnostic[]> = {};
@@ -251,11 +263,20 @@ export class Index implements ProjectIndex {
     setPassages(uri: string, newPassages: Passage[]): void {
         this._passages[uri] = [...newPassages];
     }
-    setPassageReferences(uri: string, newReferences: LocalReferences): void {
-        if (this._references[uri] === undefined) {
-            this._references[uri] = {};
+    _setPerKind<T extends Kind>(toAdd: T[]): RepositoryPerKind<T> {
+        const repo: RepositoryPerKind<T> = {};
+        for (const item of toAdd) {
+            const list = repo[item.kind] || [];
+            list.push(item);
+            repo[item.kind] = list;
         }
-        this._references[uri][TwineSymbolKind.Passage] = newReferences;
+        return repo;
+    }
+    setDefinitions(uri: string, definitions: Symbol[]): void {
+        this._definitions[uri] = this._setPerKind(definitions);
+    }
+    setReferences(uri: string, references: References[]): void {
+        this._references[uri] = this._setPerKind(references);
     }
     setEmbeddedDocuments(uri: string, documents: EmbeddedDocument[]): void {
         this._embeddedDocuments[uri] = [...documents];
@@ -281,10 +302,18 @@ export class Index implements ProjectIndex {
     getPassages(uri: string): Passage[] | undefined {
         return this._passages[uri];
     }
-    getPassageReferences(uri: string): LocalReferences | undefined {
-        const documentReferences = this._references[uri];
-        if (documentReferences !== undefined)
-            return documentReferences[TwineSymbolKind.Passage];
+    getDefinitions(uri: string, kind: number): Symbol[] | undefined {
+        const definitionsPerSymbolKind = this._definitions[uri];
+        if (definitionsPerSymbolKind !== undefined) {
+            return definitionsPerSymbolKind[kind];
+        }
+        return undefined;
+    }
+    getReferences(uri: string, kind: number): References[] | undefined {
+        const referencesPerSymbolKind = this._references[uri];
+        if (referencesPerSymbolKind !== undefined) {
+            return referencesPerSymbolKind[kind];
+        }
         return undefined;
     }
     getEmbeddedDocuments(uri: string): EmbeddedDocument[] {
@@ -312,7 +341,7 @@ export class Index implements ProjectIndex {
 
         return undefined;
     }
-    getSymbolAt(uri: string, position: Position): TwineSymbol | undefined {
+    getSymbolAt(uri: string, position: Position): Symbol | undefined {
         // See if the index has a passage name here
         const passage = this.getPassages(uri)?.find((p) =>
             positionInRange(position, p.name.location.range)
@@ -327,27 +356,27 @@ export class Index implements ProjectIndex {
 
         return undefined;
     }
-    getDefinitionAt(uri: string, position: Position): TwineSymbol | undefined {
+    getDefinitionAt(uri: string, position: Position): Symbol | undefined {
         // Do we have a reference at the position?
-        const referencesPerType = this._references[uri] || {};
-        for (const [symbolTypeAsString, localReferences] of Object.entries(
-            referencesPerType
+        const referencesPerKind = this._references[uri] || {};
+        for (const [symbolKindAsString, localReferences] of Object.entries(
+            referencesPerKind
         )) {
-            for (const [name, locations] of Object.entries(localReferences)) {
-                const match = locations.find((loc) =>
-                    positionInRange(position, loc)
+            for (const ref of localReferences) {
+                const match = ref.locations.find((loc) =>
+                    positionInRange(position, loc.range)
                 );
 
                 // If we do have a reference, see if we have a matching symbol
                 if (match !== undefined) {
-                    const symbolType = Number(symbolTypeAsString);
+                    const symbolType = Number(symbolKindAsString);
                     const symbolLocation = this.getSymbolLocation(
-                        name,
+                        ref.contents,
                         symbolType
                     );
                     if (symbolLocation !== undefined) {
                         return {
-                            contents: name,
+                            contents: ref.contents,
                             location: symbolLocation,
                             kind: symbolType,
                         };
@@ -363,7 +392,7 @@ export class Index implements ProjectIndex {
     getReferencesAt(
         uri: string,
         position: Position,
-        includeReferences: boolean
+        includeDeclaration: boolean
     ): References | undefined {
         // First, see if we can get to a definition at the position
         const symbol = this.getDefinitionAt(uri, position);
@@ -373,24 +402,25 @@ export class Index implements ProjectIndex {
         const references: References = {
             contents: symbol.contents,
             locations: [],
+            kind: symbol.kind,
         };
         for (const [refUri, localReferencesPerType] of Object.entries(
             this._references
         )) {
             const localReferences = localReferencesPerType[symbol.kind];
             if (localReferences !== undefined) {
-                const locs = localReferences[symbol.contents];
-                if (locs !== undefined) {
-                    for (const range of locs) {
-                        references.locations.push(
-                            Location.create(refUri, range)
-                        );
+                const ref = localReferences.find(
+                    (ref) => ref.contents === symbol.contents
+                );
+                if (ref !== undefined) {
+                    for (const loc of ref.locations) {
+                        references.locations.push(loc);
                     }
                 }
             }
         }
 
-        if (includeReferences) {
+        if (includeDeclaration) {
             references.locations.push(symbol.location);
         }
 
@@ -426,6 +456,7 @@ export class Index implements ProjectIndex {
 
     removeDocument(uri: string): void {
         delete this._passages[uri];
+        delete this._definitions[uri];
         delete this._references[uri];
         delete this._embeddedDocuments[uri];
         delete this._semanticTokens[uri];

@@ -6,7 +6,7 @@ import {
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { doValidation } from "./embedded-languages";
-import { ProjectIndex } from "./project-index";
+import { ProjectIndex, TwineSymbolKind } from "./project-index";
 import { comparePositions, containingRange } from "./utilities";
 import { DiagnosticsOptions } from "./server-options";
 
@@ -84,15 +84,16 @@ function validatePassageReferences(
     const diagnostics: Diagnostic[] = [];
 
     if (diagnosticsOptions.warnings.unknownPassage) {
-        const references = index.getPassageReferences(document.uri);
+        const references =
+            index.getReferences(document.uri, TwineSymbolKind.Passage) || [];
         const names = index.getPassageNames();
-        for (const [name, ranges] of Object.entries(references || {})) {
-            if (!names.includes(name)) {
-                for (const range of ranges) {
+        for (const ref of references) {
+            if (!names.includes(ref.contents)) {
+                for (const loc of ref.locations) {
                     diagnostics.push(
                         Diagnostic.create(
-                            range,
-                            `Cannot find passage '${name}'`,
+                            loc.range,
+                            `Cannot find passage '${ref.contents}'`,
                             DiagnosticSeverity.Warning,
                             undefined,
                             "Twine"

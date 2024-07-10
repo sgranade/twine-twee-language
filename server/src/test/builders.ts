@@ -2,7 +2,7 @@ import { Diagnostic, Range } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { EmbeddedDocument } from "../embedded-languages";
-import { Passage, StoryData } from "../project-index";
+import { Label, Passage, StoryData } from "../project-index";
 import { ParserCallbacks, ParsingState } from "../parser";
 import { defaultDiagnosticsOptions } from "../server-options";
 import { SemanticToken } from "../tokens";
@@ -56,6 +56,7 @@ export class MockCallbacks implements ParserCallbacks {
     public storyTitleRange?: Range;
     public storyData?: StoryData;
     public storyDataRange?: Range;
+    public definitions: Label[] = [];
     public embeddedDocuments: EmbeddedDocument[] = [];
     public tokens: SemanticToken[] = [];
     public errors: Diagnostic[] = [];
@@ -84,5 +85,8 @@ export class MockCallbacks implements ParserCallbacks {
     }
     onParseError(error: Diagnostic): void {
         this.errors.push(error);
+    }
+    onSymbolDefinition(label: Label): void {
+        this.definitions.push(label);
     }
 }

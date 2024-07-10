@@ -13,7 +13,13 @@ import {
     parseJSON,
     storyDataJSONUri,
 } from "./embedded-languages";
-import { Label, Passage, PassageMetadata, StoryData } from "./project-index";
+import {
+    Label,
+    Passage,
+    PassageMetadata,
+    StoryData,
+    Symbol,
+} from "./project-index";
 import {
     closeMetaCharPattern,
     metadataPattern,
@@ -75,6 +81,7 @@ export interface ParsingState {
 export interface ParserCallbacks {
     onPassage(passage: Passage): void;
     onPassageReference(passageName: string, range: Range): void;
+    onSymbolDefinition(symbol: Symbol): void;
     onStoryTitle(title: string, range: Range): void;
     onStoryData(data: StoryData, range: Range): void;
     onEmbeddedDocument(document: EmbeddedDocument): void;

@@ -1,8 +1,20 @@
-import { Diagnostic, DiagnosticSeverity, Range } from "vscode-languageserver";
+import {
+    Diagnostic,
+    DiagnosticSeverity,
+    Location,
+    Range,
+} from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { EmbeddedDocument } from "./embedded-languages";
-import { Passage, ProjectIndex, StoryData } from "./project-index";
+import {
+    Passage,
+    ProjectIndex,
+    References,
+    StoryData,
+    Symbol,
+    TwineSymbolKind,
+} from "./project-index";
 import { ParserCallbacks, parse } from "./parser";
 import { DiagnosticsOptions } from "./server-options";
 import { SemanticToken } from "./tokens";
@@ -17,7 +29,8 @@ class IndexingState {
     textDocument: TextDocument;
 
     passages: Passage[] = [];
-    passageReferences: Record<string, Range[]> = {};
+    passageReferences: Record<string, Location[]> = {};
+    definitions: Symbol[] = [];
     parseErrors: Diagnostic[] = [];
     semanticTokens: SemanticToken[] = [];
     embeddedDocuments: EmbeddedDocument[] = [];
@@ -57,7 +70,12 @@ export function updateProjectIndex(
             if (indexingState.passageReferences[passageName] === undefined) {
                 indexingState.passageReferences[passageName] = [];
             }
-            indexingState.passageReferences[passageName].push(range);
+            indexingState.passageReferences[passageName].push(
+                Location.create(uri, range)
+            );
+        },
+        onSymbolDefinition: function (symbol: Symbol): void {
+            indexingState.definitions.push(symbol);
         },
         onStoryTitle: function (title: string, range: Range): void {
             if (index.getStoryTitle() !== undefined) {
@@ -104,8 +122,18 @@ export function updateProjectIndex(
         diagnosticsOptions
     );
 
+    const references: References[] = Object.entries(
+        indexingState.passageReferences
+    ).map(([name, locs]) => {
+        return {
+            contents: name,
+            locations: locs,
+            kind: TwineSymbolKind.Passage,
+        };
+    });
     index.setPassages(uri, indexingState.passages);
-    index.setPassageReferences(uri, indexingState.passageReferences);
+    index.setDefinitions(uri, indexingState.definitions);
+    index.setReferences(uri, references);
     index.setEmbeddedDocuments(uri, indexingState.embeddedDocuments);
     index.setSemanticTokens(uri, indexingState.semanticTokens);
     index.setParseErrors(uri, indexingState.parseErrors);

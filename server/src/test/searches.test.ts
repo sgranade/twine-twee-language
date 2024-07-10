@@ -1,8 +1,8 @@
 import { expect } from "chai";
 import "mocha";
-import { Position, Range, TextEdit } from "vscode-languageserver";
+import { Location, Position, Range, TextEdit } from "vscode-languageserver";
 
-import { Index } from "../project-index";
+import { Index, TwineSymbolKind } from "../project-index";
 import { buildPassage } from "./builders";
 
 import * as uut from "../searches";
@@ -27,16 +27,35 @@ describe("Searches", () => {
                         },
                     }),
                 ];
-                const passageReferences = {
-                    "Passage 1": [Range.create(5, 2, 5, 4)],
-                    "Passage 2": [
-                        Range.create(5, 6, 7, 8),
-                        Range.create(9, 10, 11, 12),
-                    ],
-                };
+                const passageReferences = [
+                    {
+                        contents: "Passage 1",
+                        locations: [
+                            Location.create(
+                                "other-uri",
+                                Range.create(5, 2, 5, 4)
+                            ),
+                        ],
+                        kind: TwineSymbolKind.Passage,
+                    },
+                    {
+                        contents: "Passage 2",
+                        locations: [
+                            Location.create(
+                                "other-uri",
+                                Range.create(5, 6, 7, 8)
+                            ),
+                            Location.create(
+                                "other-uri",
+                                Range.create(9, 10, 11, 12)
+                            ),
+                        ],
+                        kind: TwineSymbolKind.Passage,
+                    },
+                ];
                 const index = new Index();
                 index.setPassages("fake-uri", passages);
-                index.setPassageReferences("other-uri", passageReferences);
+                index.setReferences("other-uri", passageReferences);
 
                 const result = uut.generateRenames(
                     "fake-uri",
@@ -80,16 +99,35 @@ describe("Searches", () => {
                         },
                     }),
                 ];
-                const passageReferences = {
-                    "Passage 1": [Range.create(5, 2, 5, 4)],
-                    "Passage 2": [
-                        Range.create(5, 6, 7, 8),
-                        Range.create(9, 10, 11, 12),
-                    ],
-                };
+                const passageReferences = [
+                    {
+                        contents: "Passage 1",
+                        locations: [
+                            Location.create(
+                                "other-uri",
+                                Range.create(5, 2, 5, 4)
+                            ),
+                        ],
+                        kind: TwineSymbolKind.Passage,
+                    },
+                    {
+                        contents: "Passage 2",
+                        locations: [
+                            Location.create(
+                                "other-uri",
+                                Range.create(5, 6, 7, 8)
+                            ),
+                            Location.create(
+                                "other-uri",
+                                Range.create(9, 10, 11, 12)
+                            ),
+                        ],
+                        kind: TwineSymbolKind.Passage,
+                    },
+                ];
                 const index = new Index();
                 index.setPassages("fake-uri", passages);
-                index.setPassageReferences("other-uri", passageReferences);
+                index.setReferences("other-uri", passageReferences);
 
                 const result = uut.generateRenames(
                     "other-uri",

@@ -1,10 +1,15 @@
 import { expect } from "chai";
 import "mocha";
 import { ImportMock } from "ts-mock-imports";
-import { DiagnosticSeverity, Position, Range } from "vscode-languageserver";
+import {
+    DiagnosticSeverity,
+    Location,
+    Position,
+    Range,
+} from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
-import { Index } from "../project-index";
+import { Index, TwineSymbolKind } from "../project-index";
 import { buildPassage } from "./builders";
 
 import * as ptpModule from "../passage-text-parsers";
@@ -61,6 +66,54 @@ describe("Indexer", () => {
             ]);
         });
 
+        it("should add definitions to the index", () => {
+            const doc = buildDocument({
+                uri: "test-uri",
+                content: "::Passage 1\nYup\n\n",
+            });
+            const index = new Index();
+            // Because definitions only show up in passage contents, we
+            // need to mock the passage text parser to create a reference
+            const mockFunction = ImportMock.mockFunction(
+                ptpModule,
+                "getStoryFormatParser"
+            ).callsFake(() => {
+                return {
+                    id: "FakeFormat",
+                    parsePassageText: (
+                        passageText: string,
+                        textIndex: number,
+                        state: ParsingState
+                    ) => {
+                        if (passageText === "Yup\n\n")
+                            state.callbacks.onSymbolDefinition({
+                                contents: "symbol",
+                                location: Location.create(
+                                    "test-uri",
+                                    Range.create(1, 2, 3, 4)
+                                ),
+                                kind: 17,
+                            });
+                    },
+                };
+            });
+
+            uut.updateProjectIndex(doc, true, index);
+            mockFunction.restore();
+            const result = index.getDefinitions("test-uri", 17);
+
+            expect(result).to.eql([
+                {
+                    contents: "symbol",
+                    location: Location.create(
+                        "test-uri",
+                        Range.create(1, 2, 3, 4)
+                    ),
+                    kind: 17,
+                },
+            ]);
+        });
+
         it("should add passage references to the index", () => {
             const doc = buildDocument({
                 uri: "test-uri",
@@ -91,11 +144,20 @@ describe("Indexer", () => {
 
             uut.updateProjectIndex(doc, true, index);
             mockFunction.restore();
-            const result = index.getPassageReferences("test-uri");
+            const result = index.getReferences(
+                "test-uri",
+                TwineSymbolKind.Passage
+            );
 
-            expect(result).to.eql({
-                "Other Passage": [Range.create(1, 2, 3, 4)],
-            });
+            expect(result).to.eql([
+                {
+                    contents: "Other Passage",
+                    locations: [
+                        Location.create("test-uri", Range.create(1, 2, 3, 4)),
+                    ],
+                    kind: TwineSymbolKind.Passage,
+                },
+            ]);
         });
 
         it("should add the story title to the index", () => {

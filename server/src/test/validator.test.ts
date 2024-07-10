@@ -4,7 +4,7 @@ import { Diagnostic, Location, Range } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { EmbeddedDocument } from "../embedded-languages";
-import { Index } from "../project-index";
+import { Index, TwineSymbolKind } from "../project-index";
 import * as uut from "../validator";
 import { buildPassage } from "./builders";
 import { defaultDiagnosticsOptions } from "../server-options";
@@ -216,9 +216,15 @@ describe("Validator", () => {
                 '{ "test": 17, }'
             );
             const index = new Index();
-            index.setPassageReferences("test-uri", {
-                "Non-existent passage": [Range.create(1, 2, 3, 4)],
-            });
+            index.setReferences("test-uri", [
+                {
+                    contents: "Non-existent passage",
+                    locations: [
+                        Location.create("test-uri", Range.create(1, 2, 3, 4)),
+                    ],
+                    kind: TwineSymbolKind.Passage,
+                },
+            ]);
 
             const result = await uut.generateDiagnostics(
                 document,
@@ -240,9 +246,15 @@ describe("Validator", () => {
                 '{ "test": 17, }'
             );
             const index = new Index();
-            index.setPassageReferences("test-uri", {
-                "Non-existent passage": [Range.create(1, 2, 3, 4)],
-            });
+            index.setReferences("test-uri", [
+                {
+                    contents: "Non-existent passage",
+                    locations: [
+                        Location.create("test-uri", Range.create(1, 2, 3, 4)),
+                    ],
+                    kind: TwineSymbolKind.Passage,
+                },
+            ]);
 
             const result = await uut.generateDiagnostics(document, index, {
                 warnings: { unknownMacro: true, unknownPassage: false },
