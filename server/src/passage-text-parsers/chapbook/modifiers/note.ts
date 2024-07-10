@@ -1,4 +1,4 @@
-import { ModifierType } from "../chapbook-parser";
+import { ModifierKind } from "../chapbook-parser";
 import { ModifierParser } from "./types";
 
 export const note: ModifierParser = {
@@ -6,6 +6,6 @@ export const note: ModifierParser = {
     match: /^(note(\s+to\s+myself)?|n\.?b\.?|todo|fixme)$/i,
     completions: ["note"],
     parse(text, state, chapbookState) {
-        chapbookState.modifierType = ModifierType.Note;
+        chapbookState.modifierKind = ModifierKind.Note;
     },
 };

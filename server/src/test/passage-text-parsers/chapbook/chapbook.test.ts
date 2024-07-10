@@ -1,12 +1,17 @@
 import "mocha";
 import { expect } from "chai";
 import { ImportMock } from "ts-mock-imports";
-import { DiagnosticSeverity, Position, Range } from "vscode-languageserver";
+import {
+    DiagnosticSeverity,
+    Location,
+    Position,
+    Range,
+} from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { MockCallbacks, buildParsingState, buildPassage } from "../../builders";
 import { buildInsertParser } from "./inserts/insert-builders";
-import { Index } from "../../../project-index";
+import { Index, TwineSymbolKind } from "../../../project-index";
 import { ETokenModifier, ETokenType } from "../../../tokens";
 import * as insertsModule from "../../../passage-text-parsers/chapbook/inserts";
 import * as modifiersModule from "../../../passage-text-parsers/chapbook/modifiers";
@@ -341,17 +346,25 @@ describe("Chapbook Passage", () => {
                         "Here it is: [[ target passage ]]\n";
                     const callbacks = new MockCallbacks();
                     const state = buildParsingState({
+                        uri: "fake-uri",
                         content: header + passage,
                         callbacks: callbacks,
                     });
                     const parser = uut.getChapbookParser(undefined);
 
                     parser?.parsePassageText(passage, header.length, state);
-                    const result = callbacks.passageReferences;
+                    const result = callbacks.references;
 
-                    expect(result).to.eql({
-                        "target passage": [Range.create(2, 15, 2, 29)],
-                    });
+                    expect(result).to.eql([
+                        {
+                            contents: "target passage",
+                            location: Location.create(
+                                "fake-uri",
+                                Range.create(2, 15, 2, 29)
+                            ),
+                            kind: TwineSymbolKind.Passage,
+                        },
+                    ]);
                 });
 
                 it("should set semantic tokens for a [[display|target]] link", () => {
@@ -401,17 +414,25 @@ describe("Chapbook Passage", () => {
                         "Here it is: [[display w a string | target passage ]]\n";
                     const callbacks = new MockCallbacks();
                     const state = buildParsingState({
+                        uri: "fake-uri",
                         content: header + passage,
                         callbacks: callbacks,
                     });
                     const parser = uut.getChapbookParser(undefined);
 
                     parser?.parsePassageText(passage, header.length, state);
-                    const result = callbacks.passageReferences;
+                    const result = callbacks.references;
 
-                    expect(result).to.eql({
-                        "target passage": [Range.create(2, 35, 2, 49)],
-                    });
+                    expect(result).to.eql([
+                        {
+                            contents: "target passage",
+                            location: Location.create(
+                                "fake-uri",
+                                Range.create(2, 35, 2, 49)
+                            ),
+                            kind: TwineSymbolKind.Passage,
+                        },
+                    ]);
                 });
 
                 it("should set semantic tokens for a [[display->target]] link", () => {
@@ -461,17 +482,25 @@ describe("Chapbook Passage", () => {
                         "Here it is: [[display w a string -> target passage ]]\n";
                     const callbacks = new MockCallbacks();
                     const state = buildParsingState({
+                        uri: "fake-uri",
                         content: header + passage,
                         callbacks: callbacks,
                     });
                     const parser = uut.getChapbookParser(undefined);
 
                     parser?.parsePassageText(passage, header.length, state);
-                    const result = callbacks.passageReferences;
+                    const result = callbacks.references;
 
-                    expect(result).to.eql({
-                        "target passage": [Range.create(2, 36, 2, 50)],
-                    });
+                    expect(result).to.eql([
+                        {
+                            contents: "target passage",
+                            location: Location.create(
+                                "fake-uri",
+                                Range.create(2, 36, 2, 50)
+                            ),
+                            kind: TwineSymbolKind.Passage,
+                        },
+                    ]);
                 });
 
                 it("should set semantic tokens for a [[target<-display]] link", () => {
@@ -521,17 +550,25 @@ describe("Chapbook Passage", () => {
                         "Here it is: [[ target passage <- display w a string ]]\n";
                     const callbacks = new MockCallbacks();
                     const state = buildParsingState({
+                        uri: "fake-uri",
                         content: header + passage,
                         callbacks: callbacks,
                     });
                     const parser = uut.getChapbookParser(undefined);
 
                     parser?.parsePassageText(passage, header.length, state);
-                    const result = callbacks.passageReferences;
+                    const result = callbacks.references;
 
-                    expect(result).to.eql({
-                        "target passage": [Range.create(2, 15, 2, 29)],
-                    });
+                    expect(result).to.eql([
+                        {
+                            contents: "target passage",
+                            location: Location.create(
+                                "fake-uri",
+                                Range.create(2, 15, 2, 29)
+                            ),
+                            kind: TwineSymbolKind.Passage,
+                        },
+                    ]);
                 });
             });
 
@@ -883,6 +920,7 @@ describe("Chapbook Passage", () => {
                             allTokens.push(tokens);
                         };
                         const state = buildParsingState({
+                            uri: "fake-uri",
                             content: header + passage,
                             callbacks: callbacks,
                         });
@@ -894,11 +932,18 @@ describe("Chapbook Passage", () => {
 
                         parser?.parsePassageText(passage, header.length, state);
                         mockFunction.restore();
-                        const result = callbacks.passageReferences;
+                        const result = callbacks.references;
 
-                        expect(result).to.eql({
-                            arg: [Range.create(1, 24, 1, 27)],
-                        });
+                        expect(result).to.eql([
+                            {
+                                contents: "arg",
+                                location: Location.create(
+                                    "fake-uri",
+                                    Range.create(1, 24, 1, 27)
+                                ),
+                                kind: TwineSymbolKind.Passage,
+                            },
+                        ]);
                     });
 
                     it("should create a passage semantic token for a first arg that's a passage", () => {
@@ -951,6 +996,7 @@ describe("Chapbook Passage", () => {
                             allTokens.push(tokens);
                         };
                         const state = buildParsingState({
+                            uri: "fake-uri",
                             content: header + passage,
                             callbacks: callbacks,
                         });
@@ -962,11 +1008,18 @@ describe("Chapbook Passage", () => {
 
                         parser?.parsePassageText(passage, header.length, state);
                         mockFunction.restore();
-                        const result = callbacks.passageReferences;
+                        const result = callbacks.references;
 
-                        expect(result).to.eql({
-                            arg: [Range.create(1, 24, 1, 27)],
-                        });
+                        expect(result).to.eql([
+                            {
+                                contents: "arg",
+                                location: Location.create(
+                                    "fake-uri",
+                                    Range.create(1, 24, 1, 27)
+                                ),
+                                kind: TwineSymbolKind.Passage,
+                            },
+                        ]);
                     });
 
                     it("should create a passage semantic token for a non-link first arg that's a urlOrPassage", () => {
@@ -1031,7 +1084,7 @@ describe("Chapbook Passage", () => {
 
                         parser?.parsePassageText(passage, header.length, state);
                         mockFunction.restore();
-                        const result = callbacks.passageReferences;
+                        const result = callbacks.references;
 
                         expect(result).to.be.empty;
                     });

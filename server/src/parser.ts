@@ -19,6 +19,7 @@ import {
     PassageMetadata,
     StoryData,
     Symbol,
+    TwineSymbolKind,
 } from "./project-index";
 import {
     closeMetaCharPattern,
@@ -80,13 +81,32 @@ export interface ParsingState {
  */
 export interface ParserCallbacks {
     onPassage(passage: Passage): void;
-    onPassageReference(passageName: string, range: Range): void;
     onSymbolDefinition(symbol: Symbol): void;
+    onSymbolReference(symbol: Symbol): void;
     onStoryTitle(title: string, range: Range): void;
     onStoryData(data: StoryData, range: Range): void;
     onEmbeddedDocument(document: EmbeddedDocument): void;
     onSemanticToken(token: SemanticToken): void;
     onParseError(error: Diagnostic): void;
+}
+
+/**
+ * Create a location for text in a document.
+ *
+ * @param text Document text to create the location for.
+ * @param at Index where the text occurs in the document (zero-based).
+ * @param state Parsing state.
+ * @returns The location containing the text.
+ */
+export function createLocationFor(
+    text: string,
+    at: number,
+    state: ParsingState
+): Location {
+    return Location.create(
+        state.textDocument.uri,
+        createRangeFor(text, at, state)
+    );
 }
 
 /**
@@ -214,10 +234,11 @@ export function parsePassageReference(
         storyFormatParsingState
     );
 
-    state.callbacks.onPassageReference(
-        passage,
-        createRangeFor(passage, at, state)
-    );
+    state.callbacks.onSymbolReference({
+        contents: passage,
+        location: createLocationFor(passage, at, state),
+        kind: TwineSymbolKind.Passage,
+    });
 }
 
 /**

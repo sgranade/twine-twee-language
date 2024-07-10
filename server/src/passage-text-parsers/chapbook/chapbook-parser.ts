@@ -34,7 +34,7 @@ const lineExtractionPattern = /^([ \t]*?)\b(.*)$/gm;
 /**
  * Type of Chapbook modifier
  */
-export enum ModifierType {
+export enum ModifierKind {
     None,
     Javascript,
     Css,
@@ -49,7 +49,7 @@ export interface ChapbookParsingState extends StoryFormatParsingState {
     /**
      * Type of modifier affecting a text block.
      */
-    modifierType: ModifierType;
+    modifierKind: ModifierKind;
 }
 
 const varInsertPattern = /^({\s*)(\S+)\s*}$/;
@@ -494,7 +494,7 @@ function parseTextSubsection(
     state: ParsingState,
     chapbookState: ChapbookParsingState
 ): void {
-    if (chapbookState.modifierType === ModifierType.Javascript) {
+    if (chapbookState.modifierKind === ModifierKind.Javascript) {
         // Look for engine extensions (`engine.extend()`)
         let ndx = subsection.indexOf("engine.extend(");
         if (ndx >= 0) {
@@ -517,7 +517,7 @@ function parseTextSubsection(
         }
 
         // TODO tokenize javascript
-    } else if (chapbookState.modifierType === ModifierType.Css) {
+    } else if (chapbookState.modifierKind === ModifierKind.Css) {
         state.callbacks.onEmbeddedDocument({
             document: TextDocument.create(
                 "stylesheet",
@@ -527,7 +527,7 @@ function parseTextSubsection(
             ),
             offset: subsectionIndex,
         });
-    } else if (chapbookState.modifierType === ModifierType.Note) {
+    } else if (chapbookState.modifierKind === ModifierKind.Note) {
         capturePreTokenFor(
             subsection,
             subsectionIndex,
@@ -674,7 +674,7 @@ function parseModifier(
             capturePreTokenFor(
                 token,
                 tokenIndex,
-                chapbookState.modifierType == ModifierType.Note
+                chapbookState.modifierKind == ModifierKind.Note
                     ? ETokenType.comment
                     : ETokenType.function,
                 [],
@@ -713,7 +713,7 @@ function parseTextSection(
 ): void {
     // Go through the text modifier block by modifier block,
     // starting with no modifier
-    chapbookState.modifierType = ModifierType.None;
+    chapbookState.modifierKind = ModifierKind.None;
     modifierPattern.lastIndex = 0;
     let previousModifierEndIndex = 0;
 
@@ -727,7 +727,7 @@ function parseTextSection(
         );
 
         // Reset the modifier type
-        chapbookState.modifierType = ModifierType.None;
+        chapbookState.modifierKind = ModifierKind.None;
 
         // Check for spaces before/after the modifier, which causes Chapbook to ignore them
         if (m[1] !== "") {
@@ -956,7 +956,7 @@ export function parsePassageText(
     let content = passageText,
         contentIndex = 0;
     const chapbookState: ChapbookParsingState = {
-        modifierType: ModifierType.None,
+        modifierKind: ModifierKind.None,
         passageTokens: {},
     };
 

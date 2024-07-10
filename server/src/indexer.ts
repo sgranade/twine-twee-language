@@ -29,8 +29,8 @@ class IndexingState {
     textDocument: TextDocument;
 
     passages: Passage[] = [];
-    passageReferences: Record<string, Location[]> = {};
     definitions: Symbol[] = [];
+    references: Symbol[] = [];
     parseErrors: Diagnostic[] = [];
     semanticTokens: SemanticToken[] = [];
     embeddedDocuments: EmbeddedDocument[] = [];
@@ -66,16 +66,11 @@ export function updateProjectIndex(
         onPassage: function (passage: Passage): void {
             indexingState.passages.push(passage);
         },
-        onPassageReference(passageName: string, range: Range): void {
-            if (indexingState.passageReferences[passageName] === undefined) {
-                indexingState.passageReferences[passageName] = [];
-            }
-            indexingState.passageReferences[passageName].push(
-                Location.create(uri, range)
-            );
-        },
         onSymbolDefinition: function (symbol: Symbol): void {
             indexingState.definitions.push(symbol);
+        },
+        onSymbolReference: function (symbol: Symbol): void {
+            indexingState.references.push(symbol);
         },
         onStoryTitle: function (title: string, range: Range): void {
             if (index.getStoryTitle() !== undefined) {
@@ -122,15 +117,19 @@ export function updateProjectIndex(
         diagnosticsOptions
     );
 
-    const references: References[] = Object.entries(
-        indexingState.passageReferences
-    ).map(([name, locs]) => {
-        return {
-            contents: name,
-            locations: locs,
-            kind: TwineSymbolKind.Passage,
+    // Collate the array of individual references by name
+    const referencesMap: Record<string, References> = {};
+    for (const symbol of indexingState.references) {
+        const ref = referencesMap[symbol.contents] || {
+            contents: symbol.contents,
+            locations: [],
+            kind: symbol.kind,
         };
-    });
+        ref.locations.push(symbol.location);
+        referencesMap[symbol.contents] = ref;
+    }
+    const references = Object.values(referencesMap);
+
     index.setPassages(uri, indexingState.passages);
     index.setDefinitions(uri, indexingState.definitions);
     index.setReferences(uri, references);

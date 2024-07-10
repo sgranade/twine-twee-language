@@ -1,6 +1,6 @@
 import "mocha";
 import { expect } from "chai";
-import { DiagnosticSeverity, Range } from "vscode-languageserver";
+import { DiagnosticSeverity, Location, Range } from "vscode-languageserver";
 
 import { ETokenType } from "../../../../tokens";
 import { MockCallbacks, buildParsingState } from "../../../builders";
@@ -10,6 +10,7 @@ import { Token } from "../../../../passage-text-parsers/chapbook/inserts";
 import * as uutEmbedPassage from "../../../../passage-text-parsers/chapbook/inserts/embed-passage";
 import * as uutLink from "../../../../passage-text-parsers/chapbook/inserts/link";
 import * as uutRevealLink from "../../../../passage-text-parsers/chapbook/inserts/reveal-link";
+import { TwineSymbolKind } from "../../../../project-index";
 
 describe("Inserts", () => {
     describe("Embed Passage", () => {
@@ -21,7 +22,7 @@ describe("Inserts", () => {
             });
             const chapbookState: ChapbookParsingState = {
                 passageTokens: {},
-                modifierType: 0,
+                modifierKind: 0,
             };
             const args = buildInsertTokens({
                 firstArgument: '"Passage Ref"',
@@ -43,12 +44,13 @@ describe("Inserts", () => {
         it("should capture the passage reference for the first argument", () => {
             const callbacks = new MockCallbacks();
             const state = buildParsingState({
+                uri: "fake-uri",
                 content: '{embed passage: "Passage Ref"}',
                 callbacks: callbacks,
             });
             const chapbookState: ChapbookParsingState = {
                 passageTokens: {},
-                modifierType: 0,
+                modifierKind: 0,
             };
             const args = buildInsertTokens({
                 firstArgument: '"Passage Ref"',
@@ -57,9 +59,16 @@ describe("Inserts", () => {
 
             uutEmbedPassage.embedPassage.parse(args, state, chapbookState);
 
-            expect(callbacks.passageReferences).to.eql({
-                "Passage Ref": [Range.create(0, 11, 0, 22)],
-            });
+            expect(callbacks.references).to.eql([
+                {
+                    contents: "Passage Ref",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(0, 11, 0, 22)
+                    ),
+                    kind: TwineSymbolKind.Passage,
+                },
+            ]);
         });
 
         it("should log an error for a non-string first argument", () => {
@@ -70,7 +79,7 @@ describe("Inserts", () => {
             });
             const chapbookState: ChapbookParsingState = {
                 passageTokens: {},
-                modifierType: 0,
+                modifierKind: 0,
             };
             const args = buildInsertTokens({
                 firstArgument: "Passage Ref",
@@ -92,7 +101,7 @@ describe("Inserts", () => {
             const state = buildParsingState({});
             const chapbookState: ChapbookParsingState = {
                 passageTokens: {},
-                modifierType: 0,
+                modifierKind: 0,
             };
             const args = buildInsertTokens({
                 firstArgument: "'https://google.com/'",
@@ -119,7 +128,7 @@ describe("Inserts", () => {
             });
             const chapbookState: ChapbookParsingState = {
                 passageTokens: {},
-                modifierType: 0,
+                modifierKind: 0,
             };
             const args = buildInsertTokens({
                 firstArgument: '"Passage Ref"',
@@ -141,12 +150,13 @@ describe("Inserts", () => {
         it("should capture the passage reference for a first argument that's a passage", () => {
             const callbacks = new MockCallbacks();
             const state = buildParsingState({
+                uri: "fake-uri",
                 content: '{link to: "Passage Ref"}',
                 callbacks: callbacks,
             });
             const chapbookState: ChapbookParsingState = {
                 passageTokens: {},
-                modifierType: 0,
+                modifierKind: 0,
             };
             const args = buildInsertTokens({
                 firstArgument: '"Passage Ref"',
@@ -155,9 +165,16 @@ describe("Inserts", () => {
 
             uutLink.link.parse(args, state, chapbookState);
 
-            expect(callbacks.passageReferences).to.eql({
-                "Passage Ref": [Range.create(0, 11, 0, 22)],
-            });
+            expect(callbacks.references).to.eql([
+                {
+                    contents: "Passage Ref",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(0, 11, 0, 22)
+                    ),
+                    kind: TwineSymbolKind.Passage,
+                },
+            ]);
         });
 
         it("should set a string token for a label property", () => {
@@ -168,7 +185,7 @@ describe("Inserts", () => {
             });
             const chapbookState: ChapbookParsingState = {
                 passageTokens: {},
-                modifierType: 0,
+                modifierKind: 0,
             };
             const args = buildInsertTokens({
                 firstArgument: '"Passage Ref"',
@@ -199,7 +216,7 @@ describe("Inserts", () => {
             });
             const chapbookState: ChapbookParsingState = {
                 passageTokens: {},
-                modifierType: 0,
+                modifierKind: 0,
             };
             const args = buildInsertTokens({ name: "reveal link", nameAt: 1 });
 
@@ -222,7 +239,7 @@ describe("Inserts", () => {
             });
             const chapbookState: ChapbookParsingState = {
                 passageTokens: {},
-                modifierType: 0,
+                modifierKind: 0,
             };
             const args = buildInsertTokens({});
             args.props = {
@@ -247,12 +264,13 @@ describe("Inserts", () => {
         it("should create a passage reference for the passage property", () => {
             const callbacks = new MockCallbacks();
             const state = buildParsingState({
+                uri: "fake-uri",
                 content: '{reveal link, passage: "Passage Ref"}',
                 callbacks: callbacks,
             });
             const chapbookState: ChapbookParsingState = {
                 passageTokens: {},
-                modifierType: 0,
+                modifierKind: 0,
             };
             const args = buildInsertTokens({});
             args.props = {
@@ -264,9 +282,16 @@ describe("Inserts", () => {
 
             uutRevealLink.revealLink.parse(args, state, chapbookState);
 
-            expect(callbacks.passageReferences).to.eql({
-                "Passage Ref": [Range.create(0, 24, 0, 35)],
-            });
+            expect(callbacks.references).to.eql([
+                {
+                    contents: "Passage Ref",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(0, 24, 0, 35)
+                    ),
+                    kind: TwineSymbolKind.Passage,
+                },
+            ]);
         });
     });
 });

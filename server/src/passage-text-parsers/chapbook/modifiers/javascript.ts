@@ -1,4 +1,4 @@
-import { ModifierType } from "../chapbook-parser";
+import { ModifierKind } from "../chapbook-parser";
 import { ModifierParser } from "./types";
 
 export const javascript: ModifierParser = {
@@ -6,6 +6,6 @@ export const javascript: ModifierParser = {
     match: /^javascript$/i,
     completions: ["JavaScript"],
     parse(text, state, chapbookState) {
-        chapbookState.modifierType = ModifierType.Javascript;
+        chapbookState.modifierKind = ModifierKind.Javascript;
     },
 };

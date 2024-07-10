@@ -2,7 +2,7 @@ import { Diagnostic, Range } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { EmbeddedDocument } from "../embedded-languages";
-import { Label, Passage, StoryData } from "../project-index";
+import { Passage, StoryData, Symbol } from "../project-index";
 import { ParserCallbacks, ParsingState } from "../parser";
 import { defaultDiagnosticsOptions } from "../server-options";
 import { SemanticToken } from "../tokens";
@@ -50,13 +50,13 @@ export function buildParsingState({
 
 export class MockCallbacks implements ParserCallbacks {
     public passages: Passage[] = [];
-    public passageReferences: Record<string, Range[]> = {};
+    public definitions: Symbol[] = [];
+    public references: Symbol[] = [];
     public passageContents: string[] = [];
     public storyTitle?: string;
     public storyTitleRange?: Range;
     public storyData?: StoryData;
     public storyDataRange?: Range;
-    public definitions: Label[] = [];
     public embeddedDocuments: EmbeddedDocument[] = [];
     public tokens: SemanticToken[] = [];
     public errors: Diagnostic[] = [];
@@ -64,10 +64,11 @@ export class MockCallbacks implements ParserCallbacks {
     onPassage(passage: Passage): void {
         this.passages.push(passage);
     }
-    onPassageReference(passageName: string, range: Range): void {
-        if (this.passageReferences[passageName] === undefined)
-            this.passageReferences[passageName] = [];
-        this.passageReferences[passageName].push(range);
+    onSymbolDefinition(symbol: Symbol): void {
+        this.definitions.push(symbol);
+    }
+    onSymbolReference(symbol: Symbol): void {
+        this.references.push(symbol);
     }
     onStoryTitle(title: string, range: Range): void {
         this.storyTitle = title;
@@ -85,8 +86,5 @@ export class MockCallbacks implements ParserCallbacks {
     }
     onParseError(error: Diagnostic): void {
         this.errors.push(error);
-    }
-    onSymbolDefinition(label: Label): void {
-        this.definitions.push(label);
     }
 }

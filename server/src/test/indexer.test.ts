@@ -114,7 +114,7 @@ describe("Indexer", () => {
             ]);
         });
 
-        it("should add passage references to the index", () => {
+        it("should add references to the index", () => {
             const doc = buildDocument({
                 uri: "test-uri",
                 content: "::Passage 1\nYup\n\n",
@@ -134,20 +134,21 @@ describe("Indexer", () => {
                         state: ParsingState
                     ) => {
                         if (passageText === "Yup\n\n")
-                            state.callbacks.onPassageReference(
-                                "Other Passage",
-                                Range.create(1, 2, 3, 4)
-                            );
+                            state.callbacks.onSymbolReference({
+                                contents: "Other Passage",
+                                location: Location.create(
+                                    "test-uri",
+                                    Range.create(1, 2, 3, 4)
+                                ),
+                                kind: 1,
+                            });
                     },
                 };
             });
 
             uut.updateProjectIndex(doc, true, index);
             mockFunction.restore();
-            const result = index.getReferences(
-                "test-uri",
-                TwineSymbolKind.Passage
-            );
+            const result = index.getReferences("test-uri", 1);
 
             expect(result).to.eql([
                 {
@@ -155,7 +156,7 @@ describe("Indexer", () => {
                     locations: [
                         Location.create("test-uri", Range.create(1, 2, 3, 4)),
                     ],
-                    kind: TwineSymbolKind.Passage,
+                    kind: 1,
                 },
             ]);
         });

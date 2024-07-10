@@ -1,4 +1,4 @@
-import { ModifierType } from "../chapbook-parser";
+import { ModifierKind } from "../chapbook-parser";
 import { ModifierParser } from "./types";
 
 export const css: ModifierParser = {
@@ -6,6 +6,6 @@ export const css: ModifierParser = {
     match: /^css$/i,
     completions: ["CSS"],
     parse(text, state, chapbookState) {
-        chapbookState.modifierType = ModifierType.Css;
+        chapbookState.modifierKind = ModifierKind.Css;
     },
 };
