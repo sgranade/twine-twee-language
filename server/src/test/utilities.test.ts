@@ -142,6 +142,14 @@ describe("Utilities", () => {
             expect(result).to.equal("out {in} out");
         });
 
+        it('should handle delimiters that aren\'t in the standard set of (), {}, or ""', () => {
+            const text = "/in / and so on";
+
+            const result = uut.extractToMatchingDelimiter(text, "/", "/", 1);
+
+            expect(result).to.equal("in ");
+        });
+
         it("should only match starting at a pased index", () => {
             const text = "(outer (inner) outer) and so on";
 

@@ -110,7 +110,7 @@ export function extractToMatchingDelimiter(
     } else if (closeDelimiter === ")") {
         match = parensSearch;
     } else if (openDelimiter === closeDelimiter) {
-        match = RegExp(`(?<!\\\\)\\${openDelimiter})`, "g");
+        match = RegExp(`(?<!\\\\)\\${openDelimiter}`, "g");
     } else {
         match = RegExp(
             `(?<!\\\\)(\\${openDelimiter}|\\${closeDelimiter})`,
