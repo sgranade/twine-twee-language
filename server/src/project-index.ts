@@ -446,6 +446,7 @@ export class Index implements ProjectIndex {
     getIndexedUris(): readonly string[] {
         const s = new Set([
             ...Object.keys(this._passages),
+            ...Object.keys(this._definitions),
             ...Object.keys(this._references),
             ...Object.keys(this._embeddedDocuments),
             ...Object.keys(this._semanticTokens),

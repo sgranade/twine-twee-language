@@ -992,6 +992,15 @@ describe("Project Index", () => {
                 expect(result).to.eql(["fake-uri"]);
             });
 
+            it("should return URIs from definitions", () => {
+                const index = new uut.Index();
+                index.setDefinitions("fake-uri", []);
+
+                const result = index.getIndexedUris();
+
+                expect(result).to.eql(["fake-uri"]);
+            });
+
             it("should return URIs from references", () => {
                 const index = new uut.Index();
                 index.setReferences("fake-uri", []);
