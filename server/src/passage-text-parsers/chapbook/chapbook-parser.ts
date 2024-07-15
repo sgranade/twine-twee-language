@@ -27,7 +27,7 @@ import {
 } from "./inserts";
 import { all as allModifiers } from "./modifiers";
 import { parseJSExpression } from "../../js-parser";
-import { Symbol, TwineSymbolKind } from "../../project-index";
+import { ProjectIndex, Symbol, TwineSymbolKind } from "../../project-index";
 
 const varsSepPattern = /^--(\r?\n|$)/m;
 const conditionPattern = /((\((.+?)\)?)\s*)([^)]*)$/;
@@ -37,10 +37,12 @@ const lineExtractionPattern = /^([ \t]*?)\b(.*)$/gm;
 /**
  * Kind of a Chapbook symbol.
  */
-export enum ChapbookSymbolKind {
-    Modifier = TwineSymbolKind._end + 1,
-    Insert,
-}
+export const OChapbookSymbolKind = {
+    Modifier: TwineSymbolKind._end + 1,
+    Insert: TwineSymbolKind._end + 2,
+};
+export type ChapbookSymbolKind =
+    (typeof OChapbookSymbolKind)[keyof typeof OChapbookSymbolKind];
 
 export interface ChapbookSymbol extends Symbol {
     match: RegExp;
@@ -80,6 +82,30 @@ export interface ChapbookParsingState extends StoryFormatParsingState {
 const varInsertPattern = /^({\s*)(\S+)\s*}$/;
 
 /**
+ * Get Chapbook-specific symbol definitions across all indexed documents.
+ *
+ * @param kind Kind of Chapbook symbol definitions to return.
+ * @param index Project index.
+ * @returns List of definitions.
+ */
+export function getChapbookDefinitions(
+    kind: ChapbookSymbolKind,
+    index: ProjectIndex
+): ChapbookSymbol[] {
+    const customSymbols: ChapbookSymbol[] = [];
+    for (const uri of index.getIndexedUris()) {
+        customSymbols.push(
+            ...(index
+                .getDefinitions(uri, kind)
+                ?.filter<ChapbookSymbol>((x): x is ChapbookSymbol =>
+                    ChapbookSymbol.is(x)
+                ) || [])
+        );
+    }
+    return customSymbols;
+}
+
+/**
  * Parse a custom insert or modifier defined in the Twine story.
  *
  * @param contents Contents of the custom insert or modifier.
@@ -115,7 +141,7 @@ function parseCustomInsertOrModifier(
 
     // Custom inserts must have a space in their match object
     if (
-        symbolKind === ChapbookSymbolKind.Insert &&
+        symbolKind === OChapbookSymbolKind.Insert &&
         matchInnards.indexOf(" ") === -1 &&
         matchInnards.indexOf("\\s") === -1
     ) {
@@ -241,9 +267,9 @@ function parseEngineExtension(
 
         let symbolKind: ChapbookSymbolKind | undefined;
         if (m[1] === "modifiers") {
-            symbolKind = ChapbookSymbolKind.Modifier;
+            symbolKind = OChapbookSymbolKind.Modifier;
         } else if (m[1] === "inserts") {
-            symbolKind = ChapbookSymbolKind.Insert;
+            symbolKind = OChapbookSymbolKind.Insert;
         }
         if (symbolKind !== undefined) {
             parseCustomInsertOrModifier(
@@ -323,7 +349,7 @@ function parseInsertContents(
             createSymbolFor(
                 tokens.name.text,
                 tokens.name.at,
-                ChapbookSymbolKind.Insert,
+                OChapbookSymbolKind.Insert,
                 state
             )
         );
@@ -784,7 +810,7 @@ function parseModifier(
                     createSymbolFor(
                         remainingModifier,
                         tokenIndex,
-                        ChapbookSymbolKind.Modifier,
+                        OChapbookSymbolKind.Modifier,
                         state
                     )
                 );

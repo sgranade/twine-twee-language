@@ -1,6 +1,7 @@
 import { StoryFormatParser } from "..";
 import { parsePassageText } from "./chapbook-parser";
 import { generateCompletions } from "./chapbook-completions";
+import { getDefinitionAt } from "./chapbook-definitions";
 import { generateDiagnostics } from "./chapbook-diagnostics";
 
 /**
@@ -18,5 +19,6 @@ export function getChapbookParser(
         parsePassageText: parsePassageText,
         generateCompletions: generateCompletions,
         generateDiagnostics: generateDiagnostics,
+        getDefinitionAt: getDefinitionAt,
     };
 }

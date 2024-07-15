@@ -13,5 +13,8 @@ export function getDefinitionAt(
     let definition = index.getDefinitionBySymbolAt(document.uri, position);
     if (definition !== undefined) return definition.location;
 
-    return undefined;
+    // Second: check the story format
+    return getStoryFormatParser(
+        index.getStoryData()?.storyFormat
+    )?.getDefinitionAt(document, position, index);
 }

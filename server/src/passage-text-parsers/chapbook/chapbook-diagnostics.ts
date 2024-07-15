@@ -3,7 +3,7 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { ProjectIndex, References } from "../../project-index";
 import { DiagnosticsOptions } from "../../server-options";
-import { ChapbookSymbol, ChapbookSymbolKind } from "./chapbook-parser";
+import { getChapbookDefinitions, OChapbookSymbolKind } from "./chapbook-parser";
 
 /**
  * Generate Chapbook-specific diagnostics.
@@ -25,28 +25,18 @@ export function generateDiagnostics(
     if (!diagnosticsOptions.warnings.unknownMacro) return diagnostics;
 
     const insertReferences: References[] =
-        index.getReferences(document.uri, ChapbookSymbolKind.Insert) || [];
+        index.getReferences(document.uri, OChapbookSymbolKind.Insert) || [];
     const modifierReferences: References[] =
-        index.getReferences(document.uri, ChapbookSymbolKind.Modifier) || [];
+        index.getReferences(document.uri, OChapbookSymbolKind.Modifier) || [];
 
-    const customInserts: ChapbookSymbol[] = [];
-    const customModifiers: ChapbookSymbol[] = [];
-    for (const uri of index.getIndexedUris()) {
-        customInserts.push(
-            ...(index
-                .getDefinitions(uri, ChapbookSymbolKind.Insert)
-                ?.filter<ChapbookSymbol>((x): x is ChapbookSymbol =>
-                    ChapbookSymbol.is(x)
-                ) || [])
-        );
-        customModifiers.push(
-            ...(index
-                .getDefinitions(uri, ChapbookSymbolKind.Modifier)
-                ?.filter<ChapbookSymbol>((x): x is ChapbookSymbol =>
-                    ChapbookSymbol.is(x)
-                ) || [])
-        );
-    }
+    const customInserts = getChapbookDefinitions(
+        OChapbookSymbolKind.Insert,
+        index
+    );
+    const customModifiers = getChapbookDefinitions(
+        OChapbookSymbolKind.Modifier,
+        index
+    );
 
     for (const insertRef of insertReferences) {
         if (

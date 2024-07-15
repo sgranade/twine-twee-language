@@ -1,4 +1,9 @@
-import { CompletionList, Diagnostic, Position } from "vscode-languageserver";
+import {
+    CompletionList,
+    Definition,
+    Diagnostic,
+    Position,
+} from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { StoryFormat } from "../client-server";
@@ -53,6 +58,19 @@ export interface StoryFormatParser {
         index: ProjectIndex,
         diagnosticsOptions: DiagnosticsOptions
     ): Diagnostic[];
+    /**
+     * Get a symbol's definition by a position in a document.
+     *
+     * @param document Document to get definition at.
+     * @param position Position in the document to find the definition at.
+     * @param index Twine project index.
+     * @returns Definition, or undefined for no definition at the given position.
+     */
+    getDefinitionAt(
+        document: TextDocument,
+        position: Position,
+        index: ProjectIndex
+    ): Definition | undefined;
 }
 
 /**
