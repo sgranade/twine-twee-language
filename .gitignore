@@ -1,5 +1,12 @@
+# Output and Node
 out
 node_modules
 client/server
+
+# Test and Coverage
 .vscode-test
+.nyc_output
+coverage.lcov
+
+# Other
 TODO.md

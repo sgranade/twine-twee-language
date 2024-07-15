@@ -99,12 +99,12 @@
 		"configuration": {
 			"title": "Twine (Twee 3) Language",
 			"properties": {
-				"twineTweeLanguage.twee-3.warnings.unknownMacro" : {
+				"twineTweeLanguage.twee-3.warnings.unknownMacro": {
 					"type": "boolean",
 					"default": "true",
 					"description": "Warn about unrecognized macros (in Sugarcube) or inserts and modifiers (in Chapbook)."
 				},
-				"twineTweeLanguage.twee-3.warnings.unknownPassage" : {
+				"twineTweeLanguage.twee-3.warnings.unknownPassage": {
 					"type": "boolean",
 					"default": "true",
 					"markdownDescription": "Warn about references to unrecognized passages, such as in `[[passage]]` links."
@@ -128,7 +128,8 @@
 		"vscode:prepublish": "npm run compile",
 		"compile": "tsc -b",
 		"watch": "tsc -b -w",
-		"test": "mocha",
+		"test": "nyc mocha",
+		"coverage": "nyc report --reporter=text-lcov > coverage.lcov",
 		"lint": "eslint ./client/src ./server/src",
 		"postinstall": "cd client && npm install && cd ../server && npm install && cd .."
 	},
@@ -142,6 +143,7 @@
 		"chai": "^4.4.1",
 		"eslint": "^9.3.0",
 		"mocha": "^10.3.0",
+		"nyc": "^17.0.0",
 		"prettier": "3.2.5",
 		"sinon": "^17.0.2",
 		"ts-mock-imports": "^1.3.8",
