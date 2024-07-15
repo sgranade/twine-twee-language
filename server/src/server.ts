@@ -37,10 +37,15 @@ import {
     StoryFormat,
 } from "./client-server";
 import { generateCompletions } from "./completions";
+import { getDefinitionAt } from "./definition";
 import { generateHover } from "./hover";
 import { updateProjectIndex } from "./indexer";
 import { Index } from "./project-index";
 import { generateRenames } from "./searches";
+import {
+    DiagnosticsOptions,
+    defaultDiagnosticsOptions,
+} from "./server-options";
 import {
     generateFoldingRanges,
     generateSemanticTokens,
@@ -48,10 +53,6 @@ import {
 } from "./structure";
 import { semanticTokensLegend } from "./tokens";
 import { generateDiagnostics } from "./validator";
-import {
-    DiagnosticsOptions,
-    defaultDiagnosticsOptions,
-} from "./server-options";
 
 const connection: Connection = createConnection(ProposedFeatures.all);
 
@@ -272,12 +273,11 @@ connection.onCompletion(
 );
 
 connection.onDefinition((params: DefinitionParams): Definition | undefined => {
-    const definition = projectIndex.getDefinitionAt(
-        params.textDocument.uri,
-        params.position
-    );
-    if (definition !== undefined) return definition.location;
-    return undefined;
+    const document = documents.get(params.textDocument.uri);
+    if (document === undefined) {
+        return undefined;
+    }
+    return getDefinitionAt(document, params.position, projectIndex);
 });
 
 connection.onDidChangeConfiguration(async (change) => {
@@ -330,7 +330,7 @@ connection.onNotification(CustomMessages.RequestReindex, () => {
 });
 
 connection.onPrepareRename((params: PrepareRenameParams): Range | undefined => {
-    const symbol = projectIndex.getSymbolAt(
+    const symbol = projectIndex.getDefinitionAt(
         params.textDocument.uri,
         params.position
     );
@@ -350,7 +350,7 @@ connection.onRenameRequest((params: RenameParams): WorkspaceEdit | null => {
 });
 
 connection.onReferences((params: ReferenceParams): Location[] | undefined => {
-    const references = projectIndex.getReferencesAt(
+    const references = projectIndex.getReferencesToSymbolAt(
         params.textDocument.uri,
         params.position,
         params.context.includeDeclaration

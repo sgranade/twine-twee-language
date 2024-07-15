@@ -15,7 +15,11 @@ export function generateRenames(
     newName: string,
     index: ProjectIndex
 ): WorkspaceEdit | null {
-    const referencesToChange = index.getReferencesAt(uri, position, true);
+    const referencesToChange = index.getReferencesToSymbolAt(
+        uri,
+        position,
+        true
+    );
     if (referencesToChange === undefined) {
         return null;
     }

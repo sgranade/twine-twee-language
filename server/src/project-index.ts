@@ -176,28 +176,38 @@ export interface ProjectIndex {
     getParseErrors(uri: string): readonly Diagnostic[];
 
     /**
-     * Find the location of an indexed symbol by that symbol's name.
+     * Find the location of an indexed symbol by that symbol's name and kind.
      * @param name Symbol name.
      * @param kind Kind of symbol.
      * @returns Symbol's location, or undefined if not found.
      */
-    getSymbolLocation(
+    getSymbolLocationByName(
         name: string,
         kind: TwineSymbolKind
     ): Location | undefined;
     /**
-     * Get the indexed symbol (if any) at a location in a document.
+     * Get the symbol definition (if any) at a location in a document.
      * @param uri Document URI.
-     * @param position Position.
-     * @returns Symbol, or undefined if not found.
+     * @param position Position in the document.
+     * @returns Symbol, or undefined if none is found.
      */
-    getSymbolAt(uri: string, position: Position): Symbol | undefined;
+    getDefinitionAt(uri: string, position: Position): Symbol | undefined;
+    /**
+     * Get the symbol reference at a location in a document.
+     * @param uri Document URI.
+     * @param position Position in the document.
+     * @returns References at that location, or undefined if none are found.
+     */
+    getReferencesAt(uri: string, position: Position): References | undefined;
     /**
      * Get the location of a symbol's definition based on a symbol or single reference at a location in a document.
      * @param uri Document URI.
      * @param position Position in the document where the symbol or symbol reference should be.
      */
-    getDefinitionAt(uri: string, position: Position): Symbol | undefined;
+    getDefinitionBySymbolAt(
+        uri: string,
+        position: Position
+    ): Symbol | undefined;
     /**
      * Get all references to a symbol based on a symbol or single reference in a document.
      * @param uri Document URI.
@@ -205,7 +215,7 @@ export interface ProjectIndex {
      * @param includeDeclaration True if the symbol declaration should be included as a reference.
      * @returns The references, if there is a symbol with references at the position.
      */
-    getReferencesAt(
+    getReferencesToSymbolAt(
         uri: string,
         position: Position,
         includeDeclaration: boolean
@@ -326,10 +336,8 @@ export class Index implements ProjectIndex {
         return this._parseErrors[uri] ?? [];
     }
 
-    getSymbolLocation(
-        name: string,
-        kind: TwineSymbolKind
-    ): Location | undefined {
+    getSymbolLocationByName(name: string, kind: number): Location | undefined {
+        // Special case passages, since they're not stored as definitions
         if (kind === TwineSymbolKind.Passage) {
             for (const passages of Object.values(this._passages)) {
                 const match = passages.find((p) => p.name.contents === name);
@@ -339,9 +347,17 @@ export class Index implements ProjectIndex {
             }
         }
 
+        for (const defsPerKind of Object.values(this._definitions)) {
+            const defs = defsPerKind[kind] || [];
+            const match = defs.find((d) => d.contents === name);
+            if (match !== undefined) {
+                return match.location;
+            }
+        }
+
         return undefined;
     }
-    getSymbolAt(uri: string, position: Position): Symbol | undefined {
+    getDefinitionAt(uri: string, position: Position): Symbol | undefined {
         // See if the index has a passage name here
         const passage = this.getPassages(uri)?.find((p) =>
             positionInRange(position, p.name.location.range)
@@ -354,48 +370,66 @@ export class Index implements ProjectIndex {
             };
         }
 
+        // Check our other defintions
+        const definitionsPerKind = this._definitions[uri] || {};
+        for (const defs of Object.values(definitionsPerKind)) {
+            const match = defs.find((def) =>
+                positionInRange(position, def.location.range)
+            );
+            if (match !== undefined) {
+                return match;
+            }
+        }
+
         return undefined;
     }
-    getDefinitionAt(uri: string, position: Position): Symbol | undefined {
+    getReferencesAt(uri: string, position: Position): References | undefined {
         // Do we have a reference at the position?
         const referencesPerKind = this._references[uri] || {};
-        for (const [symbolKindAsString, localReferences] of Object.entries(
-            referencesPerKind
-        )) {
+        for (const localReferences of Object.values(referencesPerKind)) {
             for (const ref of localReferences) {
                 const match = ref.locations.find((loc) =>
                     positionInRange(position, loc.range)
                 );
-
-                // If we do have a reference, see if we have a matching symbol
                 if (match !== undefined) {
-                    const symbolType = Number(symbolKindAsString);
-                    const symbolLocation = this.getSymbolLocation(
-                        ref.contents,
-                        symbolType
-                    );
-                    if (symbolLocation !== undefined) {
-                        return {
-                            contents: ref.contents,
-                            location: symbolLocation,
-                            kind: symbolType,
-                        };
-                    }
+                    return ref;
                 }
+            }
+        }
+        return undefined;
+    }
+    getDefinitionBySymbolAt(
+        uri: string,
+        position: Position
+    ): Symbol | undefined {
+        // Do we have a reference at the position?
+        const ref = this.getReferencesAt(uri, position);
+        if (ref !== undefined) {
+            // See if we have a matching symbol for this reference
+            const symbolLocation = this.getSymbolLocationByName(
+                ref.contents,
+                ref.kind
+            );
+            if (symbolLocation !== undefined) {
+                return {
+                    contents: ref.contents,
+                    location: symbolLocation,
+                    kind: ref.kind,
+                };
             }
         }
 
         // If we don't have a reference, do we have a symbol at the position?
-        const symbol = this.getSymbolAt(uri, position);
+        const symbol = this.getDefinitionAt(uri, position);
         return symbol;
     }
-    getReferencesAt(
+    getReferencesToSymbolAt(
         uri: string,
         position: Position,
         includeDeclaration: boolean
     ): References | undefined {
         // First, see if we can get to a definition at the position
-        const symbol = this.getDefinitionAt(uri, position);
+        const symbol = this.getDefinitionBySymbolAt(uri, position);
         if (symbol === undefined) return undefined;
 
         // Next, scan through all document references to find this symbol's specific references.
@@ -404,10 +438,8 @@ export class Index implements ProjectIndex {
             locations: [],
             kind: symbol.kind,
         };
-        for (const [refUri, localReferencesPerType] of Object.entries(
-            this._references
-        )) {
-            const localReferences = localReferencesPerType[symbol.kind];
+        for (const referencesPerKind of Object.values(this._references)) {
+            const localReferences = referencesPerKind[symbol.kind];
             if (localReferences !== undefined) {
                 const ref = localReferences.find(
                     (ref) => ref.contents === symbol.contents
