@@ -7,8 +7,9 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { doValidation } from "./embedded-languages";
 import { ProjectIndex, TwineSymbolKind } from "./project-index";
-import { comparePositions, containingRange } from "./utilities";
+import { getStoryFormatParser } from "./passage-text-parsers";
 import { DiagnosticsOptions } from "./server-options";
+import { comparePositions, containingRange } from "./utilities";
 
 /**
  * Validate a document's passages.
@@ -144,6 +145,13 @@ export async function generateDiagnostics(
     // Validate passage references
     diagnostics.push(
         ...validatePassageReferences(document, index, diagnosticsOptions)
+    );
+
+    // If we have a story format, let it generate its own diagnostics
+    diagnostics.push(
+        ...(getStoryFormatParser(
+            index.getStoryData()?.storyFormat
+        )?.generateDiagnostics(document, index, diagnosticsOptions) || [])
     );
 
     return diagnostics;

@@ -1,6 +1,7 @@
 import { StoryFormatParser } from "..";
 import { parsePassageText } from "./chapbook-parser";
 import { generateCompletions } from "./chapbook-completions";
+import { generateDiagnostics } from "./chapbook-diagnostics";
 
 /**
  * Get passage text parser for the Chapbook story format.
@@ -16,5 +17,6 @@ export function getChapbookParser(
         id: "chapbook-any",
         parsePassageText: parsePassageText,
         generateCompletions: generateCompletions,
+        generateDiagnostics: generateDiagnostics,
     };
 }

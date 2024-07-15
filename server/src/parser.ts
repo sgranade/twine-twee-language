@@ -129,6 +129,28 @@ export function createRangeFor(
 }
 
 /**
+ * Create a symbol for text in a document.
+ *
+ * @param text Document text for the symbol.
+ * @param at Index where the text occurs in the document (zero-based).
+ * @param kind Symbol kind.
+ * @param state Parsing state.
+ * @returns The symbol.
+ */
+export function createSymbolFor(
+    text: string,
+    at: number,
+    kind: number,
+    state: ParsingState
+): Symbol {
+    return {
+        contents: text,
+        location: createLocationFor(text, at, state),
+        kind: kind,
+    };
+}
+
+/**
  * Log an error associated with text in a document.
  *
  * @param text Document text that has the error.

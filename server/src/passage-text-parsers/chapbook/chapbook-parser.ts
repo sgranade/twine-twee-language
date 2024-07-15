@@ -8,6 +8,8 @@ import {
     logSemanticTokenFor,
     parseLinks,
     parsePassageReference,
+    createSymbolFor,
+    createLocationFor,
 } from "../../parser";
 import { ETokenType, ETokenModifier } from "../../tokens";
 import {
@@ -25,6 +27,7 @@ import {
 } from "./inserts";
 import { all as allModifiers } from "./modifiers";
 import { parseJSExpression } from "../../js-parser";
+import { Symbol, TwineSymbolKind } from "../../project-index";
 
 const varsSepPattern = /^--(\r?\n|$)/m;
 const conditionPattern = /((\((.+?)\)?)\s*)([^)]*)$/;
@@ -32,7 +35,29 @@ const modifierPattern = /^([ \t]*)\[([^[].+[^\]])\](\s*?)(?:\r?\n|$)/gm;
 const lineExtractionPattern = /^([ \t]*?)\b(.*)$/gm;
 
 /**
- * Type of Chapbook modifier
+ * Kind of a Chapbook symbol.
+ */
+export enum ChapbookSymbolKind {
+    Modifier = TwineSymbolKind._end + 1,
+    Insert,
+}
+
+export interface ChapbookSymbol extends Symbol {
+    match: RegExp;
+}
+export namespace ChapbookSymbol {
+    /**
+     * Type guard for ChapbookSymbol.
+     */
+    export function is(val: any): val is ChapbookSymbol {
+        if (typeof val !== "object" || Array.isArray(val) || val === null)
+            return false;
+        return (val as ChapbookSymbol).match !== undefined;
+    }
+}
+
+/**
+ * Type of Chapbook modifier.
  */
 export enum ModifierKind {
     None,
@@ -54,11 +79,101 @@ export interface ChapbookParsingState extends StoryFormatParsingState {
 
 const varInsertPattern = /^({\s*)(\S+)\s*}$/;
 
+/**
+ * Parse a custom insert or modifier defined in the Twine story.
+ *
+ * @param contents Contents of the custom insert or modifier.
+ * @param contentsIndex Index in the document where the contents begin (zero-based).
+ * @param symbolKind Kind of contents being parsed.
+ * @param state Parsing state.
+ */
+function parseCustomInsertOrModifier(
+    contents: string,
+    contentsIndex: number,
+    symbolKind: ChapbookSymbolKind,
+    state: ParsingState
+): void {
+    // Extract the "match" property contents
+    const m = /(?<=({|,)\s*)match:\s?\//s.exec(contents);
+    if (m === null) return;
+    const matchInnardsNdx = m.index + m[0].length;
+    const matchInnards = extractToMatchingDelimiter(
+        contents,
+        "/",
+        "/",
+        matchInnardsNdx
+    );
+    if (matchInnards === undefined) return;
+
+    const matchFlagsNdx = matchInnardsNdx + matchInnards.length + 1; // + 1 to skip the trailing "/"
+
+    const endPattern = /,|}|\r?\n|$/g;
+    endPattern.lastIndex = matchFlagsNdx;
+    const endNdx = endPattern.exec(contents)?.index;
+    if (endNdx === undefined) return;
+    let matchFlags = contents.slice(matchFlagsNdx, endNdx);
+
+    // Custom inserts must have a space in their match object
+    if (
+        symbolKind === ChapbookSymbolKind.Insert &&
+        matchInnards.indexOf(" ") === -1 &&
+        matchInnards.indexOf("\\s") === -1
+    ) {
+        logErrorFor(
+            matchInnards,
+            matchInnardsNdx + contentsIndex,
+            "Custom inserts must have a space in their match",
+            state
+        );
+    }
+
+    if (matchFlags !== "" && /[^dgimsuvy]/.test(matchFlags)) {
+        logErrorFor(
+            matchFlags,
+            matchFlagsNdx + contentsIndex,
+            "Regular expression flags can only be d, g, i, m, s, u, v, and y",
+            state
+        );
+        matchFlags = "";
+    }
+
+    const fullRegexp = contents.slice(matchInnardsNdx - 1, endNdx);
+
+    // Save the match as a Regex in the associated label
+    try {
+        const regex = new RegExp(matchInnards, matchFlags);
+        const symbol: ChapbookSymbol = {
+            contents: matchInnards,
+            location: createLocationFor(
+                matchInnards,
+                matchInnardsNdx + contentsIndex,
+                state
+            ),
+            kind: symbolKind,
+            match: regex,
+        };
+        state.callbacks.onSymbolDefinition(symbol);
+    } catch (e) {
+        logErrorFor(
+            fullRegexp,
+            matchInnardsNdx - 1 + contentsIndex,
+            `${e}`,
+            state
+        );
+    }
+}
+
+/**
+ * Parse the internals of an `engine.extend()` call.
+ *
+ * @param contents Contents of the `extend()` call.
+ * @param contentsIndex Index in the document where the contents begin (zero-based).
+ * @param state Parsing state.
+ */
 function parseEngineExtension(
     contents: string,
     contentsIndex: number,
-    state: ParsingState,
-    chapbookState: ChapbookParsingState
+    state: ParsingState
 ): void {
     // The contents should be ('version', function())
     // where the function adds the new insert or modifier
@@ -124,10 +239,19 @@ function parseEngineExtension(
         );
         if (addedContents === undefined) continue;
 
+        let symbolKind: ChapbookSymbolKind | undefined;
         if (m[1] === "modifiers") {
-            // TODO handle new modifier
+            symbolKind = ChapbookSymbolKind.Modifier;
         } else if (m[1] === "inserts") {
-            // TODO handle new insert
+            symbolKind = ChapbookSymbolKind.Insert;
+        }
+        if (symbolKind !== undefined) {
+            parseCustomInsertOrModifier(
+                addedContents,
+                contentsIndex + engineTemplatePattern.lastIndex,
+                symbolKind,
+                state
+            );
         } else {
             logWarningFor(
                 `engine.template.${m[1]}`,
@@ -191,16 +315,18 @@ function parseInsertContents(
     state: ParsingState,
     chapbookState: ChapbookParsingState
 ): void {
+    // See if we match a built-in insert
     const insert = allInserts().find((i) => i.match.test(tokens.name.text));
     if (insert === undefined) {
-        if (state.diagnosticsOptions.warnings.unknownMacro) {
-            logWarningFor(
+        // If we don't recognize it, store it as a reference for later validation
+        state.callbacks.onSymbolReference(
+            createSymbolFor(
                 tokens.name.text,
                 tokens.name.at,
-                `Insert "${tokens.name.text}" not recognized`,
+                ChapbookSymbolKind.Insert,
                 state
-            );
-        }
+            )
+        );
         return;
     }
 
@@ -510,8 +636,7 @@ function parseTextSubsection(
                 parseEngineExtension(
                     extendContents,
                     subsectionIndex + ndx,
-                    state,
-                    chapbookState
+                    state
                 );
             }
         }
@@ -648,20 +773,21 @@ function parseModifier(
             break;
         }
 
-        // See if we recognize the modifier (only on the first token!)
+        // See if we're referencing a built-in modifier (only on the first token!)
         if (firstToken) {
             const modifier = modifiers.find((i) =>
                 i.match.test(remainingModifier)
             );
             if (modifier === undefined) {
-                if (state.diagnosticsOptions.warnings.unknownMacro) {
-                    logWarningFor(
+                // If we don't recognize it, store it as a reference for later validation
+                state.callbacks.onSymbolReference(
+                    createSymbolFor(
                         remainingModifier,
                         tokenIndex,
-                        `Modifier "${remainingModifier}" not recognized`,
+                        ChapbookSymbolKind.Modifier,
                         state
-                    );
-                }
+                    )
+                );
             } else {
                 // Handle modifier-specific parsing, which can set the text block state in chapbookState
                 modifier.parse(remainingModifier, state, chapbookState);

@@ -1,9 +1,10 @@
-import { CompletionList, Position } from "vscode-languageserver";
+import { CompletionList, Diagnostic, Position } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { StoryFormat } from "../client-server";
 import { ParsingState } from "../parser";
 import { ProjectIndex } from "../project-index";
+import { DiagnosticsOptions } from "../server-options";
 import { TokenModifier, TokenType } from "../tokens";
 import { getChapbookParser } from "./chapbook";
 
@@ -40,6 +41,18 @@ export interface StoryFormatParser {
         position: Position,
         index: ProjectIndex
     ): CompletionList | null;
+    /**
+     * Generate diagnostics.
+     *
+     * @param document Document to generate diagnostics for.
+     * @param index Twine project index.
+     * @param diagnosticsOptions Diagnostic options.
+     */
+    generateDiagnostics(
+        document: TextDocument,
+        index: ProjectIndex,
+        diagnosticsOptions: DiagnosticsOptions
+    ): Diagnostic[];
 }
 
 /**
