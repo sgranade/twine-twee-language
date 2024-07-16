@@ -3,6 +3,8 @@ import { ArgumentRequirement, InsertParser, ValueType } from "./types";
 
 export const embedPassage: InsertParser = {
     name: "embed passage",
+    description:
+        "Renders the passage named in the insert. This executed any vars section in that passage.",
     match: /^embed\s+passage(\s+named)?/i,
     arguments: {
         firstArgument: {

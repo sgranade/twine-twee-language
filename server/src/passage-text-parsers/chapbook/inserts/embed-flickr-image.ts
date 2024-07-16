@@ -2,6 +2,8 @@ import { ArgumentRequirement, InsertParser } from "./types";
 
 export const embedFlickrImage: InsertParser = {
     name: "embed Flickr",
+    description:
+        "Renders an image hosted on Flickr with alt text specified by `alt`.",
     match: /^embed\s+flickr(\s+image)?/i,
     arguments: {
         firstArgument: {

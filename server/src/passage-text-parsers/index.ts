@@ -2,6 +2,7 @@ import {
     CompletionList,
     Definition,
     Diagnostic,
+    Hover,
     Position,
 } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
@@ -58,6 +59,19 @@ export interface StoryFormatParser {
         index: ProjectIndex,
         diagnosticsOptions: DiagnosticsOptions
     ): Diagnostic[];
+    /**
+     * Generate hover information.
+     *
+     * @param document Document to generate hover information for.
+     * @param position Position in the document to generate hover information.
+     * @param index Project index.
+     * @returns Hover information, or null for no hover information.
+     */
+    generateHover(
+        document: TextDocument,
+        position: Position,
+        index: ProjectIndex
+    ): Hover | null;
     /**
      * Get a symbol's definition by a position in a document.
      *

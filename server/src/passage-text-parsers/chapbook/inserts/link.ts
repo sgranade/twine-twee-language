@@ -5,6 +5,8 @@ import { ArgumentRequirement, InsertParser, ValueType } from "./types";
 
 export const link: InsertParser = {
     name: "link",
+    description:
+        "Renders a link to a passage name or address. `label` may be omitted; Chapbook will use the passage name or URL as label instead.",
     match: /^link\s+to/i,
     arguments: {
         firstArgument: {

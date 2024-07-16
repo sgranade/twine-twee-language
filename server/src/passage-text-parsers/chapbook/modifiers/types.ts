@@ -10,6 +10,10 @@ export interface ModifierParser {
      */
     name: string;
     /**
+     * Description for the modifier. Shown on hover; supports markdown.
+     */
+    description: string;
+    /**
      * Regular expression that matches invocations of this modifier.
      */
     match: RegExp;

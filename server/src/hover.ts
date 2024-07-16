@@ -4,6 +4,7 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 import { doHover } from "./embedded-languages";
 import { ProjectIndex } from "./project-index";
 import { containingRange } from "./utilities";
+import { getStoryFormatParser } from "./passage-text-parsers";
 
 export async function generateHover(
     document: TextDocument,
@@ -11,7 +12,6 @@ export async function generateHover(
     index: ProjectIndex
 ): Promise<Hover | null | undefined> {
     const offset = document.offsetAt(position);
-    let hover: Hover | null | undefined = undefined;
 
     // Embedded documents get to create their own completions
     for (const embeddedDocument of index.getEmbeddedDocuments(document.uri) ||
@@ -22,7 +22,7 @@ export async function generateHover(
                 embeddedDocument.offset +
                     embeddedDocument.document.getText().length
         ) {
-            hover = await doHover(embeddedDocument, offset);
+            const hover = await doHover(embeddedDocument, offset);
 
             // Adjust ranges to be in the parent document and not the sub-document
             if (Hover.is(hover) && hover.range !== undefined) {
@@ -34,9 +34,18 @@ export async function generateHover(
                 );
             }
 
-            break;
+            return hover;
         }
     }
 
-    return hover;
+    // If there's a story format, let its parser provide optional hover information
+    const storyFormat = index.getStoryData()?.storyFormat;
+    if (storyFormat !== undefined) {
+        const parser = getStoryFormatParser(storyFormat);
+        if (parser !== undefined) {
+            return parser.generateHover(document, position, index);
+        }
+    }
+
+    return undefined;
 }

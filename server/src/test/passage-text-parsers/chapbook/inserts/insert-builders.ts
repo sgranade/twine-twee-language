@@ -6,6 +6,7 @@ import {
 
 export function buildInsertParser({
     name = "Mock Insert",
+    description = "Description",
     match = /^mock insert/,
     firstArgRequired = ArgumentRequirement.optional,
     requiredProps = {},
@@ -13,6 +14,7 @@ export function buildInsertParser({
 }): InsertParser {
     return {
         name: name,
+        description: description,
         match: match,
         arguments: {
             firstArgument: { required: firstArgRequired },

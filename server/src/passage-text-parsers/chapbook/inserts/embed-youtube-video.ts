@@ -2,6 +2,7 @@ import { ArgumentRequirement, InsertParser } from "./types";
 
 export const embedYouTubeVideo: InsertParser = {
     name: "embed YouTube video",
+    description: "Renders a video player for a video hosted on YouTube.",
     match: /^embed\s+youtube(\s+video)?/i,
     arguments: {
         firstArgument: {

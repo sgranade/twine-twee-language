@@ -49,7 +49,7 @@ export function generateDiagnostics(
                 ...insertRef.locations.map((loc) =>
                     Diagnostic.create(
                         loc.range,
-                        `Insert ${insertRef.contents} not recognized`,
+                        `Insert "${insertRef.contents}" not recognized`,
                         DiagnosticSeverity.Warning
                     )
                 )
@@ -66,7 +66,7 @@ export function generateDiagnostics(
                 ...modRef.locations.map((loc) =>
                     Diagnostic.create(
                         loc.range,
-                        `Modifier ${modRef.contents} not recognized`,
+                        `Modifier "${modRef.contents}" not recognized`,
                         DiagnosticSeverity.Warning
                     )
                 )

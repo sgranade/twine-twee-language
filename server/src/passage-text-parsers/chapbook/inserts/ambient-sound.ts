@@ -4,6 +4,8 @@ import { ArgumentRequirement, InsertParser, ValueType } from "./types";
 
 export const ambientSound: InsertParser = {
     name: "ambient sound",
+    description:
+        "Begins playing a previously-defined ambient sound. `volume` can be omitted; by default, the ambient sound is played at fulul volume.",
     match: /^ambient\s+sound/i,
     arguments: {
         firstArgument: {
@@ -43,6 +45,7 @@ export const ambientSound: InsertParser = {
 // pretend that the first argument isn't required.
 export const noAmbientSound: InsertParser = {
     name: "no ambient sound",
+    description: "Cancels all playing ambient sounds.",
     match: /^no ambient\s+sound/i,
     arguments: {
         firstArgument: { required: ArgumentRequirement.optional },

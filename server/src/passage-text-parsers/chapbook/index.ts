@@ -3,6 +3,7 @@ import { parsePassageText } from "./chapbook-parser";
 import { generateCompletions } from "./chapbook-completions";
 import { getDefinitionAt } from "./chapbook-definitions";
 import { generateDiagnostics } from "./chapbook-diagnostics";
+import { generateHover } from "./chapbook-hover";
 
 /**
  * Get passage text parser for the Chapbook story format.
@@ -19,6 +20,7 @@ export function getChapbookParser(
         parsePassageText: parsePassageText,
         generateCompletions: generateCompletions,
         generateDiagnostics: generateDiagnostics,
+        generateHover: generateHover,
         getDefinitionAt: getDefinitionAt,
     };
 }

@@ -1144,18 +1144,17 @@ describe("Chapbook", () => {
 
                         parser?.parsePassageText(passage, header.length, state);
                         mockFunction.restore();
-                        const result = callbacks.references;
+                        const result = callbacks.references[1];
 
-                        expect(result).to.eql([
-                            {
-                                contents: "arg",
-                                location: Location.create(
-                                    "fake-uri",
-                                    Range.create(1, 24, 1, 27)
-                                ),
-                                kind: TwineSymbolKind.Passage,
-                            },
-                        ]);
+                        expect(callbacks.references.length).to.equal(2);
+                        expect(result).to.eql({
+                            contents: "arg",
+                            location: Location.create(
+                                "fake-uri",
+                                Range.create(1, 24, 1, 27)
+                            ),
+                            kind: TwineSymbolKind.Passage,
+                        });
                     });
 
                     it("should create a passage semantic token for a first arg that's a passage", () => {
@@ -1220,18 +1219,17 @@ describe("Chapbook", () => {
 
                         parser?.parsePassageText(passage, header.length, state);
                         mockFunction.restore();
-                        const result = callbacks.references;
+                        const result = callbacks.references[1];
 
-                        expect(result).to.eql([
-                            {
-                                contents: "arg",
-                                location: Location.create(
-                                    "fake-uri",
-                                    Range.create(1, 24, 1, 27)
-                                ),
-                                kind: TwineSymbolKind.Passage,
-                            },
-                        ]);
+                        expect(callbacks.references.length).to.equal(2);
+                        expect(result).to.eql({
+                            contents: "arg",
+                            location: Location.create(
+                                "fake-uri",
+                                Range.create(1, 24, 1, 27)
+                            ),
+                            kind: TwineSymbolKind.Passage,
+                        });
                     });
 
                     it("should create a passage semantic token for a non-link first arg that's a urlOrPassage", () => {
@@ -1298,8 +1296,10 @@ describe("Chapbook", () => {
                         mockFunction.restore();
                         const result = callbacks.references;
 
-                        expect(result).to.be.empty;
+                        expect(result.length).to.equal(1); // There should only be the reference to the insert itself
+                        expect(result[0].contents).to.eql("mock insert");
                     });
+
                     it("should create a string semantic token for a link first arg that's a urlOrPassage", () => {
                         const header = ":: Passage\n";
                         const passage =
@@ -1800,6 +1800,7 @@ describe("Chapbook", () => {
                 const index = new Index();
                 const insert: insertsModule.InsertParser = {
                     name: "test insert",
+                    description: "desc",
                     match: /^test\s+insert/i,
                     completions: ["test insert"],
                     arguments: {
@@ -1878,6 +1879,7 @@ describe("Chapbook", () => {
                 const index = new Index();
                 const insert: insertsModule.InsertParser = {
                     name: "test insert",
+                    description: "desc",
                     match: /^test\s+insert/i,
                     completions: ["test insert"],
                     arguments: {
@@ -1920,6 +1922,7 @@ describe("Chapbook", () => {
                 const index = new Index();
                 const insert: insertsModule.InsertParser = {
                     name: "test insert",
+                    description: "desc",
                     match: /^test\s+insert/i,
                     completions: ["test insert"],
                     arguments: {
@@ -1962,6 +1965,7 @@ describe("Chapbook", () => {
                 const index = new Index();
                 const insert: insertsModule.InsertParser = {
                     name: "test insert",
+                    description: "desc",
                     match: /^test\s+insert/i,
                     completions: ["test insert"],
                     arguments: {
@@ -2005,6 +2009,7 @@ describe("Chapbook", () => {
                 const index = new Index();
                 const insert: insertsModule.InsertParser = {
                     name: "test insert",
+                    description: "desc",
                     match: /^test\s+insert/i,
                     completions: ["test insert"],
                     arguments: {
@@ -2049,6 +2054,7 @@ describe("Chapbook", () => {
                 const index = new Index();
                 const insert: insertsModule.InsertParser = {
                     name: "test insert",
+                    description: "desc",
                     match: /^test\s+insert/i,
                     completions: ["test insert"],
                     arguments: {
@@ -2093,6 +2099,7 @@ describe("Chapbook", () => {
                 const index = new Index();
                 const insert: insertsModule.InsertParser = {
                     name: "test insert",
+                    description: "desc",
                     match: /^test\s+insert/i,
                     completions: ["test insert"],
                     arguments: {
@@ -2138,6 +2145,7 @@ describe("Chapbook", () => {
                 const index = new Index();
                 const insert: insertsModule.InsertParser = {
                     name: "test insert",
+                    description: "desc",
                     match: /^test\s+insert/i,
                     completions: ["test insert"],
                     arguments: {
@@ -2186,6 +2194,7 @@ describe("Chapbook", () => {
                 const index = new Index();
                 const insert: insertsModule.InsertParser = {
                     name: "test insert",
+                    description: "desc",
                     match: /^test\s+insert/i,
                     completions: ["test insert"],
                     arguments: {
@@ -2234,6 +2243,7 @@ describe("Chapbook", () => {
                 const index = new Index();
                 const insert: insertsModule.InsertParser = {
                     name: "test insert",
+                    description: "desc",
                     match: /^test\s+insert/i,
                     completions: ["test insert"],
                     arguments: {
@@ -2280,6 +2290,7 @@ describe("Chapbook", () => {
                 ]);
                 const insert: insertsModule.InsertParser = {
                     name: "test insert",
+                    description: "desc",
                     match: /^test\s+insert/i,
                     completions: ["test insert"],
                     arguments: {
@@ -2329,6 +2340,7 @@ describe("Chapbook", () => {
                 ]);
                 const insert: insertsModule.InsertParser = {
                     name: "test insert",
+                    description: "desc",
                     match: /^test\s+insert/i,
                     completions: ["test insert"],
                     arguments: {
@@ -2378,6 +2390,7 @@ describe("Chapbook", () => {
                 ]);
                 const insert: insertsModule.InsertParser = {
                     name: "test insert",
+                    description: "desc",
                     match: /^test\s+insert/i,
                     completions: ["test insert"],
                     arguments: {
@@ -2422,6 +2435,7 @@ describe("Chapbook", () => {
                 const index = new Index();
                 const insert: insertsModule.InsertParser = {
                     name: "test insert",
+                    description: "desc",
                     match: /^test\s+insert/i,
                     completions: ["test insert"],
                     arguments: {
@@ -2471,6 +2485,7 @@ describe("Chapbook", () => {
                 const index = new Index();
                 const insert: insertsModule.InsertParser = {
                     name: "test insert",
+                    description: "desc",
                     match: /^test\s+insert/i,
                     completions: ["test insert"],
                     arguments: {
@@ -2520,6 +2535,7 @@ describe("Chapbook", () => {
                 const index = new Index();
                 const insert: insertsModule.InsertParser = {
                     name: "test insert",
+                    description: "desc",
                     match: /^test\s+insert/i,
                     completions: ["test insert"],
                     arguments: {
@@ -2562,6 +2578,7 @@ describe("Chapbook", () => {
                 ]);
                 const insert: insertsModule.InsertParser = {
                     name: "test insert",
+                    description: "desc",
                     match: /^test\s+insert/i,
                     completions: ["test insert"],
                     arguments: {
@@ -2636,7 +2653,7 @@ describe("Chapbook", () => {
                 expect(results).to.eql([
                     Diagnostic.create(
                         Range.create(1, 2, 3, 4),
-                        "Insert custom insert not recognized",
+                        'Insert "custom insert" not recognized',
                         DiagnosticSeverity.Warning
                     ),
                 ]);
@@ -2752,7 +2769,7 @@ describe("Chapbook", () => {
                 expect(results).to.eql([
                     Diagnostic.create(
                         Range.create(1, 2, 3, 4),
-                        "Modifier mod-me not recognized",
+                        'Modifier "mod-me" not recognized',
                         DiagnosticSeverity.Warning
                     ),
                 ]);
@@ -2963,6 +2980,72 @@ describe("Chapbook", () => {
             expect(result).to.eql(
                 Location.create("source-uri", Range.create(5, 6, 7, 8))
             );
+        });
+    });
+
+    describe("Hover", () => {
+        it("should return a built-in modifier's definition for a position inside a reference to that modifier", () => {
+            const doc = TextDocument.create("fake-uri", "", 0, "Placeholder");
+            const index = new Index();
+            index.setReferences("fake-uri", [
+                {
+                    contents: "mock-mod",
+                    locations: [
+                        Location.create("fake-uri", Range.create(1, 2, 3, 4)),
+                    ],
+                    kind: OChapbookSymbolKind.BuiltInModifier,
+                },
+            ]);
+            const parser = uut.getChapbookParser(undefined);
+            const modifier = buildModifierParser({
+                description: "My description!",
+                match: /^mock-mod/,
+            });
+            const mockFunction = ImportMock.mockFunction(
+                modifiersModule,
+                "all"
+            ).returns([modifier]);
+
+            const result = parser?.generateHover(
+                doc,
+                Position.create(1, 3),
+                index
+            );
+            mockFunction.restore();
+
+            expect(result).to.eql({ contents: "My description!" });
+        });
+
+        it("should return a built-in insert's description for a position inside a reference to that insert", () => {
+            const doc = TextDocument.create("fake-uri", "", 0, "Placeholder");
+            const index = new Index();
+            index.setReferences("fake-uri", [
+                {
+                    contents: "mock insert",
+                    locations: [
+                        Location.create("fake-uri", Range.create(1, 2, 3, 4)),
+                    ],
+                    kind: OChapbookSymbolKind.BuiltInInsert,
+                },
+            ]);
+            const parser = uut.getChapbookParser(undefined);
+            const insert = buildInsertParser({
+                description: "My description!",
+                match: /^mock insert/,
+            });
+            const mockFunction = ImportMock.mockFunction(
+                insertsModule,
+                "all"
+            ).returns([insert]);
+
+            const result = parser?.generateHover(
+                doc,
+                Position.create(1, 3),
+                index
+            );
+            mockFunction.restore();
+
+            expect(result).to.eql({ contents: "My description!" });
         });
     });
 

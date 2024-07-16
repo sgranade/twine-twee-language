@@ -127,6 +127,10 @@ export interface InsertParser {
      */
     name: string;
     /**
+     * Description for the insert. Shown on hover; supports markdown.
+     */
+    description: string;
+    /**
      * Regular expression that matches invocations of this insert.
      */
     match: RegExp;

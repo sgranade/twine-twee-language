@@ -2,6 +2,8 @@ import { ArgumentRequirement, InsertParser, ValueType } from "./types";
 
 export const soundEffect: InsertParser = {
     name: "sound effect",
+    description:
+        "Begins playing a previously-defined sound effect. `volume` can be omitted; by default, the ambient sound is played at full volume.",
     match: /^sound\s+effect/i,
     arguments: {
         firstArgument: {

@@ -7,6 +7,8 @@ import { ArgumentRequirement, InsertParser, ValueType } from "./types";
 
 export const revealLink: InsertParser = {
     name: "reveal link",
+    description:
+        "Renders a link that expands to show either\n1. the `text` property (when defined) or\n2. the contents of the passage that has the name specified by the `passage` property (when defined)\nwhen clicked or tapped.",
     match: /^reveal\s+link/i,
     arguments: {
         firstArgument: {
