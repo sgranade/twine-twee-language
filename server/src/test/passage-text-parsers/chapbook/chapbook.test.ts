@@ -2,7 +2,6 @@ import "mocha";
 import { expect } from "chai";
 import { ImportMock } from "ts-mock-imports";
 import {
-    CompletionItemKind,
     Diagnostic,
     DiagnosticSeverity,
     Location,
@@ -12,6 +11,7 @@ import {
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { buildInsertParser } from "./inserts/insert-builders";
+import { buildModifierParser } from "./modifiers/modifier-builders";
 import { MockCallbacks, buildParsingState, buildPassage } from "../../builders";
 import { Index, TwineSymbolKind } from "../../../project-index";
 import { defaultDiagnosticsOptions } from "../../../server-options";
@@ -55,7 +55,7 @@ describe("Chapbook", () => {
                     "fake-uri",
                     Range.create(4, 9, 4, 11)
                 ),
-                kind: OChapbookSymbolKind.Insert,
+                kind: OChapbookSymbolKind.CustomInsert,
                 match: /hi/,
             });
         });
@@ -196,6 +196,69 @@ describe("Chapbook", () => {
 
         describe("text section", () => {
             describe("modifiers", () => {
+                it("should capture a reference for a known modifier", () => {
+                    const header = ":: Passage\n";
+                    const passage = "[mock-mod]\nContent\n";
+                    const callbacks = new MockCallbacks();
+                    const modifier = buildModifierParser({
+                        match: /^mock-mod/,
+                    });
+                    const state = buildParsingState({
+                        uri: "fake-uri",
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
+                    const mockFunction = ImportMock.mockFunction(
+                        modifiersModule,
+                        "all"
+                    ).returns([modifier]);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    mockFunction.restore();
+                    const result = callbacks.references[0];
+
+                    expect(callbacks.references.length).to.equal(1);
+                    expect(result).to.eql({
+                        contents: "mock-mod",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(1, 1, 1, 9)
+                        ),
+                        kind: OChapbookSymbolKind.BuiltInModifier,
+                    });
+                });
+
+                it("should capture a reference for an unknown modifier", () => {
+                    const header = ":: Passage\n";
+                    const passage = "[mock-mod]\nContent\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        uri: "fake-uri",
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
+                    const mockFunction = ImportMock.mockFunction(
+                        modifiersModule,
+                        "all"
+                    ).returns([]);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    mockFunction.restore();
+                    const result = callbacks.references[0];
+
+                    expect(callbacks.references.length).to.equal(1);
+                    expect(result).to.eql({
+                        contents: "mock-mod",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(1, 1, 1, 9)
+                        ),
+                        kind: OChapbookSymbolKind.CustomModifier,
+                    });
+                });
+
                 it("should set semantic tokens for modifiers", () => {
                     const header = ":: Passage\n";
                     const passage = "[ mod1 ; mod2 nice  nice ]\nContent\n";
@@ -960,6 +1023,69 @@ describe("Chapbook", () => {
                 });
 
                 describe("contents parsing", () => {
+                    it("should capture a reference for a known insert", () => {
+                        const header = ":: Passage\n";
+                        const passage = "Insert: {mock insert:  'arg'}";
+                        const callbacks = new MockCallbacks();
+                        const insert = buildInsertParser({
+                            match: /^mock insert/,
+                        });
+                        const state = buildParsingState({
+                            uri: "fake-uri",
+                            content: header + passage,
+                            callbacks: callbacks,
+                        });
+                        const parser = uut.getChapbookParser(undefined);
+                        const mockFunction = ImportMock.mockFunction(
+                            insertsModule,
+                            "all"
+                        ).returns([insert]);
+
+                        parser?.parsePassageText(passage, header.length, state);
+                        mockFunction.restore();
+                        const result = callbacks.references[0];
+
+                        expect(callbacks.references.length).to.equal(1);
+                        expect(result).to.eql({
+                            contents: "mock insert",
+                            location: Location.create(
+                                "fake-uri",
+                                Range.create(1, 9, 1, 20)
+                            ),
+                            kind: OChapbookSymbolKind.BuiltInInsert,
+                        });
+                    });
+
+                    it("should capture a reference for an unknown insert", () => {
+                        const header = ":: Passage\n";
+                        const passage = "Insert: {mock insert:  'arg'}";
+                        const callbacks = new MockCallbacks();
+                        const state = buildParsingState({
+                            uri: "fake-uri",
+                            content: header + passage,
+                            callbacks: callbacks,
+                        });
+                        const parser = uut.getChapbookParser(undefined);
+                        const mockFunction = ImportMock.mockFunction(
+                            insertsModule,
+                            "all"
+                        ).returns([]);
+
+                        parser?.parsePassageText(passage, header.length, state);
+                        mockFunction.restore();
+                        const result = callbacks.references[0];
+
+                        expect(callbacks.references.length).to.equal(1);
+                        expect(result).to.eql({
+                            contents: "mock insert",
+                            location: Location.create(
+                                "fake-uri",
+                                Range.create(1, 9, 1, 20)
+                            ),
+                            kind: OChapbookSymbolKind.CustomInsert,
+                        });
+                    });
+
                     it("should send the first arg to the matching insert", () => {
                         const header = ":: Passage\n";
                         const passage = "Insert: {mock insert:  'arg'}";
@@ -1419,7 +1545,7 @@ describe("Chapbook", () => {
                             "fake-uri",
                             Range.create(4, 9, 4, 19)
                         ),
-                        kind: OChapbookSymbolKind.Insert,
+                        kind: OChapbookSymbolKind.CustomInsert,
                         match: /hi\s+there/,
                     });
                 });
@@ -1451,7 +1577,7 @@ describe("Chapbook", () => {
                             "fake-uri",
                             Range.create(4, 9, 4, 19)
                         ),
-                        kind: OChapbookSymbolKind.Insert,
+                        kind: OChapbookSymbolKind.CustomInsert,
                         match: /hi\s+there/,
                     });
                 });
@@ -1483,7 +1609,7 @@ describe("Chapbook", () => {
                             "fake-uri",
                             Range.create(4, 9, 4, 19)
                         ),
-                        kind: OChapbookSymbolKind.Modifier,
+                        kind: OChapbookSymbolKind.CustomModifier,
                         match: /hi\s+there/,
                     });
                 });
@@ -1515,7 +1641,7 @@ describe("Chapbook", () => {
                             "fake-uri",
                             Range.create(4, 9, 4, 19)
                         ),
-                        kind: OChapbookSymbolKind.Modifier,
+                        kind: OChapbookSymbolKind.CustomModifier,
                         match: /hi\s+there/,
                     });
                 });
@@ -1553,7 +1679,7 @@ describe("Chapbook", () => {
                             "source-uri",
                             Range.create(5, 6, 7, 8)
                         ),
-                        kind: OChapbookSymbolKind.Modifier,
+                        kind: OChapbookSymbolKind.CustomModifier,
                         match: /custom\s+modifier/i,
                     } as ChapbookSymbol,
                 ]);
@@ -1721,7 +1847,7 @@ describe("Chapbook", () => {
                             "source-uri",
                             Range.create(5, 6, 7, 8)
                         ),
-                        kind: OChapbookSymbolKind.Insert,
+                        kind: OChapbookSymbolKind.CustomInsert,
                         match: /custom\s+insert/i,
                     } as ChapbookSymbol,
                 ]);
@@ -2494,7 +2620,7 @@ describe("Chapbook", () => {
                                 Range.create(1, 2, 3, 4)
                             ),
                         ],
-                        kind: OChapbookSymbolKind.Insert,
+                        kind: OChapbookSymbolKind.CustomInsert,
                     },
                 ]);
                 const diagnosticOptions = defaultDiagnosticsOptions;
@@ -2533,7 +2659,7 @@ describe("Chapbook", () => {
                                 Range.create(1, 2, 3, 4)
                             ),
                         ],
-                        kind: OChapbookSymbolKind.Insert,
+                        kind: OChapbookSymbolKind.CustomInsert,
                     },
                 ]);
                 const diagnosticOptions = defaultDiagnosticsOptions;
@@ -2564,7 +2690,7 @@ describe("Chapbook", () => {
                             "source-uri",
                             Range.create(5, 6, 7, 8)
                         ),
-                        kind: OChapbookSymbolKind.Insert,
+                        kind: OChapbookSymbolKind.CustomInsert,
                         match: /custom\s+insert/,
                     } as ChapbookSymbol,
                 ]);
@@ -2577,7 +2703,7 @@ describe("Chapbook", () => {
                                 Range.create(1, 2, 3, 4)
                             ),
                         ],
-                        kind: OChapbookSymbolKind.Insert,
+                        kind: OChapbookSymbolKind.CustomInsert,
                     },
                 ]);
                 const diagnosticOptions = defaultDiagnosticsOptions;
@@ -2610,7 +2736,7 @@ describe("Chapbook", () => {
                                 Range.create(1, 2, 3, 4)
                             ),
                         ],
-                        kind: OChapbookSymbolKind.Modifier,
+                        kind: OChapbookSymbolKind.CustomModifier,
                     },
                 ]);
                 const diagnosticOptions = defaultDiagnosticsOptions;
@@ -2649,7 +2775,7 @@ describe("Chapbook", () => {
                                 Range.create(1, 2, 3, 4)
                             ),
                         ],
-                        kind: OChapbookSymbolKind.Modifier,
+                        kind: OChapbookSymbolKind.CustomModifier,
                     },
                 ]);
                 const diagnosticOptions = defaultDiagnosticsOptions;
@@ -2680,7 +2806,7 @@ describe("Chapbook", () => {
                             "source-uri",
                             Range.create(5, 6, 7, 8)
                         ),
-                        kind: OChapbookSymbolKind.Modifier,
+                        kind: OChapbookSymbolKind.CustomModifier,
                         match: /mod-me/,
                     } as ChapbookSymbol,
                 ]);
@@ -2693,7 +2819,7 @@ describe("Chapbook", () => {
                                 Range.create(1, 2, 3, 4)
                             ),
                         ],
-                        kind: OChapbookSymbolKind.Modifier,
+                        kind: OChapbookSymbolKind.CustomModifier,
                     },
                 ]);
                 const diagnosticOptions = defaultDiagnosticsOptions;
@@ -2727,7 +2853,7 @@ describe("Chapbook", () => {
                         "source-uri",
                         Range.create(5, 6, 7, 8)
                     ),
-                    kind: OChapbookSymbolKind.Insert,
+                    kind: OChapbookSymbolKind.CustomInsert,
                     match: /custom\s+insert/,
                 } as ChapbookSymbol,
             ]);
@@ -2737,7 +2863,7 @@ describe("Chapbook", () => {
                     locations: [
                         Location.create("fake-uri", Range.create(1, 2, 3, 4)),
                     ],
-                    kind: OChapbookSymbolKind.Insert,
+                    kind: OChapbookSymbolKind.CustomInsert,
                 },
             ]);
             const diagnosticOptions = defaultDiagnosticsOptions;
@@ -2768,7 +2894,7 @@ describe("Chapbook", () => {
                         "source-uri",
                         Range.create(5, 6, 7, 8)
                     ),
-                    kind: OChapbookSymbolKind.Insert,
+                    kind: OChapbookSymbolKind.CustomInsert,
                     match: /custom\s+insert/,
                 } as ChapbookSymbol,
             ]);
@@ -2778,7 +2904,7 @@ describe("Chapbook", () => {
                     locations: [
                         Location.create("fake-uri", Range.create(1, 2, 3, 4)),
                     ],
-                    kind: OChapbookSymbolKind.Insert,
+                    kind: OChapbookSymbolKind.CustomInsert,
                 },
             ]);
             const diagnosticOptions = defaultDiagnosticsOptions;
@@ -2811,7 +2937,7 @@ describe("Chapbook", () => {
                         "source-uri",
                         Range.create(5, 6, 7, 8)
                     ),
-                    kind: OChapbookSymbolKind.Modifier,
+                    kind: OChapbookSymbolKind.CustomModifier,
                     match: /mod\s+me/,
                 } as ChapbookSymbol,
             ]);
@@ -2821,7 +2947,7 @@ describe("Chapbook", () => {
                     locations: [
                         Location.create("fake-uri", Range.create(1, 2, 3, 4)),
                     ],
-                    kind: OChapbookSymbolKind.Modifier,
+                    kind: OChapbookSymbolKind.CustomModifier,
                 },
             ]);
             const diagnosticOptions = defaultDiagnosticsOptions;

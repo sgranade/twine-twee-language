@@ -38,8 +38,10 @@ const lineExtractionPattern = /^([ \t]*?)\b(.*)$/gm;
  * Kind of a Chapbook symbol.
  */
 export const OChapbookSymbolKind = {
-    Modifier: TwineSymbolKind._end + 1,
-    Insert: TwineSymbolKind._end + 2,
+    BuiltInModifier: TwineSymbolKind._end + 1,
+    BuiltInInsert: TwineSymbolKind._end + 2,
+    CustomModifier: TwineSymbolKind._end + 3,
+    CustomInsert: TwineSymbolKind._end + 4,
 };
 export type ChapbookSymbolKind =
     (typeof OChapbookSymbolKind)[keyof typeof OChapbookSymbolKind];
@@ -165,7 +167,7 @@ function extractJSObjectPropertyStringOrRegex(
  * @param symbolKind Kind of contents being parsed.
  * @param state Parsing state.
  */
-function parseCustomInsertOrModifier(
+function parseCustomInsertOrModifierDefinition(
     contents: string,
     contentsIndex: number,
     symbolKind: ChapbookSymbolKind,
@@ -200,7 +202,7 @@ function parseCustomInsertOrModifier(
 
     // Custom inserts must have a space in their match object
     if (
-        symbolKind === OChapbookSymbolKind.Insert &&
+        symbolKind === OChapbookSymbolKind.CustomInsert &&
         matchInnards.indexOf(" ") === -1 &&
         matchInnards.indexOf("\\s") === -1
     ) {
@@ -324,12 +326,12 @@ function parseEngineExtension(
 
         let symbolKind: ChapbookSymbolKind | undefined;
         if (m[1] === "modifiers") {
-            symbolKind = OChapbookSymbolKind.Modifier;
+            symbolKind = OChapbookSymbolKind.CustomModifier;
         } else if (m[1] === "inserts") {
-            symbolKind = OChapbookSymbolKind.Insert;
+            symbolKind = OChapbookSymbolKind.CustomInsert;
         }
         if (symbolKind !== undefined) {
-            parseCustomInsertOrModifier(
+            parseCustomInsertOrModifierDefinition(
                 addedContents,
                 contentsIndex + engineTemplatePattern.lastIndex,
                 symbolKind,
@@ -428,18 +430,19 @@ function parseInsertContents(
 ): void {
     // See if we match a built-in insert
     const insert = allInserts().find((i) => i.match.test(tokens.name.text));
-    if (insert === undefined) {
-        // If we don't recognize it, store it as a reference for later validation
-        state.callbacks.onSymbolReference(
-            createSymbolFor(
-                tokens.name.text,
-                tokens.name.at,
-                OChapbookSymbolKind.Insert,
-                state
-            )
-        );
-        return;
-    }
+    // Store a reference to the insert (either built-in or custom)
+    state.callbacks.onSymbolReference(
+        createSymbolFor(
+            tokens.name.text,
+            tokens.name.at,
+            insert !== undefined
+                ? OChapbookSymbolKind.BuiltInInsert
+                : OChapbookSymbolKind.CustomInsert,
+            state
+        )
+    );
+    // If the reference is to a possible custom insert, there's nothing else for us to do right now
+    if (insert === undefined) return;
 
     // Check for required and unknown arguments
     // First up, first argument
@@ -871,17 +874,20 @@ function parseModifier(
             const modifier = modifiers.find((i) =>
                 i.match.test(remainingModifier)
             );
-            if (modifier === undefined) {
-                // If we don't recognize it, store it as a reference for later validation
-                state.callbacks.onSymbolReference(
-                    createSymbolFor(
-                        remainingModifier,
-                        tokenIndex,
-                        OChapbookSymbolKind.Modifier,
-                        state
-                    )
-                );
-            } else {
+            // Store a reference to the insert (either built-in or custom)
+            state.callbacks.onSymbolReference(
+                createSymbolFor(
+                    remainingModifier,
+                    tokenIndex,
+                    modifier !== undefined
+                        ? OChapbookSymbolKind.BuiltInModifier
+                        : OChapbookSymbolKind.CustomModifier,
+                    state
+                )
+            );
+            // If we recognize the modifier, let it parse the contents, which can set the
+            // text block state in chapbookState
+            if (modifier !== undefined) {
                 // Handle modifier-specific parsing, which can set the text block state in chapbookState
                 modifier.parse(remainingModifier, state, chapbookState);
             }

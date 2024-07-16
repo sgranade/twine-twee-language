@@ -64,7 +64,7 @@ function generateModifierCompletions(
         modifierCompletions.push(...modifier.completions);
     }
     for (const customModifier of getChapbookDefinitions(
-        OChapbookSymbolKind.Modifier,
+        OChapbookSymbolKind.CustomModifier,
         index
     )) {
         modifierCompletions.push(customModifier.contents);
@@ -281,7 +281,7 @@ function generateInsertCompletions(
             }
         }
         for (const customInsert of getChapbookDefinitions(
-            OChapbookSymbolKind.Insert,
+            OChapbookSymbolKind.CustomInsert,
             index
         )) {
             insertCompletions.push({

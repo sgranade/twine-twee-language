@@ -25,16 +25,18 @@ export function generateDiagnostics(
     if (!diagnosticsOptions.warnings.unknownMacro) return diagnostics;
 
     const insertReferences: References[] =
-        index.getReferences(document.uri, OChapbookSymbolKind.Insert) || [];
+        index.getReferences(document.uri, OChapbookSymbolKind.CustomInsert) ||
+        [];
     const modifierReferences: References[] =
-        index.getReferences(document.uri, OChapbookSymbolKind.Modifier) || [];
+        index.getReferences(document.uri, OChapbookSymbolKind.CustomModifier) ||
+        [];
 
     const customInserts = getChapbookDefinitions(
-        OChapbookSymbolKind.Insert,
+        OChapbookSymbolKind.CustomInsert,
         index
     );
     const customModifiers = getChapbookDefinitions(
-        OChapbookSymbolKind.Modifier,
+        OChapbookSymbolKind.CustomModifier,
         index
     );
 
