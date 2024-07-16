@@ -30,7 +30,7 @@ function buildStoryData({
     };
 }
 
-describe("Parser", () => {
+describe("Twine Parser", () => {
     describe("Passages", () => {
         describe("General", () => {
             it("should call back on a passage", () => {

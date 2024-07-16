@@ -292,6 +292,34 @@ function parseEngineExtension(
 }
 
 /**
+ * Find and parse all calls to the Chapbook `engine.extend()` function.
+ *
+ * @param contents Contents to search for engine extensions.
+ * @param contentsIndex Index of the contents in the document (zero-based).
+ * @param state Parsing state.
+ */
+function findEngineExtensions(
+    contents: string,
+    contentsIndex: number,
+    state: ParsingState
+): void {
+    let ndx = contents.indexOf("engine.extend(");
+    if (ndx >= 0) {
+        ndx += "engine.extend(".length;
+        let extendContents = extractToMatchingDelimiter(
+            contents,
+            "(",
+            ")",
+            ndx
+        );
+        if (extendContents !== undefined) {
+            [extendContents, ndx] = skipSpaces(extendContents, ndx);
+            parseEngineExtension(extendContents, contentsIndex + ndx, state);
+        }
+    }
+}
+
+/**
  * Parse an argument to an insert (either 1st argument or property value).
  *
  * @param token Token for the insert argument.
@@ -647,25 +675,7 @@ function parseTextSubsection(
     chapbookState: ChapbookParsingState
 ): void {
     if (chapbookState.modifierKind === ModifierKind.Javascript) {
-        // Look for engine extensions (`engine.extend()`)
-        let ndx = subsection.indexOf("engine.extend(");
-        if (ndx >= 0) {
-            ndx += "engine.extend(".length;
-            let extendContents = extractToMatchingDelimiter(
-                subsection,
-                "(",
-                ")",
-                ndx
-            );
-            if (extendContents !== undefined) {
-                [extendContents, ndx] = skipSpaces(extendContents, ndx);
-                parseEngineExtension(
-                    extendContents,
-                    subsectionIndex + ndx,
-                    state
-                );
-            }
-        }
+        findEngineExtensions(subsection, subsectionIndex, state);
 
         // TODO tokenize javascript
     } else if (chapbookState.modifierKind === ModifierKind.Css) {
@@ -1100,8 +1110,9 @@ export function parsePassageText(
     state: ParsingState
 ): void {
     if (!state.parsePassageContents) {
-        // TODO handle finding engine extensions
-
+        // Even if we don't parse passage contents, look for calls to
+        // `engine.extend()` so we can capture custom inserts and modifiers
+        findEngineExtensions(passageText, textIndex, state);
         return;
     }
 

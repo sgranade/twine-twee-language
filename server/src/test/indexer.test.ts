@@ -9,7 +9,7 @@ import {
 } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
-import { Index, TwineSymbolKind } from "../project-index";
+import { Index } from "../project-index";
 import { buildPassage } from "./builders";
 
 import * as ptpModule from "../passage-text-parsers";
