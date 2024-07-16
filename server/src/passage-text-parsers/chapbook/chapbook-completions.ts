@@ -17,6 +17,7 @@ import {
 } from "./inserts";
 import { all as allModifiers } from "./modifiers";
 import { removeAndCountPadding } from "../../utilities";
+import { getChapbookDefinitions, OChapbookSymbolKind } from "./chapbook-parser";
 
 /**
  * The character that marks the end of a modifier.
@@ -29,12 +30,14 @@ const modifierStopChar = /[\];\r\n]/g;
  * @param document Document in which to generate the completions.
  * @param modifierContentStart Offset where the modifier starts (just past the [).
  * @param offset Offset where the completion is to be generated.
+ * @param index Project index.
  * @returns Completions list.
  */
 function generateModifierCompletions(
     document: TextDocument,
     modifierContentStart: number,
-    offset: number
+    offset: number,
+    index: ProjectIndex
 ): CompletionList | null {
     const text = document.getText();
     let i = offset;
@@ -59,6 +62,12 @@ function generateModifierCompletions(
     const modifierCompletions: string[] = [];
     for (const modifier of allModifiers()) {
         modifierCompletions.push(...modifier.completions);
+    }
+    for (const customModifier of getChapbookDefinitions(
+        OChapbookSymbolKind.Modifier,
+        index
+    )) {
+        modifierCompletions.push(customModifier.contents);
     }
     const completionList = CompletionList.create(
         modifierCompletions.map((c) => {
@@ -271,6 +280,17 @@ function generateInsertCompletions(
                 });
             }
         }
+        for (const customInsert of getChapbookDefinitions(
+            OChapbookSymbolKind.Insert,
+            index
+        )) {
+            insertCompletions.push({
+                label: customInsert.contents,
+                kind: CompletionItemKind.Function,
+                textEditText: customInsert.contents,
+            });
+        }
+
         const completionList = CompletionList.create(insertCompletions);
         completionList.itemDefaults = {
             insertTextFormat: InsertTextFormat.Snippet,
@@ -410,7 +430,7 @@ export function generateCompletions(
         }
     }
     if (text[i] === "[") {
-        return generateModifierCompletions(document, i + 1, offset);
+        return generateModifierCompletions(document, i + 1, offset, index);
     } else if (text[i] === "{") {
         return generateInsertCompletions(document, i + 1, offset, index);
     }

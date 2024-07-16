@@ -2,6 +2,7 @@ import "mocha";
 import { expect } from "chai";
 import { ImportMock } from "ts-mock-imports";
 import {
+    CompletionItemKind,
     Diagnostic,
     DiagnosticSeverity,
     Location,
@@ -20,6 +21,7 @@ import {
     OChapbookSymbolKind,
 } from "../../../passage-text-parsers/chapbook/chapbook-parser";
 import * as insertsModule from "../../../passage-text-parsers/chapbook/inserts";
+import * as modifiersModule from "../../../passage-text-parsers/chapbook/modifiers";
 
 import * as uut from "../../../passage-text-parsers/chapbook";
 
@@ -1540,6 +1542,37 @@ describe("Chapbook", () => {
                 );
             });
 
+            it("should suggest custom modifiers after a [ at the start of the line", () => {
+                const doc = TextDocument.create("fake-uri", "", 0, "[ here ");
+                const position = Position.create(0, 4);
+                const index = new Index();
+                index.setDefinitions("source-uri", [
+                    {
+                        contents: "custom modifier",
+                        location: Location.create(
+                            "source-uri",
+                            Range.create(5, 6, 7, 8)
+                        ),
+                        kind: OChapbookSymbolKind.Modifier,
+                        match: /custom\s+modifier/i,
+                    } as ChapbookSymbol,
+                ]);
+                const parser = uut.getChapbookParser(undefined);
+                const mockFunction = ImportMock.mockFunction(
+                    modifiersModule,
+                    "all"
+                ).returns([]);
+
+                const results = parser?.generateCompletions(
+                    doc,
+                    position,
+                    index
+                );
+                mockFunction.restore();
+
+                expect(results?.items[0]?.label).to.eql("custom modifier");
+            });
+
             it("should suggest modifiers within [ ...;", () => {
                 const doc = TextDocument.create(
                     "fake-uri",
@@ -1670,6 +1703,42 @@ describe("Chapbook", () => {
                 expect(results?.itemDefaults?.editRange).to.eql(
                     Range.create(0, 11, 0, 13)
                 );
+            });
+
+            it("should suggest custom insert names after a {", () => {
+                const doc = TextDocument.create(
+                    "fake-uri",
+                    "",
+                    0,
+                    "Let's try {te"
+                );
+                const position = Position.create(0, 12);
+                const index = new Index();
+                index.setDefinitions("source-uri", [
+                    {
+                        contents: "custom insert",
+                        location: Location.create(
+                            "source-uri",
+                            Range.create(5, 6, 7, 8)
+                        ),
+                        kind: OChapbookSymbolKind.Insert,
+                        match: /custom\s+insert/i,
+                    } as ChapbookSymbol,
+                ]);
+                const mockFunction = ImportMock.mockFunction(
+                    insertsModule,
+                    "all"
+                ).returns([]);
+                const parser = uut.getChapbookParser(undefined);
+
+                const results = parser?.generateCompletions(
+                    doc,
+                    position,
+                    index
+                );
+                mockFunction.restore();
+
+                expect(results?.items[0]?.label).to.eql("custom insert");
             });
 
             it("should suggest insert names after a { and only replace the word the position is in", () => {
