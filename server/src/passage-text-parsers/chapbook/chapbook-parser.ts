@@ -106,6 +106,58 @@ export function getChapbookDefinitions(
 }
 
 /**
+ * Extract a Javascript object property that's a string or regular expression.
+ *
+ * The property should be in the form:
+ *    - `propertyName: "string value"`
+ *    - `propertyName: 'string value'`
+ *    - `propertyName: /regex value/i` (flags optional)
+ *
+ * @param propertyName Name of the Javascript object property to extract.
+ * @param contents String containing the object properties.
+ * @returns Tuple of the string or regex without its flags, regex flags (if found), and index into contents where the property's value begins, or undefined if not found.
+ */
+function extractJSObjectPropertyStringOrRegex(
+    propertyName: string,
+    contents: string
+): [string, string, number] | undefined {
+    const m = new RegExp(`(?<=({|,)\\s*)${propertyName}:\\s?`, "s").exec(
+        contents
+    );
+    if (m === null) return undefined;
+
+    const propertyValueNdx = m.index + m[0].length;
+    // If the property is a string or regex, go to its matching delimiter
+    const firstChar = contents[propertyValueNdx];
+    if (firstChar === "'" || firstChar === '"' || firstChar === "/") {
+        const propertyValue = extractToMatchingDelimiter(
+            contents,
+            firstChar,
+            firstChar,
+            propertyValueNdx + 1
+        );
+        if (propertyValue === undefined) return undefined;
+        // Regexes can have flags; capture those to return
+        let matchFlags = "";
+        if (firstChar === "/") {
+            const matchFlagsNdx =
+                propertyValueNdx + 1 + propertyValue.length + 1; // + 1s to skip the "/"s
+            const endPattern = /,|}|\r?\n|$/g;
+            endPattern.lastIndex = matchFlagsNdx;
+            const endNdx = endPattern.exec(contents)?.index;
+            matchFlags = contents.slice(matchFlagsNdx, endNdx);
+        }
+        return [
+            `${firstChar}${propertyValue}${firstChar}`,
+            matchFlags,
+            propertyValueNdx,
+        ];
+    }
+
+    return undefined;
+}
+
+/**
  * Parse a custom insert or modifier defined in the Twine story.
  *
  * @param contents Contents of the custom insert or modifier.
@@ -120,24 +172,31 @@ function parseCustomInsertOrModifier(
     state: ParsingState
 ): void {
     // Extract the "match" property contents
-    const m = /(?<=({|,)\s*)match:\s?\//s.exec(contents);
-    if (m === null) return;
-    const matchInnardsNdx = m.index + m[0].length;
-    const matchInnards = extractToMatchingDelimiter(
-        contents,
-        "/",
-        "/",
-        matchInnardsNdx
+    const matchPropertyInfo = extractJSObjectPropertyStringOrRegex(
+        "match",
+        contents
     );
-    if (matchInnards === undefined) return;
+    if (matchPropertyInfo === undefined) return;
+    let [matchContents, matchFlags, matchNdx] = matchPropertyInfo;
+    if (matchContents[0] !== "/") return;
+    matchFlags = matchFlags.trimEnd();
+    const matchInnards = matchContents.slice(1, -1);
+    const matchInnardsNdx = matchNdx + 1; // +1 to skip the leading "/"
+    const matchFlagsNdx = matchNdx + matchContents.length;
 
-    const matchFlagsNdx = matchInnardsNdx + matchInnards.length + 1; // + 1 to skip the trailing "/"
-
-    const endPattern = /,|}|\r?\n|$/g;
-    endPattern.lastIndex = matchFlagsNdx;
-    const endNdx = endPattern.exec(contents)?.index;
-    if (endNdx === undefined) return;
-    let matchFlags = contents.slice(matchFlagsNdx, endNdx);
+    // If there's a "name" property, use that as the symbol's contents;
+    // otherwise, stick with the regex match contents.
+    let name = matchInnards;
+    const namePropertyInfo = extractJSObjectPropertyStringOrRegex(
+        "name",
+        contents
+    );
+    if (namePropertyInfo !== undefined) {
+        const nameContents = namePropertyInfo[0];
+        if (nameContents[0] === "'" || nameContents[0] === '"') {
+            name = nameContents.slice(1, -1);
+        }
+    }
 
     // Custom inserts must have a space in their match object
     if (
@@ -163,13 +222,11 @@ function parseCustomInsertOrModifier(
         matchFlags = "";
     }
 
-    const fullRegexp = contents.slice(matchInnardsNdx - 1, endNdx);
-
     // Save the match as a Regex in the associated label
     try {
         const regex = new RegExp(matchInnards, matchFlags);
         const symbol: ChapbookSymbol = {
-            contents: matchInnards,
+            contents: name,
             location: createLocationFor(
                 matchInnards,
                 matchInnardsNdx + contentsIndex,
@@ -181,8 +238,8 @@ function parseCustomInsertOrModifier(
         state.callbacks.onSymbolDefinition(symbol);
     } catch (e) {
         logErrorFor(
-            fullRegexp,
-            matchInnardsNdx - 1 + contentsIndex,
+            `${matchContents}${matchFlags}`,
+            matchNdx + contentsIndex,
             `${e}`,
             state
         );
