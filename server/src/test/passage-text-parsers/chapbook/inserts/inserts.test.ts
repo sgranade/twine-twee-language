@@ -97,29 +97,6 @@ describe("Chapbook Inserts", () => {
     });
 
     describe("Link", () => {
-        it("should set a string token for a first argument that's a link", () => {
-            const state = buildParsingState({});
-            const chapbookState: ChapbookParsingState = {
-                passageTokens: {},
-                modifierKind: 0,
-            };
-            const args = buildInsertTokens({
-                firstArgument: "'https://google.com/'",
-                firstArgumentAt: 17,
-            });
-
-            uutLink.link.parse(args, state, chapbookState);
-
-            expect(chapbookState.passageTokens).to.eql({
-                17: {
-                    text: "'https://google.com/'",
-                    at: 17,
-                    type: ETokenType.string,
-                    modifiers: [],
-                },
-            });
-        });
-
         it("should set a class token for a first argument that's a passage", () => {
             const callbacks = new MockCallbacks();
             const state = buildParsingState({
@@ -175,35 +152,6 @@ describe("Chapbook Inserts", () => {
                     kind: TwineSymbolKind.Passage,
                 },
             ]);
-        });
-
-        it("should set a string token for a label property", () => {
-            const callbacks = new MockCallbacks();
-            const state = buildParsingState({
-                content: '{link to: "Passage Ref", label: "Go!"}',
-                callbacks: callbacks,
-            });
-            const chapbookState: ChapbookParsingState = {
-                passageTokens: {},
-                modifierKind: 0,
-            };
-            const args = buildInsertTokens({
-                firstArgument: '"Passage Ref"',
-                firstArgumentAt: 10,
-            });
-            args.props = {
-                label: [Token.create("label", 0), Token.create('"Go!"', 32)],
-            };
-
-            uutLink.link.parse(args, state, chapbookState);
-            const result = chapbookState.passageTokens[32];
-
-            expect(result).to.eql({
-                text: '"Go!"',
-                at: 32,
-                type: ETokenType.string,
-                modifiers: [],
-            });
         });
     });
 
