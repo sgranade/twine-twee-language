@@ -9,6 +9,7 @@ import {
     DocumentDiagnosticReportKind,
     DocumentSymbol,
     DocumentSymbolParams,
+    FileChangeType,
     FoldingRange,
     FoldingRangeParams,
     Hover,
@@ -299,8 +300,11 @@ documents.onDidChangeContent(async (change) => {
 documents.onDidClose;
 
 connection.onDidChangeWatchedFiles((_change) => {
-    // TODO Monitored files have changed in VSCode. Handle deleted file.
-    connection.console.log("We received a file change event");
+    for (const change of _change.changes || []) {
+        if (change.type === FileChangeType.Deleted) {
+            projectIndex.removeDocument(change.uri);
+        }
+    }
 });
 
 connection.onDocumentSymbol(
@@ -425,6 +429,9 @@ async function processChangedDocument(
         };
         connection.sendNotification(CustomMessages.UpdatedStoryFormat, e);
     }
+
+    // Request a refresh of semantic tokens since we've potentially changed them
+    connection.languages.semanticTokens.refresh();
 }
 
 /**
