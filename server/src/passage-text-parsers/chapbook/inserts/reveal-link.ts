@@ -23,9 +23,6 @@ export const revealLink: InsertParser = {
     },
     completions: ["reveal link"],
     parse(args, state, chapbookState) {
-        if (args.firstArgument) {
-            // TODO parse as expression
-        }
         const passageProp = args.props.passage;
         const textProp = args.props.text;
         // In reality, either text or passage property must be defined. If both are defined,

@@ -14,12 +14,5 @@ export const cyclingLink: InsertParser = {
         optionalProps: {},
     },
     completions: ["cycling link"],
-    parse(args, state, chapbookState) {
-        if (args.firstArgument) {
-            // TODO parse as expression
-        }
-        if (args.props.choices !== undefined) {
-            // TODO parse as an expression; should be an array
-        }
-    },
+    parse(args, state, chapbookState) {},
 };

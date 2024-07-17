@@ -1,4 +1,5 @@
 import { capturePreTokenFor } from "../..";
+import { parseJSExpression } from "../../../js-parser";
 import { ETokenType } from "../../../tokens";
 import { ArgumentRequirement, InsertParser, ValueType } from "./types";
 
@@ -18,26 +19,7 @@ export const ambientSound: InsertParser = {
         },
     },
     completions: ["ambient sound"],
-    parse(args, state, chapbookState) {
-        if (args.firstArgument) {
-            const m = /^(['"])(.*)\1$/.exec(args.firstArgument.text);
-            if (m !== null) {
-                capturePreTokenFor(
-                    args.firstArgument.text,
-                    args.firstArgument.at,
-                    ETokenType.string,
-                    [],
-                    chapbookState
-                );
-            } else {
-                // TODO parse as an expression
-            }
-        }
-
-        if (args.props.volume !== undefined) {
-            // TODO parse as an expression
-        }
-    },
+    parse(args, state, chapbookState) {},
 };
 
 // {no ambient sound} is, under the hood, just {ambient sound} with

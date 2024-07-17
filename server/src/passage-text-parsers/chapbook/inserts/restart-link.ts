@@ -11,9 +11,5 @@ export const restartLink: InsertParser = {
         optionalProps: { label: "'label'" },
     },
     completions: ["restart link"],
-    parse(args, state, chapbookState) {
-        if (args.props.label !== undefined) {
-            // TODO parse as an expression
-        }
-    },
+    parse(args, state, chapbookState) {},
 };

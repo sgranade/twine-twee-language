@@ -11,9 +11,5 @@ export const backLink: InsertParser = {
         optionalProps: { label: "'Back'" },
     },
     completions: ["back link"],
-    parse(args, state, chapbookState) {
-        if (args.props.label !== undefined) {
-            // TODO parse as an expression
-        }
-    },
+    parse(args, state, chapbookState) {},
 };

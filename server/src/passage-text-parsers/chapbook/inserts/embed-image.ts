@@ -14,12 +14,5 @@ export const embedImage: InsertParser = {
         optionalProps: { alt: "'alternate text'" },
     },
     completions: ["embed image"],
-    parse(args, state, chapbookState) {
-        if (args.firstArgument) {
-            // TODO parse as expression
-        }
-        if (args.props.alt !== undefined) {
-            // TODO parse as an expression
-        }
-    },
+    parse(args, state, chapbookState) {},
 };

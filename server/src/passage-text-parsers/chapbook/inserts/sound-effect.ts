@@ -16,13 +16,5 @@ export const soundEffect: InsertParser = {
         },
     },
     completions: ["sound effect"],
-    parse(args, state, chapbookState) {
-        if (args.firstArgument) {
-            // TODO parse as an expression
-        }
-
-        if (args.props.volume !== undefined) {
-            // TODO parse as an expression
-        }
-    },
+    parse(args, state, chapbookState) {},
 };

@@ -13,15 +13,5 @@ export const embedYouTubeVideo: InsertParser = {
         optionalProps: { autoplay: "true", loop: "true" },
     },
     completions: ["embed YouTube"],
-    parse(args, state, chapbookState) {
-        if (args.firstArgument) {
-            // TODO parse as expression
-        }
-        if (args.props.autoplay !== undefined) {
-            // TODO parse as an expression
-        }
-        if (args.props.loop !== undefined) {
-            // TODO parse as an expression
-        }
-    },
+    parse(args, state, chapbookState) {},
 };

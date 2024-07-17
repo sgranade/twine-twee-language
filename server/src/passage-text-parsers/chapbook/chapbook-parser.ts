@@ -639,8 +639,7 @@ function parseInsert(
     if (propertySection.trim()) {
         const propertySectionIndex = functionSection.length + 1; // + 1 for the comma
 
-        // TODO ideally parse this as JS. In the meantime, tokenize things that
-        // look like properties.
+        // Tokenize things that look like properties.
         let propertyIndex = 0; // Relative to propertySection
         while (propertyIndex < propertySection.length) {
             const colonIndex = propertySection.indexOf(":", propertyIndex);
@@ -752,8 +751,7 @@ function parseTextSubsection(
 ): void {
     if (chapbookState.modifierKind === ModifierKind.Javascript) {
         findEngineExtensions(subsection, subsectionIndex, state);
-
-        // TODO tokenize javascript
+        parseJSExpression(subsection, subsectionIndex, chapbookState);
     } else if (chapbookState.modifierKind === ModifierKind.Css) {
         state.callbacks.onEmbeddedDocument({
             document: TextDocument.create(
@@ -852,8 +850,6 @@ function parseTextSubsection(
                 }
             }
         }
-
-        // TODO TOKENIZE NODES/LEAFS
     }
 }
 
@@ -1172,7 +1168,6 @@ function parseVarsSection(
         );
 
         // TODO call back on variable
-        // TODO Tokenize? the value as a JS expression
     }
 }
 
