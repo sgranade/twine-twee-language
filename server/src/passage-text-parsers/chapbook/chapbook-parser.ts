@@ -48,6 +48,7 @@ export type ChapbookSymbolKind =
 
 export interface ChapbookSymbol extends Symbol {
     match: RegExp;
+    description?: string;
 }
 export namespace ChapbookSymbol {
     /**
@@ -200,6 +201,20 @@ function parseCustomInsertOrModifierDefinition(
         }
     }
 
+    // If there's a "description" property, capture that as a
+    // description
+    let description: string | undefined;
+    const descriptionPropertyInfo = extractJSObjectPropertyStringOrRegex(
+        "description",
+        contents
+    );
+    if (descriptionPropertyInfo !== undefined) {
+        const descriptionContents = descriptionPropertyInfo[0];
+        if (descriptionContents[0] === "'" || descriptionContents[0] === '"') {
+            description = descriptionContents.slice(1, -1);
+        }
+    }
+
     // Custom inserts must have a space in their match object
     if (
         symbolKind === OChapbookSymbolKind.CustomInsert &&
@@ -237,6 +252,7 @@ function parseCustomInsertOrModifierDefinition(
             kind: symbolKind,
             match: regex,
         };
+        if (description !== undefined) symbol.description = description;
         state.callbacks.onSymbolDefinition(symbol);
     } catch (e) {
         logErrorFor(

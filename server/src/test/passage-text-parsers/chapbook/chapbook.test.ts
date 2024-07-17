@@ -1582,6 +1582,39 @@ describe("Chapbook", () => {
                     });
                 });
 
+                it("should set the symbol definition's description to the description property for a custom insert", () => {
+                    const header = ":: Passage\n";
+                    const passage =
+                        "[javascript]\nengine.extend('2.0.1', () => {\nengine.template.inserts.add(\n{match: /hi\\s+there/, description: 'I am an insert!'}\n);\n});\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        uri: "fake-uri",
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    state.storyFormat = {
+                        format: "Chapbook",
+                        formatVersion: "2.0.1",
+                    };
+                    const parser = uut.getChapbookParser(undefined);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    const result = callbacks.definitions[0] as ChapbookSymbol;
+
+                    expect(callbacks.definitions.length).to.equal(1);
+                    expect(ChapbookSymbol.is(result)).to.be.true;
+                    expect(result).to.eql({
+                        contents: "hi\\s+there",
+                        description: "I am an insert!",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(4, 9, 4, 19)
+                        ),
+                        kind: OChapbookSymbolKind.CustomInsert,
+                        match: /hi\s+there/,
+                    });
+                });
+
                 it("should capture a symbol definition for a custom modifier", () => {
                     const header = ":: Passage\n";
                     const passage =
@@ -1637,6 +1670,39 @@ describe("Chapbook", () => {
                     expect(ChapbookSymbol.is(result)).to.be.true;
                     expect(result).to.eql({
                         contents: "hi there",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(4, 9, 4, 19)
+                        ),
+                        kind: OChapbookSymbolKind.CustomModifier,
+                        match: /hi\s+there/,
+                    });
+                });
+
+                it("should set the symbol definition's description to the description property for a custom modifier", () => {
+                    const header = ":: Passage\n";
+                    const passage =
+                        "[javascript]\nengine.extend('2.0.1', () => {\nengine.template.modifiers.add(\n{match: /hi\\s+there/, description: \"I'm a modifier!\"}\n);\n});\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        uri: "fake-uri",
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    state.storyFormat = {
+                        format: "Chapbook",
+                        formatVersion: "2.0.1",
+                    };
+                    const parser = uut.getChapbookParser(undefined);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    const result = callbacks.definitions[0] as ChapbookSymbol;
+
+                    expect(callbacks.definitions.length).to.equal(1);
+                    expect(ChapbookSymbol.is(result)).to.be.true;
+                    expect(result).to.eql({
+                        contents: "hi\\s+there",
+                        description: "I'm a modifier!",
                         location: Location.create(
                             "fake-uri",
                             Range.create(4, 9, 4, 19)
@@ -3016,6 +3082,85 @@ describe("Chapbook", () => {
             expect(result).to.eql({ contents: "My description!" });
         });
 
+        it("should return a custom modifier's description for a position inside a reference to that modifier if that description is defined", () => {
+            const doc = TextDocument.create("fake-uri", "", 0, "Placeholder");
+            const index = new Index();
+            index.setDefinitions("source-uri", [
+                {
+                    contents: "custom modifier",
+                    location: Location.create(
+                        "source-uri",
+                        Range.create(5, 6, 7, 8)
+                    ),
+                    kind: OChapbookSymbolKind.CustomModifier,
+                    description: "This is a custom modifier!",
+                    match: /custom\s+modifier/i,
+                } as ChapbookSymbol,
+            ]);
+            index.setReferences("fake-uri", [
+                {
+                    contents: "custom  modifier",
+                    locations: [
+                        Location.create("fake-uri", Range.create(1, 2, 3, 4)),
+                    ],
+                    kind: OChapbookSymbolKind.CustomModifier,
+                },
+            ]);
+            const parser = uut.getChapbookParser(undefined);
+            const mockFunction = ImportMock.mockFunction(
+                modifiersModule,
+                "all"
+            ).returns([]);
+
+            const result = parser?.generateHover(
+                doc,
+                Position.create(1, 3),
+                index
+            );
+            mockFunction.restore();
+
+            expect(result).to.eql({ contents: "This is a custom modifier!" });
+        });
+
+        it("should return null for a position inside a reference to a custom modifier if that modifier's description isn't defined", () => {
+            const doc = TextDocument.create("fake-uri", "", 0, "Placeholder");
+            const index = new Index();
+            index.setDefinitions("source-uri", [
+                {
+                    contents: "custom modifier",
+                    location: Location.create(
+                        "source-uri",
+                        Range.create(5, 6, 7, 8)
+                    ),
+                    kind: OChapbookSymbolKind.CustomModifier,
+                    match: /custom\s+modifier/i,
+                } as ChapbookSymbol,
+            ]);
+            index.setReferences("fake-uri", [
+                {
+                    contents: "custom  modifier",
+                    locations: [
+                        Location.create("fake-uri", Range.create(1, 2, 3, 4)),
+                    ],
+                    kind: OChapbookSymbolKind.CustomModifier,
+                },
+            ]);
+            const parser = uut.getChapbookParser(undefined);
+            const mockFunction = ImportMock.mockFunction(
+                modifiersModule,
+                "all"
+            ).returns([]);
+
+            const result = parser?.generateHover(
+                doc,
+                Position.create(1, 3),
+                index
+            );
+            mockFunction.restore();
+
+            expect(result).to.be.null;
+        });
+
         it("should return a built-in insert's description for a position inside a reference to that insert", () => {
             const doc = TextDocument.create("fake-uri", "", 0, "Placeholder");
             const index = new Index();
@@ -3046,6 +3191,86 @@ describe("Chapbook", () => {
             mockFunction.restore();
 
             expect(result).to.eql({ contents: "My description!" });
+        });
+
+        it("should return a custom insert's description for a position inside a reference to that insert if its description is defined", () => {
+            const doc = TextDocument.create("fake-uri", "", 0, "Placeholder");
+            const index = new Index();
+            index.setDefinitions("source-uri", [
+                {
+                    contents: "custom\\s+insert",
+                    location: Location.create(
+                        "source-uri",
+                        Range.create(5, 6, 7, 8)
+                    ),
+                    kind: OChapbookSymbolKind.CustomInsert,
+                    description: "This is a custom insert!",
+                    match: /custom\s+insert/,
+                } as ChapbookSymbol,
+            ]);
+            index.setReferences("fake-uri", [
+                {
+                    contents: "custom insert",
+                    locations: [
+                        Location.create("fake-uri", Range.create(1, 2, 3, 4)),
+                    ],
+                    kind: OChapbookSymbolKind.CustomInsert,
+                },
+            ]);
+            const parser = uut.getChapbookParser(undefined);
+            const mockFunction = ImportMock.mockFunction(
+                insertsModule,
+                "all"
+            ).returns([]);
+
+            const result = parser?.generateHover(
+                doc,
+                Position.create(1, 3),
+                index
+            );
+            mockFunction.restore();
+
+            expect(result).to.eql({ contents: "This is a custom insert!" });
+        });
+
+        it("should return null for a position inside a reference to a custom insert whose description isn't defined", () => {
+            const doc = TextDocument.create("fake-uri", "", 0, "Placeholder");
+            const index = new Index();
+            index.setDefinitions("source-uri", [
+                {
+                    contents: "custom\\s+insert",
+                    location: Location.create(
+                        "source-uri",
+                        Range.create(5, 6, 7, 8)
+                    ),
+                    kind: OChapbookSymbolKind.CustomInsert,
+                    description: "This is a custom insert!",
+                    match: /custom\s+insert/,
+                } as ChapbookSymbol,
+            ]);
+            index.setReferences("fake-uri", [
+                {
+                    contents: "mock insert",
+                    locations: [
+                        Location.create("fake-uri", Range.create(1, 2, 3, 4)),
+                    ],
+                    kind: OChapbookSymbolKind.CustomInsert,
+                },
+            ]);
+            const parser = uut.getChapbookParser(undefined);
+            const mockFunction = ImportMock.mockFunction(
+                insertsModule,
+                "all"
+            ).returns([]);
+
+            const result = parser?.generateHover(
+                doc,
+                Position.create(1, 3),
+                index
+            );
+            mockFunction.restore();
+
+            expect(result).to.be.null;
         });
     });
 
