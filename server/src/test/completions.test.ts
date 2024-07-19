@@ -119,7 +119,42 @@ describe("Completions", () => {
         });
 
         describe("StoryData JSON", () => {
-            it("should generate and suggest IFID values", async () => {
+            it("should add an IFID value when completing the ifid property", async () => {
+                const doc = TextDocument.create(
+                    "fake-uri",
+                    "",
+                    1,
+                    "0123456789\n123456789\n123456789\n123456789"
+                );
+                const position = Position.create(1, 3);
+                const index = new Index();
+                index.setEmbeddedDocuments("fake-uri", [
+                    embeddedLanguagesModule.EmbeddedDocument.create(
+                        embeddedLanguagesModule.storyDataJSONUri,
+                        "json",
+                        '{\n""\n}',
+                        11,
+                        doc
+                    ),
+                ]);
+
+                const completions = await uut.generateCompletions(
+                    doc,
+                    position,
+                    index,
+                    true
+                );
+                const ifidItem = completions?.items.find((item) =>
+                    item.insertText?.includes("ifid")
+                );
+                const result = ifidItem?.insertText?.slice(-39, -3) || "nope";
+
+                // Slice the result to pull the end IFID out
+                expect(uuid.validate(result)).to.be.true;
+                expect(uuid.version(result)).to.equal(4);
+            });
+
+            it("should generate and suggest an IFID value", async () => {
                 const doc = TextDocument.create(
                     "fake-uri",
                     "",

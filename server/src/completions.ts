@@ -227,8 +227,20 @@ export async function generateCompletions(
                     completionOffset
                 )) || CompletionList.create([], false);
 
-            // Add custom completions for specific items
+            // Adjust the completion items for StoryData
             if (embeddedDocument.document.uri === storyDataJSONUri) {
+                // If one of the completion items is the IFID property, generate a
+                // new IFID value to go with it
+                const ifidItem = completions.items.find(
+                    (item) => item.insertText === '"ifid": "$1"'
+                );
+                if (ifidItem !== undefined) {
+                    ifidItem.insertText = `"ifid": "${v4().toUpperCase()}"$1`;
+                    if (ifidItem.textEdit?.newText !== undefined) {
+                        ifidItem.textEdit.newText = ifidItem.insertText;
+                    }
+                }
+
                 completions.items.push(
                     ...generateStoryDataCompletions(
                         embeddedDocument,
