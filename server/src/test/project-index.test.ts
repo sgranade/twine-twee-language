@@ -210,17 +210,14 @@ describe("Project Index", () => {
         });
 
         it("should return embedded documents for indexed files", () => {
-            const fakeEmbeddedDoc = TextDocument.create(
-                "fake-sub-ui",
-                "json",
-                1,
-                '{ "prop": 7 }'
-            );
             const docs: EmbeddedDocument[] = [
-                {
-                    document: fakeEmbeddedDoc,
-                    offset: 7,
-                },
+                EmbeddedDocument.create(
+                    "fake-sub-uri",
+                    "json",
+                    '{ "prop": 7 }',
+                    7,
+                    TextDocument.create("fake-uri", "", 2, "fake-content")
+                ),
             ];
             const index = new uut.Index();
             index.setEmbeddedDocuments("fake-uri", docs);
@@ -1184,17 +1181,14 @@ describe("Project Index", () => {
         });
 
         it("should remove embedded documents for a deleted document", () => {
-            const fakeEmbeddedDoc = TextDocument.create(
-                "fake-sub-ui",
-                "json",
-                1,
-                '{ "prop": 7 }'
-            );
             const docs: EmbeddedDocument[] = [
-                {
-                    document: fakeEmbeddedDoc,
-                    offset: 7,
-                },
+                EmbeddedDocument.create(
+                    "fake-sub-uri",
+                    "json",
+                    '{ "prop": 7 }',
+                    7,
+                    TextDocument.create("fake-uri", "", 2, "fake-content")
+                ),
             ];
             const index = new uut.Index();
             index.setEmbeddedDocuments("fake-uri", docs);

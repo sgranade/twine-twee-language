@@ -160,7 +160,7 @@ export function containingPosition(
 }
 
 /**
- * Convert a position in an embedded document to one in its containing document.
+ * Convert a range in an embedded document to one in its containing document.
  *
  * @param embeddedDocument The embedded document.
  * @param embeddedRange Range within the embedded document.

@@ -133,7 +133,7 @@ export async function generateDiagnostics(
                 embeddedDocument.document,
                 diagnostic.range,
                 document,
-                embeddedDocument.offset
+                document.offsetAt(embeddedDocument.range.start)
             );
             diagnostics.push(diagnostic);
         }

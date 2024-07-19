@@ -3,7 +3,7 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { doHover } from "./embedded-languages";
 import { ProjectIndex } from "./project-index";
-import { containingRange } from "./utilities";
+import { containingRange, positionInRange } from "./utilities";
 import { getStoryFormatParser } from "./passage-text-parsers";
 
 export async function generateHover(
@@ -16,13 +16,8 @@ export async function generateHover(
     // Embedded documents get to create their own completions
     for (const embeddedDocument of index.getEmbeddedDocuments(document.uri) ||
         []) {
-        if (
-            offset >= embeddedDocument.offset &&
-            offset <
-                embeddedDocument.offset +
-                    embeddedDocument.document.getText().length
-        ) {
-            const hover = await doHover(embeddedDocument, offset);
+        if (positionInRange(position, embeddedDocument.range)) {
+            const hover = await doHover(document, embeddedDocument, offset);
 
             // Adjust ranges to be in the parent document and not the sub-document
             if (Hover.is(hover) && hover.range !== undefined) {
@@ -30,7 +25,7 @@ export async function generateHover(
                     embeddedDocument.document,
                     hover.range,
                     document,
-                    embeddedDocument.offset
+                    document.offsetAt(embeddedDocument.range.start)
                 );
             }
 

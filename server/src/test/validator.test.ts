@@ -47,18 +47,15 @@ describe("Validator", () => {
                 "test-uri",
                 "twine",
                 1,
-                '{ "test": 17, }'
+                '012345678\n0123456{ "test": 17, }'
             );
-            const subDocument = TextDocument.create(
+            const embeddedDocument = EmbeddedDocument.create(
                 "file:///fake.json",
                 "json",
-                1,
-                document.getText()
+                '{ "test": 17, }',
+                17,
+                document
             );
-            const embeddedDocument: EmbeddedDocument = {
-                document: subDocument,
-                offset: 17,
-            };
             const index = new Index();
             index.setEmbeddedDocuments("test-uri", [embeddedDocument]);
 
@@ -79,16 +76,13 @@ describe("Validator", () => {
                 1,
                 '012345678\n0123456{ "test": 17, }'
             );
-            const subDocument = TextDocument.create(
+            const embeddedDocument = EmbeddedDocument.create(
                 "file:///fake.json",
                 "json",
-                1,
-                '{ "test": 17, }'
+                '{ "test": 17, }',
+                17,
+                document
             );
-            const embeddedDocument: EmbeddedDocument = {
-                document: subDocument,
-                offset: 17,
-            };
             const index = new Index();
             index.setEmbeddedDocuments("test-uri", [embeddedDocument]);
 

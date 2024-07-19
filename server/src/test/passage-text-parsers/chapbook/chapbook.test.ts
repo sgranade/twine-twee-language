@@ -393,7 +393,7 @@ describe("Chapbook", () => {
                         "Fake CSS\nMore fake\n"
                     );
                     expect(result.document.languageId).to.eql("css");
-                    expect(result.offset).to.eql(38);
+                    expect(result.range).to.eql(Range.create(3, 0, 5, 0));
                 });
 
                 it("should set a semantic token for a note modifier", () => {

@@ -28,6 +28,7 @@ import {
 import { all as allModifiers } from "./modifiers";
 import { parseJSExpression } from "../../js-parser";
 import { ProjectIndex, Symbol, TwineSymbolKind } from "../../project-index";
+import { EmbeddedDocument } from "../../embedded-languages";
 
 const varsSepPattern = /^--(\r?\n|$)/m;
 const conditionPattern = /((\((.+?)\)?)\s*)([^)]*)$/;
@@ -753,15 +754,15 @@ function parseTextSubsection(
         findEngineExtensions(subsection, subsectionIndex, state);
         parseJSExpression(subsection, subsectionIndex, chapbookState);
     } else if (chapbookState.modifierKind === ModifierKind.Css) {
-        state.callbacks.onEmbeddedDocument({
-            document: TextDocument.create(
+        state.callbacks.onEmbeddedDocument(
+            EmbeddedDocument.create(
                 "stylesheet",
                 "css",
-                state.textDocument.version,
-                subsection
-            ),
-            offset: subsectionIndex,
-        });
+                subsection,
+                subsectionIndex,
+                state.textDocument
+            )
+        );
     } else if (chapbookState.modifierKind === ModifierKind.Note) {
         capturePreTokenFor(
             subsection,

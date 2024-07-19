@@ -235,7 +235,7 @@ describe("Indexer", () => {
                 '{ "ifid": "11111111-DEFA-4F70-B7A2-27742230C0FC" }\n'
             );
             expect(result.document.languageId).to.eql("json");
-            expect(result.offset).to.eql(12);
+            expect(result.range).to.eql(Range.create(1, 0, 2, 0));
         });
 
         it("should add parse errors to the index", () => {

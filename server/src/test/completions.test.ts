@@ -1,6 +1,5 @@
 import { expect } from "chai";
 import "mocha";
-import * as sinon from "sinon";
 import { ImportMock } from "ts-mock-imports";
 import * as uuid from "uuid";
 import {
@@ -18,7 +17,6 @@ import * as ptpModule from "../passage-text-parsers";
 import * as embeddedLanguagesModule from "../embedded-languages";
 
 import * as uut from "../completions";
-import { generateCompletions } from "../passage-text-parsers/chapbook/chapbook-completions";
 
 describe("Completions", () => {
     describe("Embedded Documents", () => {
@@ -32,21 +30,20 @@ describe("Completions", () => {
             const position = Position.create(1, 9);
             const index = new Index();
             index.setEmbeddedDocuments("fake-uri", [
-                {
-                    document: TextDocument.create(
-                        "inner-uri",
-                        "",
-                        0,
-                        "embedded doc"
-                    ),
-                    offset: 17,
-                },
+                embeddedLanguagesModule.EmbeddedDocument.create(
+                    "inner-uri",
+                    "",
+                    "embedded doc",
+                    17,
+                    doc
+                ),
             ]);
             const mockFunction = ImportMock.mockFunction(
                 embeddedLanguagesModule,
                 "doComplete"
             ).callsFake(
                 async (
+                    parentDoc: TextDocument,
                     embeddedDoc: embeddedLanguagesModule.EmbeddedDocument
                 ) => {
                     if (embeddedDoc.document.uri === "inner-uri") {
@@ -79,21 +76,20 @@ describe("Completions", () => {
             const position = Position.create(1, 9);
             const index = new Index();
             index.setEmbeddedDocuments("fake-uri", [
-                {
-                    document: TextDocument.create(
-                        "inner-uri",
-                        "",
-                        0,
-                        "embedded doc"
-                    ),
-                    offset: 17,
-                },
+                embeddedLanguagesModule.EmbeddedDocument.create(
+                    "inner-uri",
+                    "",
+                    "embedded doc",
+                    17,
+                    doc
+                ),
             ]);
             const mockFunction = ImportMock.mockFunction(
                 embeddedLanguagesModule,
                 "doComplete"
             ).callsFake(
                 async (
+                    parentDoc: TextDocument,
                     embeddedDoc: embeddedLanguagesModule.EmbeddedDocument
                 ) => {
                     if (embeddedDoc.document.uri === "inner-uri") {
@@ -133,15 +129,13 @@ describe("Completions", () => {
                 const position = Position.create(2, 7);
                 const index = new Index();
                 index.setEmbeddedDocuments("fake-uri", [
-                    {
-                        document: TextDocument.create(
-                            embeddedLanguagesModule.storyDataJSONUri,
-                            "",
-                            0,
-                            '{\n"ifid": ""\n}'
-                        ),
-                        offset: 17,
-                    },
+                    embeddedLanguagesModule.EmbeddedDocument.create(
+                        embeddedLanguagesModule.storyDataJSONUri,
+                        "",
+                        '{\n"ifid": ""\n}',
+                        17,
+                        doc
+                    ),
                 ]);
                 const mockDoComplete = ImportMock.mockFunction(
                     embeddedLanguagesModule,
@@ -177,15 +171,13 @@ describe("Completions", () => {
                 const position = Position.create(2, 9);
                 const index = new Index();
                 index.setEmbeddedDocuments("fake-uri", [
-                    {
-                        document: TextDocument.create(
-                            embeddedLanguagesModule.storyDataJSONUri,
-                            "",
-                            0,
-                            '{\n"format": ""\n}'
-                        ),
-                        offset: 17,
-                    },
+                    embeddedLanguagesModule.EmbeddedDocument.create(
+                        embeddedLanguagesModule.storyDataJSONUri,
+                        "",
+                        '{\n"format": ""\n}',
+                        17,
+                        doc
+                    ),
                 ]);
                 const mockDoComplete = ImportMock.mockFunction(
                     embeddedLanguagesModule,
@@ -221,15 +213,13 @@ describe("Completions", () => {
                     buildPassage({ label: "Testy" }),
                 ]);
                 index.setEmbeddedDocuments("fake-uri", [
-                    {
-                        document: TextDocument.create(
-                            embeddedLanguagesModule.storyDataJSONUri,
-                            "",
-                            0,
-                            '{\n"start": ""\n}'
-                        ),
-                        offset: 17,
-                    },
+                    embeddedLanguagesModule.EmbeddedDocument.create(
+                        embeddedLanguagesModule.storyDataJSONUri,
+                        "",
+                        '{\n"start": ""\n}',
+                        17,
+                        doc
+                    ),
                 ]);
                 const mockDoComplete = ImportMock.mockFunction(
                     embeddedLanguagesModule,
@@ -260,15 +250,13 @@ describe("Completions", () => {
                 const position = Position.create(2, 23);
                 const index = new Index();
                 index.setEmbeddedDocuments("fake-uri", [
-                    {
-                        document: TextDocument.create(
-                            embeddedLanguagesModule.storyDataJSONUri,
-                            "",
-                            0,
-                            '{\n"tag-colors": { "test": "" }\n}'
-                        ),
-                        offset: 17,
-                    },
+                    embeddedLanguagesModule.EmbeddedDocument.create(
+                        embeddedLanguagesModule.storyDataJSONUri,
+                        "",
+                        '{\n"tag-colors": { "test": "" }\n}',
+                        17,
+                        doc
+                    ),
                 ]);
                 const mockDoComplete = ImportMock.mockFunction(
                     embeddedLanguagesModule,

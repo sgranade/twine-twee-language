@@ -15,10 +15,11 @@ import {
     doComplete,
     parseJSON,
     storyDataJSONUri,
+    updateEmbeddedDocument,
 } from "./embedded-languages";
 import { getStoryFormatParser } from "./passage-text-parsers";
 import { ProjectIndex } from "./project-index";
-import { containingRange } from "./utilities";
+import { containingRange, positionInRange } from "./utilities";
 
 /**
  * Create a string completion.
@@ -202,27 +203,36 @@ export async function generateCompletions(
     index: ProjectIndex,
     hasCompletionListItemDefaults: boolean
 ): Promise<CompletionList | null> {
-    const offset = document.offsetAt(position);
+    const completionOffset = document.offsetAt(position);
 
     // Embedded documents get to create their own completions
-    for (const embeddedDocument of index.getEmbeddedDocuments(document.uri) ||
+    for (let embeddedDocument of index.getEmbeddedDocuments(document.uri) ||
         []) {
-        if (
-            offset >= embeddedDocument.offset &&
-            offset <
-                embeddedDocument.offset +
-                    embeddedDocument.document.getText().length
-        ) {
+        if (positionInRange(position, embeddedDocument.range)) {
+            // Some clients (looking at you, VS Code) ask for completions before
+            // the change propagates to the server, leaving the embedded document
+            // out of sync with the parent, so make sure to update it if needed
+            embeddedDocument = updateEmbeddedDocument(
+                embeddedDocument,
+                document
+            );
+
+            const embeddedDocOffset = document.offsetAt(
+                embeddedDocument.range.start
+            );
             const completions =
-                (await doComplete(embeddedDocument, offset)) ||
-                CompletionList.create([], false);
+                (await doComplete(
+                    document,
+                    embeddedDocument,
+                    completionOffset
+                )) || CompletionList.create([], false);
 
             // Add custom completions for specific items
             if (embeddedDocument.document.uri === storyDataJSONUri) {
                 completions.items.push(
                     ...generateStoryDataCompletions(
                         embeddedDocument,
-                        offset - embeddedDocument.offset,
+                        completionOffset - embeddedDocOffset,
                         index
                     )
                 );
@@ -240,7 +250,7 @@ export async function generateCompletions(
                             embeddedDocument.document,
                             item.textEdit.range,
                             document,
-                            embeddedDocument.offset
+                            embeddedDocOffset
                         );
                     }
                 }
@@ -253,7 +263,7 @@ export async function generateCompletions(
 
     // See if we're potentially inside a Twine link
     const text = document.getText();
-    let i = offset;
+    let i = completionOffset;
     let linkBeginOffset: number | undefined;
     let arrowOrPipeOffset: number | undefined;
     // Find where the link should begin: [[, -> or |
@@ -281,7 +291,7 @@ export async function generateCompletions(
         // Find where the link should end: ]], <-, or the end of the line
         let linkEndOffset: number | undefined;
         let suggestAPassage = true;
-        for (i = offset; i < text.length; i++) {
+        for (i = completionOffset; i < text.length; i++) {
             // Don't go further forward than the current line,
             // the pipe character, or a ->
             if (text[i] === "\r" || text[i] === "\n") break;

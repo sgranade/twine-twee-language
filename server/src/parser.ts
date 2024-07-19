@@ -390,13 +390,14 @@ function parseHeaderMetadata(
         },
     };
 
-    const subDocument = TextDocument.create(
+    const subDocument = EmbeddedDocument.create(
         headerMetadataJSONUri,
         "json",
-        state.textDocument.version,
-        rawMetadata
+        rawMetadata,
+        metadataIndex,
+        state.textDocument
     );
-    const jsonDocument = parseJSON(subDocument);
+    const jsonDocument = parseJSON(subDocument.document);
 
     for (const kid of jsonDocument.root?.children || []) {
         if (kid.type === "property") {
@@ -410,10 +411,7 @@ function parseHeaderMetadata(
         }
     }
 
-    state.callbacks.onEmbeddedDocument({
-        document: subDocument,
-        offset: metadataIndex,
-    });
+    state.callbacks.onEmbeddedDocument(subDocument);
 
     return metadata;
 }
@@ -598,13 +596,15 @@ function parseStoryDataPassage(
         ifid: "",
     };
 
-    const subDocument = TextDocument.create(
+    const subDocument = EmbeddedDocument.create(
         storyDataJSONUri,
         "json",
-        state.textDocument.version,
-        passageText
+
+        passageText,
+        textIndex,
+        state.textDocument
     );
-    const jsonDocument = parseJSON(subDocument);
+    const jsonDocument = parseJSON(subDocument.document);
 
     const storyFormat: StoryFormat = {
         format: "",
@@ -654,10 +654,7 @@ function parseStoryDataPassage(
             state.textDocument.positionAt(textIndex + trimmedPassageText.length)
         )
     );
-    state.callbacks.onEmbeddedDocument({
-        document: subDocument,
-        offset: textIndex,
-    });
+    state.callbacks.onEmbeddedDocument(subDocument);
 
     return storyData;
 }
@@ -680,10 +677,15 @@ function parseStylesheetPassage(
         state.textDocument.version,
         passageText
     );
-    state.callbacks.onEmbeddedDocument({
-        document: subDocument,
-        offset: textIndex,
-    });
+    state.callbacks.onEmbeddedDocument(
+        EmbeddedDocument.create(
+            "stylesheet",
+            "css",
+            passageText,
+            textIndex,
+            state.textDocument
+        )
+    );
 }
 
 /**

@@ -241,7 +241,7 @@ describe("Twine Parser", () => {
 
                 expect(result.document.getText()).to.eql("P1 contents");
                 expect(result.document.languageId).to.eql("css");
-                expect(result.offset).to.eql(26);
+                expect(result.range).to.eql(Range.create(1, 0, 1, 11));
             });
 
             it("should call back with the passage's metadata captured", () => {
@@ -285,7 +285,7 @@ describe("Twine Parser", () => {
                     '{"position":"600,400", "size":"100,200"}'
                 );
                 expect(result.document.languageId).to.eql("json");
-                expect(result.offset).to.eql(13);
+                expect(result.range).to.eql(Range.create(0, 13, 0, 53));
             });
 
             it("should call back with both the passage's tags and metadata", () => {
@@ -464,7 +464,7 @@ describe("Twine Parser", () => {
                         "}\n"
                 );
                 expect(result.document.languageId).to.eql("json");
-                expect(result.offset).to.eql(13);
+                expect(result.range).to.eql(Range.create(1, 0, 4, 0));
             });
 
             it("should call back on StoryData with the data's range", () => {
