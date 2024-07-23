@@ -22,7 +22,7 @@ A VS Code plugin for [Twine] (specifically the [Twee3] format) and the [Chapbook
     -   Go to a custom inserts or modifier's definition
     -   Highlight references to a custom insert or modifier
 
-The plugin recognizes [custom inserts] and [modifiers] defined through `engine.extend()` calls. If you add a `name` property to your custom insert or modifier, the plugin will use that name in auto-completions. If you add a `description` property, the plugin will show its value when hovering over the insert or modifier. For instance, here's how you could add both to the example custom insert from the Chapbook documentation.
+The plugin recognizes [custom inserts] and [modifiers][custom modifiers] defined through `engine.extend()` calls. If you add a `name` property to your custom insert or modifier, the plugin will use that name in auto-completions. If you add a `description` property, the plugin will show its value when hovering over the insert or modifier. For instance, here's how you could add both to the example custom insert from the Chapbook documentation.
 
 ```
 [JavaScript]
@@ -48,7 +48,7 @@ The plugin determines what story format to use based on the `format` property in
 
 [Chapbook]: https://klembot.github.io/chapbook/
 [custom inserts]: https://klembot.github.io/chapbook/guide/advanced/adding-custom-inserts.html
-[modifiers]: https://klembot.github.io/chapbook/guide/advanced/adding-custom-modifiers.html
+[custom modifiers]: https://klembot.github.io/chapbook/guide/advanced/adding-custom-modifiers.html
 [marketplace]: https://marketplace.visualstudio.com/
 [Twee3]: https://github.com/iftechfoundation/twine-specs/blob/master/twee-3-specification.md
 [Twine]: https://twinery.org/

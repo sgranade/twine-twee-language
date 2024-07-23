@@ -1,5 +1,13 @@
 import * as path from "path";
-import { workspace, ExtensionContext, Uri } from "vscode";
+import {
+    languages,
+    window,
+    workspace,
+    ExtensionContext,
+    TextEditor,
+    Uri,
+    TextDocument,
+} from "vscode";
 
 import {
     LanguageClient,
@@ -20,9 +28,63 @@ import * as notifications from "./notifications";
 
 let client: LanguageClient;
 let currentStoryFormat: StoryFormat;
+let currentStoryFormatLanguage: string;
 
-function _onUpdatedStoryFormat(e: StoryFormat): void {
+async function _updateStoryFormatLanguage() {
+    const langs = await languages.getLanguages();
+
+    // Get a language format, starting with the most specific and going from there.
+    // Currently we only support languages based on the major version number
+    // (i.e. `twee3-chapbook-2` and not `twee3-chapbook-2-1`)
+    let format = `twee3-${currentStoryFormat.format}`.toLowerCase();
+    if (currentStoryFormat.formatVersion !== undefined) {
+        const testLanguage = `${format}-${currentStoryFormat.formatVersion.split(".")[0]}`;
+        if (langs.includes(testLanguage)) {
+            currentStoryFormatLanguage = testLanguage;
+            return;
+        }
+    }
+    if (langs.includes(format)) {
+        currentStoryFormatLanguage = format;
+    } else {
+        currentStoryFormatLanguage = "twee3";
+    }
+}
+
+/**
+ * If a document is a Twee 3 document, adjust its specific language if needed.
+ *
+ * This function allows us to adjust document languages for specific
+ * Twine story formats.
+ *
+ * @param document Document whose language might need to be updated.
+ * @returns Document.
+ */
+async function _updateTweeDocumentLanguage(
+    document: TextDocument
+): Promise<TextDocument> {
+    // N.B. that currentStoryFormatLanguage may not be set due to
+    // the parser not yet having encountered the StoryData passage
+    if (
+        currentStoryFormatLanguage !== undefined &&
+        /^twee3.*/.test(document.languageId) &&
+        document.languageId !== currentStoryFormatLanguage
+    ) {
+        return await languages.setTextDocumentLanguage(
+            document,
+            currentStoryFormatLanguage
+        );
+    }
+    return document;
+}
+
+async function _onUpdatedStoryFormat(e: StoryFormat) {
     currentStoryFormat = e;
+    await _updateStoryFormatLanguage();
+    // If we have an active text window, adjust its language if necessary
+    if (window.activeTextEditor !== undefined) {
+        _updateTweeDocumentLanguage(window.activeTextEditor.document);
+    }
 }
 
 const includeFiles = (): string =>
@@ -52,8 +114,7 @@ export function activate(context: ExtensionContext) {
 
     // Options to control the language client
     const clientOptions: LanguageClientOptions = {
-        // Register the server for plain text documents
-        documentSelector: [{ scheme: "file", language: "twee3" }],
+        documentSelector: [{ scheme: "file", pattern: "**/*.{tw,twee}" }],
         synchronize: {
             // TODO Notify the server about file changes to '.clientrc files contained in the workspace
             fileEvents: workspace.createFileSystemWatcher("**/.clientrc"),
@@ -71,10 +132,9 @@ export function activate(context: ExtensionContext) {
     // Handle notifications
     context.subscriptions.push(notifications.initNotifications(client));
 
-    // TODO REMOVE
     notifications.addNotificationHandler(
         CustomMessages.UpdatedStoryFormat,
-        (e) => _onUpdatedStoryFormat(e[0])
+        async (e) => await _onUpdatedStoryFormat(e[0])
     );
 
     // Handle configuration changes
@@ -89,6 +149,13 @@ export function activate(context: ExtensionContext) {
             )
         ) {
             client.sendNotification(CustomMessages.RequestReindex);
+        }
+    });
+
+    // Adjust document languages on edit if needed
+    window.onDidChangeActiveTextEditor(async (e: TextEditor | undefined) => {
+        if (e !== undefined) {
+            await _updateTweeDocumentLanguage(e.document);
         }
     });
 

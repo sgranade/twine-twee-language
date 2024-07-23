@@ -147,7 +147,7 @@
 			"name": "comment.block.twee3.chapbook-2"
 		},
 		"chapbook-2-modifier-entire": {
-			"match": "^\\s*\\[(.*?)\\]\\s*$",
+			"match": "^\\[([^\\[].+[^\\]])\\]$",
 			"name": "source.modifier.twee3",
 			"captures": {
 				"1": {
