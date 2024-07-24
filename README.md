@@ -22,15 +22,24 @@ A VS Code plugin for [Twine] (specifically the [Twee3] format) and the [Chapbook
     -   Go to a custom inserts or modifier's definition
     -   Highlight references to a custom insert or modifier
 
-The plugin recognizes [custom inserts] and [modifiers][custom modifiers] defined through `engine.extend()` calls. If you add a `name` property to your custom insert or modifier, the plugin will use that name in auto-completions. If you add a `description` property, the plugin will show its value when hovering over the insert or modifier. For instance, here's how you could add both to the example custom insert from the Chapbook documentation.
+The plugin recognizes [custom inserts] and [modifiers][custom modifiers] defined through `engine.extend()` calls. You can add additional properties to your custom insert or modifier to add better autocomplete and hover support.
+
+-   `name` (string): The custom insert/modifier's name.
+-   `syntax` (string): What the author will type to use your custom insert/modifier, such as "[custom modifier]" or "{new insert: 'text to display'}". Shown when hovering over the insert/modifier.
+-   `description` (string): What your custom insert/modifier does. Shown when hovering over it.
+-   `completions` (array of strings): The text to be used when VS Code tries to auto-complete your insert/modifier. For example, the `[if]` and `[else]` modifier's completions are `['if', 'else']`.
+
+Here's how the example custom insert from the Chapbook documentation could use these properties.
 
 ```
 [JavaScript]
 engine.extend("2.0.0", () => {
-    engine.timplate.inserts.add({
+    engine.template.inserts.add({
         name: "smiley face",
+        syntax: "{smiley face}",
         description: "Inserts a smiley face emoji.",
         match: /^smiley face$/i,
+        completions: ["smiley face"],
         render: () => "😀",
     });
 });

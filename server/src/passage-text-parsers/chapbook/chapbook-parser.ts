@@ -141,53 +141,149 @@ export function getChapbookDefinitions(
     return customSymbols;
 }
 
+enum jsObjectType {
+    str,
+    regex,
+    strArray,
+}
+
 /**
- * Extract a Javascript object property that's a string or regular expression.
+ * Extract a Javascript object property.
  *
  * The property should be in the form:
  *    - `propertyName: "string value"`
  *    - `propertyName: 'string value'`
  *    - `propertyName: /regex value/i` (flags optional)
+ *    - `propertyName: ['value 1', 'value 2']`
  *
  * @param propertyName Name of the Javascript object property to extract.
+ * @param expectedType Type of the property's value.
  * @param contents String containing the object properties.
- * @returns Tuple of the string or regex without its flags, regex flags (if found), and index into contents where the property's value begins, or undefined if not found.
+ * @param contentsIndex Index in the document where the contents begin (zero-based).
+ * @param state Parsing state.
+ * @returns Tuple of the property value as raw text, its index into contents, and the parsed value, or undefined if not found.
  */
-function extractJSObjectPropertyStringOrRegex(
+function extractJSObjectProperty(
     propertyName: string,
-    contents: string
-): [string, string, number] | undefined {
+    expectedType: jsObjectType,
+    contents: string,
+    contentsIndex: number,
+    state: ParsingState
+): [string, number, string | RegExp | string[]] | undefined {
     const m = new RegExp(`(?<=({|,)\\s*)${propertyName}:\\s?`, "s").exec(
         contents
     );
     if (m === null) return undefined;
 
-    const propertyValueNdx = m.index + m[0].length;
-    // If the property is a string or regex, go to its matching delimiter
-    const firstChar = contents[propertyValueNdx];
-    if (firstChar === "'" || firstChar === '"' || firstChar === "/") {
+    let retVal: string | RegExp | string[] | undefined = undefined;
+
+    let fullPropertyValue = "";
+    const fullPropertyNdx = m.index + m[0].length;
+    const firstChar = contents[fullPropertyNdx];
+
+    // String
+    if (
+        expectedType === jsObjectType.str &&
+        (firstChar === "'" || firstChar === '"')
+    ) {
         const propertyValue = extractToMatchingDelimiter(
             contents,
             firstChar,
             firstChar,
-            propertyValueNdx + 1
+            fullPropertyNdx + 1
         );
-        if (propertyValue === undefined) return undefined;
-        // Regexes can have flags; capture those to return
-        let matchFlags = "";
-        if (firstChar === "/") {
+        if (propertyValue !== undefined) {
+            fullPropertyValue = `${firstChar}${propertyValue}${firstChar}`;
+            retVal = propertyValue;
+        }
+    }
+
+    // Regex
+    else if (expectedType === jsObjectType.regex && firstChar === "/") {
+        const propertyValue = extractToMatchingDelimiter(
+            contents,
+            "/",
+            "/",
+            fullPropertyNdx + 1
+        );
+        if (propertyValue !== undefined) {
+            // Regexes can have flags; capture and verify those
             const matchFlagsNdx =
-                propertyValueNdx + 1 + propertyValue.length + 1; // + 1s to skip the "/"s
+                fullPropertyNdx + 1 + propertyValue.length + 1; // + 1s to skip the "/"s
             const endPattern = /,|}|\r?\n|$/g;
             endPattern.lastIndex = matchFlagsNdx;
             const endNdx = endPattern.exec(contents)?.index;
-            matchFlags = contents.slice(matchFlagsNdx, endNdx);
+            let matchFlags = contents.slice(matchFlagsNdx, endNdx).trimEnd();
+            if (/[^dgimsuvy]/.test(matchFlags)) {
+                logErrorFor(
+                    matchFlags,
+                    matchFlagsNdx + contentsIndex,
+                    "Regular expression flags can only be d, g, i, m, s, u, v, and y",
+                    state
+                );
+                matchFlags = "";
+            }
+            try {
+                retVal = new RegExp(propertyValue, matchFlags);
+                fullPropertyValue = `/${propertyValue}/${matchFlags}`;
+            } catch (e) {
+                logErrorFor(
+                    `/${propertyValue}/${matchFlags}`,
+                    fullPropertyNdx + contentsIndex,
+                    `Invalid regular expression: ${e}`,
+                    state
+                );
+            }
         }
-        return [
-            `${firstChar}${propertyValue}${firstChar}`,
-            matchFlags,
-            propertyValueNdx,
-        ];
+    }
+
+    // String array
+    else if (expectedType === jsObjectType.strArray && firstChar === "[") {
+        const propertyValue = extractToMatchingDelimiter(
+            contents,
+            "[",
+            "]",
+            fullPropertyNdx + 1
+        );
+        if (propertyValue !== undefined) {
+            // Extract the purported strings one at a time -- we can't use
+            // JSON parsing since the strings may be single quoted
+            const arr: string[] = [];
+            let currentArrNdx = 0;
+            const commaBracketPattern = / *([,\]]|$)/g;
+            while (currentArrNdx < propertyValue.length) {
+                // Find the next string and save it
+                let m = /^ *(['"])/.exec(propertyValue.slice(currentArrNdx));
+                if (m === null) break;
+                const arrString = extractToMatchingDelimiter(
+                    propertyValue,
+                    m[1],
+                    m[1],
+                    currentArrNdx + m[0].length
+                );
+                if (arrString === undefined) break;
+                arr.push(arrString);
+
+                // See if we need to keep going
+                currentArrNdx += m[0].length + arrString.length + 1; // + 1 to skip closing quote mark
+                commaBracketPattern.lastIndex = currentArrNdx;
+                m = commaBracketPattern.exec(propertyValue);
+                currentArrNdx += m !== null ? m[0].length : 0;
+                // If it's not found, or we found the end of the string or a closing bracket, stop
+                if (m === null || m[1] === "" || m[1] === "]") break;
+            }
+            if (arr.length > 0) {
+                retVal = arr;
+                fullPropertyValue = contents.slice(
+                    fullPropertyNdx,
+                    currentArrNdx
+                );
+            }
+        }
+    }
+
+    if (retVal !== undefined) {
+        return [fullPropertyValue, fullPropertyNdx, retVal];
     }
 
     return undefined;
@@ -208,93 +304,102 @@ function parseCustomInsertOrModifierDefinition(
     state: ParsingState
 ): void {
     // Extract the "match" property contents
-    const matchPropertyInfo = extractJSObjectPropertyStringOrRegex(
+    const matchPropertyInfo = extractJSObjectProperty(
         "match",
-        contents
+        jsObjectType.regex,
+        contents,
+        contentsIndex,
+        state
     );
     if (matchPropertyInfo === undefined) return;
-    let [matchContents, matchFlags, matchNdx] = matchPropertyInfo;
-    if (matchContents[0] !== "/") return;
-    matchFlags = matchFlags.trimEnd();
-    const matchInnards = matchContents.slice(1, -1);
-    const matchInnardsNdx = matchNdx + 1; // +1 to skip the leading "/"
-    const matchFlagsNdx = matchNdx + matchContents.length;
+    const match = matchPropertyInfo[2] as RegExp;
+    const matchIndex = matchPropertyInfo[1];
 
     // If there's a "name" property, use that as the symbol's contents;
     // otherwise, stick with the regex match contents.
-    let name = matchInnards;
-    const namePropertyInfo = extractJSObjectPropertyStringOrRegex(
+    let name: string;
+    const namePropertyInfo = extractJSObjectProperty(
         "name",
-        contents
+        jsObjectType.str,
+        contents,
+        contentsIndex,
+        state
     );
     if (namePropertyInfo !== undefined) {
-        const nameContents = namePropertyInfo[0];
-        if (nameContents[0] === "'" || nameContents[0] === '"') {
-            name = nameContents.slice(1, -1);
-        }
+        name = namePropertyInfo[2] as string;
+    } else {
+        name = match.source;
     }
 
     // If there's a "description" property, capture that as a
     // description
     let description: string | undefined;
-    const descriptionPropertyInfo = extractJSObjectPropertyStringOrRegex(
+    const descriptionPropertyInfo = extractJSObjectProperty(
         "description",
-        contents
+        jsObjectType.str,
+        contents,
+        contentsIndex,
+        state
     );
     if (descriptionPropertyInfo !== undefined) {
-        const descriptionContents = descriptionPropertyInfo[0];
-        if (descriptionContents[0] === "'" || descriptionContents[0] === '"') {
-            description = descriptionContents.slice(1, -1);
-        }
+        description = descriptionPropertyInfo[2] as string;
+    }
+
+    // Similarly, if there's a "syntax" property, capture that
+    let syntax: string | undefined;
+    const syntaxPropertyInfo = extractJSObjectProperty(
+        "syntax",
+        jsObjectType.str,
+        contents,
+        contentsIndex,
+        state
+    );
+    if (syntaxPropertyInfo !== undefined) {
+        syntax = syntaxPropertyInfo[2] as string;
+    }
+
+    // And finally the "completions" property
+    let completions: string[] | undefined;
+    const completionsPropertyInfo = extractJSObjectProperty(
+        "completions",
+        jsObjectType.strArray,
+        contents,
+        contentsIndex,
+        state
+    );
+    if (completionsPropertyInfo !== undefined) {
+        completions = completionsPropertyInfo[2] as string[];
     }
 
     // Custom inserts must have a space in their match object
     if (
         symbolKind === OChapbookSymbolKind.CustomInsert &&
-        matchInnards.indexOf(" ") === -1 &&
-        matchInnards.indexOf("\\s") === -1
+        match.source.indexOf(" ") === -1 &&
+        match.source.indexOf("\\s") === -1
     ) {
         logErrorFor(
-            matchInnards,
-            matchInnardsNdx + contentsIndex,
+            match.source,
+            matchIndex + 1 + contentsIndex, // + 1 to skip the leading "/"
             "Custom inserts must have a space in their match",
             state
         );
     }
 
-    if (matchFlags !== "" && /[^dgimsuvy]/.test(matchFlags)) {
-        logErrorFor(
-            matchFlags,
-            matchFlagsNdx + contentsIndex,
-            "Regular expression flags can only be d, g, i, m, s, u, v, and y",
-            state
-        );
-        matchFlags = "";
-    }
-
     // Save the match as a Regex in the associated label
-    try {
-        const regex = new RegExp(matchInnards, matchFlags);
-        const symbol: ChapbookSymbol = {
-            contents: name,
-            location: createLocationFor(
-                matchInnards,
-                matchInnardsNdx + contentsIndex,
-                state
-            ),
-            kind: symbolKind,
-            match: regex,
-        };
-        if (description !== undefined) symbol.description = description;
-        state.callbacks.onSymbolDefinition(symbol);
-    } catch (e) {
-        logErrorFor(
-            `${matchContents}${matchFlags}`,
-            matchNdx + contentsIndex,
-            `${e}`,
+    const symbol: ChapbookSymbol = {
+        contents: name,
+        location: createLocationFor(
+            match.source,
+            matchIndex + 1 + contentsIndex, // + 1 to skip the leading "/"
             state
-        );
-    }
+        ),
+        kind: symbolKind,
+        match: match,
+    };
+    if (description !== undefined) symbol.description = description;
+    if (syntax !== undefined) symbol.syntax = syntax;
+    if (completions !== undefined) symbol.completions = completions;
+    state.callbacks.onSymbolDefinition(symbol);
 }
 
 /**

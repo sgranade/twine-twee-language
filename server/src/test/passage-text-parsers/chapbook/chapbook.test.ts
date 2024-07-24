@@ -1616,6 +1616,72 @@ describe("Chapbook", () => {
                     });
                 });
 
+                it("should set the symbol definition's syntax to the syntax property for a custom insert", () => {
+                    const header = ":: Passage\n";
+                    const passage =
+                        "[javascript]\nengine.extend('2.0.1', () => {\nengine.template.inserts.add(\n{match: /hi\\s+there/, syntax: '{hi there}'}\n);\n});\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        uri: "fake-uri",
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    state.storyFormat = {
+                        format: "Chapbook",
+                        formatVersion: "2.0.1",
+                    };
+                    const parser = uut.getChapbookParser(undefined);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    const result = callbacks.definitions[0] as ChapbookSymbol;
+
+                    expect(callbacks.definitions.length).to.equal(1);
+                    expect(ChapbookSymbol.is(result)).to.be.true;
+                    expect(result).to.eql({
+                        contents: "hi\\s+there",
+                        syntax: "{hi there}",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(4, 9, 4, 19)
+                        ),
+                        kind: OChapbookSymbolKind.CustomInsert,
+                        match: /hi\s+there/,
+                    });
+                });
+
+                it("should set the symbol definition's completions to the completions property for a custom insert", () => {
+                    const header = ":: Passage\n";
+                    const passage =
+                        "[javascript]\nengine.extend('2.0.1', () => {\nengine.template.inserts.add(\n{match: /hi\\s+there/, completions: ['one', 'two']}\n);\n});\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        uri: "fake-uri",
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    state.storyFormat = {
+                        format: "Chapbook",
+                        formatVersion: "2.0.1",
+                    };
+                    const parser = uut.getChapbookParser(undefined);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    const result = callbacks.definitions[0] as ChapbookSymbol;
+
+                    expect(callbacks.definitions.length).to.equal(1);
+                    expect(ChapbookSymbol.is(result)).to.be.true;
+                    expect(result).to.eql({
+                        contents: "hi\\s+there",
+                        completions: ["one", "two"],
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(4, 9, 4, 19)
+                        ),
+                        kind: OChapbookSymbolKind.CustomInsert,
+                        match: /hi\s+there/,
+                    });
+                });
+
                 it("should capture a symbol definition for a custom modifier", () => {
                     const header = ":: Passage\n";
                     const passage =
@@ -1704,6 +1770,72 @@ describe("Chapbook", () => {
                     expect(result).to.eql({
                         contents: "hi\\s+there",
                         description: "I'm a modifier!",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(4, 9, 4, 19)
+                        ),
+                        kind: OChapbookSymbolKind.CustomModifier,
+                        match: /hi\s+there/,
+                    });
+                });
+
+                it("should set the symbol definition's syntax to the syntax property for a custom modifier", () => {
+                    const header = ":: Passage\n";
+                    const passage =
+                        "[javascript]\nengine.extend('2.0.1', () => {\nengine.template.modifiers.add(\n{match: /hi\\s+there/, syntax: \"[hi there]\"}\n);\n});\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        uri: "fake-uri",
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    state.storyFormat = {
+                        format: "Chapbook",
+                        formatVersion: "2.0.1",
+                    };
+                    const parser = uut.getChapbookParser(undefined);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    const result = callbacks.definitions[0] as ChapbookSymbol;
+
+                    expect(callbacks.definitions.length).to.equal(1);
+                    expect(ChapbookSymbol.is(result)).to.be.true;
+                    expect(result).to.eql({
+                        contents: "hi\\s+there",
+                        syntax: "[hi there]",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(4, 9, 4, 19)
+                        ),
+                        kind: OChapbookSymbolKind.CustomModifier,
+                        match: /hi\s+there/,
+                    });
+                });
+
+                it("should set the symbol definition's completions to the completions property for a custom modifier", () => {
+                    const header = ":: Passage\n";
+                    const passage =
+                        '[javascript]\nengine.extend(\'2.0.1\', () => {\nengine.template.modifiers.add(\n{match: /hi\\s+there/, completions: ["one", "two"]}\n);\n});\n';
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        uri: "fake-uri",
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    state.storyFormat = {
+                        format: "Chapbook",
+                        formatVersion: "2.0.1",
+                    };
+                    const parser = uut.getChapbookParser(undefined);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    const result = callbacks.definitions[0] as ChapbookSymbol;
+
+                    expect(callbacks.definitions.length).to.equal(1);
+                    expect(ChapbookSymbol.is(result)).to.be.true;
+                    expect(result).to.eql({
+                        contents: "hi\\s+there",
+                        completions: ["one", "two"],
                         location: Location.create(
                             "fake-uri",
                             Range.create(4, 9, 4, 19)
