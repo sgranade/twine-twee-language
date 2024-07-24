@@ -61,7 +61,8 @@ function generateModifierCompletions(
 
     const modifierCompletions: string[] = [];
     for (const modifier of allModifiers()) {
-        modifierCompletions.push(...modifier.completions);
+        if (modifier.completions !== undefined)
+            modifierCompletions.push(...modifier.completions);
     }
     for (const customModifier of getChapbookDefinitions(
         OChapbookSymbolKind.CustomModifier,
@@ -252,7 +253,7 @@ function generateInsertCompletions(
         let placeholderCount = 1;
         const insertCompletions: CompletionItem[] = [];
         for (const insert of inserts) {
-            for (const label of insert.completions) {
+            for (const label of insert.completions || []) {
                 let textEditText = label;
                 if (
                     colonMissing &&

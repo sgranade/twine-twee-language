@@ -1,7 +1,8 @@
-import { ArgumentRequirement, InsertParser } from "./types";
+import { ArgumentRequirement, InsertInfo } from "./types";
 
-export const embedYouTubeVideo: InsertParser = {
+export const embedYouTubeVideo: InsertInfo = {
     name: "embed YouTube video",
+    syntax: "{embed YouTube video: 'URL'}\n{embed YouTube: 'URL'}",
     description: "Renders a video player for a video hosted on YouTube.",
     match: /^embed\s+youtube(\s+video)?/i,
     arguments: {

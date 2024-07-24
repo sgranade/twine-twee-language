@@ -6,11 +6,11 @@ import { cont } from "./continue";
 import { css } from "./css";
 import { javascript } from "./javascript";
 import { note } from "./note";
-import { ModifierParser } from "./types";
+import { ModifierInfo } from "./types";
 
 export * from "./types";
 
-const builtins: ModifierParser[] = [
+const builtins: ModifierInfo[] = [
     after,
     align,
     append,
@@ -27,6 +27,6 @@ const inserts = [...builtins];
  * Get all modifier parsers.
  * @returns Modifier parsers.
  */
-export function all(): readonly ModifierParser[] {
+export function all(): readonly ModifierInfo[] {
     return inserts;
 }

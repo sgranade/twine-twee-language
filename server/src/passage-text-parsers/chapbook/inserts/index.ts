@@ -12,11 +12,11 @@ import { restartLink } from "./restart-link";
 import { revealLink } from "./reveal-link";
 import { soundEffect } from "./sound-effect";
 import { textInput } from "./text-input";
-import { InsertParser } from "./types";
+import { InsertInfo } from "./types";
 
 export * from "./types";
 
-const builtins: InsertParser[] = [
+const builtins: InsertInfo[] = [
     ambientSound,
     backLink,
     cyclingLink,
@@ -40,6 +40,6 @@ const inserts = [...builtins];
  * Get all insert parsers.
  * @returns Insert parsers.
  */
-export function all(): readonly InsertParser[] {
+export function all(): readonly InsertInfo[] {
     return inserts;
 }

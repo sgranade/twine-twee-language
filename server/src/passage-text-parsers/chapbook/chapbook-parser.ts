@@ -36,6 +36,38 @@ const modifierPattern = /^([ \t]*)\[([^[].+[^\]])\](\s*?)(?:\r?\n|$)/gm;
 const lineExtractionPattern = /^([ \t]*?)\b(.*)$/gm;
 
 /**
+ * A Chapbook function such as an insert or modifier.
+ */
+export interface ChapbookFunctionInfo {
+    /**
+     * Regular expression that matches invocations of this function.
+     */
+    match: RegExp;
+    /**
+     * Function's syntax. Shown on hover; supports markdown.
+     */
+    syntax?: string;
+    /**
+     * Function's description. Shown on hover; supports markdown.
+     */
+    description?: string;
+    /**
+     * List of completions corresponding to this function.
+     */
+    completions?: string[];
+}
+export namespace ChapbookFunctionInfo {
+    /**
+     * Type guard for ChapbookSymbol.
+     */
+    export function is(val: any): val is ChapbookFunctionInfo {
+        if (typeof val !== "object" || Array.isArray(val) || val === null)
+            return false;
+        return (val as ChapbookFunctionInfo).match !== undefined;
+    }
+}
+
+/**
  * Kind of a Chapbook symbol.
  */
 export const OChapbookSymbolKind = {
@@ -47,10 +79,10 @@ export const OChapbookSymbolKind = {
 export type ChapbookSymbolKind =
     (typeof OChapbookSymbolKind)[keyof typeof OChapbookSymbolKind];
 
-export interface ChapbookSymbol extends Symbol {
-    match: RegExp;
-    description?: string;
-}
+/**
+ * A Chapbook symbol, which corresponds either to a modifier or insert.
+ */
+export interface ChapbookSymbol extends Symbol, ChapbookFunctionInfo {}
 export namespace ChapbookSymbol {
     /**
      * Type guard for ChapbookSymbol.

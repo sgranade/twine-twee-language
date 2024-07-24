@@ -1,8 +1,9 @@
 import { logErrorFor, parsePassageReference } from "../../../parser";
-import { ArgumentRequirement, InsertParser, ValueType } from "./types";
+import { ArgumentRequirement, InsertInfo, ValueType } from "./types";
 
-export const embedPassage: InsertParser = {
+export const embedPassage: InsertInfo = {
     name: "embed passage",
+    syntax: "{embed passage named: 'passage name'}\n{embed passage: 'passage name'}",
     description:
         "Renders the passage named in the insert. This executed any vars section in that passage.",
     match: /^embed\s+passage(\s+named)?/i,

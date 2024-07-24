@@ -1,8 +1,9 @@
 import { ModifierKind } from "../chapbook-parser";
-import { ModifierParser } from "./types";
+import { ModifierInfo } from "./types";
 
-export const note: ModifierParser = {
+export const note: ModifierInfo = {
     name: "note",
+    syntax: "[note to self], [note], [todo], [fixme]",
     description:
         "Causes the text to never be visible to the player. This is useful for leaving notes or other information for yourself.",
     match: /^(note(\s+to\s+myself)?|n\.?b\.?|todo|fixme)$/i,

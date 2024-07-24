@@ -1,10 +1,9 @@
-import { capturePreTokenFor } from "../..";
 import { parsePassageReference } from "../../../parser";
-import { ETokenType } from "../../../tokens";
-import { ArgumentRequirement, InsertParser, ValueType } from "./types";
+import { ArgumentRequirement, InsertInfo, ValueType } from "./types";
 
-export const link: InsertParser = {
-    name: "link",
+export const link: InsertInfo = {
+    name: "link to",
+    syntax: "{link to: 'passage name or URL', _label: 'label'_}",
     description:
         "Renders a link to a passage name or address. `label` may be omitted; Chapbook will use the passage name or URL as label instead.",
     match: /^link\s+to/i,

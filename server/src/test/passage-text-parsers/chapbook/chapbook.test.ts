@@ -5,13 +5,14 @@ import {
     Diagnostic,
     DiagnosticSeverity,
     Location,
+    MarkupKind,
     Position,
     Range,
 } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
-import { buildInsertParser } from "./inserts/insert-builders";
-import { buildModifierParser } from "./modifiers/modifier-builders";
+import { buildInsertInfo } from "./inserts/insert-builders";
+import { buildModifierInfo } from "./modifiers/modifier-builders";
 import { MockCallbacks, buildParsingState, buildPassage } from "../../builders";
 import { Index, TwineSymbolKind } from "../../../project-index";
 import { defaultDiagnosticsOptions } from "../../../server-options";
@@ -200,7 +201,7 @@ describe("Chapbook", () => {
                     const header = ":: Passage\n";
                     const passage = "[mock-mod]\nContent\n";
                     const callbacks = new MockCallbacks();
-                    const modifier = buildModifierParser({
+                    const modifier = buildModifierInfo({
                         match: /^mock-mod/,
                     });
                     const state = buildParsingState({
@@ -1027,7 +1028,7 @@ describe("Chapbook", () => {
                         const header = ":: Passage\n";
                         const passage = "Insert: {mock insert:  'arg'}";
                         const callbacks = new MockCallbacks();
-                        const insert = buildInsertParser({
+                        const insert = buildInsertInfo({
                             match: /^mock insert/,
                         });
                         const state = buildParsingState({
@@ -1090,7 +1091,7 @@ describe("Chapbook", () => {
                         const header = ":: Passage\n";
                         const passage = "Insert: {mock insert:  'arg'}";
                         const callbacks = new MockCallbacks();
-                        const insert = buildInsertParser({
+                        const insert = buildInsertInfo({
                             match: /^mock insert/,
                         });
                         const allTokens: insertsModule.InsertTokens[] = [];
@@ -1122,7 +1123,7 @@ describe("Chapbook", () => {
                         const header = ":: Passage\n";
                         const passage = "Insert: {mock insert:  'arg'}";
                         const callbacks = new MockCallbacks();
-                        const insert = buildInsertParser({
+                        const insert = buildInsertInfo({
                             match: /^mock insert/,
                         });
                         insert.arguments.firstArgument.type =
@@ -1161,7 +1162,7 @@ describe("Chapbook", () => {
                         const header = ":: Passage\n";
                         const passage = "Insert: {mock insert:  'arg'}";
                         const callbacks = new MockCallbacks();
-                        const insert = buildInsertParser({
+                        const insert = buildInsertInfo({
                             match: /^mock insert/,
                         });
                         insert.arguments.firstArgument.type =
@@ -1197,7 +1198,7 @@ describe("Chapbook", () => {
                         const header = ":: Passage\n";
                         const passage = "Insert: {mock insert:  'arg'}";
                         const callbacks = new MockCallbacks();
-                        const insert = buildInsertParser({
+                        const insert = buildInsertInfo({
                             match: /^mock insert/,
                         });
                         insert.arguments.firstArgument.type =
@@ -1236,7 +1237,7 @@ describe("Chapbook", () => {
                         const header = ":: Passage\n";
                         const passage = "Insert: {mock insert:  'arg'}";
                         const callbacks = new MockCallbacks();
-                        const insert = buildInsertParser({
+                        const insert = buildInsertInfo({
                             match: /^mock insert/,
                         });
                         insert.arguments.firstArgument.type =
@@ -1273,7 +1274,7 @@ describe("Chapbook", () => {
                         const passage =
                             "Insert: {mock insert:  'https://link.com'}";
                         const callbacks = new MockCallbacks();
-                        const insert = buildInsertParser({
+                        const insert = buildInsertInfo({
                             match: /^mock insert/,
                         });
                         insert.arguments.firstArgument.type =
@@ -1305,7 +1306,7 @@ describe("Chapbook", () => {
                         const passage =
                             "Insert: {mock insert:  'https://link.com'}";
                         const callbacks = new MockCallbacks();
-                        const insert = buildInsertParser({
+                        const insert = buildInsertInfo({
                             match: /^mock insert/,
                         });
                         insert.arguments.firstArgument.type =
@@ -1341,7 +1342,7 @@ describe("Chapbook", () => {
                         const header = ":: Passage\n";
                         const passage = "Insert: {mock insert:  arg}";
                         const callbacks = new MockCallbacks();
-                        const insert = buildInsertParser({
+                        const insert = buildInsertInfo({
                             match: /^mock insert/,
                         });
                         insert.arguments.firstArgument.type =
@@ -1378,7 +1379,7 @@ describe("Chapbook", () => {
                         const passage =
                             "Insert: {mock insert:  'arg', prop1: 'yes', prop2: 'no'}";
                         const callbacks = new MockCallbacks();
-                        const insert = buildInsertParser({
+                        const insert = buildInsertInfo({
                             match: /^mock insert/,
                         });
                         insert.arguments.requiredProps = {
@@ -1439,7 +1440,7 @@ describe("Chapbook", () => {
                         const passage =
                             "Insert: {mock insert ,  prop1: 'yes', prop2: 'no'}";
                         const callbacks = new MockCallbacks();
-                        const insert = buildInsertParser({
+                        const insert = buildInsertInfo({
                             match: /^mock insert/,
                         });
                         const allTokens: insertsModule.InsertTokens[] = [];
@@ -1478,7 +1479,7 @@ describe("Chapbook", () => {
                         const passage =
                             "Insert: {mock insert: 'arg', prop1: 'yes', prop2: 'no'}";
                         const callbacks = new MockCallbacks();
-                        const insert = buildInsertParser({
+                        const insert = buildInsertInfo({
                             match: /^mock insert/,
                         });
                         const allTokens: insertsModule.InsertTokens[] = [];
@@ -1864,8 +1865,9 @@ describe("Chapbook", () => {
                 );
                 const position = Position.create(0, 12);
                 const index = new Index();
-                const insert: insertsModule.InsertParser = {
+                const insert: insertsModule.InsertInfo = {
                     name: "test insert",
+                    syntax: "test insert",
                     description: "desc",
                     match: /^test\s+insert/i,
                     completions: ["test insert"],
@@ -1943,8 +1945,9 @@ describe("Chapbook", () => {
                 );
                 const position = Position.create(0, 12);
                 const index = new Index();
-                const insert: insertsModule.InsertParser = {
+                const insert: insertsModule.InsertInfo = {
                     name: "test insert",
+                    syntax: "test insert",
                     description: "desc",
                     match: /^test\s+insert/i,
                     completions: ["test insert"],
@@ -1986,8 +1989,9 @@ describe("Chapbook", () => {
                 );
                 const position = Position.create(0, 12);
                 const index = new Index();
-                const insert: insertsModule.InsertParser = {
+                const insert: insertsModule.InsertInfo = {
                     name: "test insert",
+                    syntax: "test insert",
                     description: "desc",
                     match: /^test\s+insert/i,
                     completions: ["test insert"],
@@ -2029,8 +2033,9 @@ describe("Chapbook", () => {
                 );
                 const position = Position.create(0, 12);
                 const index = new Index();
-                const insert: insertsModule.InsertParser = {
+                const insert: insertsModule.InsertInfo = {
                     name: "test insert",
+                    syntax: "test insert",
                     description: "desc",
                     match: /^test\s+insert/i,
                     completions: ["test insert"],
@@ -2073,8 +2078,9 @@ describe("Chapbook", () => {
                 );
                 const position = Position.create(0, 12);
                 const index = new Index();
-                const insert: insertsModule.InsertParser = {
+                const insert: insertsModule.InsertInfo = {
                     name: "test insert",
+                    syntax: "test insert",
                     description: "desc",
                     match: /^test\s+insert/i,
                     completions: ["test insert"],
@@ -2118,8 +2124,9 @@ describe("Chapbook", () => {
                 );
                 const position = Position.create(0, 12);
                 const index = new Index();
-                const insert: insertsModule.InsertParser = {
+                const insert: insertsModule.InsertInfo = {
                     name: "test insert",
+                    syntax: "test insert",
                     description: "desc",
                     match: /^test\s+insert/i,
                     completions: ["test insert"],
@@ -2163,8 +2170,9 @@ describe("Chapbook", () => {
                 );
                 const position = Position.create(0, 12);
                 const index = new Index();
-                const insert: insertsModule.InsertParser = {
+                const insert: insertsModule.InsertInfo = {
                     name: "test insert",
+                    syntax: "test insert",
                     description: "desc",
                     match: /^test\s+insert/i,
                     completions: ["test insert"],
@@ -2209,8 +2217,9 @@ describe("Chapbook", () => {
                 );
                 const position = Position.create(0, 12);
                 const index = new Index();
-                const insert: insertsModule.InsertParser = {
+                const insert: insertsModule.InsertInfo = {
                     name: "test insert",
+                    syntax: "test insert",
                     description: "desc",
                     match: /^test\s+insert/i,
                     completions: ["test insert"],
@@ -2258,8 +2267,9 @@ describe("Chapbook", () => {
                 );
                 const position = Position.create(0, 12);
                 const index = new Index();
-                const insert: insertsModule.InsertParser = {
+                const insert: insertsModule.InsertInfo = {
                     name: "test insert",
+                    syntax: "test insert",
                     description: "desc",
                     match: /^test\s+insert/i,
                     completions: ["test insert"],
@@ -2307,8 +2317,9 @@ describe("Chapbook", () => {
                 );
                 const position = Position.create(0, 12);
                 const index = new Index();
-                const insert: insertsModule.InsertParser = {
+                const insert: insertsModule.InsertInfo = {
                     name: "test insert",
+                    syntax: "test insert",
                     description: "desc",
                     match: /^test\s+insert/i,
                     completions: ["test insert"],
@@ -2354,8 +2365,9 @@ describe("Chapbook", () => {
                 index.setPassages("fake-uri", [
                     buildPassage({ label: "I'm a passage!" }),
                 ]);
-                const insert: insertsModule.InsertParser = {
+                const insert: insertsModule.InsertInfo = {
                     name: "test insert",
+                    syntax: "test insert",
                     description: "desc",
                     match: /^test\s+insert/i,
                     completions: ["test insert"],
@@ -2404,8 +2416,9 @@ describe("Chapbook", () => {
                 index.setPassages("fake-uri", [
                     buildPassage({ label: "I'm a passage!" }),
                 ]);
-                const insert: insertsModule.InsertParser = {
+                const insert: insertsModule.InsertInfo = {
                     name: "test insert",
+                    syntax: "test insert",
                     description: "desc",
                     match: /^test\s+insert/i,
                     completions: ["test insert"],
@@ -2454,8 +2467,9 @@ describe("Chapbook", () => {
                 index.setPassages("fake-uri", [
                     buildPassage({ label: "I'm a passage!" }),
                 ]);
-                const insert: insertsModule.InsertParser = {
+                const insert: insertsModule.InsertInfo = {
                     name: "test insert",
+                    syntax: "test insert",
                     description: "desc",
                     match: /^test\s+insert/i,
                     completions: ["test insert"],
@@ -2499,8 +2513,9 @@ describe("Chapbook", () => {
                 );
                 const position = Position.create(0, 23);
                 const index = new Index();
-                const insert: insertsModule.InsertParser = {
+                const insert: insertsModule.InsertInfo = {
                     name: "test insert",
+                    syntax: "test insert",
                     description: "desc",
                     match: /^test\s+insert/i,
                     completions: ["test insert"],
@@ -2549,8 +2564,9 @@ describe("Chapbook", () => {
                 );
                 const position = Position.create(0, 23);
                 const index = new Index();
-                const insert: insertsModule.InsertParser = {
+                const insert: insertsModule.InsertInfo = {
                     name: "test insert",
+                    syntax: "test insert",
                     description: "desc",
                     match: /^test\s+insert/i,
                     completions: ["test insert"],
@@ -2599,8 +2615,9 @@ describe("Chapbook", () => {
                 );
                 const position = Position.create(0, 28);
                 const index = new Index();
-                const insert: insertsModule.InsertParser = {
+                const insert: insertsModule.InsertInfo = {
                     name: "test insert",
+                    syntax: "test insert",
                     description: "desc",
                     match: /^test\s+insert/i,
                     completions: ["test insert"],
@@ -2642,8 +2659,9 @@ describe("Chapbook", () => {
                 index.setPassages("fake-uri", [
                     buildPassage({ label: "I'm a passage!" }),
                 ]);
-                const insert: insertsModule.InsertParser = {
+                const insert: insertsModule.InsertInfo = {
                     name: "test insert",
+                    syntax: "test insert",
                     description: "desc",
                     match: /^test\s+insert/i,
                     completions: ["test insert"],
@@ -3063,7 +3081,7 @@ describe("Chapbook", () => {
                 },
             ]);
             const parser = uut.getChapbookParser(undefined);
-            const modifier = buildModifierParser({
+            const modifier = buildModifierInfo({
                 description: "My description!",
                 match: /^mock-mod/,
             });
@@ -3079,7 +3097,50 @@ describe("Chapbook", () => {
             );
             mockFunction.restore();
 
-            expect(result).to.eql({ contents: "My description!" });
+            expect(result).to.eql({
+                contents: {
+                    kind: MarkupKind.Markdown,
+                    value: "My description!",
+                },
+            });
+        });
+
+        it("should return a built-in modifier's definition along with its syntax for a position inside a reference to that modifier", () => {
+            const doc = TextDocument.create("fake-uri", "", 0, "Placeholder");
+            const index = new Index();
+            index.setReferences("fake-uri", [
+                {
+                    contents: "mock-mod",
+                    locations: [
+                        Location.create("fake-uri", Range.create(1, 2, 3, 4)),
+                    ],
+                    kind: OChapbookSymbolKind.BuiltInModifier,
+                },
+            ]);
+            const parser = uut.getChapbookParser(undefined);
+            const modifier = buildModifierInfo({
+                description: "My description!",
+                match: /^mock-mod/,
+            });
+            modifier.syntax = "My syntax";
+            const mockFunction = ImportMock.mockFunction(
+                modifiersModule,
+                "all"
+            ).returns([modifier]);
+
+            const result = parser?.generateHover(
+                doc,
+                Position.create(1, 3),
+                index
+            );
+            mockFunction.restore();
+
+            expect(result).to.eql({
+                contents: {
+                    kind: MarkupKind.Markdown,
+                    value: "```chapbook\nMy syntax\n```\n\nMy description!",
+                },
+            });
         });
 
         it("should return a custom modifier's description for a position inside a reference to that modifier if that description is defined", () => {
@@ -3119,7 +3180,58 @@ describe("Chapbook", () => {
             );
             mockFunction.restore();
 
-            expect(result).to.eql({ contents: "This is a custom modifier!" });
+            expect(result).to.eql({
+                contents: {
+                    kind: MarkupKind.Markdown,
+                    value: "This is a custom modifier!",
+                },
+            });
+        });
+
+        it("should return a custom modifier's description and syntax for a position inside a reference to that modifier if its description and syntax are defined", () => {
+            const doc = TextDocument.create("fake-uri", "", 0, "Placeholder");
+            const index = new Index();
+            index.setDefinitions("source-uri", [
+                {
+                    contents: "custom modifier",
+                    location: Location.create(
+                        "source-uri",
+                        Range.create(5, 6, 7, 8)
+                    ),
+                    kind: OChapbookSymbolKind.CustomModifier,
+                    syntax: "[custom modifier]",
+                    description: "This is a custom modifier!",
+                    match: /custom\s+modifier/i,
+                } as ChapbookSymbol,
+            ]);
+            index.setReferences("fake-uri", [
+                {
+                    contents: "custom  modifier",
+                    locations: [
+                        Location.create("fake-uri", Range.create(1, 2, 3, 4)),
+                    ],
+                    kind: OChapbookSymbolKind.CustomModifier,
+                },
+            ]);
+            const parser = uut.getChapbookParser(undefined);
+            const mockFunction = ImportMock.mockFunction(
+                modifiersModule,
+                "all"
+            ).returns([]);
+
+            const result = parser?.generateHover(
+                doc,
+                Position.create(1, 3),
+                index
+            );
+            mockFunction.restore();
+
+            expect(result).to.eql({
+                contents: {
+                    kind: MarkupKind.Markdown,
+                    value: "```chapbook\n[custom modifier]\n```\n\nThis is a custom modifier!",
+                },
+            });
         });
 
         it("should return null for a position inside a reference to a custom modifier if that modifier's description isn't defined", () => {
@@ -3174,7 +3286,7 @@ describe("Chapbook", () => {
                 },
             ]);
             const parser = uut.getChapbookParser(undefined);
-            const insert = buildInsertParser({
+            const insert = buildInsertInfo({
                 description: "My description!",
                 match: /^mock insert/,
             });
@@ -3190,7 +3302,50 @@ describe("Chapbook", () => {
             );
             mockFunction.restore();
 
-            expect(result).to.eql({ contents: "My description!" });
+            expect(result).to.eql({
+                contents: {
+                    kind: MarkupKind.Markdown,
+                    value: "My description!",
+                },
+            });
+        });
+
+        it("should return a built-in insert's description and syntax for a position inside a reference to that insert", () => {
+            const doc = TextDocument.create("fake-uri", "", 0, "Placeholder");
+            const index = new Index();
+            index.setReferences("fake-uri", [
+                {
+                    contents: "mock insert",
+                    locations: [
+                        Location.create("fake-uri", Range.create(1, 2, 3, 4)),
+                    ],
+                    kind: OChapbookSymbolKind.BuiltInInsert,
+                },
+            ]);
+            const parser = uut.getChapbookParser(undefined);
+            const insert = buildInsertInfo({
+                description: "My description!",
+                match: /^mock insert/,
+            });
+            insert.syntax = "{mock insert}";
+            const mockFunction = ImportMock.mockFunction(
+                insertsModule,
+                "all"
+            ).returns([insert]);
+
+            const result = parser?.generateHover(
+                doc,
+                Position.create(1, 3),
+                index
+            );
+            mockFunction.restore();
+
+            expect(result).to.eql({
+                contents: {
+                    kind: MarkupKind.Markdown,
+                    value: "```chapbook\n{mock insert}\n```\n\nMy description!",
+                },
+            });
         });
 
         it("should return a custom insert's description for a position inside a reference to that insert if its description is defined", () => {
@@ -3230,7 +3385,58 @@ describe("Chapbook", () => {
             );
             mockFunction.restore();
 
-            expect(result).to.eql({ contents: "This is a custom insert!" });
+            expect(result).to.eql({
+                contents: {
+                    kind: MarkupKind.Markdown,
+                    value: "This is a custom insert!",
+                },
+            });
+        });
+
+        it("should return a custom insert's description and syntax for a position inside a reference to that insert if its description and syntax are defined", () => {
+            const doc = TextDocument.create("fake-uri", "", 0, "Placeholder");
+            const index = new Index();
+            index.setDefinitions("source-uri", [
+                {
+                    contents: "custom\\s+insert",
+                    location: Location.create(
+                        "source-uri",
+                        Range.create(5, 6, 7, 8)
+                    ),
+                    kind: OChapbookSymbolKind.CustomInsert,
+                    description: "This is a custom insert!",
+                    syntax: "{custom insert}",
+                    match: /custom\s+insert/,
+                } as ChapbookSymbol,
+            ]);
+            index.setReferences("fake-uri", [
+                {
+                    contents: "custom insert",
+                    locations: [
+                        Location.create("fake-uri", Range.create(1, 2, 3, 4)),
+                    ],
+                    kind: OChapbookSymbolKind.CustomInsert,
+                },
+            ]);
+            const parser = uut.getChapbookParser(undefined);
+            const mockFunction = ImportMock.mockFunction(
+                insertsModule,
+                "all"
+            ).returns([]);
+
+            const result = parser?.generateHover(
+                doc,
+                Position.create(1, 3),
+                index
+            );
+            mockFunction.restore();
+
+            expect(result).to.eql({
+                contents: {
+                    kind: MarkupKind.Markdown,
+                    value: "```chapbook\n{custom insert}\n```\n\nThis is a custom insert!",
+                },
+            });
         });
 
         it("should return null for a position inside a reference to a custom insert whose description isn't defined", () => {
@@ -3564,7 +3770,7 @@ describe("Chapbook", () => {
                     const header = ":: Passage\n";
                     const passage = "Insert: {mock insert, prop 1 a: 'arg'}";
                     const callbacks = new MockCallbacks();
-                    const insert = buildInsertParser({
+                    const insert = buildInsertInfo({
                         match: /^mock insert/,
                     });
                     const state = buildParsingState({
@@ -3593,7 +3799,7 @@ describe("Chapbook", () => {
                     const header = ":: Passage\n";
                     const passage = "Insert: { mock insert }";
                     const callbacks = new MockCallbacks();
-                    const insert = buildInsertParser({
+                    const insert = buildInsertInfo({
                         match: /^mock insert/,
                         firstArgRequired:
                             insertsModule.ArgumentRequirement.required,
@@ -3624,7 +3830,7 @@ describe("Chapbook", () => {
                     const header = ":: Passage\n";
                     const passage = "Insert: { mock insert: 'arg' }";
                     const callbacks = new MockCallbacks();
-                    const insert = buildInsertParser({
+                    const insert = buildInsertInfo({
                         match: /^mock insert/,
                         firstArgRequired:
                             insertsModule.ArgumentRequirement.ignored,
@@ -3655,7 +3861,7 @@ describe("Chapbook", () => {
                     const header = ":: Passage\n";
                     const passage = "Insert: { mock insert }";
                     const callbacks = new MockCallbacks();
-                    const insert = buildInsertParser({
+                    const insert = buildInsertInfo({
                         match: /^mock insert/,
                         requiredProps: { expected: null, also: null },
                     });
@@ -3685,7 +3891,7 @@ describe("Chapbook", () => {
                     const header = ":: Passage\n";
                     const passage = "Insert: { mock insert }";
                     const callbacks = new MockCallbacks();
-                    const insert = buildInsertParser({
+                    const insert = buildInsertInfo({
                         match: /^mock insert/,
                         optionalProps: { expected: null, also: null },
                     });
@@ -3709,7 +3915,7 @@ describe("Chapbook", () => {
                     const header = ":: Passage\n";
                     const passage = "Insert: { mock insert, nope: 2 }";
                     const callbacks = new MockCallbacks();
-                    const insert = buildInsertParser({
+                    const insert = buildInsertInfo({
                         match: /^mock insert/,
                         optionalProps: { unneeded: null },
                     });

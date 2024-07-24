@@ -1,10 +1,10 @@
-import { ModifierParser } from "../../../../passage-text-parsers/chapbook/modifiers";
+import { ModifierInfo } from "../../../../passage-text-parsers/chapbook/modifiers";
 
-export function buildModifierParser({
+export function buildModifierInfo({
     name = "Mock Modifier",
     description = "Description",
     match = /^mock modifier/,
-}): ModifierParser {
+}): ModifierInfo {
     return {
         name: name,
         description: description,

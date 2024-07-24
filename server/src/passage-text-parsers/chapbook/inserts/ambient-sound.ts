@@ -1,10 +1,8 @@
-import { capturePreTokenFor } from "../..";
-import { parseJSExpression } from "../../../js-parser";
-import { ETokenType } from "../../../tokens";
-import { ArgumentRequirement, InsertParser, ValueType } from "./types";
+import { ArgumentRequirement, InsertInfo, ValueType } from "./types";
 
-export const ambientSound: InsertParser = {
+export const ambientSound: InsertInfo = {
     name: "ambient sound",
+    syntax: "{ambient sound: 'sound name', _volume: 0.5_}",
     description:
         "Begins playing a previously-defined ambient sound. `volume` can be omitted; by default, the ambient sound is played at fulul volume.",
     match: /^ambient\s+sound/i,
@@ -25,8 +23,9 @@ export const ambientSound: InsertParser = {
 // {no ambient sound} is, under the hood, just {ambient sound} with
 // no first argument. Because that can be confusing to authors,
 // pretend that the first argument isn't required.
-export const noAmbientSound: InsertParser = {
+export const noAmbientSound: InsertInfo = {
     name: "no ambient sound",
+    syntax: "{no ambient sound}",
     description: "Cancels all playing ambient sounds.",
     match: /^no ambient\s+sound/i,
     arguments: {

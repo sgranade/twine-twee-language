@@ -1,4 +1,4 @@
-import { ChapbookParsingState } from "../chapbook-parser";
+import { ChapbookFunctionInfo, ChapbookParsingState } from "../chapbook-parser";
 import { ParsingState } from "../../../parser";
 
 /**
@@ -121,27 +121,15 @@ export interface InsertArguments {
 /**
  * A parser for a specific insert.
  */
-export interface InsertParser {
+export interface InsertInfo extends ChapbookFunctionInfo {
     /**
      * What to call this insert.
      */
     name: string;
     /**
-     * Description for the insert. Shown on hover; supports markdown.
-     */
-    description: string;
-    /**
-     * Regular expression that matches invocations of this insert.
-     */
-    match: RegExp;
-    /**
      * Which arguments the insert expects and completion/placeholder information about them.
      */
     arguments: InsertArguments;
-    /**
-     * List of completions corresponding to this insert's name.
-     */
-    completions: string[];
     /**
      * Parses the insert.
      * @param tokens Tokenized insert information.

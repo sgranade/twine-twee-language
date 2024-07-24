@@ -1,7 +1,8 @@
-import { ArgumentRequirement, InsertParser } from "./types";
+import { ArgumentRequirement, InsertInfo } from "./types";
 
-export const embedFlickrImage: InsertParser = {
+export const embedFlickrImage: InsertInfo = {
     name: "embed Flickr",
+    syntax: "{embed Flickr image: 'embed code', alt: 'alternate text'}\n{embed Flickr: 'embed code', alt: 'alternate text'}",
     description:
         "Renders an image hosted on Flickr with alt text specified by `alt`.",
     match: /^embed\s+flickr(\s+image)?/i,

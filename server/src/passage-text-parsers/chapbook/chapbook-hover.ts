@@ -1,10 +1,33 @@
-import { Hover, Position } from "vscode-languageserver";
+import { Hover, MarkupKind, Position } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { ProjectIndex } from "../../project-index";
-import { getChapbookDefinitions, OChapbookSymbolKind } from "./chapbook-parser";
+import {
+    ChapbookFunctionInfo,
+    getChapbookDefinitions,
+    OChapbookSymbolKind,
+} from "./chapbook-parser";
 import { all as allInserts } from "./inserts";
 import { all as allModifiers } from "./modifiers";
+
+function generateDescription(
+    item: ChapbookFunctionInfo | undefined
+): Hover | null {
+    if (item !== undefined && item.description !== undefined) {
+        let value = item.description;
+        if (item.syntax !== undefined) {
+            value = "```chapbook\n" + item.syntax + "\n```\n\n" + value;
+        }
+        return {
+            contents: {
+                kind: MarkupKind.Markdown,
+                value: value,
+            },
+        };
+    }
+
+    return null;
+}
 
 export function generateHover(
     document: TextDocument,
@@ -15,37 +38,21 @@ export function generateHover(
     // return its description (if it exists) as the hover information.
     const refs = index.getReferencesAt(document.uri, position);
     if (refs !== undefined) {
+        let matchedObjects: readonly ChapbookFunctionInfo[] = [];
         if (refs.kind === OChapbookSymbolKind.BuiltInInsert) {
-            const insert = allInserts().find((i) =>
-                i.match.test(refs.contents)
-            );
-            if (insert !== undefined) {
-                return { contents: insert.description };
-            }
+            matchedObjects = allInserts();
         } else if (refs.kind === OChapbookSymbolKind.BuiltInModifier) {
-            const modifier = allModifiers().find((i) =>
-                i.match.test(refs.contents)
-            );
-            if (modifier !== undefined) {
-                return { contents: modifier.description };
-            }
-        } else if (refs.kind === OChapbookSymbolKind.CustomInsert) {
-            const insert = getChapbookDefinitions(
-                OChapbookSymbolKind.CustomInsert,
-                index
-            ).find((i) => i.match.test(refs.contents));
-            if (insert !== undefined && insert.description !== undefined) {
-                return { contents: insert.description };
-            }
-        } else if (refs.kind === OChapbookSymbolKind.CustomModifier) {
-            const modifier = getChapbookDefinitions(
-                OChapbookSymbolKind.CustomModifier,
-                index
-            ).find((i) => i.match.test(refs.contents));
-            if (modifier !== undefined && modifier.description !== undefined) {
-                return { contents: modifier.description };
-            }
+            matchedObjects = allModifiers();
+        } else if (
+            refs.kind === OChapbookSymbolKind.CustomInsert ||
+            refs.kind === OChapbookSymbolKind.CustomModifier
+        ) {
+            matchedObjects = getChapbookDefinitions(refs.kind, index);
         }
+
+        return generateDescription(
+            matchedObjects.find((o) => o.match.test(refs.contents))
+        );
     }
 
     return null;

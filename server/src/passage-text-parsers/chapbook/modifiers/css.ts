@@ -1,8 +1,9 @@
 import { ModifierKind } from "../chapbook-parser";
-import { ModifierParser } from "./types";
+import { ModifierInfo } from "./types";
 
-export const css: ModifierParser = {
+export const css: ModifierInfo = {
     name: "CSS",
+    syntax: "[CSS]",
     description:
         "Acts like a `<style>` tag in the passage; the contents of the text will be interpreted as CSS rules instead of normal text.",
     match: /^css$/i,

@@ -1,7 +1,8 @@
-import { ArgumentRequirement, InsertParser } from "./types";
+import { ArgumentRequirement, InsertInfo } from "./types";
 
-export const embedImage: InsertParser = {
+export const embedImage: InsertInfo = {
     name: "embed image",
+    syntax: "{embed image: 'url', alt: 'alternate text'}",
     description:
         "Renders an image at a particular URL with alt text specified by `alt`.",
     match: /^embed\s+image/i,

@@ -1,17 +1,17 @@
 import {
     ArgumentRequirement,
-    InsertParser,
+    InsertInfo,
     InsertTokens,
 } from "../../../../passage-text-parsers/chapbook/inserts";
 
-export function buildInsertParser({
+export function buildInsertInfo({
     name = "Mock Insert",
     description = "Description",
     match = /^mock insert/,
     firstArgRequired = ArgumentRequirement.optional,
     requiredProps = {},
     optionalProps = {},
-}): InsertParser {
+}): InsertInfo {
     return {
         name: name,
         description: description,
