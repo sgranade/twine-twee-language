@@ -305,6 +305,43 @@ describe("Chapbook", () => {
                     });
                 });
 
+                it("should indicate deprecation in a modifier's semantic token if applicable", () => {
+                    const header = ":: Passage\n";
+                    const passage = "[mod1]\nContent\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    state.storyFormat = {
+                        format: "Chapbook",
+                        formatVersion: "2.1",
+                    };
+                    const parser = uut.getChapbookParser("2.1");
+                    const modifier = buildModifierInfo({
+                        description: "My description!",
+                        match: /^mod1/,
+                    });
+                    modifier.deprecated = "2.1";
+                    const mockFunction = ImportMock.mockFunction(
+                        modifiersModule,
+                        "all"
+                    ).returns([modifier]);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    const [mod1Token] = callbacks.tokens;
+                    mockFunction.restore();
+
+                    expect(callbacks.tokens.length).to.equal(1);
+                    expect(mod1Token).to.eql({
+                        line: 1,
+                        char: 1,
+                        length: 4,
+                        tokenType: ETokenType.function,
+                        tokenModifiers: [ETokenModifier.deprecated],
+                    });
+                });
+
                 it("should set semantic tokens for modifiers that take quote marks into account", () => {
                     const header = ":: Passage\n";
                     const passage = '[ mod1 "and\\"; so" ; mod2 ]\nContent\n';
@@ -771,6 +808,44 @@ describe("Chapbook", () => {
                             length: 9,
                             tokenType: ETokenType.function,
                             tokenModifiers: [],
+                        });
+                    });
+
+                    it("should indicate deprecation in a simple insert's semantic token when applicable", () => {
+                        const header = ":: Passage\n";
+                        const passage =
+                            "Some content.\n" +
+                            "A function insert: {back soon}.\n";
+                        const callbacks = new MockCallbacks();
+                        const state = buildParsingState({
+                            content: header + passage,
+                            callbacks: callbacks,
+                        });
+                        state.storyFormat = {
+                            format: "Chapbook",
+                            formatVersion: "2.1",
+                        };
+                        const parser = uut.getChapbookParser("2.1");
+                        const insert = buildInsertInfo({
+                            match: /^back soon/,
+                        });
+                        insert.deprecated = "2.1";
+                        const mockFunction = ImportMock.mockFunction(
+                            insertsModule,
+                            "all"
+                        ).returns([insert]);
+
+                        parser?.parsePassageText(passage, header.length, state);
+                        mockFunction.restore();
+                        const [functionToken] = callbacks.tokens;
+
+                        expect(callbacks.tokens.length).to.equal(1);
+                        expect(functionToken).to.eql({
+                            line: 2,
+                            char: 20,
+                            length: 9,
+                            tokenType: ETokenType.function,
+                            tokenModifiers: [ETokenModifier.deprecated],
                         });
                     });
 
@@ -1842,6 +1917,906 @@ describe("Chapbook", () => {
                         ),
                         kind: OChapbookSymbolKind.CustomModifier,
                         match: /hi\s+there/,
+                    });
+                });
+            });
+        });
+
+        describe("errors", () => {
+            describe("vars section", () => {
+                it("should warn on a missing colon", () => {
+                    const header = ":: Passage\n";
+                    const passage = "var0: right\nvar1 = wrong\n--\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    const [result] = callbacks.errors;
+
+                    expect(callbacks.errors.length).to.equal(1);
+                    expect(result.severity).to.eql(DiagnosticSeverity.Warning);
+                    expect(result.message).to.include("Missing colon");
+                    expect(result.range).to.eql(Range.create(2, 0, 2, 12));
+                });
+
+                it("should warn on a missing colon even on Windows", () => {
+                    const header = ":: Passage\r\n";
+                    const passage = "var0: right\r\nvar1 = wrong\r\n--\r\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    const [result] = callbacks.errors;
+
+                    expect(callbacks.errors.length).to.equal(1);
+                    expect(result.severity).to.eql(DiagnosticSeverity.Warning);
+                    expect(result.message).to.include("Missing colon");
+                    expect(result.range).to.eql(Range.create(2, 0, 2, 12));
+                });
+
+                it("should error on spaces before a colon", () => {
+                    const header = ":: Passage\n";
+                    const passage = "var1 nope: 17\n--\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    const [result] = callbacks.errors;
+
+                    expect(callbacks.errors.length).to.equal(1);
+                    expect(result.severity).to.eql(DiagnosticSeverity.Error);
+                    expect(result.message).to.include(
+                        "Variable names can't have spaces"
+                    );
+                    expect(result.range).to.eql(Range.create(1, 4, 1, 5));
+                });
+
+                it("should error on a variable with a bad first character", () => {
+                    const header = ":: Passage\n";
+                    const passage = " 1var : 17\n--\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    const [result] = callbacks.errors;
+
+                    expect(callbacks.errors.length).to.equal(1);
+                    expect(result.severity).to.eql(DiagnosticSeverity.Error);
+                    expect(result.message).to.include(
+                        "Variable names must start with a letter, $, or _"
+                    );
+                    expect(result.range).to.eql(Range.create(1, 1, 1, 2));
+                });
+
+                it("should error on a variable with illegal characters", () => {
+                    const header = ":: Passage\n";
+                    const passage = " väur😊 : 17\n--\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    const result = callbacks.errors;
+
+                    expect(result.length).to.equal(2);
+                    expect(result[0].severity).to.eql(DiagnosticSeverity.Error);
+                    expect(result[0].message).to.include(
+                        "Must be a letter, digit, $, or _"
+                    );
+                    expect(result[0].range).to.eql(Range.create(1, 2, 1, 3));
+                    expect(result[1].severity).to.eql(DiagnosticSeverity.Error);
+                    expect(result[1].message).to.include(
+                        "Must be a letter, digit, $, or _"
+                    );
+                    // Note that this looks like 2 characters b/c of UTF-16 encoding of the smilie face
+                    expect(result[1].range).to.eql(Range.create(1, 5, 1, 7));
+                });
+
+                it("should not error on a variable with a dot", () => {
+                    const header = ":: Passage\n";
+                    const passage = " var.sub : 17\n--\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
+
+                    parser?.parsePassageText(passage, header.length, state);
+
+                    expect(callbacks.errors).to.be.empty;
+                });
+
+                it("should error on an unclosed parenthesis before a colon", () => {
+                    const header = ":: Passage\n";
+                    const passage = "var(cond: 17\n--\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    const [result] = callbacks.errors;
+
+                    expect(callbacks.errors.length).to.equal(1);
+                    expect(result.severity).to.eql(DiagnosticSeverity.Error);
+                    expect(result.message).to.include(
+                        "Missing a close parenthesis"
+                    );
+                    expect(result.range).to.eql(Range.create(1, 8, 1, 8));
+                });
+
+                it("should warn on text after a condition parentheses but before the colon", () => {
+                    const header = ":: Passage\n";
+                    const passage = "var (cond) ignored: 17\n--\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    const [result] = callbacks.errors;
+
+                    expect(callbacks.errors.length).to.equal(1);
+                    expect(result.severity).to.eql(DiagnosticSeverity.Warning);
+                    expect(result.message).to.include("This will be ignored");
+                    expect(result.range).to.eql(Range.create(1, 11, 1, 18));
+                });
+            });
+
+            describe("text section", () => {
+                describe("modifiers", () => {
+                    it("should error on a modifier when the story format's version is earlier than when the modifier was added to Chapbook", () => {
+                        const header = ":: Passage\n";
+                        const passage =
+                            "var1: 17\n--\n" + "[mod]\nOther text\n";
+                        const callbacks = new MockCallbacks();
+                        const state = buildParsingState({
+                            content: header + passage,
+                            callbacks: callbacks,
+                        });
+                        state.storyFormat = {
+                            format: "Chapbook",
+                            formatVersion: "2.1",
+                        };
+                        const parser = uut.getChapbookParser("2.1");
+                        const modifier = buildModifierInfo({
+                            name: "modMe",
+                            match: /^mod/,
+                        });
+                        modifier.since = "2.1.1";
+                        const mockFunction = ImportMock.mockFunction(
+                            modifiersModule,
+                            "all"
+                        ).returns([modifier]);
+
+                        parser?.parsePassageText(passage, header.length, state);
+                        const [result] = callbacks.errors;
+                        mockFunction.restore();
+
+                        expect(callbacks.errors.length).to.equal(1);
+                        expect(result.severity).to.eql(
+                            DiagnosticSeverity.Error
+                        );
+                        expect(result.message).to.include(
+                            "Modifier [modMe] isn't available until Chapbook version 2.1.1 but your StoryFormat version is 2.1"
+                        );
+                        expect(result.range).to.eql(Range.create(3, 1, 3, 4));
+                    });
+
+                    it("should error on a modifier when the story format's version is later than when the modifier was removed from Chapbook", () => {
+                        const header = ":: Passage\n";
+                        const passage =
+                            "var1: 17\n--\n" + "[mod]\nOther text\n";
+                        const callbacks = new MockCallbacks();
+                        const state = buildParsingState({
+                            content: header + passage,
+                            callbacks: callbacks,
+                        });
+                        state.storyFormat = {
+                            format: "Chapbook",
+                            formatVersion: "2.1",
+                        };
+                        const parser = uut.getChapbookParser("2.1");
+                        const modifier = buildModifierInfo({
+                            name: "modMe",
+                            match: /^mod/,
+                        });
+                        modifier.removed = "2.1";
+                        const mockFunction = ImportMock.mockFunction(
+                            modifiersModule,
+                            "all"
+                        ).returns([modifier]);
+
+                        parser?.parsePassageText(passage, header.length, state);
+                        const [result] = callbacks.errors;
+                        mockFunction.restore();
+
+                        expect(callbacks.errors.length).to.equal(1);
+                        expect(result.severity).to.eql(
+                            DiagnosticSeverity.Error
+                        );
+                        expect(result.message).to.include(
+                            "Modifier [modMe] was removed in Chapbook version 2.1 and your StoryFormat version is 2.1"
+                        );
+                        expect(result.range).to.eql(Range.create(3, 1, 3, 4));
+                    });
+
+                    it("should error on spaces before modifiers", () => {
+                        const header = ":: Passage\n";
+                        const passage =
+                            "var1: 17\n--\n" + "  [note]\nOther text\n";
+                        const callbacks = new MockCallbacks();
+                        const state = buildParsingState({
+                            content: header + passage,
+                            callbacks: callbacks,
+                        });
+                        const parser = uut.getChapbookParser(undefined);
+
+                        parser?.parsePassageText(passage, header.length, state);
+                        const [result] = callbacks.errors;
+
+                        expect(callbacks.errors.length).to.equal(1);
+                        expect(result.severity).to.eql(
+                            DiagnosticSeverity.Error
+                        );
+                        expect(result.message).to.include(
+                            "Modifiers can't have spaces before them"
+                        );
+                        expect(result.range).to.eql(Range.create(3, 0, 3, 2));
+                    });
+
+                    it("should error on spaces after modifiers", () => {
+                        const header = ":: Passage\n";
+                        const passage =
+                            "var1: 17\n--\n" + " [note]  \nOther text\n";
+                        const callbacks = new MockCallbacks();
+                        const state = buildParsingState({
+                            content: header + passage,
+                            callbacks: callbacks,
+                        });
+                        const parser = uut.getChapbookParser(undefined);
+
+                        parser?.parsePassageText(passage, header.length, state);
+                        const [, result] = callbacks.errors;
+
+                        expect(callbacks.errors.length).to.equal(2);
+                        expect(result.severity).to.eql(
+                            DiagnosticSeverity.Error
+                        );
+                        expect(result.message).to.include(
+                            "Modifiers can't have spaces after them"
+                        );
+                        expect(result.range).to.eql(Range.create(3, 7, 3, 9));
+                    });
+
+                    it("should not error on blank lines before or after modifiers", () => {
+                        const header = ":: Passage\n";
+                        const passage =
+                            "var1: 17\n--\n" + "\n[note]\nOther text\n";
+                        const callbacks = new MockCallbacks();
+                        const state = buildParsingState({
+                            content: header + passage,
+                            callbacks: callbacks,
+                        });
+                        const parser = uut.getChapbookParser(undefined);
+
+                        parser?.parsePassageText(passage, header.length, state);
+
+                        expect(callbacks.errors).to.be.empty;
+                    });
+
+                    it("should not error on Windows blank lines before or after modifiers", () => {
+                        const header = ":: Passage\r\n";
+                        const passage =
+                            "var1: 17\r\n--\r\n" +
+                            "\r\n[note]\r\nOther text\r\n";
+                        const callbacks = new MockCallbacks();
+                        const state = buildParsingState({
+                            content: header + passage,
+                            callbacks: callbacks,
+                        });
+                        const parser = uut.getChapbookParser(undefined);
+
+                        parser?.parsePassageText(passage, header.length, state);
+
+                        expect(callbacks.errors).to.be.empty;
+                    });
+                });
+
+                describe("inserts", () => {
+                    it("should error on an insert when the story format's version is earlier than when the modifier was added to Chapbook", () => {
+                        const header = ":: Passage\n";
+                        const passage =
+                            "var1: 17\n--\n" + "Let's go: {fn insert}\n";
+                        const callbacks = new MockCallbacks();
+                        const state = buildParsingState({
+                            content: header + passage,
+                            callbacks: callbacks,
+                        });
+                        state.storyFormat = {
+                            format: "Chapbook",
+                            formatVersion: "2.1",
+                        };
+                        const parser = uut.getChapbookParser("2.1");
+                        const insert = buildInsertInfo({
+                            name: "fn insert",
+                            match: /^fn\s+insert/i,
+                        });
+                        insert.since = "2.1.1";
+                        const mockFunction = ImportMock.mockFunction(
+                            insertsModule,
+                            "all"
+                        ).returns([insert]);
+
+                        parser?.parsePassageText(passage, header.length, state);
+                        const [result] = callbacks.errors;
+                        mockFunction.restore();
+
+                        expect(callbacks.errors.length).to.equal(1);
+                        expect(result.severity).to.eql(
+                            DiagnosticSeverity.Error
+                        );
+                        expect(result.message).to.include(
+                            "Insert {fn insert} isn't available until Chapbook version 2.1.1 but your StoryFormat version is 2.1"
+                        );
+                        expect(result.range).to.eql(Range.create(3, 11, 3, 20));
+                    });
+
+                    it("should error on an insert when the story format's version is later than when the insert was removed from Chapbook", () => {
+                        const header = ":: Passage\n";
+                        const passage =
+                            "var1: 17\n--\n" + "Let's go: {fn insert}\n";
+                        const callbacks = new MockCallbacks();
+                        const state = buildParsingState({
+                            content: header + passage,
+                            callbacks: callbacks,
+                        });
+                        state.storyFormat = {
+                            format: "Chapbook",
+                            formatVersion: "2.1",
+                        };
+                        const parser = uut.getChapbookParser("2.1");
+                        const insert = buildInsertInfo({
+                            name: "fn insert",
+                            match: /^fn\s+insert/i,
+                        });
+                        insert.removed = "2.1";
+                        const mockFunction = ImportMock.mockFunction(
+                            insertsModule,
+                            "all"
+                        ).returns([insert]);
+
+                        parser?.parsePassageText(passage, header.length, state);
+                        const [result] = callbacks.errors;
+                        mockFunction.restore();
+
+                        expect(callbacks.errors.length).to.equal(1);
+                        expect(result.severity).to.eql(
+                            DiagnosticSeverity.Error
+                        );
+                        expect(result.message).to.include(
+                            "Insert {fn insert} was removed in Chapbook version 2.1 and your StoryFormat version is 2.1"
+                        );
+                        expect(result.range).to.eql(Range.create(3, 11, 3, 20));
+                    });
+
+                    it("should error on an array dereference in the middle of a var insert", () => {
+                        const header = ":: Passage\r\n";
+                        const passage =
+                            "var1: 17\r\n--\r\n" + " {var[0].color}  \r\n";
+                        const callbacks = new MockCallbacks();
+                        const state = buildParsingState({
+                            content: header + passage,
+                            callbacks: callbacks,
+                        });
+                        const parser = uut.getChapbookParser(undefined);
+
+                        parser?.parsePassageText(passage, header.length, state);
+                        const [result] = callbacks.errors;
+
+                        expect(callbacks.errors.length).to.equal(1);
+                        expect(result.severity).to.eql(
+                            DiagnosticSeverity.Error
+                        );
+                        expect(result.message).to.include(
+                            "Array dereferencing can only be at the end"
+                        );
+                        expect(result.range).to.eql(Range.create(3, 5, 3, 8));
+                    });
+
+                    it("should error on a function insert whose property has spaces", () => {
+                        const header = ":: Passage\n";
+                        const passage = " {fn insert, bad prop: 1}  \n";
+                        const callbacks = new MockCallbacks();
+                        const state = buildParsingState({
+                            content: header + passage,
+                            callbacks: callbacks,
+                        });
+                        const parser = uut.getChapbookParser(undefined);
+
+                        parser?.parsePassageText(passage, header.length, state);
+                        const [result] = callbacks.errors;
+
+                        expect(callbacks.errors.length).to.equal(1);
+                        expect(result.severity).to.eql(
+                            DiagnosticSeverity.Error
+                        );
+                        expect(result.message).to.include(
+                            "Properties can't have spaces"
+                        );
+                        expect(result.range).to.eql(Range.create(1, 13, 1, 21));
+                    });
+
+                    it("should flag a property with a space", () => {
+                        const header = ":: Passage\n";
+                        const passage =
+                            "Insert: {mock insert, prop 1 a: 'arg'}";
+                        const callbacks = new MockCallbacks();
+                        const insert = buildInsertInfo({
+                            match: /^mock insert/,
+                        });
+                        const state = buildParsingState({
+                            content: header + passage,
+                            callbacks: callbacks,
+                        });
+                        const parser = uut.getChapbookParser(undefined);
+                        const mockFunction = ImportMock.mockFunction(
+                            insertsModule,
+                            "all"
+                        ).returns([insert]);
+
+                        parser?.parsePassageText(passage, header.length, state);
+                        mockFunction.restore();
+                        const [result] = callbacks.errors;
+
+                        expect(callbacks.errors.length).to.equal(1);
+                        expect(result.severity).to.eql(
+                            DiagnosticSeverity.Error
+                        );
+                        expect(result.message).to.include(
+                            "Properties can't have spaces"
+                        );
+                        expect(result.range).to.eql(Range.create(1, 22, 1, 30));
+                    });
+
+                    it("should flag a missing required first argument", () => {
+                        const header = ":: Passage\n";
+                        const passage = "Insert: { mock insert }";
+                        const callbacks = new MockCallbacks();
+                        const insert = buildInsertInfo({
+                            match: /^mock insert/,
+                            firstArgRequired:
+                                insertsModule.ArgumentRequirement.required,
+                        });
+                        const state = buildParsingState({
+                            content: header + passage,
+                            callbacks: callbacks,
+                        });
+                        const parser = uut.getChapbookParser(undefined);
+                        const mockFunction = ImportMock.mockFunction(
+                            insertsModule,
+                            "all"
+                        ).returns([insert]);
+
+                        parser?.parsePassageText(passage, header.length, state);
+                        mockFunction.restore();
+                        const [result] = callbacks.errors;
+
+                        expect(callbacks.errors.length).to.equal(1);
+                        expect(result.severity).to.eql(
+                            DiagnosticSeverity.Error
+                        );
+                        expect(result.message).to.include(
+                            'Insert "Mock Insert" requires a first argument'
+                        );
+                        expect(result.range).to.eql(Range.create(1, 10, 1, 21));
+                    });
+
+                    it("should warn about an ignored first argument", () => {
+                        const header = ":: Passage\n";
+                        const passage = "Insert: { mock insert: 'arg' }";
+                        const callbacks = new MockCallbacks();
+                        const insert = buildInsertInfo({
+                            match: /^mock insert/,
+                            firstArgRequired:
+                                insertsModule.ArgumentRequirement.ignored,
+                        });
+                        const state = buildParsingState({
+                            content: header + passage,
+                            callbacks: callbacks,
+                        });
+                        const parser = uut.getChapbookParser(undefined);
+                        const mockFunction = ImportMock.mockFunction(
+                            insertsModule,
+                            "all"
+                        ).returns([insert]);
+
+                        parser?.parsePassageText(passage, header.length, state);
+                        mockFunction.restore();
+                        const [result] = callbacks.errors;
+
+                        expect(callbacks.errors.length).to.equal(1);
+                        expect(result.severity).to.eql(
+                            DiagnosticSeverity.Warning
+                        );
+                        expect(result.message).to.include(
+                            'Insert "Mock Insert" will ignore this first argument'
+                        );
+                        expect(result.range).to.eql(Range.create(1, 23, 1, 28));
+                    });
+
+                    it("should flag a missing required property", () => {
+                        const header = ":: Passage\n";
+                        const passage = "Insert: { mock insert }";
+                        const callbacks = new MockCallbacks();
+                        const insert = buildInsertInfo({
+                            match: /^mock insert/,
+                            requiredProps: { expected: null, also: null },
+                        });
+                        const state = buildParsingState({
+                            content: header + passage,
+                            callbacks: callbacks,
+                        });
+                        const parser = uut.getChapbookParser(undefined);
+                        const mockFunction = ImportMock.mockFunction(
+                            insertsModule,
+                            "all"
+                        ).returns([insert]);
+
+                        parser?.parsePassageText(passage, header.length, state);
+                        mockFunction.restore();
+                        const [result] = callbacks.errors;
+
+                        expect(callbacks.errors.length).to.equal(1);
+                        expect(result.severity).to.eql(
+                            DiagnosticSeverity.Error
+                        );
+                        expect(result.message).to.include(
+                            'Insert "Mock Insert" missing expected properties: expected, also'
+                        );
+                        expect(result.range).to.eql(Range.create(1, 10, 1, 21));
+                    });
+
+                    it("should not flag missing optional properties", () => {
+                        const header = ":: Passage\n";
+                        const passage = "Insert: { mock insert }";
+                        const callbacks = new MockCallbacks();
+                        const insert = buildInsertInfo({
+                            match: /^mock insert/,
+                            optionalProps: { expected: null, also: null },
+                        });
+                        const state = buildParsingState({
+                            content: header + passage,
+                            callbacks: callbacks,
+                        });
+                        const parser = uut.getChapbookParser(undefined);
+                        const mockFunction = ImportMock.mockFunction(
+                            insertsModule,
+                            "all"
+                        ).returns([insert]);
+
+                        parser?.parsePassageText(passage, header.length, state);
+                        mockFunction.restore();
+
+                        expect(callbacks.errors.length).to.equal(0);
+                    });
+
+                    it("should warn about unexpected properties", () => {
+                        const header = ":: Passage\n";
+                        const passage = "Insert: { mock insert, nope: 2 }";
+                        const callbacks = new MockCallbacks();
+                        const insert = buildInsertInfo({
+                            match: /^mock insert/,
+                            optionalProps: { unneeded: null },
+                        });
+                        const state = buildParsingState({
+                            content: header + passage,
+                            callbacks: callbacks,
+                        });
+                        const parser = uut.getChapbookParser(undefined);
+                        const mockFunction = ImportMock.mockFunction(
+                            insertsModule,
+                            "all"
+                        ).returns([insert]);
+
+                        parser?.parsePassageText(passage, header.length, state);
+                        mockFunction.restore();
+                        const [result] = callbacks.errors;
+
+                        expect(callbacks.errors.length).to.equal(1);
+                        expect(result.severity).to.eql(
+                            DiagnosticSeverity.Warning
+                        );
+                        expect(result.message).to.include(
+                            'Insert "Mock Insert" will ignore this property'
+                        );
+                        expect(result.range).to.eql(Range.create(1, 23, 1, 27));
+                    });
+                });
+
+                describe("engine extensions", () => {
+                    it("should error on engine extensions whose version isn't a number", () => {
+                        const header = ":: Passage\n";
+                        const passage =
+                            "[javascript]\nengine.extend('bork', true);\n";
+                        const callbacks = new MockCallbacks();
+                        const state = buildParsingState({
+                            content: header + passage,
+                            callbacks: callbacks,
+                        });
+                        state.storyFormat = {
+                            format: "Chapbook",
+                            formatVersion: "2.0.1",
+                        };
+                        const parser = uut.getChapbookParser(undefined);
+
+                        parser?.parsePassageText(passage, header.length, state);
+                        const [result] = callbacks.errors;
+
+                        expect(callbacks.errors.length).to.equal(1);
+                        expect(result.severity).to.eql(
+                            DiagnosticSeverity.Error
+                        );
+                        expect(result.message).to.include(
+                            "The extension's version must be a number like '2.0.0'"
+                        );
+                        expect(result.range).to.eql(Range.create(2, 15, 2, 19));
+                    });
+
+                    it("should not warn on engine extensions if the story format doesn't have a version", () => {
+                        const header = ":: Passage\n";
+                        const passage =
+                            "[javascript]\nengine.extend('2.0.0', true);\n";
+                        const callbacks = new MockCallbacks();
+                        const state = buildParsingState({
+                            content: header + passage,
+                            callbacks: callbacks,
+                        });
+                        state.storyFormat = {
+                            format: "Chapbook",
+                        };
+                        const parser = uut.getChapbookParser(undefined);
+
+                        parser?.parsePassageText(passage, header.length, state);
+
+                        expect(callbacks.errors.length).to.equal(0);
+                    });
+
+                    it("should warn on engine extensions whose version is less than the story format's version", () => {
+                        const header = ":: Passage\n";
+                        const passage =
+                            "[javascript]\nengine.extend('2.0.0', true);\n";
+                        const callbacks = new MockCallbacks();
+                        const state = buildParsingState({
+                            content: header + passage,
+                            callbacks: callbacks,
+                        });
+                        state.storyFormat = {
+                            format: "Chapbook",
+                            formatVersion: "2.0.1",
+                        };
+                        const parser = uut.getChapbookParser(undefined);
+
+                        parser?.parsePassageText(passage, header.length, state);
+                        const [result] = callbacks.errors;
+
+                        expect(callbacks.errors.length).to.equal(1);
+                        expect(result.severity).to.eql(
+                            DiagnosticSeverity.Warning
+                        );
+                        expect(result.message).to.include(
+                            "The current story format version is 2.0.1, so this extension will be ignored"
+                        );
+                        expect(result.range).to.eql(Range.create(2, 15, 2, 20));
+                    });
+
+                    it("should not warn on engine extensions whose version is greater than the story format's version", () => {
+                        const header = ":: Passage\n";
+                        const passage =
+                            "[javascript]\nengine.extend('2.2.1', true);\n";
+                        const callbacks = new MockCallbacks();
+                        const state = buildParsingState({
+                            content: header + passage,
+                            callbacks: callbacks,
+                        });
+                        state.storyFormat = {
+                            format: "Chapbook",
+                            formatVersion: "2.1.17",
+                        };
+                        const parser = uut.getChapbookParser(undefined);
+
+                        parser?.parsePassageText(passage, header.length, state);
+                        const [result] = callbacks.errors;
+
+                        expect(callbacks.errors.length).to.equal(0);
+                    });
+
+                    it("should warn on engine extensions whose version is shorter than the story format's version", () => {
+                        const header = ":: Passage\n";
+                        const passage =
+                            "[javascript]\nengine.extend('2.0', true);\n";
+                        const callbacks = new MockCallbacks();
+                        const state = buildParsingState({
+                            content: header + passage,
+                            callbacks: callbacks,
+                        });
+                        state.storyFormat = {
+                            format: "Chapbook",
+                            formatVersion: "2.0.1",
+                        };
+                        const parser = uut.getChapbookParser(undefined);
+
+                        parser?.parsePassageText(passage, header.length, state);
+                        const [result] = callbacks.errors;
+
+                        expect(callbacks.errors.length).to.equal(1);
+                        expect(result.severity).to.eql(
+                            DiagnosticSeverity.Warning
+                        );
+                        expect(result.message).to.include(
+                            "The current story format version is 2.0.1, so this extension will be ignored"
+                        );
+                        expect(result.range).to.eql(Range.create(2, 15, 2, 18));
+                    });
+
+                    it("should warn on engine extensions that aren't extending inserts or modifiers", () => {
+                        const header = ":: Passage\n";
+                        const passage =
+                            "[javascript]\nengine.extend('2.0.1', () => {\nengine.template.nope.add();\n});\n";
+                        const callbacks = new MockCallbacks();
+                        const state = buildParsingState({
+                            content: header + passage,
+                            callbacks: callbacks,
+                        });
+                        state.storyFormat = {
+                            format: "Chapbook",
+                            formatVersion: "2.0.1",
+                        };
+                        const parser = uut.getChapbookParser(undefined);
+
+                        parser?.parsePassageText(passage, header.length, state);
+                        const [result] = callbacks.errors;
+
+                        expect(callbacks.errors.length).to.equal(1);
+                        expect(result.severity).to.eql(
+                            DiagnosticSeverity.Warning
+                        );
+                        expect(result.message).to.include(
+                            "Unrecognized engine template function"
+                        );
+                        expect(result.range).to.eql(Range.create(3, 0, 3, 20));
+                    });
+
+                    it("should error on a custom insert with no space in its match object", () => {
+                        const header = ":: Passage\n";
+                        const passage =
+                            "[javascript]\nengine.extend('2.0.1', () => {\nengine.template.inserts.add(\n{match: /hi/}\n);\n});\n";
+                        const callbacks = new MockCallbacks();
+                        const state = buildParsingState({
+                            uri: "fake-uri",
+                            content: header + passage,
+                            callbacks: callbacks,
+                        });
+                        state.storyFormat = {
+                            format: "Chapbook",
+                            formatVersion: "2.0.1",
+                        };
+                        const parser = uut.getChapbookParser(undefined);
+
+                        parser?.parsePassageText(passage, header.length, state);
+                        const [result] = callbacks.errors;
+
+                        expect(callbacks.errors.length).to.equal(1);
+                        expect(result.severity).to.eql(
+                            DiagnosticSeverity.Error
+                        );
+                        expect(result.message).to.include(
+                            "Custom inserts must have a space in their match"
+                        );
+                        expect(result.range).to.eql(Range.create(4, 9, 4, 11));
+                    });
+
+                    it("should not error on a custom insert with a space regex metacharacter in its match object", () => {
+                        const header = ":: Passage\n";
+                        const passage =
+                            "[javascript]\nengine.extend('2.0.1', () => {\nengine.template.inserts.add(\n{match: /hi\\sthere/}\n);\n});\n";
+                        const callbacks = new MockCallbacks();
+                        const state = buildParsingState({
+                            uri: "fake-uri",
+                            content: header + passage,
+                            callbacks: callbacks,
+                        });
+                        state.storyFormat = {
+                            format: "Chapbook",
+                            formatVersion: "2.0.1",
+                        };
+                        const parser = uut.getChapbookParser(undefined);
+
+                        parser?.parsePassageText(passage, header.length, state);
+
+                        expect(callbacks.errors).to.be.empty;
+                    });
+
+                    it("should error on a custom insert whose match object has incorrect regex flags", () => {
+                        const header = ":: Passage\n";
+                        const passage =
+                            "[javascript]\nengine.extend('2.0.1', () => {\nengine.template.inserts.add(\n{match: /hi there/q}\n);\n});\n";
+                        const callbacks = new MockCallbacks();
+                        const state = buildParsingState({
+                            uri: "fake-uri",
+                            content: header + passage,
+                            callbacks: callbacks,
+                        });
+                        state.storyFormat = {
+                            format: "Chapbook",
+                            formatVersion: "2.0.1",
+                        };
+                        const parser = uut.getChapbookParser(undefined);
+
+                        parser?.parsePassageText(passage, header.length, state);
+                        const [result] = callbacks.errors;
+
+                        expect(callbacks.errors.length).to.equal(1);
+                        expect(result.severity).to.eql(
+                            DiagnosticSeverity.Error
+                        );
+                        expect(result.message).to.include(
+                            "Regular expression flags can only be d, g, i, m, s, u, v, and y"
+                        );
+                        expect(result.range).to.eql(Range.create(4, 18, 4, 19));
+                    });
+
+                    it("should error on a custom insert whose match object has a borked regex", () => {
+                        const header = ":: Passage\n";
+                        const passage =
+                            "[javascript]\nengine.extend('2.0.1', () => {\nengine.template.inserts.add(\n{match: /hi \\-/u}\n);\n});\n";
+                        const callbacks = new MockCallbacks();
+                        const state = buildParsingState({
+                            uri: "fake-uri",
+                            content: header + passage,
+                            callbacks: callbacks,
+                        });
+                        state.storyFormat = {
+                            format: "Chapbook",
+                            formatVersion: "2.0.1",
+                        };
+                        const parser = uut.getChapbookParser(undefined);
+
+                        parser?.parsePassageText(passage, header.length, state);
+                        const [result] = callbacks.errors;
+
+                        expect(callbacks.errors.length).to.equal(1);
+                        expect(result.severity).to.eql(
+                            DiagnosticSeverity.Error
+                        );
+                        expect(result.message).to.include(
+                            "Invalid regular expression"
+                        );
+                        expect(result.range).to.eql(Range.create(4, 8, 4, 16));
                     });
                 });
             });
@@ -3609,718 +4584,6 @@ describe("Chapbook", () => {
             mockFunction.restore();
 
             expect(result).to.be.null;
-        });
-    });
-
-    describe("errors", () => {
-        describe("vars section", () => {
-            it("should warn on a missing colon", () => {
-                const header = ":: Passage\n";
-                const passage = "var0: right\nvar1 = wrong\n--\n";
-                const callbacks = new MockCallbacks();
-                const state = buildParsingState({
-                    content: header + passage,
-                    callbacks: callbacks,
-                });
-                const parser = uut.getChapbookParser(undefined);
-
-                parser?.parsePassageText(passage, header.length, state);
-                const [result] = callbacks.errors;
-
-                expect(callbacks.errors.length).to.equal(1);
-                expect(result.severity).to.eql(DiagnosticSeverity.Warning);
-                expect(result.message).to.include("Missing colon");
-                expect(result.range).to.eql(Range.create(2, 0, 2, 12));
-            });
-
-            it("should warn on a missing colon even on Windows", () => {
-                const header = ":: Passage\r\n";
-                const passage = "var0: right\r\nvar1 = wrong\r\n--\r\n";
-                const callbacks = new MockCallbacks();
-                const state = buildParsingState({
-                    content: header + passage,
-                    callbacks: callbacks,
-                });
-                const parser = uut.getChapbookParser(undefined);
-
-                parser?.parsePassageText(passage, header.length, state);
-                const [result] = callbacks.errors;
-
-                expect(callbacks.errors.length).to.equal(1);
-                expect(result.severity).to.eql(DiagnosticSeverity.Warning);
-                expect(result.message).to.include("Missing colon");
-                expect(result.range).to.eql(Range.create(2, 0, 2, 12));
-            });
-
-            it("should error on spaces before a colon", () => {
-                const header = ":: Passage\n";
-                const passage = "var1 nope: 17\n--\n";
-                const callbacks = new MockCallbacks();
-                const state = buildParsingState({
-                    content: header + passage,
-                    callbacks: callbacks,
-                });
-                const parser = uut.getChapbookParser(undefined);
-
-                parser?.parsePassageText(passage, header.length, state);
-                const [result] = callbacks.errors;
-
-                expect(callbacks.errors.length).to.equal(1);
-                expect(result.severity).to.eql(DiagnosticSeverity.Error);
-                expect(result.message).to.include(
-                    "Variable names can't have spaces"
-                );
-                expect(result.range).to.eql(Range.create(1, 4, 1, 5));
-            });
-
-            it("should error on a variable with a bad first character", () => {
-                const header = ":: Passage\n";
-                const passage = " 1var : 17\n--\n";
-                const callbacks = new MockCallbacks();
-                const state = buildParsingState({
-                    content: header + passage,
-                    callbacks: callbacks,
-                });
-                const parser = uut.getChapbookParser(undefined);
-
-                parser?.parsePassageText(passage, header.length, state);
-                const [result] = callbacks.errors;
-
-                expect(callbacks.errors.length).to.equal(1);
-                expect(result.severity).to.eql(DiagnosticSeverity.Error);
-                expect(result.message).to.include(
-                    "Variable names must start with a letter, $, or _"
-                );
-                expect(result.range).to.eql(Range.create(1, 1, 1, 2));
-            });
-
-            it("should error on a variable with illegal characters", () => {
-                const header = ":: Passage\n";
-                const passage = " väur😊 : 17\n--\n";
-                const callbacks = new MockCallbacks();
-                const state = buildParsingState({
-                    content: header + passage,
-                    callbacks: callbacks,
-                });
-                const parser = uut.getChapbookParser(undefined);
-
-                parser?.parsePassageText(passage, header.length, state);
-                const result = callbacks.errors;
-
-                expect(result.length).to.equal(2);
-                expect(result[0].severity).to.eql(DiagnosticSeverity.Error);
-                expect(result[0].message).to.include(
-                    "Must be a letter, digit, $, or _"
-                );
-                expect(result[0].range).to.eql(Range.create(1, 2, 1, 3));
-                expect(result[1].severity).to.eql(DiagnosticSeverity.Error);
-                expect(result[1].message).to.include(
-                    "Must be a letter, digit, $, or _"
-                );
-                // Note that this looks like 2 characters b/c of UTF-16 encoding of the smilie face
-                expect(result[1].range).to.eql(Range.create(1, 5, 1, 7));
-            });
-
-            it("should not error on a variable with a dot", () => {
-                const header = ":: Passage\n";
-                const passage = " var.sub : 17\n--\n";
-                const callbacks = new MockCallbacks();
-                const state = buildParsingState({
-                    content: header + passage,
-                    callbacks: callbacks,
-                });
-                const parser = uut.getChapbookParser(undefined);
-
-                parser?.parsePassageText(passage, header.length, state);
-
-                expect(callbacks.errors).to.be.empty;
-            });
-
-            it("should error on an unclosed parenthesis before a colon", () => {
-                const header = ":: Passage\n";
-                const passage = "var(cond: 17\n--\n";
-                const callbacks = new MockCallbacks();
-                const state = buildParsingState({
-                    content: header + passage,
-                    callbacks: callbacks,
-                });
-                const parser = uut.getChapbookParser(undefined);
-
-                parser?.parsePassageText(passage, header.length, state);
-                const [result] = callbacks.errors;
-
-                expect(callbacks.errors.length).to.equal(1);
-                expect(result.severity).to.eql(DiagnosticSeverity.Error);
-                expect(result.message).to.include(
-                    "Missing a close parenthesis"
-                );
-                expect(result.range).to.eql(Range.create(1, 8, 1, 8));
-            });
-
-            it("should warn on text after a condition parentheses but before the colon", () => {
-                const header = ":: Passage\n";
-                const passage = "var (cond) ignored: 17\n--\n";
-                const callbacks = new MockCallbacks();
-                const state = buildParsingState({
-                    content: header + passage,
-                    callbacks: callbacks,
-                });
-                const parser = uut.getChapbookParser(undefined);
-
-                parser?.parsePassageText(passage, header.length, state);
-                const [result] = callbacks.errors;
-
-                expect(callbacks.errors.length).to.equal(1);
-                expect(result.severity).to.eql(DiagnosticSeverity.Warning);
-                expect(result.message).to.include("This will be ignored");
-                expect(result.range).to.eql(Range.create(1, 11, 1, 18));
-            });
-        });
-
-        describe("text section", () => {
-            describe("modifiers", () => {
-                it("should error on spaces before modifiers", () => {
-                    const header = ":: Passage\n";
-                    const passage = "var1: 17\n--\n" + "  [note]\nOther text\n";
-                    const callbacks = new MockCallbacks();
-                    const state = buildParsingState({
-                        content: header + passage,
-                        callbacks: callbacks,
-                    });
-                    const parser = uut.getChapbookParser(undefined);
-
-                    parser?.parsePassageText(passage, header.length, state);
-                    const [result] = callbacks.errors;
-
-                    expect(callbacks.errors.length).to.equal(1);
-                    expect(result.severity).to.eql(DiagnosticSeverity.Error);
-                    expect(result.message).to.include(
-                        "Modifiers can't have spaces before them"
-                    );
-                    expect(result.range).to.eql(Range.create(3, 0, 3, 2));
-                });
-
-                it("should error on spaces after modifiers", () => {
-                    const header = ":: Passage\n";
-                    const passage =
-                        "var1: 17\n--\n" + " [note]  \nOther text\n";
-                    const callbacks = new MockCallbacks();
-                    const state = buildParsingState({
-                        content: header + passage,
-                        callbacks: callbacks,
-                    });
-                    const parser = uut.getChapbookParser(undefined);
-
-                    parser?.parsePassageText(passage, header.length, state);
-                    const [, result] = callbacks.errors;
-
-                    expect(callbacks.errors.length).to.equal(2);
-                    expect(result.severity).to.eql(DiagnosticSeverity.Error);
-                    expect(result.message).to.include(
-                        "Modifiers can't have spaces after them"
-                    );
-                    expect(result.range).to.eql(Range.create(3, 7, 3, 9));
-                });
-
-                it("should not error on blank lines before or after modifiers", () => {
-                    const header = ":: Passage\n";
-                    const passage = "var1: 17\n--\n" + "\n[note]\nOther text\n";
-                    const callbacks = new MockCallbacks();
-                    const state = buildParsingState({
-                        content: header + passage,
-                        callbacks: callbacks,
-                    });
-                    const parser = uut.getChapbookParser(undefined);
-
-                    parser?.parsePassageText(passage, header.length, state);
-
-                    expect(callbacks.errors).to.be.empty;
-                });
-
-                it("should not error on Windows blank lines before or after modifiers", () => {
-                    const header = ":: Passage\r\n";
-                    const passage =
-                        "var1: 17\r\n--\r\n" + "\r\n[note]\r\nOther text\r\n";
-                    const callbacks = new MockCallbacks();
-                    const state = buildParsingState({
-                        content: header + passage,
-                        callbacks: callbacks,
-                    });
-                    const parser = uut.getChapbookParser(undefined);
-
-                    parser?.parsePassageText(passage, header.length, state);
-
-                    expect(callbacks.errors).to.be.empty;
-                });
-            });
-
-            describe("inserts", () => {
-                it("should error on an array dereference in the middle of a var insert", () => {
-                    const header = ":: Passage\r\n";
-                    const passage =
-                        "var1: 17\r\n--\r\n" + " {var[0].color}  \r\n";
-                    const callbacks = new MockCallbacks();
-                    const state = buildParsingState({
-                        content: header + passage,
-                        callbacks: callbacks,
-                    });
-                    const parser = uut.getChapbookParser(undefined);
-
-                    parser?.parsePassageText(passage, header.length, state);
-                    const [result] = callbacks.errors;
-
-                    expect(callbacks.errors.length).to.equal(1);
-                    expect(result.severity).to.eql(DiagnosticSeverity.Error);
-                    expect(result.message).to.include(
-                        "Array dereferencing can only be at the end"
-                    );
-                    expect(result.range).to.eql(Range.create(3, 5, 3, 8));
-                });
-
-                it("should error on a function insert whose property has spaces", () => {
-                    const header = ":: Passage\n";
-                    const passage = " {fn insert, bad prop: 1}  \n";
-                    const callbacks = new MockCallbacks();
-                    const state = buildParsingState({
-                        content: header + passage,
-                        callbacks: callbacks,
-                    });
-                    const parser = uut.getChapbookParser(undefined);
-
-                    parser?.parsePassageText(passage, header.length, state);
-                    const [result] = callbacks.errors;
-
-                    expect(callbacks.errors.length).to.equal(1);
-                    expect(result.severity).to.eql(DiagnosticSeverity.Error);
-                    expect(result.message).to.include(
-                        "Properties can't have spaces"
-                    );
-                    expect(result.range).to.eql(Range.create(1, 13, 1, 21));
-                });
-
-                it("should flag a property with a space", () => {
-                    const header = ":: Passage\n";
-                    const passage = "Insert: {mock insert, prop 1 a: 'arg'}";
-                    const callbacks = new MockCallbacks();
-                    const insert = buildInsertInfo({
-                        match: /^mock insert/,
-                    });
-                    const state = buildParsingState({
-                        content: header + passage,
-                        callbacks: callbacks,
-                    });
-                    const parser = uut.getChapbookParser(undefined);
-                    const mockFunction = ImportMock.mockFunction(
-                        insertsModule,
-                        "all"
-                    ).returns([insert]);
-
-                    parser?.parsePassageText(passage, header.length, state);
-                    mockFunction.restore();
-                    const [result] = callbacks.errors;
-
-                    expect(callbacks.errors.length).to.equal(1);
-                    expect(result.severity).to.eql(DiagnosticSeverity.Error);
-                    expect(result.message).to.include(
-                        "Properties can't have spaces"
-                    );
-                    expect(result.range).to.eql(Range.create(1, 22, 1, 30));
-                });
-
-                it("should flag a missing required first argument", () => {
-                    const header = ":: Passage\n";
-                    const passage = "Insert: { mock insert }";
-                    const callbacks = new MockCallbacks();
-                    const insert = buildInsertInfo({
-                        match: /^mock insert/,
-                        firstArgRequired:
-                            insertsModule.ArgumentRequirement.required,
-                    });
-                    const state = buildParsingState({
-                        content: header + passage,
-                        callbacks: callbacks,
-                    });
-                    const parser = uut.getChapbookParser(undefined);
-                    const mockFunction = ImportMock.mockFunction(
-                        insertsModule,
-                        "all"
-                    ).returns([insert]);
-
-                    parser?.parsePassageText(passage, header.length, state);
-                    mockFunction.restore();
-                    const [result] = callbacks.errors;
-
-                    expect(callbacks.errors.length).to.equal(1);
-                    expect(result.severity).to.eql(DiagnosticSeverity.Error);
-                    expect(result.message).to.include(
-                        'Insert "Mock Insert" requires a first argument'
-                    );
-                    expect(result.range).to.eql(Range.create(1, 10, 1, 21));
-                });
-
-                it("should warn about an ignored first argument", () => {
-                    const header = ":: Passage\n";
-                    const passage = "Insert: { mock insert: 'arg' }";
-                    const callbacks = new MockCallbacks();
-                    const insert = buildInsertInfo({
-                        match: /^mock insert/,
-                        firstArgRequired:
-                            insertsModule.ArgumentRequirement.ignored,
-                    });
-                    const state = buildParsingState({
-                        content: header + passage,
-                        callbacks: callbacks,
-                    });
-                    const parser = uut.getChapbookParser(undefined);
-                    const mockFunction = ImportMock.mockFunction(
-                        insertsModule,
-                        "all"
-                    ).returns([insert]);
-
-                    parser?.parsePassageText(passage, header.length, state);
-                    mockFunction.restore();
-                    const [result] = callbacks.errors;
-
-                    expect(callbacks.errors.length).to.equal(1);
-                    expect(result.severity).to.eql(DiagnosticSeverity.Warning);
-                    expect(result.message).to.include(
-                        'Insert "Mock Insert" will ignore this first argument'
-                    );
-                    expect(result.range).to.eql(Range.create(1, 23, 1, 28));
-                });
-
-                it("should flag a missing required property", () => {
-                    const header = ":: Passage\n";
-                    const passage = "Insert: { mock insert }";
-                    const callbacks = new MockCallbacks();
-                    const insert = buildInsertInfo({
-                        match: /^mock insert/,
-                        requiredProps: { expected: null, also: null },
-                    });
-                    const state = buildParsingState({
-                        content: header + passage,
-                        callbacks: callbacks,
-                    });
-                    const parser = uut.getChapbookParser(undefined);
-                    const mockFunction = ImportMock.mockFunction(
-                        insertsModule,
-                        "all"
-                    ).returns([insert]);
-
-                    parser?.parsePassageText(passage, header.length, state);
-                    mockFunction.restore();
-                    const [result] = callbacks.errors;
-
-                    expect(callbacks.errors.length).to.equal(1);
-                    expect(result.severity).to.eql(DiagnosticSeverity.Error);
-                    expect(result.message).to.include(
-                        'Insert "Mock Insert" missing expected properties: expected, also'
-                    );
-                    expect(result.range).to.eql(Range.create(1, 10, 1, 21));
-                });
-
-                it("should not flag missing optional properties", () => {
-                    const header = ":: Passage\n";
-                    const passage = "Insert: { mock insert }";
-                    const callbacks = new MockCallbacks();
-                    const insert = buildInsertInfo({
-                        match: /^mock insert/,
-                        optionalProps: { expected: null, also: null },
-                    });
-                    const state = buildParsingState({
-                        content: header + passage,
-                        callbacks: callbacks,
-                    });
-                    const parser = uut.getChapbookParser(undefined);
-                    const mockFunction = ImportMock.mockFunction(
-                        insertsModule,
-                        "all"
-                    ).returns([insert]);
-
-                    parser?.parsePassageText(passage, header.length, state);
-                    mockFunction.restore();
-
-                    expect(callbacks.errors.length).to.equal(0);
-                });
-
-                it("should warn about unexpected properties", () => {
-                    const header = ":: Passage\n";
-                    const passage = "Insert: { mock insert, nope: 2 }";
-                    const callbacks = new MockCallbacks();
-                    const insert = buildInsertInfo({
-                        match: /^mock insert/,
-                        optionalProps: { unneeded: null },
-                    });
-                    const state = buildParsingState({
-                        content: header + passage,
-                        callbacks: callbacks,
-                    });
-                    const parser = uut.getChapbookParser(undefined);
-                    const mockFunction = ImportMock.mockFunction(
-                        insertsModule,
-                        "all"
-                    ).returns([insert]);
-
-                    parser?.parsePassageText(passage, header.length, state);
-                    mockFunction.restore();
-                    const [result] = callbacks.errors;
-
-                    expect(callbacks.errors.length).to.equal(1);
-                    expect(result.severity).to.eql(DiagnosticSeverity.Warning);
-                    expect(result.message).to.include(
-                        'Insert "Mock Insert" will ignore this property'
-                    );
-                    expect(result.range).to.eql(Range.create(1, 23, 1, 27));
-                });
-            });
-
-            describe("engine extensions", () => {
-                it("should error on engine extensions whose version isn't a number", () => {
-                    const header = ":: Passage\n";
-                    const passage =
-                        "[javascript]\nengine.extend('bork', true);\n";
-                    const callbacks = new MockCallbacks();
-                    const state = buildParsingState({
-                        content: header + passage,
-                        callbacks: callbacks,
-                    });
-                    state.storyFormat = {
-                        format: "Chapbook",
-                        formatVersion: "2.0.1",
-                    };
-                    const parser = uut.getChapbookParser(undefined);
-
-                    parser?.parsePassageText(passage, header.length, state);
-                    const [result] = callbacks.errors;
-
-                    expect(callbacks.errors.length).to.equal(1);
-                    expect(result.severity).to.eql(DiagnosticSeverity.Error);
-                    expect(result.message).to.include(
-                        "The extension's version must be a number like '2.0.0'"
-                    );
-                    expect(result.range).to.eql(Range.create(2, 15, 2, 19));
-                });
-
-                it("should not warn on engine extensions if the story format doesn't have a version", () => {
-                    const header = ":: Passage\n";
-                    const passage =
-                        "[javascript]\nengine.extend('2.0.0', true);\n";
-                    const callbacks = new MockCallbacks();
-                    const state = buildParsingState({
-                        content: header + passage,
-                        callbacks: callbacks,
-                    });
-                    state.storyFormat = {
-                        format: "Chapbook",
-                    };
-                    const parser = uut.getChapbookParser(undefined);
-
-                    parser?.parsePassageText(passage, header.length, state);
-
-                    expect(callbacks.errors.length).to.equal(0);
-                });
-
-                it("should warn on engine extensions whose version is less than the story format's version", () => {
-                    const header = ":: Passage\n";
-                    const passage =
-                        "[javascript]\nengine.extend('2.0.0', true);\n";
-                    const callbacks = new MockCallbacks();
-                    const state = buildParsingState({
-                        content: header + passage,
-                        callbacks: callbacks,
-                    });
-                    state.storyFormat = {
-                        format: "Chapbook",
-                        formatVersion: "2.0.1",
-                    };
-                    const parser = uut.getChapbookParser(undefined);
-
-                    parser?.parsePassageText(passage, header.length, state);
-                    const [result] = callbacks.errors;
-
-                    expect(callbacks.errors.length).to.equal(1);
-                    expect(result.severity).to.eql(DiagnosticSeverity.Warning);
-                    expect(result.message).to.include(
-                        "The current story format version is 2.0.1, so this extension will be ignored"
-                    );
-                    expect(result.range).to.eql(Range.create(2, 15, 2, 20));
-                });
-
-                it("should not warn on engine extensions whose version is greater than the story format's version", () => {
-                    const header = ":: Passage\n";
-                    const passage =
-                        "[javascript]\nengine.extend('2.2.1', true);\n";
-                    const callbacks = new MockCallbacks();
-                    const state = buildParsingState({
-                        content: header + passage,
-                        callbacks: callbacks,
-                    });
-                    state.storyFormat = {
-                        format: "Chapbook",
-                        formatVersion: "2.1.17",
-                    };
-                    const parser = uut.getChapbookParser(undefined);
-
-                    parser?.parsePassageText(passage, header.length, state);
-                    const [result] = callbacks.errors;
-
-                    expect(callbacks.errors.length).to.equal(0);
-                });
-
-                it("should warn on engine extensions whose version is shorter than the story format's version", () => {
-                    const header = ":: Passage\n";
-                    const passage =
-                        "[javascript]\nengine.extend('2.0', true);\n";
-                    const callbacks = new MockCallbacks();
-                    const state = buildParsingState({
-                        content: header + passage,
-                        callbacks: callbacks,
-                    });
-                    state.storyFormat = {
-                        format: "Chapbook",
-                        formatVersion: "2.0.1",
-                    };
-                    const parser = uut.getChapbookParser(undefined);
-
-                    parser?.parsePassageText(passage, header.length, state);
-                    const [result] = callbacks.errors;
-
-                    expect(callbacks.errors.length).to.equal(1);
-                    expect(result.severity).to.eql(DiagnosticSeverity.Warning);
-                    expect(result.message).to.include(
-                        "The current story format version is 2.0.1, so this extension will be ignored"
-                    );
-                    expect(result.range).to.eql(Range.create(2, 15, 2, 18));
-                });
-
-                it("should warn on engine extensions that aren't extending inserts or modifiers", () => {
-                    const header = ":: Passage\n";
-                    const passage =
-                        "[javascript]\nengine.extend('2.0.1', () => {\nengine.template.nope.add();\n});\n";
-                    const callbacks = new MockCallbacks();
-                    const state = buildParsingState({
-                        content: header + passage,
-                        callbacks: callbacks,
-                    });
-                    state.storyFormat = {
-                        format: "Chapbook",
-                        formatVersion: "2.0.1",
-                    };
-                    const parser = uut.getChapbookParser(undefined);
-
-                    parser?.parsePassageText(passage, header.length, state);
-                    const [result] = callbacks.errors;
-
-                    expect(callbacks.errors.length).to.equal(1);
-                    expect(result.severity).to.eql(DiagnosticSeverity.Warning);
-                    expect(result.message).to.include(
-                        "Unrecognized engine template function"
-                    );
-                    expect(result.range).to.eql(Range.create(3, 0, 3, 20));
-                });
-
-                it("should error on a custom insert with no space in its match object", () => {
-                    const header = ":: Passage\n";
-                    const passage =
-                        "[javascript]\nengine.extend('2.0.1', () => {\nengine.template.inserts.add(\n{match: /hi/}\n);\n});\n";
-                    const callbacks = new MockCallbacks();
-                    const state = buildParsingState({
-                        uri: "fake-uri",
-                        content: header + passage,
-                        callbacks: callbacks,
-                    });
-                    state.storyFormat = {
-                        format: "Chapbook",
-                        formatVersion: "2.0.1",
-                    };
-                    const parser = uut.getChapbookParser(undefined);
-
-                    parser?.parsePassageText(passage, header.length, state);
-                    const [result] = callbacks.errors;
-
-                    expect(callbacks.errors.length).to.equal(1);
-                    expect(result.severity).to.eql(DiagnosticSeverity.Error);
-                    expect(result.message).to.include(
-                        "Custom inserts must have a space in their match"
-                    );
-                    expect(result.range).to.eql(Range.create(4, 9, 4, 11));
-                });
-
-                it("should not error on a custom insert with a space regex metacharacter in its match object", () => {
-                    const header = ":: Passage\n";
-                    const passage =
-                        "[javascript]\nengine.extend('2.0.1', () => {\nengine.template.inserts.add(\n{match: /hi\\sthere/}\n);\n});\n";
-                    const callbacks = new MockCallbacks();
-                    const state = buildParsingState({
-                        uri: "fake-uri",
-                        content: header + passage,
-                        callbacks: callbacks,
-                    });
-                    state.storyFormat = {
-                        format: "Chapbook",
-                        formatVersion: "2.0.1",
-                    };
-                    const parser = uut.getChapbookParser(undefined);
-
-                    parser?.parsePassageText(passage, header.length, state);
-
-                    expect(callbacks.errors).to.be.empty;
-                });
-
-                it("should error on a custom insert whose match object has incorrect regex flags", () => {
-                    const header = ":: Passage\n";
-                    const passage =
-                        "[javascript]\nengine.extend('2.0.1', () => {\nengine.template.inserts.add(\n{match: /hi there/q}\n);\n});\n";
-                    const callbacks = new MockCallbacks();
-                    const state = buildParsingState({
-                        uri: "fake-uri",
-                        content: header + passage,
-                        callbacks: callbacks,
-                    });
-                    state.storyFormat = {
-                        format: "Chapbook",
-                        formatVersion: "2.0.1",
-                    };
-                    const parser = uut.getChapbookParser(undefined);
-
-                    parser?.parsePassageText(passage, header.length, state);
-                    const [result] = callbacks.errors;
-
-                    expect(callbacks.errors.length).to.equal(1);
-                    expect(result.severity).to.eql(DiagnosticSeverity.Error);
-                    expect(result.message).to.include(
-                        "Regular expression flags can only be d, g, i, m, s, u, v, and y"
-                    );
-                    expect(result.range).to.eql(Range.create(4, 18, 4, 19));
-                });
-
-                it("should error on a custom insert whose match object has a borked regex", () => {
-                    const header = ":: Passage\n";
-                    const passage =
-                        "[javascript]\nengine.extend('2.0.1', () => {\nengine.template.inserts.add(\n{match: /hi \\-/u}\n);\n});\n";
-                    const callbacks = new MockCallbacks();
-                    const state = buildParsingState({
-                        uri: "fake-uri",
-                        content: header + passage,
-                        callbacks: callbacks,
-                    });
-                    state.storyFormat = {
-                        format: "Chapbook",
-                        formatVersion: "2.0.1",
-                    };
-                    const parser = uut.getChapbookParser(undefined);
-
-                    parser?.parsePassageText(passage, header.length, state);
-                    const [result] = callbacks.errors;
-
-                    expect(callbacks.errors.length).to.equal(1);
-                    expect(result.severity).to.eql(DiagnosticSeverity.Error);
-                    expect(result.message).to.include(
-                        "Invalid regular expression"
-                    );
-                    expect(result.range).to.eql(Range.create(4, 8, 4, 16));
-                });
-            });
         });
     });
 });

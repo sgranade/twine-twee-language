@@ -27,6 +27,80 @@ describe("Utilities", () => {
         });
     });
 
+    describe("version compare", () => {
+        it("should handle ver1 = ver2", () => {
+            // No arrange
+
+            const result = uut.versionCompare("1.1.10", "1.1.10");
+
+            expect(result).to.equal(0);
+        });
+
+        it("should handle ver1 < ver2 when they have the same depth", () => {
+            // No arrange
+
+            const result = uut.versionCompare("1.1.9", "1.1.10");
+
+            expect(result).to.equal(-1);
+        });
+
+        it("should handle ver1 > ver2 when they have the same depth", () => {
+            // No arrange
+
+            const result = uut.versionCompare("1.1.10", "1.1.9");
+
+            expect(result).to.equal(1);
+        });
+
+        it("should handle ver1 < ver2 when ver1 is shorter than ver2", () => {
+            // No arrange
+
+            const result = uut.versionCompare("1.1", "1.1.1");
+
+            expect(result).to.equal(-1);
+        });
+
+        it("should handle ver1 > ver2 when ver1 is shorter than ver2", () => {
+            // No arrange
+
+            const result = uut.versionCompare("1.2", "1.1.1");
+
+            expect(result).to.equal(1);
+        });
+
+        it("should handle ver1 < ver2 when ver2 is shorter than ver1", () => {
+            // No arrange
+
+            const result = uut.versionCompare("1.1.1", "1.2");
+
+            expect(result).to.equal(-1);
+        });
+
+        it("should handle ver1 > ver2 when ver2 is shorter than ver1", () => {
+            // No arrange
+
+            const result = uut.versionCompare("1.1.1", "1.1");
+
+            expect(result).to.equal(1);
+        });
+
+        it("should assume ver1 < ver2 when ver1 contains a non-number", () => {
+            // No arrange
+
+            const result = uut.versionCompare("1.a.1", "1.1.1");
+
+            expect(result).to.equal(-1);
+        });
+
+        it("should assume ver1 > ver2 when ver2 contains a non-number", () => {
+            // No arrange
+
+            const result = uut.versionCompare("1.1.1", "1.a.1");
+
+            expect(result).to.equal(1);
+        });
+    });
+
     describe("next line index", () => {
         it("should find the next line after a \\n", () => {
             const text = "line1\nline2";

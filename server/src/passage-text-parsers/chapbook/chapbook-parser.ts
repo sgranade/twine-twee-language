@@ -1,5 +1,3 @@
-import { TextDocument } from "vscode-languageserver-textdocument";
-
 import { StoryFormatParsingState, capturePreTokenFor } from "..";
 import {
     ParsingState,
@@ -16,6 +14,7 @@ import {
     skipSpaces,
     removeAndCountPadding,
     extractToMatchingDelimiter,
+    versionCompare,
 } from "../../utilities";
 import {
     InsertTokens,
@@ -25,7 +24,7 @@ import {
     ValueType,
     InsertProperty,
 } from "./inserts";
-import { all as allModifiers } from "./modifiers";
+import { all as allModifiers, ModifierInfo } from "./modifiers";
 import { parseJSExpression } from "../../js-parser";
 import { ProjectIndex, Symbol, TwineSymbolKind } from "../../project-index";
 import { EmbeddedDocument } from "../../embedded-languages";
@@ -55,6 +54,18 @@ export interface ChapbookFunctionInfo {
      * List of completions corresponding to this function.
      */
     completions?: string[];
+    /**
+     * Chapbook version when this function became available.
+     */
+    since?: string;
+    /**
+     * Chapbook version when this function became deprecated.
+     */
+    deprecated?: string;
+    /**
+     * Chapbook version when this function was removed.
+     */
+    removed?: string;
 }
 export namespace ChapbookFunctionInfo {
     /**
@@ -64,6 +75,39 @@ export namespace ChapbookFunctionInfo {
         if (typeof val !== "object" || Array.isArray(val) || val === null)
             return false;
         return (val as ChapbookFunctionInfo).match !== undefined;
+    }
+    /**
+     * Is a function available in a given Chapbook version?
+     *
+     * @param info Function information.
+     * @param version Chapbook version.
+     * @returns True if the function is available in the Chapbook version; false otherwise.
+     */
+    export function exists(
+        info: ChapbookFunctionInfo,
+        version: string
+    ): boolean {
+        if (info.since === undefined) return true;
+        if (info.removed === undefined)
+            return versionCompare(version, info.since) >= 0;
+        return (
+            versionCompare(version, info.since) >= 0 &&
+            versionCompare(version, info.removed) < 0
+        );
+    }
+    /**
+     * Is a function deprecated in a given Chapbook version?
+     *
+     * @param info Function information.
+     * @param version Chapbook version.
+     * @returns True if the function is deprecated in the Chapbook version; false otherwise.
+     */
+    export function isDeprecated(
+        info: ChapbookFunctionInfo,
+        version: string
+    ): boolean {
+        if (info.deprecated === undefined) return false;
+        return versionCompare(version, info.deprecated) >= 0;
     }
 }
 
@@ -595,8 +639,61 @@ function parseInsertContents(
             state
         )
     );
+
+    // Capture semantic tokens for the insert's info
+    // We wait until here b/c the insert may be deprecated, which affects the insert name's semantic token
+    const deprecated =
+        state.storyFormat?.formatVersion !== undefined &&
+        insert?.deprecated !== undefined &&
+        versionCompare(state.storyFormat.formatVersion, insert.deprecated) <= 0;
+    capturePreTokenFor(
+        tokens.name.text,
+        tokens.name.at,
+        ETokenType.function,
+        deprecated ? [ETokenModifier.deprecated] : [],
+        chapbookState
+    );
+    for (const [propName, [propNameToken]] of Object.entries(tokens.props) as [
+        string,
+        [Token, Token],
+    ][]) {
+        capturePreTokenFor(
+            propName,
+            propNameToken.at,
+            ETokenType.property,
+            [],
+            chapbookState
+        );
+    }
+
     // If the reference is to a possible custom insert, there's nothing else for us to do right now
     if (insert === undefined) return;
+
+    // Check the insert's version against our story format version
+    const formatVersion = state.storyFormat?.formatVersion;
+    if (formatVersion !== undefined) {
+        if (
+            insert.since !== undefined &&
+            versionCompare(formatVersion, insert.since) <= 0
+        ) {
+            logErrorFor(
+                tokens.name.text,
+                tokens.name.at,
+                `Insert {${insert.name}} isn't available until Chapbook version ${insert.since} but your StoryFormat version is ${formatVersion}`,
+                state
+            );
+        } else if (
+            insert.removed !== undefined &&
+            versionCompare(formatVersion, insert.removed) >= 0
+        ) {
+            logErrorFor(
+                tokens.name.text,
+                tokens.name.at,
+                `Insert {${insert.name}} was removed in Chapbook version ${insert.removed} and your StoryFormat version is ${formatVersion}`,
+                state
+            );
+        }
+    }
 
     // Check for required and unknown arguments
     // First up, first argument
@@ -754,14 +851,6 @@ function parseInsert(
         props: {},
     };
 
-    capturePreTokenFor(
-        insertTokens.name.text,
-        insertTokens.name.at,
-        ETokenType.function,
-        [],
-        chapbookState
-    );
-
     // Handle the first argument
     [argument, argumentIndex] = skipSpaces(argument, argumentIndex);
     if (argument !== "") {
@@ -787,13 +876,6 @@ function parseInsert(
                 propertySection.slice(propertyIndex, colonIndex)
             );
             const currentPropertyIndex = propertyIndex + leftPad; // Relative to propertySection
-            capturePreTokenFor(
-                currentProperty,
-                insertIndex + propertySectionIndex + currentPropertyIndex,
-                ETokenType.property,
-                [],
-                chapbookState
-            );
 
             // Properties can't have spaces bee tee dubs
             const spaceIndex = currentProperty.lastIndexOf(" ");
@@ -833,7 +915,7 @@ function parseInsert(
             // Skip the comma (if it exists)
             if (c === ",") propertyIndex++;
 
-            // If the property is well formed, capture it to pass to invidual inserts
+            // If the property is well formed, capture it to pass to individual inserts
             if (spaceIndex === -1) {
                 [currentValue, currentValueIndex] = skipSpaces(
                     propertySection.slice(
@@ -1019,11 +1101,11 @@ function parseModifier(
             break;
         }
 
+        let modifier: ModifierInfo | undefined = undefined;
+
         // See if we're referencing a built-in modifier (only on the first token!)
         if (firstToken) {
-            const modifier = modifiers.find((i) =>
-                i.match.test(remainingModifier)
-            );
+            modifier = modifiers.find((i) => i.match.test(remainingModifier));
             // Store a reference to the insert (either built-in or custom)
             state.callbacks.onSymbolReference(
                 createSymbolFor(
@@ -1035,9 +1117,35 @@ function parseModifier(
                     state
                 )
             );
-            // If we recognize the modifier, let it parse the contents, which can set the
-            // text block state in chapbookState
+
+            // If we recognize the modifier, check its version, and let it parse the contents,
+            // which can set the text block state in chapbookState
             if (modifier !== undefined) {
+                const formatVersion = state.storyFormat?.formatVersion;
+                if (formatVersion !== undefined) {
+                    if (
+                        modifier.since !== undefined &&
+                        versionCompare(formatVersion, modifier.since) <= 0
+                    ) {
+                        logErrorFor(
+                            remainingModifier,
+                            tokenIndex,
+                            `Modifier [${modifier.name}] isn't available until Chapbook version ${modifier.since} but your StoryFormat version is ${formatVersion}`,
+                            state
+                        );
+                    } else if (
+                        modifier.removed !== undefined &&
+                        versionCompare(formatVersion, modifier.removed) >= 0
+                    ) {
+                        logErrorFor(
+                            remainingModifier,
+                            tokenIndex,
+                            `Modifier [${modifier.name}] was removed in Chapbook version ${modifier.removed} and your StoryFormat version is ${formatVersion}`,
+                            state
+                        );
+                    }
+                }
+
                 // Handle modifier-specific parsing, which can set the text block state in chapbookState
                 modifier.parse(remainingModifier, state, chapbookState);
             }
@@ -1045,14 +1153,22 @@ function parseModifier(
 
         const token = remainingModifier.split(/\s/, 1)[0];
         if (firstToken) {
-            // Tokenize the first token as a function, unless the modifier is a note
+            // Tokenize the first token as a function, unless the modifier is a note.
+            // Also capture whether or not the modifier is deprecated.
+            const deprecated =
+                state.storyFormat?.formatVersion !== undefined &&
+                modifier?.deprecated !== undefined &&
+                versionCompare(
+                    state.storyFormat.formatVersion,
+                    modifier.deprecated
+                ) <= 0;
             capturePreTokenFor(
                 token,
                 tokenIndex,
                 chapbookState.modifierKind == ModifierKind.Note
                     ? ETokenType.comment
                     : ETokenType.function,
-                [],
+                deprecated ? [ETokenModifier.deprecated] : [],
                 chapbookState
             );
 

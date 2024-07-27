@@ -22,6 +22,29 @@ export function* pairwise<T>(itr: Iterable<T>) {
     }
 }
 
+/**
+ * Compare two dotted version numbers such as "1.3.2".
+ *
+ * @param ver1 First version number.
+ * @param ver2 Second version number.
+ * @returns -1 if ver1 < ver2, 0 if ver1 = ver2, and 1 if ver1 > ver2
+ */
+export function versionCompare(ver1: string, ver2: string): number {
+    const ver1Parts = ver1.split(".").map((n) => parseInt(n, 10));
+    const ver2Parts = ver2.split(".").map((n) => parseInt(n, 10));
+    const minLength = Math.min(ver1Parts.length, ver2Parts.length);
+    for (let i = 0; i < minLength; ++i) {
+        if (Number.isNaN(ver1Parts[i])) return -1;
+        if (Number.isNaN(ver2Parts[i])) return 1;
+        if (ver1Parts[i] < ver2Parts[i]) return -1;
+        if (ver1Parts[i] > ver2Parts[i]) return 1;
+    }
+    // If we reach here then the versions are equal as far as we've been able to compare
+    if (ver1Parts.length < ver2Parts.length) return -1;
+    if (ver1Parts.length > ver2Parts.length) return 1;
+    return 0;
+}
+
 /** TEXT AND STRING MANIPULATION **/
 
 const lineEndPattern = /\r?\n|$/g;
