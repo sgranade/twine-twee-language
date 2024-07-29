@@ -8,6 +8,7 @@ import {
     parsePassageReference,
     createSymbolFor,
     createLocationFor,
+    parseHtml,
 } from "../../parser";
 import { ETokenType, ETokenModifier } from "../../tokens";
 import {
@@ -1000,6 +1001,9 @@ function parseTextSubsection(
             state,
             chapbookState
         );
+
+        // Parse specific HTML tags
+        subsection = parseHtml(subsection, subsectionIndex, state);
 
         // Parse inserts
         // Parsing code taken from `render()` in `render-insert.ts` from Chapbook

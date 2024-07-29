@@ -1001,6 +1001,33 @@ describe("Twine Parser", () => {
                     ]);
                 });
             });
+
+            describe("html", () => {
+                it("should set an embedded document for an HTML style tag", () => {
+                    const header = ":: Passage\n";
+                    const passage =
+                        "Some content.\n" +
+                        "More content<style>\n" +
+                        "  html {\n" +
+                        "    margin: 1px;\n" +
+                        "  }\n" +
+                        "</style> And final content";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+
+                    uut.parseHtml(passage, header.length, state);
+                    const [result] = callbacks.embeddedDocuments;
+
+                    expect(result.document.getText()).to.eql(
+                        "\n  html {\n    margin: 1px;\n  }\n"
+                    );
+                    expect(result.document.languageId).to.eql("css");
+                    expect(result.range).to.eql(Range.create(2, 19, 6, 0));
+                });
+            });
         });
     });
 

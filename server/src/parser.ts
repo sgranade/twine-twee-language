@@ -277,7 +277,7 @@ export function parsePassageReference(
  * @param subsectionIndex Index in the document where the subsection begins (zero-based).
  * @param state Parsing state.
  * @param storyFormatParsingState Story-format-specific parsing state.
- * @returns Updated subsection with the link sections blanked out
+ * @returns Updated subsection with the link sections blanked out.
  */
 export function parseLinks(
     subsection: string,
@@ -357,6 +357,57 @@ export function parseLinks(
                 storyFormatParsingState
             );
         }
+    }
+
+    return subsection;
+}
+
+const styleTagOpenPattern =
+    /<style\b(?=[^>]*(?:(?:type=('text\/css'|"text\/css")|lang=(css|'css'|"css")))?)(?![^\/>]*\/>$)>/gi;
+const styleTagClosePattern = /<\/style>/gi;
+
+/**
+ * Parse specific HTML tags that produce embedded documents.
+ *
+ * As with Twine links, story formats are responsible for calling this function.
+ *
+ * @param subsection Subsection of the passage text section.
+ * @param subsectionIndex Index in the document where the subsection begins (zero-based).
+ * @param state Parsing state.
+ * @returns Updated subsection with the parsed HTML tags blanked out.
+ */
+export function parseHtml(
+    subsection: string,
+    subsectionIndex: number,
+    state: ParsingState
+): string {
+    styleTagOpenPattern.lastIndex = 0;
+    // I'm going to pretend that no one ever nests style tags inside style tags
+    for (const openMatch of subsection.matchAll(styleTagOpenPattern)) {
+        // Find the closing tag, if any
+        const openIndex = openMatch.index + openMatch[0].length;
+        styleTagClosePattern.lastIndex = openIndex;
+        const closeMatch = styleTagClosePattern.exec(subsection);
+        const closeIndex =
+            closeMatch !== null ? closeMatch.index : subsection.length;
+
+        // Create an embedded document
+        const cssContents = subsection.slice(openIndex, closeIndex);
+        state.callbacks.onEmbeddedDocument(
+            EmbeddedDocument.create(
+                "stylesheet",
+                "css",
+                cssContents,
+                openIndex + subsectionIndex,
+                state.textDocument
+            )
+        );
+
+        // Get rid of the embedded language section so it doesn't get re-parsed
+        subsection =
+            subsection.slice(0, styleTagOpenPattern.lastIndex) +
+            " ".repeat(cssContents.length) +
+            subsection.slice(closeIndex);
     }
 
     return subsection;
