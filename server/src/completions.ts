@@ -279,7 +279,7 @@ export async function generateCompletions(
         []) {
         if (positionInRange(position, embeddedDocument.range)) {
             // If the document corresponds to an entire passage, wait to form completions
-            // from it until after everything else has had a chance to create completions
+            // from it until after everything else has had its chance
             if (embeddedDocument.isPassage) {
                 passageDocument = embeddedDocument;
             } else {
@@ -393,7 +393,7 @@ export async function generateCompletions(
         }
     }
 
-    // Once everything else has had a chance, let any passage-wide document
+    // Finally, let any passage-wide document produce completions
     if (passageDocument !== undefined) {
         return await generateEmbeddedDocumentCompletions(
             passageDocument,

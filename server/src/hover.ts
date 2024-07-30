@@ -1,7 +1,7 @@
 import { Hover, Position } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
-import { doHover } from "./embedded-languages";
+import { doHover, EmbeddedDocument } from "./embedded-languages";
 import { ProjectIndex } from "./project-index";
 import { containingRange, positionInRange } from "./utilities";
 import { getStoryFormatParser } from "./passage-text-parsers";
@@ -12,24 +12,29 @@ export async function generateHover(
     index: ProjectIndex
 ): Promise<Hover | null | undefined> {
     const offset = document.offsetAt(position);
+    let passageDocument: EmbeddedDocument | undefined;
 
     // Embedded documents get to create their own completions
     for (const embeddedDocument of index.getEmbeddedDocuments(document.uri) ||
         []) {
         if (positionInRange(position, embeddedDocument.range)) {
-            const hover = await doHover(document, embeddedDocument, offset);
+            if (embeddedDocument.isPassage) {
+                passageDocument = embeddedDocument;
+            } else {
+                const hover = await doHover(document, embeddedDocument, offset);
 
-            // Adjust ranges to be in the parent document and not the sub-document
-            if (Hover.is(hover) && hover.range !== undefined) {
-                hover.range = containingRange(
-                    embeddedDocument.document,
-                    hover.range,
-                    document,
-                    document.offsetAt(embeddedDocument.range.start)
-                );
+                // Adjust ranges to be in the parent document and not the sub-document
+                if (Hover.is(hover) && hover.range !== undefined) {
+                    hover.range = containingRange(
+                        embeddedDocument.document,
+                        hover.range,
+                        document,
+                        document.offsetAt(embeddedDocument.range.start)
+                    );
+                }
+
+                return hover;
             }
-
-            return hover;
         }
     }
 
@@ -38,8 +43,26 @@ export async function generateHover(
     if (storyFormat !== undefined) {
         const parser = getStoryFormatParser(storyFormat);
         if (parser !== undefined) {
-            return parser.generateHover(document, position, index);
+            const hover = parser.generateHover(document, position, index);
+            if (hover !== null) return hover;
         }
+    }
+
+    // Finally, let any passage-wide document produce completions
+    if (passageDocument !== undefined) {
+        const hover = await doHover(document, passageDocument, offset);
+
+        // Adjust ranges to be in the parent document and not the sub-document
+        if (Hover.is(hover) && hover.range !== undefined) {
+            hover.range = containingRange(
+                passageDocument.document,
+                hover.range,
+                document,
+                document.offsetAt(passageDocument.range.start)
+            );
+        }
+
+        return hover;
     }
 
     return undefined;
