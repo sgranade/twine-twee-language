@@ -389,29 +389,32 @@ export function parseHtml(
     // I'm going to pretend that no one ever nests style tags inside style tags
     for (const openMatch of subsection.matchAll(styleTagOpenPattern)) {
         // Find the closing tag, if any
-        const openIndex = openMatch.index + openMatch[0].length;
-        styleTagClosePattern.lastIndex = openIndex;
+        const styleOpenTagBeginIndex = openMatch.index;
+        const openInnerIndex = styleOpenTagBeginIndex + openMatch[0].length;
+        styleTagClosePattern.lastIndex = openInnerIndex;
         const closeMatch = styleTagClosePattern.exec(subsection);
-        const closeIndex =
+        const closeInnerIndex =
             closeMatch !== null ? closeMatch.index : subsection.length;
+        const styleCloseTagEndIndex =
+            closeInnerIndex + (closeMatch !== null ? closeMatch[0].length : 0);
 
         // Create an embedded document
-        const cssContents = subsection.slice(openIndex, closeIndex);
+        const cssContents = subsection.slice(openInnerIndex, closeInnerIndex);
         state.callbacks.onEmbeddedDocument(
             EmbeddedDocument.create(
                 "stylesheet",
                 "css",
                 cssContents,
-                openIndex + subsectionIndex,
+                openInnerIndex + subsectionIndex,
                 state.textDocument
             )
         );
 
-        // Get rid of the embedded language section so it doesn't get re-parsed
+        // Get rid of the style tags and embedded language section so it doesn't get re-parsed
         subsection =
-            subsection.slice(0, styleTagOpenPattern.lastIndex) +
-            " ".repeat(cssContents.length) +
-            subsection.slice(closeIndex);
+            subsection.slice(0, openMatch.index) +
+            " ".repeat(styleCloseTagEndIndex - styleOpenTagBeginIndex) +
+            subsection.slice(styleCloseTagEndIndex);
     }
 
     return subsection;

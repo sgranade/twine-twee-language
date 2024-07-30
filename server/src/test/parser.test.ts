@@ -1064,6 +1064,33 @@ describe("Twine Parser", () => {
                     expect(result.document.languageId).to.eql("css");
                     expect(result.range).to.eql(Range.create(2, 19, 6, 0));
                 });
+
+                it("should replace the HTML style section with blanks in the subsection", () => {
+                    const header = ":: Passage\n";
+                    const passage =
+                        "Some content.\n" +
+                        "More content<style>\n" +
+                        "  html {\n" +
+                        "    margin: 1px;\n" +
+                        "  }\n" +
+                        "</style> And final content";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+
+                    const result = uut.parseHtml(passage, header.length, state);
+
+                    expect(result).to.eql(
+                        "Some content.\n" +
+                            "More content        " +
+                            "         " +
+                            "                 " +
+                            "    " +
+                            "         And final content"
+                    );
+                });
             });
         });
     });
