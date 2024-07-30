@@ -433,7 +433,7 @@
 				}
 			]
 		},
-		"html": {
+		"html-tag": {
 			"comment": "Non-specific HTML tag",
 			"begin": "(?i)(</?)([a-z][a-zA-Z0-9:-]*)",
 			"beginCaptures": {
