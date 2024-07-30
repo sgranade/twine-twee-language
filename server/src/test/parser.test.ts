@@ -736,6 +736,43 @@ describe("Twine Parser", () => {
                 ]);
             });
 
+            it("should set the current passage in the parsing state before parsing passage text", () => {
+                const callbacks = new MockCallbacks();
+                const doc = TextDocument.create(
+                    "fake-uri",
+                    "",
+                    0,
+                    ":: Passage to be parsed\nI am the passage contents!\n"
+                );
+                const receivedContents: string[] = [];
+                const mockFunction = ImportMock.mockFunction(
+                    ptpModule,
+                    "getStoryFormatParser"
+                ).callsFake((format: StoryFormat | undefined) => {
+                    if (format?.format == "FakeFormat") {
+                        return {
+                            id: "FakeFormat",
+                            parsePassageText: (
+                                passageText: string,
+                                textIndex: number,
+                                state: uut.ParsingState
+                            ) => {
+                                receivedContents.push(
+                                    state.currentPassage?.name.contents ||
+                                        "nope!"
+                                );
+                            },
+                        };
+                    }
+                    return undefined;
+                });
+
+                uut.parse(doc, callbacks, true, { format: "FakeFormat" });
+                mockFunction.restore();
+
+                expect(receivedContents).to.eql(["Passage to be parsed"]);
+            });
+
             describe("links", () => {
                 it("should produce no semantic tokens for an empty [[]] link", () => {
                     const header = ":: Passage\n";

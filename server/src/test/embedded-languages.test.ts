@@ -41,6 +41,7 @@ describe("Embedded Languages", () => {
                     "Line 2 - changed!\nLine 3"
                 ),
                 range: Range.create(1, 0, 2, 6),
+                isPassage: false,
             });
         });
 
@@ -78,6 +79,7 @@ describe("Embedded Languages", () => {
                     "Line 2!\nLine 3"
                 ),
                 range: Range.create(1, 0, 2, 6),
+                isPassage: false,
             });
         });
     });

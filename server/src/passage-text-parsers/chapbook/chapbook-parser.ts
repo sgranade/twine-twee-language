@@ -1429,6 +1429,35 @@ function parseVarsSection(
     }
 }
 
+interface chapbookPassageParts {
+    vars?: string;
+    content: string;
+    contentIndex: number;
+}
+
+/**
+ * Divide a Chapbook passage into the (optional) vars section and the text.
+ *
+ * @param passageText Full text of the passage.
+ * @returns Information about the vars section, or undefined if there is no vars section.
+ */
+function divideChapbookPassage(passageText: string): chapbookPassageParts {
+    const passageParts: chapbookPassageParts = {
+        content: passageText,
+        contentIndex: 0,
+    };
+    const varSeparatorMatch = varsSepPattern.exec(passageText);
+    if (varSeparatorMatch !== null) {
+        passageParts.vars = passageText.slice(0, varSeparatorMatch.index);
+        passageParts.contentIndex =
+            varSeparatorMatch.index + varSeparatorMatch[0].length;
+        passageParts.content = passageParts.content.slice(
+            passageParts.contentIndex
+        );
+    }
+    return passageParts;
+}
+
 /**
  * Parse the text of a Chapbook passage.
  *
@@ -1448,22 +1477,41 @@ export function parsePassageText(
         return;
     }
 
-    let content = passageText,
-        contentIndex = 0;
     const chapbookState: ChapbookParsingState = {
         modifierKind: ModifierKind.None,
         passageTokens: {},
     };
 
-    const varSeparatorMatch = varsSepPattern.exec(passageText);
-    if (varSeparatorMatch !== null) {
-        const vars = passageText.slice(0, varSeparatorMatch.index);
-        contentIndex = varSeparatorMatch.index + varSeparatorMatch[0].length;
-        content = passageText.slice(contentIndex);
-        parseVarsSection(vars, textIndex + 0, state, chapbookState);
+    const passageParts = divideChapbookPassage(passageText);
+    if (passageParts.vars !== undefined) {
+        parseVarsSection(
+            passageParts.vars,
+            textIndex + 0,
+            state,
+            chapbookState
+        );
     }
+    // Generate an embedded HTML document for the entire passage
+    state.callbacks.onEmbeddedDocument(
+        EmbeddedDocument.create(
+            (state.currentPassage?.name.contents || "placeholder").replace(
+                " ",
+                "-"
+            ),
+            "html",
+            passageParts.content,
+            textIndex + passageParts.contentIndex,
+            state.textDocument,
+            true
+        )
+    );
 
-    parseTextSection(content, textIndex + contentIndex, state, chapbookState);
+    parseTextSection(
+        passageParts.content,
+        textIndex + passageParts.contentIndex,
+        state,
+        chapbookState
+    );
 
     // Submit semantic tokens in document order
     // (taking advantage of object own key enumeration order)

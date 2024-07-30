@@ -189,6 +189,74 @@ function removeCompletionListItemDefaults(
 }
 
 /**
+ * Generate completions for an embedded document.
+ *
+ * @param embeddedDocument Embedded document.
+ * @param document Document to generate completions for.
+ * @param position Where to generate the completions.
+ * @param index Twine project index.
+ * @returns Completion list, or null if no completions.
+ */
+async function generateEmbeddedDocumentCompletions(
+    embeddedDocument: EmbeddedDocument,
+    document: TextDocument,
+    position: Position,
+    index: ProjectIndex
+): Promise<CompletionList | null> {
+    const completionOffset = document.offsetAt(position);
+
+    // Some clients (looking at you, VS Code) ask for completions before
+    // the change propagates to the server, leaving the embedded document
+    // out of sync with the parent, so make sure to update it if needed
+    embeddedDocument = updateEmbeddedDocument(embeddedDocument, document);
+
+    const embeddedDocOffset = document.offsetAt(embeddedDocument.range.start);
+    const completions =
+        (await doComplete(document, embeddedDocument, completionOffset)) ||
+        CompletionList.create([], false);
+
+    // Adjust the completion items for StoryData
+    if (embeddedDocument.document.uri === storyDataJSONUri) {
+        // If one of the completion items is the IFID property, generate a
+        // new IFID value to go with it
+        const ifidItem = completions.items.find(
+            (item) => item.insertText === '"ifid": "$1"'
+        );
+        if (ifidItem !== undefined) {
+            ifidItem.insertText = `"ifid": "${v4().toUpperCase()}"$1`;
+            if (ifidItem.textEdit?.newText !== undefined) {
+                ifidItem.textEdit.newText = ifidItem.insertText;
+            }
+        }
+
+        completions.items.push(
+            ...generateStoryDataCompletions(
+                embeddedDocument,
+                completionOffset - embeddedDocOffset,
+                index
+            )
+        );
+    }
+
+    // The completions's positions are relative to the sub-document, so we need
+    // to adjust those to be relative to the parent document
+    if (completions !== null) {
+        for (const item of completions.items) {
+            if (item.textEdit !== undefined && "range" in item.textEdit) {
+                item.textEdit.range = containingRange(
+                    embeddedDocument.document,
+                    item.textEdit.range,
+                    document,
+                    embeddedDocOffset
+                );
+            }
+        }
+    }
+
+    return completions;
+}
+
+/**
  * Generate completions for a document.
  *
  * @param document Document to generate completions for.
@@ -204,72 +272,24 @@ export async function generateCompletions(
     hasCompletionListItemDefaults: boolean
 ): Promise<CompletionList | null> {
     const completionOffset = document.offsetAt(position);
+    let passageDocument: EmbeddedDocument | undefined;
 
     // Embedded documents get to create their own completions
     for (let embeddedDocument of index.getEmbeddedDocuments(document.uri) ||
         []) {
         if (positionInRange(position, embeddedDocument.range)) {
-            // Some clients (looking at you, VS Code) ask for completions before
-            // the change propagates to the server, leaving the embedded document
-            // out of sync with the parent, so make sure to update it if needed
-            embeddedDocument = updateEmbeddedDocument(
-                embeddedDocument,
-                document
-            );
-
-            const embeddedDocOffset = document.offsetAt(
-                embeddedDocument.range.start
-            );
-            const completions =
-                (await doComplete(
-                    document,
+            // If the document corresponds to an entire passage, wait to form completions
+            // from it until after everything else has had a chance to create completions
+            if (embeddedDocument.isPassage) {
+                passageDocument = embeddedDocument;
+            } else {
+                return await generateEmbeddedDocumentCompletions(
                     embeddedDocument,
-                    completionOffset
-                )) || CompletionList.create([], false);
-
-            // Adjust the completion items for StoryData
-            if (embeddedDocument.document.uri === storyDataJSONUri) {
-                // If one of the completion items is the IFID property, generate a
-                // new IFID value to go with it
-                const ifidItem = completions.items.find(
-                    (item) => item.insertText === '"ifid": "$1"'
-                );
-                if (ifidItem !== undefined) {
-                    ifidItem.insertText = `"ifid": "${v4().toUpperCase()}"$1`;
-                    if (ifidItem.textEdit?.newText !== undefined) {
-                        ifidItem.textEdit.newText = ifidItem.insertText;
-                    }
-                }
-
-                completions.items.push(
-                    ...generateStoryDataCompletions(
-                        embeddedDocument,
-                        completionOffset - embeddedDocOffset,
-                        index
-                    )
+                    document,
+                    position,
+                    index
                 );
             }
-
-            // The completions's positions are relative to the sub-document, so we need
-            // to adjust those to be relative to the parent document
-            if (completions !== null) {
-                for (const item of completions.items) {
-                    if (
-                        item.textEdit !== undefined &&
-                        "range" in item.textEdit
-                    ) {
-                        item.textEdit.range = containingRange(
-                            embeddedDocument.document,
-                            item.textEdit.range,
-                            document,
-                            embeddedDocOffset
-                        );
-                    }
-                }
-            }
-
-            // Embedded documents aren't nested, so we can quit looking
-            return completions;
         }
     }
 
@@ -363,12 +383,24 @@ export async function generateCompletions(
                 position,
                 index
             );
-            if (completionList !== null && !hasCompletionListItemDefaults) {
-                completionList =
-                    removeCompletionListItemDefaults(completionList);
+            if (completionList !== null) {
+                if (!hasCompletionListItemDefaults) {
+                    completionList =
+                        removeCompletionListItemDefaults(completionList);
+                }
+                return completionList;
             }
-            return completionList;
         }
+    }
+
+    // Once everything else has had a chance, let any passage-wide document
+    if (passageDocument !== undefined) {
+        return await generateEmbeddedDocumentCompletions(
+            passageDocument,
+            document,
+            position,
+            index
+        );
     }
 
     return null;

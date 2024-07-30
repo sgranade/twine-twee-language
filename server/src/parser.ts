@@ -59,6 +59,10 @@ export interface ParsingState {
      */
     parsePassageContents: boolean;
     /**
+     * What passage are we currently parsing the contents of?
+     */
+    currentPassage?: Passage;
+    /**
      * Diagnostics options.
      */
     diagnosticsOptions: DiagnosticsOptions;
@@ -782,6 +786,9 @@ function findAndParsePassageContents(
     followingPassage: Passage | undefined,
     state: ParsingState
 ): void {
+    // Set the currently-being-parsed passage
+    state.currentPassage = passage;
+
     // Find the passage's contents
     const passageContentsStartIndex = state.textDocument.offsetAt({
         line: passage.name.location.range.start.line + 1,
@@ -816,6 +823,9 @@ function findAndParsePassageContents(
     );
 
     parsePassageText(passage, passageText, passageContentsStartIndex, state);
+
+    // Unset the currently-being-parsed passage
+    state.currentPassage = undefined;
 }
 
 /**

@@ -196,6 +196,28 @@ describe("Chapbook", () => {
         });
 
         describe("text section", () => {
+            it("should create an embedded html document for the text section", () => {
+                const header = ":: Passage\n";
+                const passage = "var1: 17\n--\n[mock-mod]\nContent\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    uri: "fake-uri",
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const parser = uut.getChapbookParser(undefined);
+
+                parser?.parsePassageText(passage, header.length, state);
+                const result = callbacks.embeddedDocuments[0];
+
+                expect(callbacks.embeddedDocuments.length).to.equal(1);
+                expect(result.document.getText()).to.eql(
+                    "[mock-mod]\nContent\n"
+                );
+                expect(result.range).to.eql(Range.create(3, 0, 5, 0));
+                expect(result.isPassage).to.be.true;
+            });
+
             describe("modifiers", () => {
                 it("should capture a reference for a known modifier", () => {
                     const header = ":: Passage\n";
@@ -425,7 +447,8 @@ describe("Chapbook", () => {
                     const parser = uut.getChapbookParser(undefined);
 
                     parser?.parsePassageText(passage, header.length, state);
-                    const [result] = callbacks.embeddedDocuments;
+                    // The first embedded document is the entire passage
+                    const [, result] = callbacks.embeddedDocuments;
 
                     expect(result.document.getText()).to.eql(
                         "Fake CSS\nMore fake\n"
@@ -777,7 +800,8 @@ describe("Chapbook", () => {
                     const parser = uut.getChapbookParser(undefined);
 
                     parser?.parsePassageText(passage, header.length, state);
-                    const [result] = callbacks.embeddedDocuments;
+                    // The first embedded document is the entire passage
+                    const [, result] = callbacks.embeddedDocuments;
 
                     expect(result.document.getText()).to.eql(
                         "\n  html {\n    margin: 1px;\n  }\n"

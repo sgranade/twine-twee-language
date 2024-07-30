@@ -10,6 +10,7 @@ import {
     getLanguageService as getJSONLanguageService,
 } from "vscode-json-languageservice";
 import { getCSSLanguageService } from "vscode-css-languageservice";
+import { getLanguageService as getHtmlLanguageService } from "vscode-html-languageservice";
 
 import { headerMetadataSchema, storyDataSchema } from "./language";
 
@@ -19,6 +20,7 @@ import { headerMetadataSchema, storyDataSchema } from "./language";
 export interface EmbeddedDocument {
     document: TextDocument; // Raw document
     range: Range; // Range in the parent that the embedded document encompasses
+    isPassage: boolean; // Does the embedded document encompass an entire Twine passage? (This affects completions, hover info, &c.)
 }
 export namespace EmbeddedDocument {
     /**
@@ -29,6 +31,7 @@ export namespace EmbeddedDocument {
      * @param content The document's content.
      * @param offset Where the embedded document begins inside its parent (zero-based).
      * @param parent Parent document the embedded document lives inside.
+     * @param isPassage If the document corresponds to an entire Twine passage (which affects completions, hover info, &c.)
      * @returns A new embedded document.
      */
     export function create(
@@ -36,8 +39,10 @@ export namespace EmbeddedDocument {
         languageId: string,
         content: string,
         offset: number,
-        parent: TextDocument
+        parent: TextDocument,
+        isPassage?: boolean
     ): EmbeddedDocument {
+        if (isPassage === undefined) isPassage = false;
         return {
             document: TextDocument.create(
                 uri,
@@ -49,6 +54,7 @@ export namespace EmbeddedDocument {
                 parent.positionAt(offset),
                 parent.positionAt(offset + content.length)
             ),
+            isPassage: isPassage,
         };
     }
 }
@@ -75,7 +81,8 @@ export function updateEmbeddedDocument(
             embeddedDocument.document.languageId,
             parent.getText(embeddedDocument.range),
             parent.offsetAt(embeddedDocument.range.start),
-            parent
+            parent,
+            embeddedDocument.isPassage
         );
     }
     return embeddedDocument;
@@ -175,6 +182,9 @@ function getLanguageService(id: string): LanguageService | undefined {
     }
     if (id === "css") {
         return cssService;
+    }
+    if (id === "html") {
+        return htmlService;
     }
 
     return undefined;
@@ -280,5 +290,34 @@ const cssService: LanguageService = {
             embeddedDocument.document,
             stylesheet
         );
+    },
+};
+
+/* HTML */
+
+const htmlLanguageService = getHtmlLanguageService();
+
+// TODO right now the language services re-parse on every validation and completion.
+// If this becomes a time suck, consider cacheing the results
+
+const htmlService: LanguageService = {
+    async doComplete(embeddedDocument, offset) {
+        return htmlLanguageService.doComplete(
+            embeddedDocument.document,
+            embeddedDocument.document.positionAt(offset),
+            htmlLanguageService.parseHTMLDocument(embeddedDocument.document)
+        );
+    },
+
+    async doHover(embeddedDocument, offset) {
+        return htmlLanguageService.doHover(
+            embeddedDocument.document,
+            embeddedDocument.document.positionAt(offset),
+            htmlLanguageService.parseHTMLDocument(embeddedDocument.document)
+        );
+    },
+
+    async doValidation(embeddedDocument) {
+        return [];
     },
 };

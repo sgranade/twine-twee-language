@@ -575,4 +575,153 @@ describe("Completions", () => {
             expect(result).to.eql(completionList);
         });
     });
+
+    describe("Passage-wide Embedded Documents vs Other Completions", () => {
+        it("should complete links before passage-wide embedded documents", async () => {
+            const doc = TextDocument.create("fake-uri", "", 0, "Passage [[ ");
+            const position = Position.create(0, 10);
+            const index = new Index();
+            index.setPassages("fake-uri", [buildPassage({ label: "Testy" })]);
+            index.setEmbeddedDocuments("fake-uri", [
+                embeddedLanguagesModule.EmbeddedDocument.create(
+                    "inner-uri",
+                    "html",
+                    "ePassage [[ ",
+                    0,
+                    doc,
+                    true
+                ),
+            ]);
+            const mockFunction = ImportMock.mockFunction(
+                embeddedLanguagesModule,
+                "doComplete"
+            ).callsFake(
+                async (
+                    parentDoc: TextDocument,
+                    embeddedDoc: embeddedLanguagesModule.EmbeddedDocument
+                ) => {
+                    if (embeddedDoc.document.uri === "inner-uri") {
+                        return CompletionList.create([
+                            CompletionItem.create("Embedded completion"),
+                        ]);
+                    }
+                    return null;
+                }
+            );
+
+            const result = await uut.generateCompletions(
+                doc,
+                position,
+                index,
+                true
+            );
+            mockFunction.restore();
+
+            expect(result?.items[0].label).to.eql("Testy");
+        });
+
+        it("should complete story format-specific items before passage-wide embedded documents", async () => {
+            const doc = TextDocument.create("fake-uri", "", 0, "Passage cont");
+            const position = Position.create(0, 10);
+            const index = new Index();
+            index.setStoryData(
+                {
+                    ifid: "mock-ifid",
+                    storyFormat: { format: "FakeFormat" },
+                },
+                "fake-uri"
+            );
+            const completionList = CompletionList.create([
+                { label: "story completion" },
+            ]);
+            index.setEmbeddedDocuments("fake-uri", [
+                embeddedLanguagesModule.EmbeddedDocument.create(
+                    "inner-uri",
+                    "html",
+                    "ePassage cont",
+                    0,
+                    doc,
+                    true
+                ),
+            ]);
+            const mockPassageTextParserFunction = ImportMock.mockFunction(
+                ptpModule,
+                "getStoryFormatParser"
+            ).callsFake(() => {
+                return {
+                    id: "FakeFormat",
+                    generateCompletions: () => completionList,
+                };
+            });
+            const mockEmbeddedDocFunction = ImportMock.mockFunction(
+                embeddedLanguagesModule,
+                "doComplete"
+            ).callsFake(
+                async (
+                    parentDoc: TextDocument,
+                    embeddedDoc: embeddedLanguagesModule.EmbeddedDocument
+                ) => {
+                    if (embeddedDoc.document.uri === "inner-uri") {
+                        return CompletionList.create([
+                            CompletionItem.create("Embedded completion"),
+                        ]);
+                    }
+                    return null;
+                }
+            );
+
+            const result = await uut.generateCompletions(
+                doc,
+                position,
+                index,
+                true
+            );
+            mockEmbeddedDocFunction.restore();
+            mockPassageTextParserFunction.restore();
+
+            expect(result).to.eql(completionList);
+        });
+
+        it("should complete passage-wide embedded documents", async () => {
+            const doc = TextDocument.create("fake-uri", "", 0, "Passage cont");
+            const position = Position.create(0, 10);
+            const index = new Index();
+            index.setEmbeddedDocuments("fake-uri", [
+                embeddedLanguagesModule.EmbeddedDocument.create(
+                    "inner-uri",
+                    "html",
+                    "Passage cont",
+                    0,
+                    doc,
+                    true
+                ),
+            ]);
+            const mockFunction = ImportMock.mockFunction(
+                embeddedLanguagesModule,
+                "doComplete"
+            ).callsFake(
+                async (
+                    parentDoc: TextDocument,
+                    embeddedDoc: embeddedLanguagesModule.EmbeddedDocument
+                ) => {
+                    if (embeddedDoc.document.uri === "inner-uri") {
+                        return CompletionList.create([
+                            CompletionItem.create("Embedded completion"),
+                        ]);
+                    }
+                    return null;
+                }
+            );
+
+            const result = await uut.generateCompletions(
+                doc,
+                position,
+                index,
+                true
+            );
+            mockFunction.restore();
+
+            expect(result?.items).to.eql([{ label: "Embedded completion" }]);
+        });
+    });
 });
