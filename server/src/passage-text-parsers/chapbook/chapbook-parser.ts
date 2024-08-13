@@ -27,7 +27,12 @@ import {
 } from "./inserts";
 import { all as allModifiers, ModifierInfo } from "./modifiers";
 import { parseJSExpression } from "../../js-parser";
-import { ProjectIndex, Symbol, TwineSymbolKind } from "../../project-index";
+import {
+    Label,
+    ProjectIndex,
+    Symbol,
+    TwineSymbolKind,
+} from "../../project-index";
 import { EmbeddedDocument } from "../../embedded-languages";
 
 const varsSepPattern = /^--(\r?\n|$)/m;
@@ -120,12 +125,13 @@ export const OChapbookSymbolKind = {
     BuiltInInsert: TwineSymbolKind._end + 2,
     CustomModifier: TwineSymbolKind._end + 3,
     CustomInsert: TwineSymbolKind._end + 4,
+    Variable: TwineSymbolKind._end + 5,
 };
 export type ChapbookSymbolKind =
     (typeof OChapbookSymbolKind)[keyof typeof OChapbookSymbolKind];
 
 /**
- * A Chapbook symbol, which corresponds either to a modifier or insert.
+ * A Chapbook symbol, which corresponds to a modifier, insert, or variable.
  */
 export interface ChapbookSymbol extends Symbol, ChapbookFunctionInfo {}
 export namespace ChapbookSymbol {
@@ -186,6 +192,25 @@ export function getChapbookDefinitions(
     return customSymbols;
 }
 
+/**
+ * Create symbol references for parsed variables.
+ *
+ * @param vars List of variables as labels.
+ * @param state Parsing state.
+ */
+function createVariableReferences(vars: Label[], state: ParsingState): void {
+    for (const v of vars) {
+        state.callbacks.onSymbolReference({
+            contents: v.contents,
+            location: v.location,
+            kind: OChapbookSymbolKind.Variable,
+        });
+    }
+}
+
+/**
+ * Types of object properties we parse.
+ */
 enum jsObjectType {
     str,
     regex,
@@ -802,6 +827,17 @@ function parseInsert(
             chapbookState
         );
 
+        // Parse the value as JavaScript
+        createVariableReferences(
+            parseJSExpression(
+                invocation,
+                insertIndex + invocationIndex,
+                state,
+                chapbookState
+            ),
+            state
+        );
+
         // Variables only allow array dereferencing at the end
         const bracketMatch = /(\[.+\])\S+/.exec(invocation);
         if (bracketMatch !== null) {
@@ -813,7 +849,6 @@ function parseInsert(
             );
         }
 
-        // TODO index variable reference
         return;
     }
 
@@ -860,8 +895,15 @@ function parseInsert(
             insertIndex + argumentIndex
         );
     }
-    parseJSExpression(argument, insertIndex + argumentIndex, chapbookState);
-    // TODO look for variable references
+    createVariableReferences(
+        parseJSExpression(
+            argument,
+            insertIndex + argumentIndex,
+            state,
+            chapbookState
+        ),
+        state
+    );
 
     // Handle properties
     if (propertySection.trim()) {
@@ -940,10 +982,14 @@ function parseInsert(
                 ];
 
                 // Parse the value as JavaScript
-                parseJSExpression(
-                    currentValue,
-                    insertIndex + propertySectionIndex + currentValueIndex,
-                    chapbookState
+                createVariableReferences(
+                    parseJSExpression(
+                        currentValue,
+                        insertIndex + propertySectionIndex + currentValueIndex,
+                        state,
+                        chapbookState
+                    ),
+                    state
                 );
             }
         }
@@ -972,7 +1018,15 @@ function parseTextSubsection(
 ): void {
     if (chapbookState.modifierKind === ModifierKind.Javascript) {
         findEngineExtensions(subsection, subsectionIndex, state);
-        parseJSExpression(subsection, subsectionIndex, chapbookState);
+        createVariableReferences(
+            parseJSExpression(
+                subsection,
+                subsectionIndex,
+                state,
+                chapbookState
+            ),
+            state
+        );
     } else if (chapbookState.modifierKind === ModifierKind.Css) {
         state.callbacks.onEmbeddedDocument(
             EmbeddedDocument.create(
@@ -1340,12 +1394,31 @@ function parseVarsSection(
         let name = m[2].slice(0, colonIndex).trimEnd();
         const nameIndex = m.index + m[1].length;
 
+        // Store a reference to the variable (since we don't know if this is where
+        // the variable is first created or merely modified)
+        state.callbacks.onSymbolReference(
+            createSymbolFor(
+                name,
+                sectionIndex + nameIndex,
+                OChapbookSymbolKind.Variable,
+                state
+            )
+        );
+
         // Handle the value
         let [value, valueIndex] = skipSpaces(
             m[2].slice(colonIndex + 1),
             m.index + m[1].length + colonIndex + 1
         );
-        parseJSExpression(value, sectionIndex + valueIndex, chapbookState);
+        createVariableReferences(
+            parseJSExpression(
+                value,
+                sectionIndex + valueIndex,
+                state,
+                chapbookState
+            ),
+            state
+        );
 
         // Check for a condition
         const conditionMatch = conditionPattern.exec(name);
@@ -1365,12 +1438,16 @@ function parseVarsSection(
                     state
                 );
             } else {
-                parseJSExpression(
-                    conditionMatch[3],
-                    sectionIndex +
-                        conditionMatchIndex +
-                        conditionMatch[0].indexOf(conditionMatch[3]),
-                    chapbookState
+                createVariableReferences(
+                    parseJSExpression(
+                        conditionMatch[3],
+                        sectionIndex +
+                            conditionMatchIndex +
+                            conditionMatch[0].indexOf(conditionMatch[3]),
+                        state,
+                        chapbookState
+                    ),
+                    state
                 );
 
                 // Check for ignored text
@@ -1417,6 +1494,7 @@ function parseVarsSection(
             );
         }
 
+        // Set a symbolic token for the variable name
         capturePreTokenFor(
             name,
             sectionIndex + nameIndex,
@@ -1424,8 +1502,6 @@ function parseVarsSection(
             [ETokenModifier.modification],
             chapbookState
         );
-
-        // TODO call back on variable
     }
 }
 

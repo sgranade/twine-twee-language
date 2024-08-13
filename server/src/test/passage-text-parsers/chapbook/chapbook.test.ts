@@ -62,6 +62,31 @@ describe("Chapbook", () => {
         });
 
         describe("vars section", () => {
+            it("should capture a reference for a variable name", () => {
+                const header = ":: Passage\n";
+                const passage = "\n var1: 17\n--\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    uri: "fake-uri",
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const parser = uut.getChapbookParser(undefined);
+
+                parser?.parsePassageText(passage, header.length, state);
+                const result = callbacks.references[0];
+
+                expect(callbacks.references.length).to.equal(1);
+                expect(result).to.eql({
+                    contents: "var1",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(2, 1, 2, 5)
+                    ),
+                    kind: OChapbookSymbolKind.Variable,
+                });
+            });
+
             it("should set a semantic token for a variable name", () => {
                 const header = ":: Passage\n";
                 const passage = "\n var1: 17\n--\n";
@@ -81,6 +106,31 @@ describe("Chapbook", () => {
                     length: 4,
                     tokenType: ETokenType.variable,
                     tokenModifiers: [ETokenModifier.modification],
+                });
+            });
+
+            it("should capture a reference for a variable's condition that itself contains a variable", () => {
+                const header = ":: Passage\n";
+                const passage = "\n var1 (var2): 17\n--\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    uri: "fake-uri",
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const parser = uut.getChapbookParser(undefined);
+
+                parser?.parsePassageText(passage, header.length, state);
+                const result = callbacks.references[1];
+
+                expect(callbacks.references.length).to.equal(2);
+                expect(result).to.eql({
+                    contents: "var2",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(2, 7, 2, 11)
+                    ),
+                    kind: OChapbookSymbolKind.Variable,
                 });
             });
 
@@ -169,6 +219,31 @@ describe("Chapbook", () => {
                     length: 4,
                     tokenType: ETokenType.keyword,
                     tokenModifiers: [],
+                });
+            });
+
+            it("should capture a reference for a variable's value that itself contains a variable", () => {
+                const header = ":: Passage\n";
+                const passage = "\n var1: 1 + var2\n--\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    uri: "fake-uri",
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const parser = uut.getChapbookParser(undefined);
+
+                parser?.parsePassageText(passage, header.length, state);
+                const result = callbacks.references[1];
+
+                expect(callbacks.references.length).to.equal(2);
+                expect(result).to.eql({
+                    contents: "var2",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(2, 11, 2, 15)
+                    ),
+                    kind: OChapbookSymbolKind.Variable,
                 });
             });
 
@@ -351,8 +426,8 @@ describe("Chapbook", () => {
                     ).returns([modifier]);
 
                     parser?.parsePassageText(passage, header.length, state);
-                    const [mod1Token] = callbacks.tokens;
                     mockFunction.restore();
+                    const [mod1Token] = callbacks.tokens;
 
                     expect(callbacks.tokens.length).to.equal(1);
                     expect(mod1Token).to.eql({
@@ -429,6 +504,30 @@ describe("Chapbook", () => {
                         length: 4,
                         tokenType: ETokenType.comment,
                         tokenModifiers: [],
+                    });
+                });
+
+                it("should capture variables in a javascript modifier", () => {
+                    const header = ":: Passage\n";
+                    const passage = "Stuff\n\n[javascript]\n  newVar = 1;\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    const [, result] = callbacks.references;
+
+                    expect(callbacks.references.length).to.equal(2);
+                    expect(result).to.eql({
+                        contents: "newVar",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(4, 2, 4, 8)
+                        ),
+                        kind: OChapbookSymbolKind.Variable,
                     });
                 });
 
@@ -1173,6 +1272,32 @@ describe("Chapbook", () => {
                 });
 
                 describe("contents parsing", () => {
+                    it("should capture a variable reference for a variable insert", () => {
+                        const header = ":: Passage\n";
+                        const passage =
+                            "Some content.\n" +
+                            "A variable insert: { var.prop  }.\n";
+                        const callbacks = new MockCallbacks();
+                        const state = buildParsingState({
+                            content: header + passage,
+                            callbacks: callbacks,
+                        });
+                        const parser = uut.getChapbookParser(undefined);
+
+                        parser?.parsePassageText(passage, header.length, state);
+                        const [result] = callbacks.references;
+
+                        expect(callbacks.references.length).to.equal(1);
+                        expect(result).to.eql({
+                            contents: "var",
+                            location: Location.create(
+                                "fake-uri",
+                                Range.create(2, 21, 2, 24)
+                            ),
+                            kind: OChapbookSymbolKind.Variable,
+                        });
+                    });
+
                     it("should capture a reference for a known insert", () => {
                         const header = ":: Passage\n";
                         const passage = "Insert: {mock insert:  'arg'}";
@@ -1233,6 +1358,42 @@ describe("Chapbook", () => {
                                 Range.create(1, 9, 1, 20)
                             ),
                             kind: OChapbookSymbolKind.CustomInsert,
+                        });
+                    });
+
+                    it("should capture a variable reference in an insert's first arg", () => {
+                        const header = ":: Passage\n";
+                        const passage = "Insert: {mock insert:  arg}";
+                        const callbacks = new MockCallbacks();
+                        const insert = buildInsertInfo({
+                            match: /^mock insert/,
+                        });
+                        const allTokens: insertsModule.InsertTokens[] = [];
+                        insert.parse = (tokens) => {
+                            allTokens.push(tokens);
+                        };
+                        const state = buildParsingState({
+                            content: header + passage,
+                            callbacks: callbacks,
+                        });
+                        const parser = uut.getChapbookParser(undefined);
+                        const mockFunction = ImportMock.mockFunction(
+                            insertsModule,
+                            "all"
+                        ).returns([insert]);
+
+                        parser?.parsePassageText(passage, header.length, state);
+                        mockFunction.restore();
+                        const [result] = callbacks.references;
+
+                        expect(callbacks.references.length).to.equal(2);
+                        expect(result).to.eql({
+                            contents: "arg",
+                            location: Location.create(
+                                "fake-uri",
+                                Range.create(1, 23, 1, 26)
+                            ),
+                            kind: OChapbookSymbolKind.Variable,
                         });
                     });
 
@@ -1487,6 +1648,44 @@ describe("Chapbook", () => {
                         });
                     });
 
+                    it("should create a variable reference for a non-string first arg that's a urlOrPassage", () => {
+                        const header = ":: Passage\n";
+                        const passage = "Insert: {mock insert:  arg}";
+                        const callbacks = new MockCallbacks();
+                        const insert = buildInsertInfo({
+                            match: /^mock insert/,
+                        });
+                        insert.arguments.firstArgument.type =
+                            insertsModule.ValueType.urlOrPassage;
+                        const allTokens: insertsModule.InsertTokens[] = [];
+                        insert.parse = (tokens) => {
+                            allTokens.push(tokens);
+                        };
+                        const state = buildParsingState({
+                            content: header + passage,
+                            callbacks: callbacks,
+                        });
+                        const parser = uut.getChapbookParser(undefined);
+                        const mockFunction = ImportMock.mockFunction(
+                            insertsModule,
+                            "all"
+                        ).returns([insert]);
+
+                        parser?.parsePassageText(passage, header.length, state);
+                        mockFunction.restore();
+                        const [result] = callbacks.references;
+
+                        expect(callbacks.references.length).to.equal(2);
+                        expect(result).to.eql({
+                            contents: "arg",
+                            location: Location.create(
+                                "fake-uri",
+                                Range.create(1, 23, 1, 26)
+                            ),
+                            kind: OChapbookSymbolKind.Variable,
+                        });
+                    });
+
                     it("should create a variable semantic token for a non-string first arg that's a urlOrPassage", () => {
                         const header = ":: Passage\n";
                         const passage = "Insert: {mock insert:  arg}";
@@ -1520,6 +1719,49 @@ describe("Chapbook", () => {
                             length: 3,
                             tokenType: ETokenType.variable,
                             tokenModifiers: [],
+                        });
+                    });
+
+                    it("should create a variable reference for a property that's a variable", () => {
+                        const header = ":: Passage\n";
+                        const passage =
+                            "Insert: {mock insert:  'arg', prop1: var }";
+                        const callbacks = new MockCallbacks();
+                        const insert = buildInsertInfo({
+                            match: /^mock insert/,
+                        });
+                        insert.arguments.requiredProps = {
+                            prop1: {
+                                placeholder: "",
+                                type: insertsModule.ValueType.passage,
+                            },
+                        };
+                        const allTokens: insertsModule.InsertTokens[] = [];
+                        insert.parse = (tokens) => {
+                            allTokens.push(tokens);
+                        };
+                        const state = buildParsingState({
+                            content: header + passage,
+                            callbacks: callbacks,
+                        });
+                        const parser = uut.getChapbookParser(undefined);
+                        const mockFunction = ImportMock.mockFunction(
+                            insertsModule,
+                            "all"
+                        ).returns([insert]);
+
+                        parser?.parsePassageText(passage, header.length, state);
+                        mockFunction.restore();
+                        const [result] = callbacks.references;
+
+                        expect(callbacks.references.length).to.equal(2);
+                        expect(result).to.eql({
+                            contents: "var",
+                            location: Location.create(
+                                "fake-uri",
+                                Range.create(1, 37, 1, 40)
+                            ),
+                            kind: OChapbookSymbolKind.Variable,
                         });
                     });
 
@@ -2188,8 +2430,8 @@ describe("Chapbook", () => {
                         ).returns([modifier]);
 
                         parser?.parsePassageText(passage, header.length, state);
-                        const [result] = callbacks.errors;
                         mockFunction.restore();
+                        const [result] = callbacks.errors;
 
                         expect(callbacks.errors.length).to.equal(1);
                         expect(result.severity).to.eql(
@@ -2226,8 +2468,8 @@ describe("Chapbook", () => {
                         ).returns([modifier]);
 
                         parser?.parsePassageText(passage, header.length, state);
-                        const [result] = callbacks.errors;
                         mockFunction.restore();
+                        const [result] = callbacks.errors;
 
                         expect(callbacks.errors.length).to.equal(1);
                         expect(result.severity).to.eql(
@@ -2347,8 +2589,8 @@ describe("Chapbook", () => {
                         ).returns([insert]);
 
                         parser?.parsePassageText(passage, header.length, state);
-                        const [result] = callbacks.errors;
                         mockFunction.restore();
+                        const [result] = callbacks.errors;
 
                         expect(callbacks.errors.length).to.equal(1);
                         expect(result.severity).to.eql(
@@ -2385,8 +2627,8 @@ describe("Chapbook", () => {
                         ).returns([insert]);
 
                         parser?.parsePassageText(passage, header.length, state);
-                        const [result] = callbacks.errors;
                         mockFunction.restore();
+                        const [result] = callbacks.errors;
 
                         expect(callbacks.errors.length).to.equal(1);
                         expect(result.severity).to.eql(

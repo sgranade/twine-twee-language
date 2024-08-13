@@ -2,10 +2,12 @@ import * as acorn from "acorn";
 import * as acornLoose from "acorn-loose";
 import * as acornWalk from "acorn-walk";
 
+import { createLocationFor, ParsingState } from "./parser";
 import {
     StoryFormatParsingState,
     capturePreTokenFor,
 } from "./passage-text-parsers";
+import { Label } from "./project-index";
 import { ETokenType, TokenModifier, TokenType } from "./tokens";
 
 /**
@@ -29,12 +31,15 @@ let unprocessedTokens: astUnprocessedToken[] = [];
 
 const astParser: acornWalk.SimpleVisitors<unknown> = {
     Identifier(node) {
-        unprocessedTokens.push({
-            text: node.name,
-            at: node.start,
-            type: ETokenType.variable,
-            modifiers: [],
-        });
+        // Don't record placeholders
+        if (node.name !== "✖") {
+            unprocessedTokens.push({
+                text: node.name,
+                at: node.start,
+                type: ETokenType.variable,
+                modifiers: [],
+            });
+        }
     },
     Literal(node) {
         if (node.raw !== undefined) {
@@ -97,9 +102,9 @@ const astParser: acornWalk.SimpleVisitors<unknown> = {
             }
         }
     },
-    Property(node) {
+    Property(node, state) {
         if (node.key.type === "Literal" && this.Literal !== undefined) {
-            this.Literal(node.key, undefined);
+            this.Literal(node.key, state);
         } else if (node.key.type === "Identifier") {
             unprocessedTokens.push({
                 text: node.key.name,
@@ -125,6 +130,14 @@ const astParser: acornWalk.SimpleVisitors<unknown> = {
             modifiers: [],
         });
     },
+    VariableDeclaration(node) {
+        unprocessedTokens.push({
+            text: node.kind,
+            at: node.start,
+            type: ETokenType.variable,
+            modifiers: [],
+        });
+    },
 };
 
 /**
@@ -132,14 +145,18 @@ const astParser: acornWalk.SimpleVisitors<unknown> = {
  *
  * @param expression Expression to parse.
  * @param offset Offset into the document where the expression occurs.
+ * @param state Parsing state.
  * @param passageState Passage state object that will collect tokens.
+ * @returns List of variable labels found in parsing.
  */
 export function parseJSExpression(
     expression: string,
     offset: number,
+    state: ParsingState,
     passageState: StoryFormatParsingState
-): void {
+): Label[] {
     let ast: acorn.Node | undefined;
+    const labels: Label[] = [];
 
     try {
         ast = acorn.parseExpressionAt(expression, 0, {
@@ -160,6 +177,16 @@ export function parseJSExpression(
         acornWalk.simple(ast, astParser);
 
         for (const token of unprocessedTokens) {
+            if (token.type === ETokenType.variable) {
+                labels.push({
+                    contents: token.text,
+                    location: createLocationFor(
+                        token.text,
+                        offset + token.at,
+                        state
+                    ),
+                });
+            }
             capturePreTokenFor(
                 token.text,
                 offset + token.at,
@@ -170,5 +197,5 @@ export function parseJSExpression(
         }
     }
 
-    return;
+    return labels;
 }
