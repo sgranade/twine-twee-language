@@ -29,8 +29,19 @@ interface astUnprocessedToken {
 let currentExpression: string = "";
 let unprocessedTokens: astUnprocessedToken[] = [];
 
-const astParser: acornWalk.SimpleVisitors<unknown> = {
-    Identifier(node) {
+/**
+ * Callback at each node in the AST.
+ * @param rawNode Current node.
+ */
+function walkerCallback(rawNode: acorn.Node): void {
+    // We end up setting semantic tokens for some nodes multiple times (for
+    // example, an Identifier and then again for a property that's an identifier).
+    // We don't worry about that, though, because the walker visits the bottom-most
+    // node first, then moves up to the containing expression or property, and the
+    // last-set semantic token is the one that's reported.
+
+    const node = rawNode as acorn.AnyNode;
+    if (node.type === "Identifier") {
         // Don't record placeholders
         if (node.name !== "✖") {
             unprocessedTokens.push({
@@ -40,105 +51,74 @@ const astParser: acornWalk.SimpleVisitors<unknown> = {
                 modifiers: [],
             });
         }
-    },
-    Literal(node) {
-        if (node.raw !== undefined) {
-            const semanticType = typeofToSemantic[typeof node.value];
-            if (semanticType !== undefined) {
-                unprocessedTokens.push({
-                    text: node.raw,
-                    at: node.start,
-                    type: semanticType,
-                    modifiers: [],
-                });
-            }
-        }
-    },
-    AssignmentExpression(node) {
-        unprocessedTokens.push({
-            text: node.operator,
-            at: currentExpression.indexOf(node.operator, node.left.end),
-            type: ETokenType.operator,
-            modifiers: [],
-        });
-    },
-    BinaryExpression(node) {
-        unprocessedTokens.push({
-            text: node.operator,
-            at: currentExpression.indexOf(node.operator, node.left.end),
-            type: ETokenType.operator,
-            modifiers: [],
-        });
-    },
-    CallExpression(node) {
-        const callee = node.callee as acorn.Identifier;
-        if (callee.name !== undefined) {
+    } else if (node.type === "Literal" && node.raw !== undefined) {
+        const semanticType = typeofToSemantic[typeof node.value];
+        if (semanticType !== undefined) {
             unprocessedTokens.push({
-                text: callee.name,
-                at: callee.start,
-                type: ETokenType.function,
-                modifiers: [],
-            });
-        }
-    },
-    LogicalExpression(node) {
-        unprocessedTokens.push({
-            text: node.operator,
-            at: currentExpression.indexOf(node.operator, node.left.end),
-            type: ETokenType.operator,
-            modifiers: [],
-        });
-    },
-    MemberExpression(node) {
-        if (!node.computed) {
-            const prop = node.property as acorn.Identifier;
-            if (prop.name !== undefined) {
-                unprocessedTokens.push({
-                    text: prop.name,
-                    at: prop.start,
-                    type: ETokenType.property,
-                    modifiers: [],
-                });
-            }
-        }
-    },
-    Property(node, state) {
-        if (node.key.type === "Literal" && this.Literal !== undefined) {
-            this.Literal(node.key, state);
-        } else if (node.key.type === "Identifier") {
-            unprocessedTokens.push({
-                text: node.key.name,
+                text: node.raw,
                 at: node.start,
-                type: ETokenType.property,
+                type: semanticType,
                 modifiers: [],
             });
         }
-    },
-    UnaryExpression(node) {
+    } else if (
+        node.type === "AssignmentExpression" ||
+        node.type === "BinaryExpression" ||
+        node.type === "LogicalExpression"
+    ) {
+        unprocessedTokens.push({
+            text: node.operator,
+            at: currentExpression.indexOf(node.operator, node.left.end),
+            type: ETokenType.operator,
+            modifiers: [],
+        });
+    } else if (
+        node.type === "CallExpression" &&
+        node.callee.type === "Identifier"
+    ) {
+        unprocessedTokens.push({
+            text: node.callee.name,
+            at: node.callee.start,
+            type: ETokenType.function,
+            modifiers: [],
+        });
+    } else if (
+        node.type === "MemberExpression" &&
+        !node.computed &&
+        node.property.type === "Identifier"
+    ) {
+        unprocessedTokens.push({
+            text: node.property.name,
+            at: node.property.start,
+            type: ETokenType.property,
+            modifiers: [],
+        });
+    } else if (
+        node.type === "UnaryExpression" ||
+        node.type === "UpdateExpression"
+    ) {
         unprocessedTokens.push({
             text: node.operator,
             at: node.start,
             type: ETokenType.operator,
             modifiers: [],
         });
-    },
-    UpdateExpression(node) {
+    } else if (node.type === "Property" && node.key.type === "Identifier") {
         unprocessedTokens.push({
-            text: node.operator,
+            text: node.key.name,
             at: node.start,
-            type: ETokenType.operator,
+            type: ETokenType.property,
             modifiers: [],
         });
-    },
-    VariableDeclaration(node) {
+    } else if (node.type === "VariableDeclaration") {
         unprocessedTokens.push({
             text: node.kind,
             at: node.start,
             type: ETokenType.variable,
             modifiers: [],
         });
-    },
-};
+    }
+}
 
 /**
  * Parse an expression as a JavaScript string.
@@ -174,7 +154,7 @@ export function parseJSExpression(
         currentExpression = expression;
         unprocessedTokens = [];
 
-        acornWalk.simple(ast, astParser);
+        acornWalk.full(ast, walkerCallback);
 
         for (const token of unprocessedTokens) {
             if (token.type === ETokenType.variable) {
