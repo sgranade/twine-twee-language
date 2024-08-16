@@ -1895,7 +1895,7 @@ describe("Chapbook", () => {
                     it("should send all properties to the matching insert", () => {
                         const header = ":: Passage\n";
                         const passage =
-                            "Insert: {mock insert ,  prop1: 'yes', prop2: 'no'}";
+                            "Insert: {mock insert ,  prop1: ['yes, yes', 'yup'], prop2: 'no'}";
                         const callbacks = new MockCallbacks();
                         const insert = buildInsertInfo({
                             match: /^mock insert/,
@@ -1922,11 +1922,11 @@ describe("Chapbook", () => {
                         expect(allTokens[0].props).to.eql({
                             prop1: [
                                 { text: "prop1", at: 35 },
-                                { text: "'yes'", at: 42 },
+                                { text: "['yes, yes', 'yup']", at: 42 },
                             ],
                             prop2: [
-                                { text: "prop2", at: 49 },
-                                { text: "'no'", at: 56 },
+                                { text: "prop2", at: 63 },
+                                { text: "'no'", at: 70 },
                             ],
                         });
                     });
@@ -2751,6 +2751,22 @@ describe("Chapbook", () => {
                             "Properties can't have spaces"
                         );
                         expect(result.range).to.eql(Range.create(1, 13, 1, 21));
+                    });
+
+                    it("should not error on a function insert whose first arg is an array", () => {
+                        const header = ":: Passage\n";
+                        const passage =
+                            " {fn insert: ['has space', 'as does this', 'and this'], prop: 2}  \n";
+                        const callbacks = new MockCallbacks();
+                        const state = buildParsingState({
+                            content: header + passage,
+                            callbacks: callbacks,
+                        });
+                        const parser = uut.getChapbookParser(undefined);
+
+                        parser?.parsePassageText(passage, header.length, state);
+
+                        expect(callbacks.errors).to.be.empty;
                     });
 
                     it("should flag a property with a space", () => {

@@ -75,7 +75,7 @@ const paddingAndTextPattern = /^(\s*)(.*?)(\s*)$/s;
  * Remove padding from a string and capture how many pad characters were removed.
  *
  * @param s String to remove leading padding from.
- * @returns Tuple of the un-padded string and the lengths of removed padding on left nd right.
+ * @returns Tuple of the un-padded string and the lengths of removed padding on left and right.
  */
 export function removeAndCountPadding(s: string): [string, number, number] {
     const m = paddingAndTextPattern.exec(s);

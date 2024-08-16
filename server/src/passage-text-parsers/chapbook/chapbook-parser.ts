@@ -13,7 +13,6 @@ import {
 import { ETokenType, ETokenModifier } from "../../tokens";
 import {
     skipSpaces,
-    removeAndCountPadding,
     extractToMatchingDelimiter,
     versionCompare,
 } from "../../utilities";
@@ -206,6 +205,67 @@ function createVariableReferences(vars: Label[], state: ParsingState): void {
             kind: OChapbookSymbolKind.Variable,
         });
     }
+}
+
+const braceMatch = /[\({['"}]/g; // For an opening "{"
+const bracketMatch = /[\({['"\]]/g; // For an opening "["
+const parenMatch = /[\({['"\)]/g; // For a nopening "("
+
+/**
+ * Find the index after the closing delimeter for an opening {, [, (, ', or ".
+ *
+ * @param contents Contents to find the closing delimeter in.
+ * @param startIndex Index in the contents where the opening delimeter begins.
+ * @returns Index one after the closing delimeter, or undefined if not found
+ */
+function findClosingDelimeterIndex(
+    contents: string,
+    startIndex: number
+): number | undefined {
+    const c = contents[startIndex];
+
+    // Strings are easy
+    if (c === "'" || c === '"') {
+        const str = extractToMatchingDelimiter(contents, c, c, startIndex + 1);
+        if (str !== undefined) {
+            return startIndex + str.length + 2;
+        } else {
+            return contents.length;
+        }
+    }
+
+    // Brackets, braces, and parentheses require more finesse, as they can
+    // contain additional brackets, braces, parens, or strings
+    if (c === "{" || c === "[" || c === "(") {
+        let re = braceMatch;
+        let close = "}";
+        if (c === "[") {
+            re = bracketMatch;
+            close = "]";
+        } else if (c === "(") {
+            re = parenMatch;
+            close = ")";
+        }
+        re.lastIndex = startIndex + 1;
+        let m = re.exec(contents);
+
+        // Go until there's no match
+        while (m !== null) {
+            // If we found the closing bracket/brace, return the position of
+            // the character after the closing bracket/brace
+            if (m[0] === close) {
+                return m.index + 1;
+            }
+
+            // Skip over the nested bracket, brace, or string and keep going
+            const nextIndex = findClosingDelimeterIndex(contents, m.index);
+            if (nextIndex === undefined) break;
+            re.lastIndex = nextIndex;
+            m = re.exec(contents);
+        }
+    }
+
+    return contents.length;
 }
 
 /**
@@ -603,6 +663,42 @@ function findEngineExtensions(
 }
 
 /**
+ * Extract an argument to an insert (either 1st argument or property value) from a string.
+ *
+ * The returned remaining contents, if any, include the "," after the argument.
+ *
+ * @param contents Contents of the insert trimmed so the insert argument is at the start of the string.
+ * @param contentsIndex Index where the contents occur in the full insert's text.
+ * @returns A tuple with the insert argument, the contents that remain after the argument (if any), and the index where the remaining contents occur.
+ */
+function extractInsertArgument(
+    contents: string,
+    contentsIndex: number
+): [string, string, number] {
+    let endIndex: number | undefined = 0;
+    const c = contents[0];
+    // If the value is a string or has parens, braces, or brackets,
+    // move beyond that section as a group before looking for the comma
+    // that separates the value from any subsequent properties
+    if (c === "'" || c === '"' || c === "{" || c === "[" || c === "(") {
+        endIndex = findClosingDelimeterIndex(contents, 0);
+    }
+    if (endIndex !== undefined) {
+        // The argument goes until a comma or the end of the contents
+        const commaIndex = contents.indexOf(",", endIndex);
+        if (commaIndex !== -1) endIndex = commaIndex;
+        else endIndex = contents.length;
+        return [
+            contents.slice(0, endIndex).trimEnd(),
+            contents.slice(endIndex),
+            contentsIndex + endIndex,
+        ];
+    } else {
+        return [contents, "", contentsIndex + contents.length];
+    }
+}
+
+/**
  * Parse an argument to an insert (either 1st argument or property value).
  *
  * @param token Token for the insert argument.
@@ -852,30 +948,18 @@ function parseInsert(
         return;
     }
 
-    // Functional inserts follow the form: {function name: arg, property: value }
-    insertIndex++; // To swallow the opening curly brace
-    const commaIndex = insert.indexOf(",");
-    // Remove the {} when slicing
-    const functionSection = insert.slice(
-        1,
-        commaIndex !== -1 ? commaIndex : -1
-    );
-    const propertySection = insert.slice(
-        commaIndex !== -1 ? commaIndex + 1 : -1,
-        insert.length - 1
-    );
-    let functionName = functionSection,
-        argument = "";
-    let functionIndex = 0,
-        argumentIndex = 0;
-    const colonIndex = functionSection.indexOf(":");
-    if (colonIndex !== -1) {
-        argumentIndex = colonIndex + 1;
-        argument = functionName.slice(argumentIndex);
-        functionName = functionName.slice(0, colonIndex);
-    }
+    // Functional inserts follow the form: {function name: arg, property1: value1, property2: value2}
+    // Get rid of the {} in the insert
+    insert = insert.slice(1, -1);
+    insertIndex++;
 
-    // Handle the function name
+    // Find where the function's name ends
+    const functionNameStopChar = /[,:]/g;
+    const functionNameEnd = functionNameStopChar.test(insert)
+        ? functionNameStopChar.lastIndex - 1
+        : insert.length;
+    let functionName = insert.slice(0, functionNameEnd);
+    let functionIndex = 0;
     [functionName, functionIndex] = skipSpaces(functionName, functionIndex);
 
     // Tokenized insert information
@@ -887,105 +971,92 @@ function parseInsert(
         props: {},
     };
 
-    // Handle the first argument
-    [argument, argumentIndex] = skipSpaces(argument, argumentIndex);
-    if (argument !== "") {
+    let remainingContents = insert.slice(functionNameEnd);
+    let remainingContentsIndex = functionNameEnd;
+
+    // If there's a colon after the function name, handle the argument
+    if (remainingContents[0] === ":") {
+        let argumentIndex = remainingContentsIndex + 1; // Skip the ":"
+        let argument = remainingContents.slice(1);
+        [argument, argumentIndex] = skipSpaces(argument, argumentIndex);
+
+        [argument, remainingContents, remainingContentsIndex] =
+            extractInsertArgument(argument, argumentIndex);
+
+        // Save the tokens and parse the argument as a JS expression
         insertTokens.firstArgument = Token.create(
             argument,
             insertIndex + argumentIndex
         );
+        createVariableReferences(
+            parseJSExpression(
+                argument,
+                insertIndex + argumentIndex,
+                state,
+                chapbookState
+            ),
+            state
+        );
     }
-    createVariableReferences(
-        parseJSExpression(
-            argument,
-            insertIndex + argumentIndex,
-            state,
-            chapbookState
-        ),
-        state
-    );
 
-    // Handle properties
-    if (propertySection.trim()) {
-        const propertySectionIndex = functionSection.length + 1; // + 1 for the comma
-
-        // Tokenize things that look like properties.
-        let propertyIndex = 0; // Relative to propertySection
-        while (propertyIndex < propertySection.length) {
-            const colonIndex = propertySection.indexOf(":", propertyIndex);
+    // If there's a comma after the function section, tokenize the properties
+    if (remainingContents[0] === ",") {
+        while (remainingContents.trim()) {
+            if (remainingContents[0] === ",") {
+                // Skip the comma
+                remainingContents = remainingContents.slice(1);
+                remainingContentsIndex++;
+            }
+            // Get the property name, which goes up to the next colon
+            const colonIndex = remainingContents.indexOf(":");
             if (colonIndex === -1) break;
-
-            const [currentProperty, leftPad] = removeAndCountPadding(
-                propertySection.slice(propertyIndex, colonIndex)
+            let currentProperty = remainingContents.slice(0, colonIndex);
+            let currentPropertyIndex = remainingContentsIndex;
+            [currentProperty, currentPropertyIndex] = skipSpaces(
+                currentProperty,
+                currentPropertyIndex
             );
-            const currentPropertyIndex = propertyIndex + leftPad; // Relative to propertySection
+            remainingContentsIndex += colonIndex + 1; // To skip the ":"
+            remainingContents = remainingContents.slice(colonIndex + 1);
 
             // Properties can't have spaces bee tee dubs
             const spaceIndex = currentProperty.lastIndexOf(" ");
             if (spaceIndex !== -1) {
                 logErrorFor(
                     currentProperty,
-                    insertIndex + propertySectionIndex + currentPropertyIndex,
+                    insertIndex + currentPropertyIndex,
                     "Properties can't have spaces",
                     state
                 );
             }
 
-            // Scan forward to look for a comma that's not in a string,
-            // indicating another property
-            let inString = "";
-            let currentValue = "";
-            let currentValueIndex = colonIndex + 1; // Relative to propertySection
-            let currentValueEndIndex = currentValueIndex;
-            let c = "";
-            for (
-                ;
-                currentValueEndIndex < propertySection.length;
-                ++currentValueEndIndex
-            ) {
-                c = propertySection[currentValueEndIndex];
-                if (c === "," && inString === "") {
-                    break;
-                }
+            // The property's value extends to the next comma (indicating another property)
+            // or the end of the insert
+            let currentValueIndex = remainingContentsIndex;
+            let currentValue = remainingContents;
+            [currentValue, currentValueIndex] = skipSpaces(
+                currentValue,
+                currentValueIndex
+            );
 
-                if (inString && c === inString) {
-                    inString = "";
-                } else if (c === '"' || c === "'") {
-                    inString = c;
-                }
-            }
-            propertyIndex = currentValueEndIndex;
-            // Skip the comma (if it exists)
-            if (c === ",") propertyIndex++;
+            [currentValue, remainingContents, remainingContentsIndex] =
+                extractInsertArgument(currentValue, currentValueIndex);
 
             // If the property is well formed, capture it to pass to individual inserts
             if (spaceIndex === -1) {
-                [currentValue, currentValueIndex] = skipSpaces(
-                    propertySection.slice(
-                        currentValueIndex,
-                        currentValueEndIndex
-                    ),
-                    currentValueIndex
-                );
-
                 insertTokens.props[currentProperty] = [
                     Token.create(
                         currentProperty,
-                        insertIndex +
-                            propertySectionIndex +
-                            currentPropertyIndex
+                        insertIndex + currentPropertyIndex
                     ),
-                    Token.create(
-                        currentValue,
-                        insertIndex + propertySectionIndex + currentValueIndex
-                    ),
+                    Token.create(currentValue, insertIndex + currentValueIndex),
                 ];
 
                 // Parse the value as JavaScript
                 createVariableReferences(
                     parseJSExpression(
                         currentValue,
-                        insertIndex + propertySectionIndex + currentValueIndex,
+                        insertIndex + currentValueIndex,
                         state,
                         chapbookState
                     ),
