@@ -71,7 +71,7 @@ describe("Chapbook Inserts", () => {
             ]);
         });
 
-        it("should log an error for a non-string first argument", () => {
+        it("should log an error for a non-string first argument with spaces", () => {
             const callbacks = new MockCallbacks();
             const state = buildParsingState({
                 content: "{embed passage: Passage Ref}",
@@ -89,10 +89,32 @@ describe("Chapbook Inserts", () => {
             uutEmbedPassage.embedPassage.parse(args, state, chapbookState);
 
             expect(callbacks.errors.length).to.equal(1);
-            expect(callbacks.errors[0].message).to.include("Must be a string");
+            expect(callbacks.errors[0].message).to.include(
+                "Must be a string or a variable"
+            );
             expect(callbacks.errors[0].range).to.eql(
                 Range.create(0, 10, 0, 21)
             );
+        });
+
+        it("should not log an error for a non-string first argument with no spaces (which is assumed to be a variable)", () => {
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                content: "{embed passage: passageRef.prop}",
+                callbacks: callbacks,
+            });
+            const chapbookState: ChapbookParsingState = {
+                passageTokens: {},
+                modifierKind: 0,
+            };
+            const args = buildInsertTokens({
+                firstArgument: "passageRef",
+                firstArgumentAt: 10,
+            });
+
+            uutEmbedPassage.embedPassage.parse(args, state, chapbookState);
+
+            expect(callbacks.errors).to.be.empty;
         });
     });
 

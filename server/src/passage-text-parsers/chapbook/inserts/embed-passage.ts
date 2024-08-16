@@ -29,11 +29,11 @@ export const embedPassage: InsertInfo = {
                     state,
                     chapbookState
                 );
-            } else {
+            } else if (!/^\S*$/.test(args.firstArgument.text)) {
                 logErrorFor(
                     args.firstArgument.text,
                     args.firstArgument.at,
-                    "Must be a string containing a passage name",
+                    "Must be a string containing a passage name or a variable",
                     state
                 );
             }
