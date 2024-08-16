@@ -17,7 +17,38 @@ import {
 } from "./inserts";
 import { all as allModifiers } from "./modifiers";
 import { removeAndCountPadding } from "../../utilities";
-import { getChapbookDefinitions, OChapbookSymbolKind } from "./chapbook-parser";
+import {
+    divideChapbookPassage,
+    getChapbookDefinitions,
+    OChapbookSymbolKind,
+} from "./chapbook-parser";
+
+/**
+ * Generate completions for all variables.
+ * @param index Project index.
+ * @returns Completions list.
+ */
+function generateVariableCompletions(
+    index: ProjectIndex
+): CompletionList | null {
+    const variableCompletions: string[] = [];
+    for (const uri of index.getIndexedUris()) {
+        variableCompletions.push(
+            ...(index
+                .getReferences(uri, OChapbookSymbolKind.Variable)
+                ?.map((x) => x.contents) || [])
+        );
+    }
+    return CompletionList.create(
+        Array.from(new Set<string>(variableCompletions)).map((c) => {
+            return {
+                label: c,
+                kind: CompletionItemKind.Variable,
+                textEditText: c,
+            };
+        })
+    );
+}
 
 /**
  * The character that marks the end of a modifier.
@@ -44,8 +75,10 @@ function generateModifierCompletions(
 
     // Make sure we don't need to move the modifier content start
     // to a semicolon
+    let atSemicolon = false;
     for (; i > modifierContentStart; i--) {
         if (text[i] === ";") {
+            atSemicolon = true;
             // Move forward ahead of the semicolon
             i++;
             break;
@@ -70,9 +103,15 @@ function generateModifierCompletions(
     )) {
         modifierCompletions.push(customModifier.contents);
     }
+    // If we're at a semicolon, put a space before each modifier's name
+    const leadingSpace = atSemicolon ? " " : "";
     const completionList = CompletionList.create(
         modifierCompletions.map((c) => {
-            return { label: c, kind: CompletionItemKind.Function };
+            return {
+                label: c,
+                kind: CompletionItemKind.Function,
+                textEditText: leadingSpace + c,
+            };
         })
     );
     completionList.itemDefaults = {
@@ -111,13 +150,13 @@ function placeholderWithTabStop(placeholder: string, tabStop?: number): string {
 }
 
 /**
- * Turn information about a property into a placeholder.
+ * Turn information about an insert's property into a placeholder.
  *
  * @param info Information about the property: either a completion string, InsertProperty, or null.
  * @param tabStop Tab stop number (if any) to put inside the completion string
  * @returns The placeholder string.
  */
-function propertyPlaceholder(
+function insertPropertyPlaceholder(
     info: string | InsertProperty | null,
     tabStop?: number
 ): string {
@@ -136,7 +175,7 @@ function propertyPlaceholder(
  * @param props Properties to convert.
  * @returns Completion items corresponding to the properties.
  */
-function propertiesToCompletionItems(
+function insertPropertiesToCompletionItems(
     props: Record<string, string | InsertProperty | null>
 ): CompletionItem[] {
     return (
@@ -145,12 +184,13 @@ function propertiesToCompletionItems(
         return {
             label: name,
             kind: CompletionItemKind.Property,
-            textEditText: ` ${name}: ${propertyPlaceholder(info, 1)}`,
+            textEditText: ` ${name}: ${insertPropertyPlaceholder(info, 1)}`,
         };
     });
 }
 
 /**
+ * Generate completions for passage names.
  *
  * @param document Document in which to generate the completions.
  * @param section Text of the insert section where completions will go.
@@ -235,7 +275,7 @@ function generateInsertCompletions(
         : text.length;
 
     if (offset <= insertNameEnd) {
-        // Insert's name
+        // Insert (or variable)'s name
 
         // If we're at the end of the document, treat only the word up to the cursor position
         // as the end of the insert's name
@@ -271,7 +311,7 @@ function generateInsertCompletions(
                     for (const [name, info] of Object.entries(
                         insert.arguments.requiredProps
                     )) {
-                        textEditText += `, ${name}: ${propertyPlaceholder(info, placeholderCount++)}`;
+                        textEditText += `, ${name}: ${insertPropertyPlaceholder(info, placeholderCount++)}`;
                     }
                 }
                 insertCompletions.push({
@@ -290,6 +330,18 @@ function generateInsertCompletions(
                 kind: CompletionItemKind.Function,
                 textEditText: customInsert.contents,
             });
+        }
+
+        // If we have a one-word insert (so far), it could also be a variable, so add those completions in
+        if (
+            text[insertNameEnd] === "}" ||
+            text[insertNameEnd] === "\r" ||
+            text[insertNameEnd] === "\n" ||
+            text[insertNameEnd] === undefined
+        ) {
+            insertCompletions.push(
+                ...(generateVariableCompletions(index)?.items || [])
+            );
         }
 
         const completionList = CompletionList.create(insertCompletions);
@@ -329,11 +381,11 @@ function generateInsertCompletions(
         // If there's a colon already in the text, swallow it
         if (text[insertSectionEnd] === ":") insertSectionEnd++;
 
-        const propCompletions = propertiesToCompletionItems(
+        const propCompletions = insertPropertiesToCompletionItems(
             insert.arguments.requiredProps
         );
         propCompletions.push(
-            ...propertiesToCompletionItems(insert.arguments.optionalProps)
+            ...insertPropertiesToCompletionItems(insert.arguments.optionalProps)
         );
         const completionList = CompletionList.create(propCompletions);
         completionList.itemDefaults = {
@@ -415,25 +467,53 @@ export function generateCompletions(
     index: ProjectIndex
 ): CompletionList | null {
     const offset = document.offsetAt(position);
-    const text = document.getText();
-    let i = offset;
+    const passage = index.getPassageAt(document.uri, position);
+    if (passage === undefined) return null;
+
+    // Passage scopes start at the ":: Passage" line, so its contents start
+    // on the line after the scope's start
+    const passageTextScope = Range.create(
+        Position.create(passage.scope.start.line + 1, 0),
+        passage.scope.end
+    );
+    const passageTextOffset = document.offsetAt(passageTextScope.start);
+    const passageText = document.getText(passageTextScope);
+    let i = offset - passageTextOffset;
+
+    // Split the passage text into the vars and content sections
+    const passageParts = divideChapbookPassage(passageText);
+
+    // If we're inside the vars section, suggest variables
+    if (i < passageParts.contentIndex) {
+        return generateVariableCompletions(index);
+    }
 
     // See if we're inside a modifier or insert
     for (; i >= 0; i--) {
         // Don't go further back than the current line
-        if (text[i] === "\n") break;
+        if (passageText[i] === "\n") break;
         // { marks a potential insert; [ at the start of a line is a modifier
         if (
-            text[i] === "{" ||
-            (text[i] === "[" && (i === 0 || text[i - 1] === "\n"))
+            passageText[i] === "{" ||
+            (passageText[i] === "[" && (i === 0 || passageText[i - 1] === "\n"))
         ) {
             break;
         }
     }
-    if (text[i] === "[") {
-        return generateModifierCompletions(document, i + 1, offset, index);
-    } else if (text[i] === "{") {
-        return generateInsertCompletions(document, i + 1, offset, index);
+    if (passageText[i] === "[") {
+        return generateModifierCompletions(
+            document,
+            passageTextOffset + i + 1,
+            offset,
+            index
+        );
+    } else if (passageText[i] === "{") {
+        return generateInsertCompletions(
+            document,
+            passageTextOffset + i + 1,
+            offset,
+            index
+        );
     }
 
     return null;

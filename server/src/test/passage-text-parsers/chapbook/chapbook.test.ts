@@ -87,6 +87,72 @@ describe("Chapbook", () => {
                 });
             });
 
+            it("should capture a reference for a variable name but not its referenced property", () => {
+                const header = ":: Passage\n";
+                const passage = "\n var1.prop: 17\n--\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    uri: "fake-uri",
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const parser = uut.getChapbookParser(undefined);
+
+                parser?.parsePassageText(passage, header.length, state);
+                const result = callbacks.references[0];
+
+                expect(callbacks.references.length).to.equal(1);
+                expect(result).to.eql({
+                    contents: "var1",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(2, 1, 2, 5)
+                    ),
+                    kind: OChapbookSymbolKind.Variable,
+                });
+            });
+
+            it("should capture reference for variables used in conditions", () => {
+                const header = ":: Passage\n";
+                const passage = "\n var_2 (var_1 || otherVar < 2): 17\n--\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    uri: "fake-uri",
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const parser = uut.getChapbookParser(undefined);
+
+                parser?.parsePassageText(passage, header.length, state);
+                const [result_0, result_1, result_2] = callbacks.references;
+
+                expect(callbacks.references.length).to.equal(3);
+                expect(result_0).to.eql({
+                    contents: "var_1",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(2, 8, 2, 13)
+                    ),
+                    kind: OChapbookSymbolKind.Variable,
+                });
+                expect(result_1).to.eql({
+                    contents: "otherVar",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(2, 17, 2, 25)
+                    ),
+                    kind: OChapbookSymbolKind.Variable,
+                });
+                expect(result_2).to.eql({
+                    contents: "var_2",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(2, 1, 2, 6)
+                    ),
+                    kind: OChapbookSymbolKind.Variable,
+                });
+            });
+
             it("should set a semantic token for a variable name", () => {
                 const header = ":: Passage\n";
                 const passage = "\n var1: 17\n--\n";
@@ -105,7 +171,7 @@ describe("Chapbook", () => {
                     char: 1,
                     length: 4,
                     tokenType: ETokenType.variable,
-                    tokenModifiers: [ETokenModifier.modification],
+                    tokenModifiers: [],
                 });
             });
 
@@ -121,7 +187,7 @@ describe("Chapbook", () => {
                 const parser = uut.getChapbookParser(undefined);
 
                 parser?.parsePassageText(passage, header.length, state);
-                const result = callbacks.references[1];
+                const [result] = callbacks.references;
 
                 expect(callbacks.references.length).to.equal(2);
                 expect(result).to.eql({
@@ -3140,11 +3206,73 @@ describe("Chapbook", () => {
     });
 
     describe("Completions", () => {
+        describe("Variables", () => {
+            it("should suggest variables in the vars section", () => {
+                const doc = TextDocument.create(
+                    "fake-uri",
+                    "",
+                    0,
+                    ":: Passage\nv\n--\nContent"
+                );
+                const position = Position.create(1, 1);
+                const index = new Index();
+                index.setPassages("fake-uri", [
+                    buildPassage({
+                        label: "passage",
+                        scope: Range.create(0, 0, 4, 0),
+                    }),
+                ]);
+                index.setReferences("fake-uri", [
+                    {
+                        contents: "var1",
+                        locations: [
+                            Location.create(
+                                "fake-uri",
+                                Range.create(1, 2, 3, 4)
+                            ),
+                        ],
+                        kind: OChapbookSymbolKind.Variable,
+                    },
+                    {
+                        contents: "anotherVar",
+                        locations: [
+                            Location.create(
+                                "fake-uri",
+                                Range.create(5, 6, 7, 8)
+                            ),
+                        ],
+                        kind: OChapbookSymbolKind.Variable,
+                    },
+                ]);
+                const parser = uut.getChapbookParser(undefined);
+
+                const results = parser?.generateCompletions(
+                    doc,
+                    position,
+                    index
+                );
+
+                expect(results?.items[0]?.label).to.eql("var1");
+                expect(results?.items[1]?.label).to.eql("anotherVar");
+            });
+        });
+
         describe("Modifiers", () => {
             it("should suggest modifiers after a [ at the start of the line", () => {
-                const doc = TextDocument.create("fake-uri", "", 0, "[ here ");
-                const position = Position.create(0, 4);
+                const doc = TextDocument.create(
+                    "fake-uri",
+                    "",
+                    0,
+                    ":: Passage\n[ here "
+                );
+                const position = Position.create(1, 4);
                 const index = new Index();
+                index.setPassages("fake-uri", [
+                    buildPassage({
+                        label: "passage",
+                        scope: Range.create(0, 0, 2, 0),
+                    }),
+                ]);
                 const parser = uut.getChapbookParser(undefined);
 
                 const results = parser?.generateCompletions(
@@ -3154,14 +3282,25 @@ describe("Chapbook", () => {
                 );
 
                 expect(results?.itemDefaults?.editRange).to.eql(
-                    Range.create(0, 1, 0, 7)
+                    Range.create(1, 1, 1, 7)
                 );
             });
 
             it("should suggest custom modifiers after a [ at the start of the line", () => {
-                const doc = TextDocument.create("fake-uri", "", 0, "[ here ");
-                const position = Position.create(0, 4);
+                const doc = TextDocument.create(
+                    "fake-uri",
+                    "",
+                    0,
+                    ":: Passage\n[ here "
+                );
+                const position = Position.create(1, 4);
                 const index = new Index();
+                index.setPassages("fake-uri", [
+                    buildPassage({
+                        label: "passage",
+                        scope: Range.create(0, 0, 2, 0),
+                    }),
+                ]);
                 index.setDefinitions("source-uri", [
                     {
                         contents: "custom modifier",
@@ -3194,10 +3333,16 @@ describe("Chapbook", () => {
                     "fake-uri",
                     "",
                     0,
-                    "[ here; not here "
+                    ":: Passage\n[ here; not here "
                 );
-                const position = Position.create(0, 4);
+                const position = Position.create(1, 4);
                 const index = new Index();
+                index.setPassages("fake-uri", [
+                    buildPassage({
+                        label: "passage",
+                        scope: Range.create(0, 0, 2, 0),
+                    }),
+                ]);
                 const parser = uut.getChapbookParser(undefined);
 
                 const results = parser?.generateCompletions(
@@ -3207,7 +3352,7 @@ describe("Chapbook", () => {
                 );
 
                 expect(results?.itemDefaults?.editRange).to.eql(
-                    Range.create(0, 1, 0, 6)
+                    Range.create(1, 1, 1, 6)
                 );
             });
 
@@ -3216,10 +3361,16 @@ describe("Chapbook", () => {
                     "fake-uri",
                     "",
                     0,
-                    "[ not here; here \nnot here"
+                    ":: Passage\n[ not here; here \nnot here"
                 );
-                const position = Position.create(0, 12);
+                const position = Position.create(1, 12);
                 const index = new Index();
+                index.setPassages("fake-uri", [
+                    buildPassage({
+                        label: "passage",
+                        scope: Range.create(0, 0, 2, 0),
+                    }),
+                ]);
                 const parser = uut.getChapbookParser(undefined);
 
                 const results = parser?.generateCompletions(
@@ -3229,7 +3380,7 @@ describe("Chapbook", () => {
                 );
 
                 expect(results?.itemDefaults?.editRange).to.eql(
-                    Range.create(0, 11, 0, 17)
+                    Range.create(1, 11, 1, 17)
                 );
             });
 
@@ -3238,10 +3389,16 @@ describe("Chapbook", () => {
                     "fake-uri",
                     "",
                     0,
-                    "[ here ] not here"
+                    ":: Passage\n[ here ] not here"
                 );
-                const position = Position.create(0, 4);
+                const position = Position.create(1, 4);
                 const index = new Index();
+                index.setPassages("fake-uri", [
+                    buildPassage({
+                        label: "passage",
+                        scope: Range.create(0, 0, 2, 0),
+                    }),
+                ]);
                 const parser = uut.getChapbookParser(undefined);
 
                 const results = parser?.generateCompletions(
@@ -3251,7 +3408,7 @@ describe("Chapbook", () => {
                 );
 
                 expect(results?.itemDefaults?.editRange).to.eql(
-                    Range.create(0, 1, 0, 7)
+                    Range.create(1, 1, 1, 7)
                 );
             });
 
@@ -3260,10 +3417,16 @@ describe("Chapbook", () => {
                     "fake-uri",
                     "",
                     0,
-                    "[ not here; here] not here"
+                    ":: Passage\n[ not here; here] not here"
                 );
-                const position = Position.create(0, 12);
+                const position = Position.create(1, 12);
                 const index = new Index();
+                index.setPassages("fake-uri", [
+                    buildPassage({
+                        label: "passage",
+                        scope: Range.create(0, 0, 2, 0),
+                    }),
+                ]);
                 const parser = uut.getChapbookParser(undefined);
 
                 const results = parser?.generateCompletions(
@@ -3273,7 +3436,7 @@ describe("Chapbook", () => {
                 );
 
                 expect(results?.itemDefaults?.editRange).to.eql(
-                    Range.create(0, 11, 0, 16)
+                    Range.create(1, 11, 1, 16)
                 );
             });
         });
@@ -3284,10 +3447,16 @@ describe("Chapbook", () => {
                     "fake-uri",
                     "",
                     0,
-                    "Let's try {te"
+                    ":: Passage\nLet's try {te"
                 );
-                const position = Position.create(0, 12);
+                const position = Position.create(1, 12);
                 const index = new Index();
+                index.setPassages("fake-uri", [
+                    buildPassage({
+                        label: "passage",
+                        scope: Range.create(0, 0, 2, 0),
+                    }),
+                ]);
                 const insert: insertsModule.InsertInfo = {
                     name: "test insert",
                     syntax: "test insert",
@@ -3319,7 +3488,7 @@ describe("Chapbook", () => {
 
                 expect(results?.items[0].label).to.eql("test insert");
                 expect(results?.itemDefaults?.editRange).to.eql(
-                    Range.create(0, 11, 0, 13)
+                    Range.create(1, 11, 1, 13)
                 );
             });
 
@@ -3328,10 +3497,16 @@ describe("Chapbook", () => {
                     "fake-uri",
                     "",
                     0,
-                    "Let's try {te"
+                    ":: Passage\nLet's try {te"
                 );
-                const position = Position.create(0, 12);
+                const position = Position.create(1, 12);
                 const index = new Index();
+                index.setPassages("fake-uri", [
+                    buildPassage({
+                        label: "passage",
+                        scope: Range.create(0, 0, 2, 0),
+                    }),
+                ]);
                 index.setDefinitions("source-uri", [
                     {
                         contents: "custom insert",
@@ -3359,15 +3534,110 @@ describe("Chapbook", () => {
                 expect(results?.items[0]?.label).to.eql("custom insert");
             });
 
+            it("should suggest variables after a { with no other contents in the insert", () => {
+                const doc = TextDocument.create(
+                    "fake-uri",
+                    "",
+                    0,
+                    ":: Passage\nLet's try {va"
+                );
+                const position = Position.create(1, 12);
+                const index = new Index();
+                index.setPassages("fake-uri", [
+                    buildPassage({
+                        label: "passage",
+                        scope: Range.create(0, 0, 2, 0),
+                    }),
+                ]);
+                index.setReferences("fake-uri", [
+                    {
+                        contents: "var1",
+                        locations: [
+                            Location.create(
+                                "fake-uri",
+                                Range.create(1, 2, 3, 4)
+                            ),
+                        ],
+                        kind: OChapbookSymbolKind.Variable,
+                    },
+                ]);
+                const mockFunction = ImportMock.mockFunction(
+                    insertsModule,
+                    "all"
+                ).returns([]);
+                const parser = uut.getChapbookParser(undefined);
+
+                const results = parser?.generateCompletions(
+                    doc,
+                    position,
+                    index
+                );
+                mockFunction.restore();
+
+                expect(results?.items[0].label).to.eql("var1");
+                expect(results?.itemDefaults?.editRange).to.eql(
+                    Range.create(1, 11, 1, 13)
+                );
+            });
+
+            it("should not suggest variables after a { if there are other contents in the insert", () => {
+                const doc = TextDocument.create(
+                    "fake-uri",
+                    "",
+                    0,
+                    ":: Passage\nLet's try {va nope"
+                );
+                const position = Position.create(1, 12);
+                const index = new Index();
+                index.setPassages("fake-uri", [
+                    buildPassage({
+                        label: "passage",
+                        scope: Range.create(0, 0, 2, 0),
+                    }),
+                ]);
+                index.setReferences("fake-uri", [
+                    {
+                        contents: "var1",
+                        locations: [
+                            Location.create(
+                                "fake-uri",
+                                Range.create(1, 2, 3, 4)
+                            ),
+                        ],
+                        kind: OChapbookSymbolKind.Variable,
+                    },
+                ]);
+                const mockFunction = ImportMock.mockFunction(
+                    insertsModule,
+                    "all"
+                ).returns([]);
+                const parser = uut.getChapbookParser(undefined);
+
+                const results = parser?.generateCompletions(
+                    doc,
+                    position,
+                    index
+                );
+                mockFunction.restore();
+
+                expect(results?.items).to.be.empty;
+            });
+
             it("should suggest insert names after a { and only replace the word the position is in", () => {
                 const doc = TextDocument.create(
                     "fake-uri",
                     "",
                     0,
-                    "Let's try {te nope"
+                    ":: Passage\nLet's try {te nope"
                 );
-                const position = Position.create(0, 12);
+                const position = Position.create(1, 12);
                 const index = new Index();
+                index.setPassages("fake-uri", [
+                    buildPassage({
+                        label: "passage",
+                        scope: Range.create(0, 0, 2, 0),
+                    }),
+                ]);
                 const insert: insertsModule.InsertInfo = {
                     name: "test insert",
                     syntax: "test insert",
@@ -3399,7 +3669,7 @@ describe("Chapbook", () => {
 
                 expect(results?.items[0].label).to.eql("test insert");
                 expect(results?.itemDefaults?.editRange).to.eql(
-                    Range.create(0, 11, 0, 13)
+                    Range.create(1, 11, 1, 13)
                 );
             });
 
@@ -3408,10 +3678,16 @@ describe("Chapbook", () => {
                     "fake-uri",
                     "",
                     0,
-                    "Let's try {te, prop: 'yep'"
+                    ":: Passage\nLet's try {te, prop: 'yep'"
                 );
-                const position = Position.create(0, 12);
+                const position = Position.create(1, 12);
                 const index = new Index();
+                index.setPassages("fake-uri", [
+                    buildPassage({
+                        label: "passage",
+                        scope: Range.create(0, 0, 2, 0),
+                    }),
+                ]);
                 const insert: insertsModule.InsertInfo = {
                     name: "test insert",
                     syntax: "test insert",
@@ -3443,7 +3719,7 @@ describe("Chapbook", () => {
 
                 expect(results?.items[0].label).to.eql("test insert");
                 expect(results?.itemDefaults?.editRange).to.eql(
-                    Range.create(0, 11, 0, 13)
+                    Range.create(1, 11, 1, 13)
                 );
             });
 
@@ -3452,10 +3728,16 @@ describe("Chapbook", () => {
                     "fake-uri",
                     "",
                     0,
-                    "Let's try {te: 'first arg'"
+                    ":: Passage\nLet's try {te: 'first arg'"
                 );
-                const position = Position.create(0, 12);
+                const position = Position.create(1, 12);
                 const index = new Index();
+                index.setPassages("fake-uri", [
+                    buildPassage({
+                        label: "passage",
+                        scope: Range.create(0, 0, 2, 0),
+                    }),
+                ]);
                 const insert: insertsModule.InsertInfo = {
                     name: "test insert",
                     syntax: "test insert",
@@ -3488,7 +3770,7 @@ describe("Chapbook", () => {
                 expect(results?.items[0].label).to.eql("test insert");
                 expect(results?.items[0].textEditText).to.eql("test insert");
                 expect(results?.itemDefaults?.editRange).to.eql(
-                    Range.create(0, 11, 0, 13)
+                    Range.create(1, 11, 1, 13)
                 );
             });
 
@@ -3497,10 +3779,16 @@ describe("Chapbook", () => {
                     "fake-uri",
                     "",
                     0,
-                    "Let's try {te"
+                    ":: Passage\nLet's try {te"
                 );
-                const position = Position.create(0, 12);
+                const position = Position.create(1, 12);
                 const index = new Index();
+                index.setPassages("fake-uri", [
+                    buildPassage({
+                        label: "passage",
+                        scope: Range.create(0, 0, 2, 0),
+                    }),
+                ]);
                 const insert: insertsModule.InsertInfo = {
                     name: "test insert",
                     syntax: "test insert",
@@ -3534,7 +3822,7 @@ describe("Chapbook", () => {
                     "test insert: '${1:arg}'"
                 );
                 expect(results?.itemDefaults?.editRange).to.eql(
-                    Range.create(0, 11, 0, 13)
+                    Range.create(1, 11, 1, 13)
                 );
             });
 
@@ -3543,10 +3831,16 @@ describe("Chapbook", () => {
                     "fake-uri",
                     "",
                     0,
-                    "Let's try {te ,"
+                    ":: Passage\nLet's try {te ,"
                 );
-                const position = Position.create(0, 12);
+                const position = Position.create(1, 12);
                 const index = new Index();
+                index.setPassages("fake-uri", [
+                    buildPassage({
+                        label: "passage",
+                        scope: Range.create(0, 0, 2, 0),
+                    }),
+                ]);
                 const insert: insertsModule.InsertInfo = {
                     name: "test insert",
                     syntax: "test insert",
@@ -3580,7 +3874,7 @@ describe("Chapbook", () => {
                     "test insert: '${1:arg}'"
                 );
                 expect(results?.itemDefaults?.editRange).to.eql(
-                    Range.create(0, 11, 0, 14)
+                    Range.create(1, 11, 1, 14)
                 );
             });
 
@@ -3589,10 +3883,16 @@ describe("Chapbook", () => {
                     "fake-uri",
                     "",
                     0,
-                    "Let's try {te ,"
+                    ":: Passage\nLet's try {te ,"
                 );
-                const position = Position.create(0, 12);
+                const position = Position.create(1, 12);
                 const index = new Index();
+                index.setPassages("fake-uri", [
+                    buildPassage({
+                        label: "passage",
+                        scope: Range.create(0, 0, 2, 0),
+                    }),
+                ]);
                 const insert: insertsModule.InsertInfo = {
                     name: "test insert",
                     syntax: "test insert",
@@ -3627,7 +3927,7 @@ describe("Chapbook", () => {
                     "test insert: '${1:URL}'"
                 );
                 expect(results?.itemDefaults?.editRange).to.eql(
-                    Range.create(0, 11, 0, 14)
+                    Range.create(1, 11, 1, 14)
                 );
             });
 
@@ -3636,10 +3936,16 @@ describe("Chapbook", () => {
                     "fake-uri",
                     "",
                     0,
-                    "Let's try {te "
+                    ":: Passage\nLet's try {te "
                 );
-                const position = Position.create(0, 12);
+                const position = Position.create(1, 12);
                 const index = new Index();
+                index.setPassages("fake-uri", [
+                    buildPassage({
+                        label: "passage",
+                        scope: Range.create(0, 0, 2, 0),
+                    }),
+                ]);
                 const insert: insertsModule.InsertInfo = {
                     name: "test insert",
                     syntax: "test insert",
@@ -3677,7 +3983,7 @@ describe("Chapbook", () => {
                     "test insert: '${1:URL}', one: ${2:true}, two: '${3:falsy}'"
                 );
                 expect(results?.itemDefaults?.editRange).to.eql(
-                    Range.create(0, 11, 0, 13)
+                    Range.create(1, 11, 1, 13)
                 );
             });
 
@@ -3686,10 +3992,16 @@ describe("Chapbook", () => {
                     "fake-uri",
                     "",
                     0,
-                    "Let's try {te ,"
+                    ":: Passage\nLet's try {te ,"
                 );
-                const position = Position.create(0, 12);
+                const position = Position.create(1, 12);
                 const index = new Index();
+                index.setPassages("fake-uri", [
+                    buildPassage({
+                        label: "passage",
+                        scope: Range.create(0, 0, 2, 0),
+                    }),
+                ]);
                 const insert: insertsModule.InsertInfo = {
                     name: "test insert",
                     syntax: "test insert",
@@ -3727,7 +4039,7 @@ describe("Chapbook", () => {
                     "test insert: '${1:URL}'"
                 );
                 expect(results?.itemDefaults?.editRange).to.eql(
-                    Range.create(0, 11, 0, 14)
+                    Range.create(1, 11, 1, 14)
                 );
             });
 
@@ -3736,10 +4048,16 @@ describe("Chapbook", () => {
                     "fake-uri",
                     "",
                     0,
-                    "Let's try {te :"
+                    ":: Passage\nLet's try {te :"
                 );
-                const position = Position.create(0, 12);
+                const position = Position.create(1, 12);
                 const index = new Index();
+                index.setPassages("fake-uri", [
+                    buildPassage({
+                        label: "passage",
+                        scope: Range.create(0, 0, 2, 0),
+                    }),
+                ]);
                 const insert: insertsModule.InsertInfo = {
                     name: "test insert",
                     syntax: "test insert",
@@ -3772,7 +4090,7 @@ describe("Chapbook", () => {
 
                 expect(results?.items[0].textEditText).to.eql("test insert");
                 expect(results?.itemDefaults?.editRange).to.eql(
-                    Range.create(0, 11, 0, 14)
+                    Range.create(1, 11, 1, 14)
                 );
             });
 
@@ -3781,12 +4099,15 @@ describe("Chapbook", () => {
                     "fake-uri",
                     "",
                     0,
-                    "Let's try {test insert: }"
+                    ":: Passage\nLet's try {test insert: }"
                 );
-                const position = Position.create(0, 24);
+                const position = Position.create(1, 24);
                 const index = new Index();
                 index.setPassages("fake-uri", [
-                    buildPassage({ label: "I'm a passage!" }),
+                    buildPassage({
+                        label: "I'm a passage!",
+                        scope: Range.create(0, 0, 2, 0),
+                    }),
                 ]);
                 const insert: insertsModule.InsertInfo = {
                     name: "test insert",
@@ -3823,7 +4144,7 @@ describe("Chapbook", () => {
                     "'I'm a passage!'"
                 );
                 expect(results?.itemDefaults?.editRange).to.eql(
-                    Range.create(0, 24, 0, 24)
+                    Range.create(1, 24, 1, 24)
                 );
             });
 
@@ -3832,12 +4153,15 @@ describe("Chapbook", () => {
                     "fake-uri",
                     "",
                     0,
-                    "Let's try {test insert: }"
+                    ":: Passage\nLet's try {test insert: }"
                 );
-                const position = Position.create(0, 24);
+                const position = Position.create(1, 24);
                 const index = new Index();
                 index.setPassages("fake-uri", [
-                    buildPassage({ label: "I'm a passage!" }),
+                    buildPassage({
+                        label: "passage",
+                        scope: Range.create(0, 0, 2, 0),
+                    }),
                 ]);
                 const insert: insertsModule.InsertInfo = {
                     name: "test insert",
@@ -3869,12 +4193,10 @@ describe("Chapbook", () => {
                 );
                 mockFunction.restore();
 
-                expect(results?.items[0].label).to.eql("I'm a passage!");
-                expect(results?.items[0].textEditText).to.eql(
-                    "'I'm a passage!'"
-                );
+                expect(results?.items[0].label).to.eql("passage");
+                expect(results?.items[0].textEditText).to.eql("'passage'");
                 expect(results?.itemDefaults?.editRange).to.eql(
-                    Range.create(0, 24, 0, 24)
+                    Range.create(1, 24, 1, 24)
                 );
             });
 
@@ -3883,12 +4205,15 @@ describe("Chapbook", () => {
                     "fake-uri",
                     "",
                     0,
-                    "Let's try {test insert: 'placeholder' }"
+                    ":: I'm a passage!\nLet's try {test insert: 'placeholder' }"
                 );
-                const position = Position.create(0, 27);
+                const position = Position.create(1, 27);
                 const index = new Index();
                 index.setPassages("fake-uri", [
-                    buildPassage({ label: "I'm a passage!" }),
+                    buildPassage({
+                        label: "I'm a passage!",
+                        scope: Range.create(0, 0, 2, 0),
+                    }),
                 ]);
                 const insert: insertsModule.InsertInfo = {
                     name: "test insert",
@@ -3923,7 +4248,7 @@ describe("Chapbook", () => {
                 expect(results?.items[0].label).to.eql("I'm a passage!");
                 expect(results?.items[0].textEditText).to.eql("I'm a passage!");
                 expect(results?.itemDefaults?.editRange).to.eql(
-                    Range.create(0, 25, 0, 36)
+                    Range.create(1, 25, 1, 36)
                 );
             });
 
@@ -3932,10 +4257,16 @@ describe("Chapbook", () => {
                     "fake-uri",
                     "",
                     0,
-                    "Let's try {test insert, "
+                    ":: Passage\nLet's try {test insert, "
                 );
-                const position = Position.create(0, 23);
+                const position = Position.create(1, 23);
                 const index = new Index();
+                index.setPassages("fake-uri", [
+                    buildPassage({
+                        label: "passage",
+                        scope: Range.create(0, 0, 2, 0),
+                    }),
+                ]);
                 const insert: insertsModule.InsertInfo = {
                     name: "test insert",
                     syntax: "test insert",
@@ -3974,7 +4305,7 @@ describe("Chapbook", () => {
                     " two: '${1:value}'"
                 );
                 expect(results?.itemDefaults?.editRange).to.eql(
-                    Range.create(0, 23, 0, 23)
+                    Range.create(1, 23, 1, 23)
                 );
             });
 
@@ -3983,10 +4314,16 @@ describe("Chapbook", () => {
                     "fake-uri",
                     "",
                     0,
-                    "Let's try {test insert, :"
+                    ":: Passage\nLet's try {test insert, :"
                 );
-                const position = Position.create(0, 23);
+                const position = Position.create(1, 23);
                 const index = new Index();
+                index.setPassages("fake-uri", [
+                    buildPassage({
+                        label: "passage",
+                        scope: Range.create(0, 0, 2, 0),
+                    }),
+                ]);
                 const insert: insertsModule.InsertInfo = {
                     name: "test insert",
                     syntax: "test insert",
@@ -4025,7 +4362,7 @@ describe("Chapbook", () => {
                     " two: '${1:arg}'"
                 );
                 expect(results?.itemDefaults?.editRange).to.eql(
-                    Range.create(0, 23, 0, 25)
+                    Range.create(1, 23, 1, 25)
                 );
             });
 
@@ -4034,10 +4371,16 @@ describe("Chapbook", () => {
                     "fake-uri",
                     "",
                     0,
-                    "Let's try {test insert, : 'here'"
+                    ":: Passage\nLet's try {test insert, : 'here'"
                 );
-                const position = Position.create(0, 28);
+                const position = Position.create(1, 28);
                 const index = new Index();
+                index.setPassages("fake-uri", [
+                    buildPassage({
+                        label: "passage",
+                        scope: Range.create(0, 0, 2, 0),
+                    }),
+                ]);
                 const insert: insertsModule.InsertInfo = {
                     name: "test insert",
                     syntax: "test insert",
@@ -4075,12 +4418,15 @@ describe("Chapbook", () => {
                     "fake-uri",
                     "",
                     0,
-                    "Let's try {test insert, one: 'here',"
+                    ":: Passage\nLet's try {test insert, one: 'here',"
                 );
-                const position = Position.create(0, 30);
+                const position = Position.create(1, 30);
                 const index = new Index();
                 index.setPassages("fake-uri", [
-                    buildPassage({ label: "I'm a passage!" }),
+                    buildPassage({
+                        label: "I'm a passage!",
+                        scope: Range.create(0, 0, 2, 0),
+                    }),
                 ]);
                 const insert: insertsModule.InsertInfo = {
                     name: "test insert",
@@ -4119,7 +4465,7 @@ describe("Chapbook", () => {
                 expect(results?.items[0].label).to.eql("I'm a passage!");
                 expect(results?.items[0].textEditText).to.eql("I'm a passage!");
                 expect(results?.itemDefaults?.editRange).to.eql(
-                    Range.create(0, 30, 0, 34)
+                    Range.create(1, 30, 1, 34)
                 );
             });
         });

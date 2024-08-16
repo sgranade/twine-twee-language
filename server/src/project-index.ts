@@ -57,6 +57,7 @@ export interface StoryData {
  */
 export interface Passage {
     name: Label;
+    // When parsed, scope includes the entire passage contents
     scope: Range;
     isScript: boolean;
     isStylesheet: boolean;
@@ -226,6 +227,13 @@ export interface ProjectIndex {
      * @returns Passages (which may be more than one if they all have the same name), if found.
      */
     getPassage(name: string): Passage[];
+    /**
+     * Get a passage at a location.
+     * @param uri Document URI.
+     * @param position Position in the document.
+     * @returns The passage that contains the position, or undefined if there is none at that location.
+     */
+    getPassageAt(uri: string, position: Position): Passage | undefined;
     /**
      * Get all passage names in the index.
      *
@@ -464,6 +472,14 @@ export class Index implements ProjectIndex {
             matches.push(...passages.filter((p) => p.name.contents === name));
         }
         return matches;
+    }
+    getPassageAt(uri: string, position: Position): Passage | undefined {
+        for (const passage of this._passages[uri] || []) {
+            if (positionInRange(position, passage.scope)) {
+                return passage;
+            }
+        }
+        return undefined;
     }
     getPassageNames(): readonly string[] {
         const s = [];

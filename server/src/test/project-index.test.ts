@@ -1003,6 +1003,46 @@ describe("Project Index", () => {
         });
     });
 
+    describe("Passages By Location", () => {
+        it("should return a passage from any indexed file", () => {
+            const passages = [
+                buildPassage({
+                    label: "F1 P1",
+                    scope: Range.create(1, 0, 17, 22),
+                }),
+                buildPassage({
+                    label: "F1 P2",
+                    scope: Range.create(18, 0, 22, 29),
+                }),
+            ];
+            const index = new uut.Index();
+            index.setPassages("file1", passages);
+
+            const result = index.getPassageAt("file1", Position.create(19, 2));
+
+            expect(result).to.eql(passages[1]);
+        });
+
+        it("should return undefined for a location not contained in a passage", () => {
+            const passages = [
+                buildPassage({
+                    label: "F1 P1",
+                    scope: Range.create(1, 0, 17, 22),
+                }),
+                buildPassage({
+                    label: "F1 P2",
+                    scope: Range.create(18, 0, 22, 29),
+                }),
+            ];
+            const index = new uut.Index();
+            index.setPassages("file1", passages);
+
+            const result = index.getPassageAt("file1", Position.create(0, 2));
+
+            expect(result).to.be.undefined;
+        });
+    });
+
     describe("Passage Names", () => {
         it("should return passage names across all indexed files", () => {
             const passages1 = [

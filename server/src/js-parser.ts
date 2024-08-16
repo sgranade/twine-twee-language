@@ -32,8 +32,14 @@ let unprocessedTokens: astUnprocessedToken[] = [];
 /**
  * Callback at each node in the AST.
  * @param rawNode Current node.
+ * @param state Parsing state.
+ * @param ancestors List of ancestor nodes (including the current one).
  */
-function walkerCallback(rawNode: acorn.Node): void {
+function walkerCallback(
+    rawNode: acorn.Node,
+    _: unknown,
+    ancestors: acorn.Node[]
+): void {
     // We end up setting semantic tokens for some nodes multiple times (for
     // example, an Identifier and then again for a property that's an identifier).
     // We don't worry about that, though, because the walker visits the bottom-most
@@ -42,8 +48,13 @@ function walkerCallback(rawNode: acorn.Node): void {
 
     const node = rawNode as acorn.AnyNode;
     if (node.type === "Identifier") {
-        // Don't record placeholders
-        if (node.name !== "✖") {
+        const ancestor = ancestors[ancestors.length - 2];
+        // Don't record placeholders, instantiated classes, or function names
+        if (
+            node.name !== "✖" &&
+            ancestor?.type !== "NewExpression" &&
+            ancestor?.type !== "CallExpression"
+        ) {
             unprocessedTokens.push({
                 text: node.name,
                 at: node.start,
@@ -154,7 +165,7 @@ export function parseJSExpression(
         currentExpression = expression;
         unprocessedTokens = [];
 
-        acornWalk.full(ast, walkerCallback);
+        acornWalk.fullAncestor(ast, walkerCallback);
 
         for (const token of unprocessedTokens) {
             if (token.type === ETokenType.variable) {

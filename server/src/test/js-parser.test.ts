@@ -346,4 +346,58 @@ describe("JS Parser", () => {
             },
         ]);
     });
+
+    it("should not return an instantiated class as a variable", () => {
+        const expression = " var1 = new Error();";
+        const offset = 12;
+        const state = buildParsingState({
+            uri: "fake-uri",
+            content: "0123456789\n1 var1 = new Error();",
+            callbacks: new MockCallbacks(),
+        });
+        const storyState: StoryFormatParsingState = {
+            passageTokens: {},
+        };
+
+        const result = uut.parseJSExpression(
+            expression,
+            offset,
+            state,
+            storyState
+        );
+
+        expect(result).to.eql([
+            {
+                contents: "var1",
+                location: Location.create("fake-uri", Range.create(1, 2, 1, 6)),
+            },
+        ]);
+    });
+
+    it("should not return an called function as a variable", () => {
+        const expression = " var1 = funcme();";
+        const offset = 12;
+        const state = buildParsingState({
+            uri: "fake-uri",
+            content: "0123456789\n1 var1 = funcme();",
+            callbacks: new MockCallbacks(),
+        });
+        const storyState: StoryFormatParsingState = {
+            passageTokens: {},
+        };
+
+        const result = uut.parseJSExpression(
+            expression,
+            offset,
+            state,
+            storyState
+        );
+
+        expect(result).to.eql([
+            {
+                contents: "var1",
+                location: Location.create("fake-uri", Range.create(1, 2, 1, 6)),
+            },
+        ]);
+    });
 });

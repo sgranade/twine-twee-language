@@ -1394,32 +1394,6 @@ function parseVarsSection(
         let name = m[2].slice(0, colonIndex).trimEnd();
         const nameIndex = m.index + m[1].length;
 
-        // Store a reference to the variable (since we don't know if this is where
-        // the variable is first created or merely modified)
-        state.callbacks.onSymbolReference(
-            createSymbolFor(
-                name,
-                sectionIndex + nameIndex,
-                OChapbookSymbolKind.Variable,
-                state
-            )
-        );
-
-        // Handle the value
-        let [value, valueIndex] = skipSpaces(
-            m[2].slice(colonIndex + 1),
-            m.index + m[1].length + colonIndex + 1
-        );
-        createVariableReferences(
-            parseJSExpression(
-                value,
-                sectionIndex + valueIndex,
-                state,
-                chapbookState
-            ),
-            state
-        );
-
         // Check for a condition
         const conditionMatch = conditionPattern.exec(name);
         if (conditionMatch !== null) {
@@ -1494,20 +1468,43 @@ function parseVarsSection(
             );
         }
 
-        // Set a symbolic token for the variable name
-        capturePreTokenFor(
-            name,
-            sectionIndex + nameIndex,
-            ETokenType.variable,
-            [ETokenModifier.modification],
-            chapbookState
+        // Set tokens and variable references for the variable name
+        createVariableReferences(
+            parseJSExpression(
+                name,
+                sectionIndex + nameIndex,
+                state,
+                chapbookState
+            ),
+            state
+        );
+
+        // Handle the value
+        let [value, valueIndex] = skipSpaces(
+            m[2].slice(colonIndex + 1),
+            m.index + m[1].length + colonIndex + 1
+        );
+        createVariableReferences(
+            parseJSExpression(
+                value,
+                sectionIndex + valueIndex,
+                state,
+                chapbookState
+            ),
+            state
         );
     }
 }
 
-interface chapbookPassageParts {
+/**
+ * A Chapbook passage divided into the vars and content sections.
+ */
+interface ChapbookPassageParts {
+    // Text of the vars section, not including the "--" separator, if it exists.
     vars?: string;
+    // Text of the content section.
     content: string;
+    // Index where the content is relative to the start of the passage.
     contentIndex: number;
 }
 
@@ -1517,8 +1514,10 @@ interface chapbookPassageParts {
  * @param passageText Full text of the passage.
  * @returns Information about the vars section, or undefined if there is no vars section.
  */
-function divideChapbookPassage(passageText: string): chapbookPassageParts {
-    const passageParts: chapbookPassageParts = {
+export function divideChapbookPassage(
+    passageText: string
+): ChapbookPassageParts {
+    const passageParts: ChapbookPassageParts = {
         content: passageText,
         contentIndex: 0,
     };
