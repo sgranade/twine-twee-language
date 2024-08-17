@@ -14,6 +14,7 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 import { buildInsertInfo } from "./inserts/insert-builders";
 import { buildModifierInfo } from "./modifiers/modifier-builders";
 import { MockCallbacks, buildParsingState, buildPassage } from "../../builders";
+import { ParseLevel } from "../../../parser";
 import { Index, TwineSymbolKind } from "../../../project-index";
 import { defaultDiagnosticsOptions } from "../../../server-options";
 import { ETokenModifier, ETokenType } from "../../../tokens";
@@ -28,7 +29,7 @@ import * as uut from "../../../passage-text-parsers/chapbook";
 
 describe("Chapbook", () => {
     describe("Parsing", () => {
-        it("should parse engine extension calls even when not parsing passage contents", () => {
+        it("should parse engine extension calls even when only parsing passage names", () => {
             const header = ":: Passage\n";
             const passage =
                 "[javascript]\nengine.extend('2.0.1', () => {\nengine.template.inserts.add(\n{match: /hi/}\n);\n});\n";
@@ -37,7 +38,7 @@ describe("Chapbook", () => {
                 uri: "fake-uri",
                 content: header + passage,
                 callbacks: callbacks,
-                parsePassageContents: false,
+                parseLevel: ParseLevel.PassageNames,
             });
             state.storyFormat = {
                 format: "Chapbook",
@@ -59,6 +60,28 @@ describe("Chapbook", () => {
                 kind: OChapbookSymbolKind.CustomInsert,
                 match: /hi/,
             });
+        });
+
+        it("should not parse engine extension calls when only parsing the StoryData passage", () => {
+            const header = ":: Passage\n";
+            const passage =
+                "[javascript]\nengine.extend('2.0.1', () => {\nengine.template.inserts.add(\n{match: /hi/}\n);\n});\n";
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                uri: "fake-uri",
+                content: header + passage,
+                callbacks: callbacks,
+                parseLevel: ParseLevel.StoryData,
+            });
+            state.storyFormat = {
+                format: "Chapbook",
+                formatVersion: "2.0.1",
+            };
+            const parser = uut.getChapbookParser(undefined);
+
+            parser?.parsePassageText(passage, header.length, state);
+
+            expect(callbacks.definitions).to.be.empty;
         });
 
         describe("vars section", () => {
@@ -2136,6 +2159,59 @@ describe("Chapbook", () => {
                         ),
                         kind: OChapbookSymbolKind.CustomInsert,
                         match: /hi\s+there/,
+                    });
+                });
+
+                it("should capture symbol definitions for multiple custom inserts in a passage", () => {
+                    const header = ":: Passage\n";
+                    const passage =
+                        "[javascript]\n" +
+                        "engine.extend('2.0.1', () => {\n" +
+                        "engine.template.inserts.add(\n" +
+                        "{match: /hi\\s+there/}\n" +
+                        ");\n" +
+                        "});\n" +
+                        "engine.extend('2.0.1', () => {\n" +
+                        "engine.template.inserts.add(\n" +
+                        "{match: /different\\s+insert/}\n" +
+                        ");\n" +
+                        "});\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        uri: "fake-uri",
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    state.storyFormat = {
+                        format: "Chapbook",
+                        formatVersion: "2.0.1",
+                    };
+                    const parser = uut.getChapbookParser(undefined);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    const [result0, result1] =
+                        callbacks.definitions as ChapbookSymbol[];
+
+                    expect(callbacks.definitions.length).to.equal(2);
+                    expect(ChapbookSymbol.is(result0)).to.be.true;
+                    expect(result0).to.eql({
+                        contents: "hi\\s+there",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(4, 9, 4, 19)
+                        ),
+                        kind: OChapbookSymbolKind.CustomInsert,
+                        match: /hi\s+there/,
+                    });
+                    expect(ChapbookSymbol.is(result1)).to.be.true;
+                    expect(result1).to.eql({
+                        contents: "different\\s+insert",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(9, 9, 9, 27)
+                        ),
+                        kind: OChapbookSymbolKind.CustomInsert,
+                        match: /different\s+insert/,
                     });
                 });
 

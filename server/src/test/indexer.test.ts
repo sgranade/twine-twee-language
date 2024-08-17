@@ -13,7 +13,7 @@ import { Index } from "../project-index";
 import { buildPassage } from "./builders";
 
 import * as ptpModule from "../passage-text-parsers";
-import { ParsingState } from "../parser";
+import { ParseLevel, ParsingState } from "../parser";
 import * as uut from "../indexer";
 
 function buildDocument({
@@ -35,7 +35,7 @@ describe("Indexer", () => {
             });
             const index = new Index();
 
-            uut.updateProjectIndex(doc, true, index);
+            uut.updateProjectIndex(doc, ParseLevel.Full, index);
             const result = index.getPassages("test-uri");
 
             expect(result).to.eql([
@@ -98,7 +98,7 @@ describe("Indexer", () => {
                 };
             });
 
-            uut.updateProjectIndex(doc, true, index);
+            uut.updateProjectIndex(doc, ParseLevel.Full, index);
             mockFunction.restore();
             const result = index.getDefinitions("test-uri", 17);
 
@@ -146,7 +146,7 @@ describe("Indexer", () => {
                 };
             });
 
-            uut.updateProjectIndex(doc, true, index);
+            uut.updateProjectIndex(doc, ParseLevel.Full, index);
             mockFunction.restore();
             const result = index.getReferences("test-uri", 1);
 
@@ -168,7 +168,7 @@ describe("Indexer", () => {
             });
             const index = new Index();
 
-            uut.updateProjectIndex(doc, true, index);
+            uut.updateProjectIndex(doc, ParseLevel.Full, index);
             const result = index.getStoryTitle();
 
             expect(result).to.eql("Title!");
@@ -181,7 +181,7 @@ describe("Indexer", () => {
             });
             const index = new Index();
 
-            uut.updateProjectIndex(doc, true, index);
+            uut.updateProjectIndex(doc, ParseLevel.Full, index);
             const result = index.getStoryTitle();
 
             expect(result).to.equal("Title!");
@@ -195,7 +195,7 @@ describe("Indexer", () => {
             });
             const index = new Index();
 
-            uut.updateProjectIndex(doc, true, index);
+            uut.updateProjectIndex(doc, ParseLevel.Full, index);
             const result = index.getStoryData();
 
             expect(result).to.eql({
@@ -212,7 +212,7 @@ describe("Indexer", () => {
             });
             const index = new Index();
 
-            uut.updateProjectIndex(doc, true, index);
+            uut.updateProjectIndex(doc, ParseLevel.Full, index);
             const result = index.getStoryData();
 
             expect(result).to.eql({
@@ -228,7 +228,7 @@ describe("Indexer", () => {
             });
             const index = new Index();
 
-            uut.updateProjectIndex(doc, true, index);
+            uut.updateProjectIndex(doc, ParseLevel.Full, index);
             const [result] = [...index.getEmbeddedDocuments("test-uri")];
 
             expect(result.document.getText()).to.eql(
@@ -245,7 +245,7 @@ describe("Indexer", () => {
             });
             const index = new Index();
 
-            uut.updateProjectIndex(doc, true, index);
+            uut.updateProjectIndex(doc, ParseLevel.Full, index);
             const result = index.getParseErrors("test-uri");
 
             expect(result.length).to.equal(1);
@@ -264,7 +264,7 @@ describe("Indexer", () => {
             });
             const index = new Index();
 
-            uut.updateProjectIndex(doc, true, index);
+            uut.updateProjectIndex(doc, ParseLevel.Full, index);
             const result = index.getParseErrors("test-uri");
 
             expect(result.length).to.equal(1);
@@ -283,8 +283,8 @@ describe("Indexer", () => {
             });
             const index = new Index();
 
-            uut.updateProjectIndex(doc, true, index);
-            uut.updateProjectIndex(doc, true, index);
+            uut.updateProjectIndex(doc, ParseLevel.Full, index);
+            uut.updateProjectIndex(doc, ParseLevel.Full, index);
             const result = index.getParseErrors("test-uri");
 
             expect(result.length).to.equal(0);
@@ -298,7 +298,7 @@ describe("Indexer", () => {
             });
             const index = new Index();
 
-            uut.updateProjectIndex(doc, true, index);
+            uut.updateProjectIndex(doc, ParseLevel.Full, index);
             const result = index.getParseErrors("test-uri");
 
             expect(result.length).to.equal(1);
@@ -318,8 +318,8 @@ describe("Indexer", () => {
             });
             const index = new Index();
 
-            uut.updateProjectIndex(doc, true, index);
-            uut.updateProjectIndex(doc, true, index);
+            uut.updateProjectIndex(doc, ParseLevel.Full, index);
+            uut.updateProjectIndex(doc, ParseLevel.Full, index);
             const result = index.getParseErrors("test-uri");
 
             expect(result.length).to.equal(0);

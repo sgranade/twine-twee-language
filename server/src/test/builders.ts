@@ -3,7 +3,7 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { EmbeddedDocument } from "../embedded-languages";
 import { Passage, StoryData, Symbol } from "../project-index";
-import { ParserCallbacks, ParsingState } from "../parser";
+import { ParseLevel, ParserCallbacks, ParsingState } from "../parser";
 import { defaultDiagnosticsOptions } from "../server-options";
 import { SemanticToken } from "../tokens";
 
@@ -35,13 +35,13 @@ export function buildPassage({
 export function buildParsingState({
     uri = "fake-uri",
     content = "content",
-    parsePassageContents = true,
+    parseLevel = ParseLevel.Full,
     callbacks = new MockCallbacks(),
     diagnosticsOptions = defaultDiagnosticsOptions,
 }): ParsingState {
     return {
         textDocument: TextDocument.create(uri, "twee3", 1, content),
-        parsePassageContents: parsePassageContents,
+        parseLevel: parseLevel,
         storyFormatParser: undefined,
         callbacks: callbacks,
         diagnosticsOptions: diagnosticsOptions,

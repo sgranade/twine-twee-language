@@ -90,7 +90,7 @@ describe("Chapbook Inserts", () => {
 
             expect(callbacks.errors.length).to.equal(1);
             expect(callbacks.errors[0].message).to.include(
-                "Must be a string or a variable"
+                "Must be a string or variable"
             );
             expect(callbacks.errors[0].range).to.eql(
                 Range.create(0, 10, 0, 21)

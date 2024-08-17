@@ -15,7 +15,7 @@ import {
     Symbol,
     TwineSymbolKind,
 } from "./project-index";
-import { ParserCallbacks, parse } from "./parser";
+import { ParseLevel, ParserCallbacks, parse } from "./parser";
 import { DiagnosticsOptions } from "./server-options";
 import { SemanticToken } from "./tokens";
 
@@ -48,13 +48,13 @@ class IndexingState {
  * is skipped, though, the StoryTitle and StoryData passages are still parsed.
  *
  * @param textDocument Document to index.
- * @param parsePassageContents Whether to parse passage contents.
+ * @param parseLevel Level of parsing to do.
  * @param index Project index to update.
- * @param diagnosticsOptions Options for what optional diagnostics to report
+ * @param diagnosticsOptions Options for what optional diagnostics to report.
  */
 export function updateProjectIndex(
     textDocument: TextDocument,
-    parsePassageContents: boolean,
+    parseLevel: ParseLevel,
     index: ProjectIndex,
     diagnosticsOptions?: DiagnosticsOptions
 ): void {
@@ -112,7 +112,7 @@ export function updateProjectIndex(
     parse(
         textDocument,
         callbacks,
-        parsePassageContents,
+        parseLevel,
         index.getStoryData()?.storyFormat,
         diagnosticsOptions
     );

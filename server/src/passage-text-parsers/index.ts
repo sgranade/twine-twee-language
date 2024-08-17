@@ -25,6 +25,11 @@ export interface StoryFormatParser {
     /**
      * Parse a Twine passage's text.
      *
+     * Note that this may be called even when state.parseLevel indicates that the passage
+     * contents shouldn't be parsed. That's in case story formats need to index information
+     * for project-wide diagnostics even if they're not doing a full passage contents parse.
+     * It's up to the story format to check for that.
+     *
      * @param passageText Text of the passage to parse.
      * @param textIndex Index of the passage in the document (zero-based).
      * @param state Parsing state.

@@ -9,6 +9,7 @@ import {
     createSymbolFor,
     createLocationFor,
     parseHtml,
+    ParseLevel,
 } from "../../parser";
 import { ETokenType, ETokenModifier } from "../../tokens";
 import {
@@ -646,9 +647,8 @@ function findEngineExtensions(
     contentsIndex: number,
     state: ParsingState
 ): void {
-    let ndx = contents.indexOf("engine.extend(");
-    if (ndx >= 0) {
-        ndx += "engine.extend(".length;
+    for (const m of contents.matchAll(/engine.extend\(/g)) {
+        let ndx = m.index + m[0].length;
         let extendContents = extractToMatchingDelimiter(
             contents,
             "(",
@@ -1616,10 +1616,12 @@ export function parsePassageText(
     textIndex: number,
     state: ParsingState
 ): void {
-    if (!state.parsePassageContents) {
-        // Even if we don't parse passage contents, look for calls to
-        // `engine.extend()` so we can capture custom inserts and modifiers
-        findEngineExtensions(passageText, textIndex, state);
+    if (state.parseLevel !== ParseLevel.Full) {
+        if (state.parseLevel === ParseLevel.PassageNames) {
+            // Even if we don't parse passage contents, look for calls to
+            // `engine.extend()` so we can capture custom inserts and modifiers
+            findEngineExtensions(passageText, textIndex, state);
+        }
         return;
     }
 

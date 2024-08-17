@@ -47,6 +47,24 @@ import {
 } from "./server-options";
 
 /**
+ * At what level of detail to parse a Twee document.
+ */
+export enum ParseLevel {
+    /**
+     * Just the StoryData passage (if it exists) -- used to find the story format quickly.
+     */
+    StoryData = 1,
+    /**
+     * StoryData and names of passages, but not the content of passages.
+     */
+    PassageNames,
+    /**
+     * Everything.
+     */
+    Full,
+}
+
+/**
  * Captures information about the current state of parsing
  */
 export interface ParsingState {
@@ -57,7 +75,7 @@ export interface ParsingState {
     /**
      * Are we to parse passage contents?
      */
-    parsePassageContents: boolean;
+    parseLevel: ParseLevel;
     /**
      * What passage are we currently parsing the contents of?
      */
@@ -729,12 +747,6 @@ function parseStylesheetPassage(
     textIndex: number,
     state: ParsingState
 ): void {
-    const subDocument = TextDocument.create(
-        "stylesheet",
-        "css",
-        state.textDocument.version,
-        passageText
-    );
     state.callbacks.onEmbeddedDocument(
         EmbeddedDocument.create(
             "stylesheet",
@@ -825,6 +837,8 @@ function findAndParsePassageContents(
         )
     );
 
+    // Even if we're not to parse passage text, we call this function
+    // since there are elements that we need to parse (like StoryTitle) regardless
     parsePassageText(passage, passageText, passageContentsStartIndex, state);
 
     // Unset the currently-being-parsed passage
@@ -867,20 +881,20 @@ function parseTwee3(state: ParsingState): void {
  *
  * @param textDocument Document to parse.
  * @param callbacks Parser event callbacks.
- * @param parsePassageContents Whether to parse passage contents.
+ * @param parseLevel What level of parsing to do.
  * @param storyFormat Previous story format (if any) to use in parsing.
  * @param diagnosticsOptions Options for what optional diagnostics to report.
  */
 export function parse(
     textDocument: TextDocument,
     callbacks: ParserCallbacks,
-    parsePassageContents: boolean,
+    parseLevel: ParseLevel,
     storyFormat?: StoryFormat,
     diagnosticsOptions?: DiagnosticsOptions
 ): void {
     const state: ParsingState = {
         textDocument: textDocument,
-        parsePassageContents: parsePassageContents,
+        parseLevel: parseLevel,
         diagnosticsOptions: diagnosticsOptions || defaultDiagnosticsOptions,
         storyFormatParser: undefined, // No story format parser to begin with
         callbacks: callbacks,
@@ -923,6 +937,8 @@ export function parse(
             }
         }
     }
+    // In fact, if we're only to parse story data, we can return
+    if (parseLevel === ParseLevel.StoryData) return;
 
     state.storyFormat = storyFormat;
 

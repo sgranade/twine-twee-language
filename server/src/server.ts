@@ -54,6 +54,7 @@ import {
 } from "./structure";
 import { semanticTokensLegend } from "./tokens";
 import { generateDiagnostics } from "./validator";
+import { ParseLevel } from "./parser";
 
 const connection: Connection = createConnection(ProposedFeatures.all);
 
@@ -116,6 +117,28 @@ namespace Heartbeat {
     }
 
     /**
+     * Fetch a Twee file.
+     *
+     * @param uri URI of the document to fetch.
+     * @returns A text document containing the file's contents, or undefined if we weren't able to read it.
+     */
+    async function fetchTweeFile(
+        uri: string
+    ): Promise<TextDocument | undefined> {
+        try {
+            const content = await connection.sendRequest(ReadFileRequest, {
+                uri: uri,
+            });
+            return TextDocument.create(uri, "twee3", 1, content);
+        } catch (err) {
+            connection.console.error(`Client didn't read file ${uri}: ${err}`);
+            if (!(err instanceof ResponseError)) throw err;
+        }
+
+        return undefined;
+    }
+
+    /**
      * Index all Twee files in an opened project, as reported by the client.
      */
     async function indexAllTweeFiles() {
@@ -132,28 +155,28 @@ namespace Heartbeat {
             const tweeFiles =
                 await connection.sendRequest(FindTweeFilesRequest);
 
+            // We'll loop through the files twice, once to find a StoryData
+            // value, and then a second time to parse passages, since
+            // the story format can change how even passage-name-only
+            // parsing occurs.
+
+            // Right now we don't cache the results so as not to have to
+            // potentially hold every file in a project in memory.
             for (const uri of tweeFiles) {
-                try {
-                    const content = await connection.sendRequest(
-                        ReadFileRequest,
-                        {
-                            uri: uri,
-                        }
-                    );
-                    if (content.length > 0) {
-                        const doc = TextDocument.create(
-                            uri,
-                            "twee3",
-                            1,
-                            content
-                        );
-                        await processChangedDocument(doc, false);
-                    }
-                } catch (err) {
-                    connection.console.error(
-                        `Client didn't read file ${uri}: ${err}`
-                    );
-                    if (!(err instanceof ResponseError)) throw err;
+                // The moment we have a story format, we can stop looking.
+                if (projectIndex.getStoryData()?.storyFormat !== undefined)
+                    break;
+
+                const doc = await fetchTweeFile(uri);
+                if (doc !== undefined) {
+                    updateProjectIndex(doc, ParseLevel.StoryData, projectIndex);
+                }
+            }
+
+            for (const uri of tweeFiles) {
+                const doc = await fetchTweeFile(uri);
+                if (doc !== undefined) {
+                    await processChangedDocument(doc, ParseLevel.PassageNames);
                 }
             }
 
@@ -294,7 +317,7 @@ connection.onDidChangeConfiguration(async (change) => {
 });
 
 documents.onDidChangeContent(async (change) => {
-    await processChangedDocument(change.document, true);
+    await processChangedDocument(change.document, ParseLevel.Full);
 });
 
 documents.onDidClose;
@@ -399,28 +422,23 @@ async function getSettings(): Promise<ServerSettings> {
  * Process a document whose content has changed.
  *
  * @param document Document to process.
- * @param parsePassageContents Whether to parse passage contents.
+ * @param parseLevel What level of parsing to do.
  */
 async function processChangedDocument(
     document: TextDocument,
-    parsePassageContents: boolean
+    parseLevel: ParseLevel
 ) {
     // We'll only get the diagnostic options if we're parsing passage
     // contents, since otherwise we're just collecting passage names
     let diagnosticsOptions = defaultDiagnosticsOptions;
-    if (parsePassageContents) {
+    if (parseLevel === ParseLevel.Full) {
         const settings = await getSettings();
         diagnosticsOptions = settings["twee-3"];
     }
 
     // Keep track of the story format so, if it changes, we can notify listeners
     const storyFormat = projectIndex.getStoryData()?.storyFormat?.format;
-    updateProjectIndex(
-        document,
-        parsePassageContents,
-        projectIndex,
-        diagnosticsOptions
-    );
+    updateProjectIndex(document, parseLevel, projectIndex, diagnosticsOptions);
     const newStoryFormat = projectIndex.getStoryData()?.storyFormat;
     if (newStoryFormat?.format !== storyFormat && newStoryFormat?.format) {
         const e: StoryFormat = {
@@ -442,7 +460,7 @@ async function processChangedDocument(
  */
 async function processAllOpenDocuments() {
     for (const doc of documents.all()) {
-        await processChangedDocument(doc, true);
+        await processChangedDocument(doc, ParseLevel.Full);
     }
     // Request that the client re-do diagnostics since we've re-processed
     connection.languages.diagnostics.refresh();

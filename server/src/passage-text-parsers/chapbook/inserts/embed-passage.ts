@@ -33,7 +33,7 @@ export const embedPassage: InsertInfo = {
                 logErrorFor(
                     args.firstArgument.text,
                     args.firstArgument.at,
-                    "Must be a string containing a passage name or a variable",
+                    "Must be a string or variable containing a passage name or a variable",
                     state
                 );
             }

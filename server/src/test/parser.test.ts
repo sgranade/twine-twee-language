@@ -42,7 +42,7 @@ describe("Twine Parser", () => {
                     ":: Passage 1\nP1 contents\n\n:: Passage 2\nP2 contents"
                 );
 
-                uut.parse(doc, callbacks, true);
+                uut.parse(doc, callbacks, uut.ParseLevel.Full);
 
                 expect(callbacks.passages.length).to.equal(2);
             });
@@ -56,7 +56,7 @@ describe("Twine Parser", () => {
                     ":: Passage 1 \nP1 contents"
                 );
 
-                uut.parse(doc, callbacks, true);
+                uut.parse(doc, callbacks, uut.ParseLevel.Full);
 
                 expect(callbacks.passages[0].name.contents).to.equal(
                     "Passage 1"
@@ -72,7 +72,7 @@ describe("Twine Parser", () => {
                     ":: \\[Passage\\] \\1 \nP1 contents"
                 );
 
-                uut.parse(doc, callbacks, true);
+                uut.parse(doc, callbacks, uut.ParseLevel.Full);
 
                 expect(callbacks.passages[0].name.contents).to.equal(
                     "[Passage] 1"
@@ -88,7 +88,7 @@ describe("Twine Parser", () => {
                     ":: Passage 1 \nP1 contents"
                 );
 
-                uut.parse(doc, callbacks, true);
+                uut.parse(doc, callbacks, uut.ParseLevel.Full);
                 const result = callbacks.passages[0].name.location;
                 expect(result.range.start).to.eql(Position.create(0, 3));
                 expect(result.range.end).to.eql(Position.create(0, 12));
@@ -103,7 +103,7 @@ describe("Twine Parser", () => {
                     ":: Passage 1 [tag-1  tag_2]\nP1 contents"
                 );
 
-                uut.parse(doc, callbacks, true);
+                uut.parse(doc, callbacks, uut.ParseLevel.Full);
                 const result = callbacks.passages[0].tags;
 
                 expect(result).to.eql([
@@ -133,7 +133,7 @@ describe("Twine Parser", () => {
                     ":: Passage 1 [tag-1 tag_2 tag-1]\nP1 contents"
                 );
 
-                uut.parse(doc, callbacks, true);
+                uut.parse(doc, callbacks, uut.ParseLevel.Full);
                 const result = callbacks.passages[0].tags?.map(
                     (x) => x.contents
                 );
@@ -150,7 +150,7 @@ describe("Twine Parser", () => {
                     ":: Passage 1 [tag-1 \\[tag_2\\]]\nP1 contents"
                 );
 
-                uut.parse(doc, callbacks, true);
+                uut.parse(doc, callbacks, uut.ParseLevel.Full);
                 const result = callbacks.passages[0].tags;
 
                 expect(result).to.eql([
@@ -180,7 +180,7 @@ describe("Twine Parser", () => {
                     ":: Passage 1 [script]\nP1 contents"
                 );
 
-                uut.parse(doc, callbacks, true);
+                uut.parse(doc, callbacks, uut.ParseLevel.Full);
 
                 expect(callbacks.passages[0].isScript).to.be.true;
             });
@@ -194,7 +194,7 @@ describe("Twine Parser", () => {
                     ":: Passage 1 [not-a-script]\nP1 contents"
                 );
 
-                uut.parse(doc, callbacks, true);
+                uut.parse(doc, callbacks, uut.ParseLevel.Full);
 
                 expect(callbacks.passages[0].isScript).to.be.false;
             });
@@ -208,7 +208,7 @@ describe("Twine Parser", () => {
                     ":: Passage 1 [stylesheet]\nP1 contents"
                 );
 
-                uut.parse(doc, callbacks, true);
+                uut.parse(doc, callbacks, uut.ParseLevel.Full);
 
                 expect(callbacks.passages[0].isStylesheet).to.be.true;
             });
@@ -222,7 +222,7 @@ describe("Twine Parser", () => {
                     ":: Passage 1 [not-a-stylesheet]\nP1 contents"
                 );
 
-                uut.parse(doc, callbacks, true);
+                uut.parse(doc, callbacks, uut.ParseLevel.Full);
 
                 expect(callbacks.passages[0].isStylesheet).to.be.false;
             });
@@ -236,7 +236,7 @@ describe("Twine Parser", () => {
                     ":: Passage 1 [stylesheet]\nP1 contents"
                 );
 
-                uut.parse(doc, callbacks, true);
+                uut.parse(doc, callbacks, uut.ParseLevel.Full);
                 const [result] = callbacks.embeddedDocuments;
 
                 expect(result.document.getText()).to.eql("P1 contents");
@@ -253,7 +253,7 @@ describe("Twine Parser", () => {
                     ':: Passage 1 {"position":"600,400", "size":"100,200"}\nP1 contents'
                 );
 
-                uut.parse(doc, callbacks, true);
+                uut.parse(doc, callbacks, uut.ParseLevel.Full);
                 const [result] = callbacks.passages;
 
                 expect(result.metadata).to.eql({
@@ -278,7 +278,7 @@ describe("Twine Parser", () => {
                     ':: Passage 1 {"position":"600,400", "size":"100,200"}\nP1 contents'
                 );
 
-                uut.parse(doc, callbacks, true);
+                uut.parse(doc, callbacks, uut.ParseLevel.Full);
                 const [result] = callbacks.embeddedDocuments;
 
                 expect(result.document.getText()).to.eql(
@@ -297,7 +297,7 @@ describe("Twine Parser", () => {
                     ':: Passage 1 [tag-1] {"position":"600,400"}\nP1 contents'
                 );
 
-                uut.parse(doc, callbacks, true);
+                uut.parse(doc, callbacks, uut.ParseLevel.Full);
                 const result = callbacks.passages[0];
 
                 expect(result.tags).to.eql([
@@ -330,7 +330,7 @@ describe("Twine Parser", () => {
                     ":: Passage 1 \nP1 contents"
                 );
 
-                uut.parse(doc, callbacks, true);
+                uut.parse(doc, callbacks, uut.ParseLevel.Full);
                 const result = callbacks.passages[0].scope;
 
                 expect(result.start).to.eql(Position.create(0, 0));
@@ -346,7 +346,7 @@ describe("Twine Parser", () => {
                     ":: Passage 1 \nP1 contents\n:: Passage 2"
                 );
 
-                uut.parse(doc, callbacks, true);
+                uut.parse(doc, callbacks, uut.ParseLevel.Full);
                 const result = callbacks.passages[0].scope;
 
                 expect(result.start).to.eql(Position.create(0, 0));
@@ -362,11 +362,42 @@ describe("Twine Parser", () => {
                     ":: Passage 1 \r\nP1 contents\r\n:: Passage 2"
                 );
 
-                uut.parse(doc, callbacks, true);
+                uut.parse(doc, callbacks, uut.ParseLevel.Full);
                 const result = callbacks.passages[0].scope;
 
                 expect(result.start).to.eql(Position.create(0, 0));
                 expect(result.end).to.eql(Position.create(1, 11));
+            });
+
+            it("should call back on a passage even when told to parse Passage Names only", () => {
+                const callbacks = new MockCallbacks();
+                const doc = TextDocument.create(
+                    "fake-uri",
+                    "",
+                    0,
+                    ":: Passage 1\nP1 contents\n"
+                );
+
+                uut.parse(doc, callbacks, uut.ParseLevel.PassageNames);
+                const [result] = callbacks.passages;
+
+                expect(callbacks.passages.length).to.equal(1);
+                expect(result.name.contents).to.eql("Passage 1");
+                expect(result.scope).to.eql(Range.create(0, 0, 1, 11));
+            });
+
+            it("should not call back on a passage when told to parse StoryData only", () => {
+                const callbacks = new MockCallbacks();
+                const doc = TextDocument.create(
+                    "fake-uri",
+                    "",
+                    0,
+                    ":: Passage 1\nP1 contents"
+                );
+
+                uut.parse(doc, callbacks, uut.ParseLevel.StoryData);
+
+                expect(callbacks.passages).to.be.empty;
             });
         });
 
@@ -380,7 +411,7 @@ describe("Twine Parser", () => {
                     ":: StoryTitle\nSweet title!\n"
                 );
 
-                uut.parse(doc, callbacks, true);
+                uut.parse(doc, callbacks, uut.ParseLevel.Full);
 
                 expect(callbacks.storyTitle).to.eql("Sweet title!");
             });
@@ -394,7 +425,7 @@ describe("Twine Parser", () => {
                     ":: StoryTitle\nSweet title!"
                 );
 
-                uut.parse(doc, callbacks, true);
+                uut.parse(doc, callbacks, uut.ParseLevel.Full);
 
                 expect(callbacks.storyTitleRange?.start).to.eql(
                     Position.create(1, 0)
@@ -413,7 +444,7 @@ describe("Twine Parser", () => {
                     ":: StoryTitle\r\nSweet title!"
                 );
 
-                uut.parse(doc, callbacks, true);
+                uut.parse(doc, callbacks, uut.ParseLevel.Full);
 
                 expect(callbacks.storyTitleRange?.start).to.eql(
                     Position.create(1, 0)
@@ -423,7 +454,7 @@ describe("Twine Parser", () => {
                 );
             });
 
-            it("should call back on StoryTitle even if told not to parse passage contents", () => {
+            it("should call back on StoryTitle even if told to parse only passage names", () => {
                 const callbacks = new MockCallbacks();
                 const doc = TextDocument.create(
                     "fake-uri",
@@ -432,7 +463,7 @@ describe("Twine Parser", () => {
                     ":: StoryTitle\r\nSweet title!"
                 );
 
-                uut.parse(doc, callbacks, false);
+                uut.parse(doc, callbacks, uut.ParseLevel.PassageNames);
 
                 expect(callbacks.storyTitleRange?.start).to.eql(
                     Position.create(1, 0)
@@ -440,6 +471,20 @@ describe("Twine Parser", () => {
                 expect(callbacks.storyTitleRange?.end).to.eql(
                     Position.create(1, 12)
                 );
+            });
+
+            it("should not call back on StoryTitle if told to parse only StoryData passages", () => {
+                const callbacks = new MockCallbacks();
+                const doc = TextDocument.create(
+                    "fake-uri",
+                    "",
+                    0,
+                    ":: StoryTitle\r\nSweet title!"
+                );
+
+                uut.parse(doc, callbacks, uut.ParseLevel.StoryData);
+
+                expect(callbacks.storyTitleRange).to.be.undefined;
             });
 
             it("should call back on StoryData with an embedded passage", () => {
@@ -455,7 +500,7 @@ describe("Twine Parser", () => {
                         ":: NextPassage\nContent"
                 );
 
-                uut.parse(doc, callbacks, true);
+                uut.parse(doc, callbacks, uut.ParseLevel.Full);
                 const [result] = callbacks.embeddedDocuments;
 
                 expect(result.document.getText()).to.eql(
@@ -479,7 +524,7 @@ describe("Twine Parser", () => {
                         "}\n"
                 );
 
-                uut.parse(doc, callbacks, true);
+                uut.parse(doc, callbacks, uut.ParseLevel.Full);
 
                 expect(callbacks.storyDataRange?.start).to.eql(
                     Position.create(1, 0)
@@ -501,7 +546,7 @@ describe("Twine Parser", () => {
                         "}\r\n"
                 );
 
-                uut.parse(doc, callbacks, true);
+                uut.parse(doc, callbacks, uut.ParseLevel.Full);
 
                 expect(callbacks.storyDataRange?.start).to.eql(
                     Position.create(1, 0)
@@ -523,7 +568,7 @@ describe("Twine Parser", () => {
                     ":: StoryData\n" + JSON.stringify(storyData, null, "\t")
                 );
 
-                uut.parse(doc, callbacks, true);
+                uut.parse(doc, callbacks, uut.ParseLevel.Full);
 
                 expect(callbacks.storyData?.ifid).to.eql(
                     "62891577-8D8E-496F-B46C-9FF0194C0EAC"
@@ -542,7 +587,7 @@ describe("Twine Parser", () => {
                     ":: StoryData\n" + JSON.stringify(storyData, null, "\t")
                 );
 
-                uut.parse(doc, callbacks, true);
+                uut.parse(doc, callbacks, uut.ParseLevel.Full);
 
                 expect(callbacks.storyData?.storyFormat?.format).to.eql(
                     "MySuperSweetFormat"
@@ -562,7 +607,7 @@ describe("Twine Parser", () => {
                     ":: StoryData\n" + JSON.stringify(storyData, null, "\t")
                 );
 
-                uut.parse(doc, callbacks, true);
+                uut.parse(doc, callbacks, uut.ParseLevel.Full);
 
                 expect(
                     callbacks.storyData?.storyFormat?.formatVersion
@@ -582,7 +627,7 @@ describe("Twine Parser", () => {
                     ":: StoryData\n" + JSON.stringify(storyData, null, "\t")
                 );
 
-                uut.parse(doc, callbacks, true);
+                uut.parse(doc, callbacks, uut.ParseLevel.Full);
 
                 expect(callbacks.storyData?.storyFormat).to.be.undefined;
             });
@@ -599,7 +644,7 @@ describe("Twine Parser", () => {
                     ":: StoryData\n" + JSON.stringify(storyData, null, "\t")
                 );
 
-                uut.parse(doc, callbacks, true);
+                uut.parse(doc, callbacks, uut.ParseLevel.Full);
 
                 expect(callbacks.storyData?.start).to.eql("17.2");
             });
@@ -619,7 +664,7 @@ describe("Twine Parser", () => {
                     ":: StoryData\n" + JSON.stringify(storyData, null, "\t")
                 );
 
-                uut.parse(doc, callbacks, true);
+                uut.parse(doc, callbacks, uut.ParseLevel.Full);
 
                 expect(callbacks.storyData?.tagColors).to.eql({
                     "tag-1": "black",
@@ -636,12 +681,12 @@ describe("Twine Parser", () => {
                     ":: StoryData\n" + JSON.stringify(storyData, null, "\t")
                 );
 
-                uut.parse(doc, callbacks, true);
+                uut.parse(doc, callbacks, uut.ParseLevel.Full);
 
                 expect(callbacks.storyData?.zoom).to.eql(0.83);
             });
 
-            it("should call back on StoryData even if told not to parse passages", () => {
+            it("should call back on StoryData even if told to parse passage names only", () => {
                 const callbacks = new MockCallbacks();
                 const doc = TextDocument.create(
                     "fake-uri",
@@ -653,7 +698,29 @@ describe("Twine Parser", () => {
                         "}\n"
                 );
 
-                uut.parse(doc, callbacks, false);
+                uut.parse(doc, callbacks, uut.ParseLevel.PassageNames);
+
+                expect(callbacks.storyDataRange?.start).to.eql(
+                    Position.create(1, 0)
+                );
+                expect(callbacks.storyDataRange?.end).to.eql(
+                    Position.create(3, 1)
+                );
+            });
+
+            it("should call back on StoryData if told to parse StoryData only", () => {
+                const callbacks = new MockCallbacks();
+                const doc = TextDocument.create(
+                    "fake-uri",
+                    "",
+                    0,
+                    ":: StoryData\n" +
+                        "{\n" +
+                        '\t"ifid": "62891577-8D8E-496F-B46C-9FF0194C0EAC"\n' +
+                        "}\n"
+                );
+
+                uut.parse(doc, callbacks, uut.ParseLevel.StoryData);
 
                 expect(callbacks.storyDataRange?.start).to.eql(
                     Position.create(1, 0)
@@ -689,7 +756,9 @@ describe("Twine Parser", () => {
                     return undefined;
                 });
 
-                uut.parse(doc, callbacks, true, { format: "FakeFormat" });
+                uut.parse(doc, callbacks, uut.ParseLevel.Full, {
+                    format: "FakeFormat",
+                });
                 mockFunction.restore();
 
                 expect(receivedContents).to.eql([
@@ -727,7 +796,9 @@ describe("Twine Parser", () => {
                     return undefined;
                 });
 
-                uut.parse(doc, callbacks, true, { format: "FakeFormat" });
+                uut.parse(doc, callbacks, uut.ParseLevel.Full, {
+                    format: "FakeFormat",
+                });
                 mockFunction.restore();
 
                 expect(receivedContents).to.eql([
@@ -767,7 +838,9 @@ describe("Twine Parser", () => {
                     return undefined;
                 });
 
-                uut.parse(doc, callbacks, true, { format: "FakeFormat" });
+                uut.parse(doc, callbacks, uut.ParseLevel.Full, {
+                    format: "FakeFormat",
+                });
                 mockFunction.restore();
 
                 expect(receivedContents).to.eql(["Passage to be parsed"]);
@@ -1107,7 +1180,7 @@ describe("Twine Parser", () => {
                         ':: Passage 1 {"position":"600,400"} [tag]\nP1 contents'
                     );
 
-                    uut.parse(doc, callbacks, true);
+                    uut.parse(doc, callbacks, uut.ParseLevel.Full);
 
                     expect(callbacks.errors.length).to.equal(1);
                     expect(callbacks.errors[0].message).to.include(
@@ -1127,7 +1200,7 @@ describe("Twine Parser", () => {
                         ':: Passage 1 {"position":"600,400"} Bad!\nP1 contents'
                     );
 
-                    uut.parse(doc, callbacks, true);
+                    uut.parse(doc, callbacks, uut.ParseLevel.Full);
 
                     expect(callbacks.errors.length).to.equal(1);
                     expect(callbacks.errors[0].message).to.include(
@@ -1147,7 +1220,7 @@ describe("Twine Parser", () => {
                         ":: Passage 1 [tag1] Bad!\nP1 contents"
                     );
 
-                    uut.parse(doc, callbacks, true);
+                    uut.parse(doc, callbacks, uut.ParseLevel.Full);
 
                     expect(callbacks.errors.length).to.equal(1);
                     expect(callbacks.errors[0].message).to.include(
@@ -1167,7 +1240,7 @@ describe("Twine Parser", () => {
                         ":: Passage ] 1 } Bad!\nP1 contents"
                     );
 
-                    uut.parse(doc, callbacks, true);
+                    uut.parse(doc, callbacks, uut.ParseLevel.Full);
 
                     expect(callbacks.errors.length).to.equal(2);
                     expect(callbacks.errors[0].message).to.include(
@@ -1193,7 +1266,7 @@ describe("Twine Parser", () => {
                         ":: Passage 1 [nopers\nP1 contents"
                     );
 
-                    uut.parse(doc, callbacks, true);
+                    uut.parse(doc, callbacks, uut.ParseLevel.Full);
 
                     expect(callbacks.errors.length).to.equal(1);
                     expect(callbacks.errors[0].message).to.include(
