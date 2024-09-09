@@ -1,3 +1,5 @@
+import * as acornWalk from "acorn-walk";
+
 import { StoryFormatParsingState, capturePreTokenFor } from "..";
 import {
     ParsingState,
@@ -16,6 +18,8 @@ import {
     skipSpaces,
     extractToMatchingDelimiter,
     versionCompare,
+    createDiagnostic,
+    hasOwnProperty,
 } from "../../utilities";
 import {
     InsertTokens,
@@ -34,6 +38,7 @@ import {
     TwineSymbolKind,
 } from "../../project-index";
 import { EmbeddedDocument } from "../../embedded-languages";
+import { DiagnosticSeverity } from "vscode-languageserver";
 
 const varsSepPattern = /^--(\r?\n|$)/m;
 const conditionPattern = /((\((.+?)\)?)\s*)([^)]*)$/;
@@ -420,6 +425,15 @@ function extractJSObjectProperty(
     return undefined;
 }
 
+interface CustomInsertOrModifierNodes {
+    match: RegExp | undefined;
+    matchIndex: number | undefined;
+    name: string | undefined;
+    description: string | undefined;
+    syntax: string | undefined;
+    completions: string[] | undefined;
+}
+
 /**
  * Parse a custom insert or modifier defined in the Twine story.
  *
@@ -434,83 +448,75 @@ function parseCustomInsertOrModifierDefinition(
     symbolKind: ChapbookSymbolKind,
     state: ParsingState
 ): void {
-    // Extract the "match" property contents
-    const matchPropertyInfo = extractJSObjectProperty(
-        "match",
-        jsObjectType.regex,
-        contents,
-        contentsIndex,
-        state
-    );
-    if (matchPropertyInfo === undefined) return;
-    const match = matchPropertyInfo[2] as RegExp;
-    const matchIndex = matchPropertyInfo[1];
-
-    // If there's a "name" property, use that as the symbol's contents;
-    // otherwise, stick with the regex match contents.
-    let name: string;
-    const namePropertyInfo = extractJSObjectProperty(
-        "name",
-        jsObjectType.str,
-        contents,
-        contentsIndex,
-        state
-    );
-    if (namePropertyInfo !== undefined) {
-        name = namePropertyInfo[2] as string;
-    } else {
-        name = match.source;
+    const props: CustomInsertOrModifierNodes = {
+        match: undefined,
+        matchIndex: undefined,
+        name: undefined,
+        description: undefined,
+        syntax: undefined,
+        completions: undefined,
+    };
+    // Parse the contents as a JavaScript expression so we can extract the properties
+    try {
+        const ast = parseJSExpressionStrict(contents);
+        acornWalk.simple(ast, {
+            Property(node) {
+                if (node.key.type === "Identifier") {
+                    if (node.value.type === "Literal") {
+                        if (typeof node.value.value === "string") {
+                            // The simple string values
+                            if (node.key.name === "name") {
+                                props.name = node.value.value;
+                            } else if (node.key.name === "description") {
+                                props.description = node.value.value;
+                            } else if (node.key.name === "syntax") {
+                                props.syntax = node.value.value;
+                            } else if (node.key.name === "completions") {
+                                // Note that completions can be either a single string or an array of them (see below)
+                                props.completions = [node.value.value];
+                            }
+                        } else if (
+                            node.key.name === "match" &&
+                            node.value.value instanceof RegExp
+                        ) {
+                            // The regex value
+                            props.match = node.value.value;
+                            props.matchIndex = node.value.start;
     }
-
-    // If there's a "description" property, capture that as a
-    // description
-    let description: string | undefined;
-    const descriptionPropertyInfo = extractJSObjectProperty(
-        "description",
-        jsObjectType.str,
-        contents,
-        contentsIndex,
-        state
-    );
-    if (descriptionPropertyInfo !== undefined) {
-        description = descriptionPropertyInfo[2] as string;
+                    } else if (
+                        node.key.name === "completions" &&
+                        node.value.type === "ArrayExpression"
+                    ) {
+                        const completions: string[] = [];
+                        for (const elem of node.value.elements) {
+                            if (
+                                elem?.type === "Literal" &&
+                                typeof elem.value === "string"
+                            ) {
+                                completions.push(elem.value);
+                            }
+                        }
+                        props.completions = completions;
     }
+                }
+            },
+        });
 
-    // Similarly, if there's a "syntax" property, capture that
-    let syntax: string | undefined;
-    const syntaxPropertyInfo = extractJSObjectProperty(
-        "syntax",
-        jsObjectType.str,
-        contents,
-        contentsIndex,
-        state
-    );
-    if (syntaxPropertyInfo !== undefined) {
-        syntax = syntaxPropertyInfo[2] as string;
-    }
+        // We have to at least have a "match" property to be an insert or modifier
+        if (props.match === undefined || props.matchIndex === undefined) return;
 
-    // And finally the "completions" property
-    let completions: string[] | undefined;
-    const completionsPropertyInfo = extractJSObjectProperty(
-        "completions",
-        jsObjectType.strArray,
-        contents,
-        contentsIndex,
-        state
-    );
-    if (completionsPropertyInfo !== undefined) {
-        completions = completionsPropertyInfo[2] as string[];
-    }
+        // If there's no "name" property, use the match contents as the name
+        if (props.name === undefined) props.name = props.match.source;
 
     // Custom inserts must have a space in their match object
     if (
         symbolKind === OChapbookSymbolKind.CustomInsert &&
-        match.source.indexOf(" ") === -1 &&
-        match.source.indexOf("\\s") === -1
+            props.match.source.indexOf(" ") === -1 &&
+            props.match.source.indexOf("\\s") === -1
     ) {
         logErrorFor(
-            match.source,
-            matchIndex + 1 + contentsIndex, // + 1 to skip the leading "/"
+                props.match.source,
+                props.matchIndex + 1 + contentsIndex, // + 1 to skip the leading "/"
             "Custom inserts must have a space in their match",
             state
         );
@@ -518,19 +524,42 @@ function parseCustomInsertOrModifierDefinition(
 
     // Save the match as a Regex in the associated label
     const symbol: ChapbookSymbol = {
-        contents: name,
+            contents: props.name,
         location: createLocationFor(
-            match.source,
-            matchIndex + 1 + contentsIndex, // + 1 to skip the leading "/"
+                props.match.source,
+                props.matchIndex + 1 + contentsIndex, // + 1 to skip the leading "/"
             state
         ),
         kind: symbolKind,
-        match: match,
+            match: props.match,
     };
-    if (description !== undefined) symbol.description = description;
-    if (syntax !== undefined) symbol.syntax = syntax;
-    if (completions !== undefined) symbol.completions = completions;
+        if (props.description !== undefined)
+            symbol.description = props.description;
+        if (props.syntax !== undefined) symbol.syntax = props.syntax;
+        if (props.completions !== undefined)
+            symbol.completions = props.completions;
     state.callbacks.onSymbolDefinition(symbol);
+    } catch (err) {
+        if (err instanceof SyntaxError) {
+            const pos =
+                contentsIndex +
+                (hasOwnProperty(err, "pos") ? (err.pos as number) : 0);
+            const raisedAt =
+                contentsIndex +
+                (hasOwnProperty(err, "raisedAt")
+                    ? (err.raisedAt as number)
+                    : 0);
+            state.callbacks.onParseError(
+                createDiagnostic(
+                    DiagnosticSeverity.Error,
+                    state.textDocument,
+                    pos,
+                    raisedAt,
+                    err.message
+                )
+            );
+        }
+    }
 }
 
 /**
@@ -925,7 +954,7 @@ function parseInsert(
 
         // Parse the value as JavaScript
         createVariableReferences(
-            parseJSExpression(
+            tokenizeJSExpression(
                 invocation,
                 insertIndex + invocationIndex,
                 state,
@@ -989,7 +1018,7 @@ function parseInsert(
             insertIndex + argumentIndex
         );
         createVariableReferences(
-            parseJSExpression(
+            tokenizeJSExpression(
                 argument,
                 insertIndex + argumentIndex,
                 state,
@@ -1054,7 +1083,7 @@ function parseInsert(
 
                 // Parse the value as JavaScript
                 createVariableReferences(
-                    parseJSExpression(
+                    tokenizeJSExpression(
                         currentValue,
                         insertIndex + currentValueIndex,
                         state,
@@ -1090,7 +1119,7 @@ function parseTextSubsection(
     if (chapbookState.modifierKind === ModifierKind.Javascript) {
         findEngineExtensions(subsection, subsectionIndex, state);
         createVariableReferences(
-            parseJSExpression(
+            tokenizeJSExpression(
                 subsection,
                 subsectionIndex,
                 state,
@@ -1484,7 +1513,7 @@ function parseVarsSection(
                 );
             } else {
                 createVariableReferences(
-                    parseJSExpression(
+                    tokenizeJSExpression(
                         conditionMatch[3],
                         sectionIndex +
                             conditionMatchIndex +
@@ -1541,7 +1570,7 @@ function parseVarsSection(
 
         // Set tokens and variable references for the variable name
         createVariableReferences(
-            parseJSExpression(
+            tokenizeJSExpression(
                 name,
                 sectionIndex + nameIndex,
                 state,
@@ -1556,7 +1585,7 @@ function parseVarsSection(
             m.index + m[1].length + colonIndex + 1
         );
         createVariableReferences(
-            parseJSExpression(
+            tokenizeJSExpression(
                 value,
                 sectionIndex + valueIndex,
                 state,

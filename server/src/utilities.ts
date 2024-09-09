@@ -45,6 +45,25 @@ export function versionCompare(ver1: string, ver2: string): number {
     return 0;
 }
 
+/** TYPE NARROWING HELPERS **/
+
+/**
+ * Check if an object has a given property.
+ *
+ * This function convinces Typescript to narrow the type so we can
+ * get access to the property after checking for it.
+ *
+ * @param obj Object to check.
+ * @param prop Property to check for.
+ * @returns True if the object has the property.
+ */
+export function hasOwnProperty<T, K extends PropertyKey>(
+    obj: T,
+    prop: K
+): obj is T & Record<K, unknown> {
+    return Object.prototype.hasOwnProperty.call(obj, prop);
+}
+
 /** TEXT AND STRING MANIPULATION **/
 
 const lineEndPattern = /\r?\n|$/g;

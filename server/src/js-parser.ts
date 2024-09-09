@@ -30,12 +30,13 @@ let currentExpression: string = "";
 let unprocessedTokens: astUnprocessedToken[] = [];
 
 /**
- * Callback at each node in the AST.
+ * Callback at each node in the AST, capturing tokens of interest.
+ *
  * @param rawNode Current node.
  * @param state Parsing state.
  * @param ancestors List of ancestor nodes (including the current one).
  */
-function walkerCallback(
+function fullAncestorTokenizingCallback(
     rawNode: acorn.Node,
     _: unknown,
     ancestors: acorn.Node[]
@@ -132,7 +133,40 @@ function walkerCallback(
 }
 
 /**
- * Parse an expression as a JavaScript string.
+ * Parse a JavaScript expression.
+ *
+ * This performs strict parsing, and throws SyntaxError if the expression isn't valid JS.
+ *
+ * @param expression Expression to parse as JavaScript.
+ * @returns Top-most node in the AST.
+ */
+export function parseJSExpressionStrict(expression: string): acorn.Expression {
+    return acorn.parseExpressionAt(expression, 0, { ecmaVersion: 2020 });
+}
+
+/**
+ * Parse a JavaScript epxression.
+ *
+ * This performs strict parsing first, then loose parsing, and does not throw an exception.
+ *
+ * @param expression Expression to parse as JavaScript.
+ * @returns Top-most node in the AST, or undefined if the parsing failed.
+ */
+export function parseJSExpression(expression: string): acorn.Node | undefined {
+    try {
+        return parseJSExpressionStrict(expression);
+    } catch (err) {
+        if (err instanceof SyntaxError) {
+            return acornLoose.parse(expression, {
+                ecmaVersion: 2020,
+            });
+        }
+    }
+    return undefined;
+}
+
+/**
+ * Tokenize a JavaScript expression and find referenced variables in it.
  *
  * @param expression Expression to parse.
  * @param offset Offset into the document where the expression occurs.
@@ -140,32 +174,20 @@ function walkerCallback(
  * @param passageState Passage state object that will collect tokens.
  * @returns List of variable labels found in parsing.
  */
-export function parseJSExpression(
+export function tokenizeJSExpression(
     expression: string,
     offset: number,
     state: ParsingState,
     passageState: StoryFormatParsingState
 ): Label[] {
-    let ast: acorn.Node | undefined;
     const labels: Label[] = [];
 
-    try {
-        ast = acorn.parseExpressionAt(expression, 0, {
-            ecmaVersion: 2020,
-        });
-    } catch (err) {
-        if (err instanceof SyntaxError) {
-            ast = acornLoose.parse(expression, {
-                ecmaVersion: 2020,
-            });
-        }
-    }
-
+    const ast = parseJSExpression(expression);
     if (ast !== undefined) {
         currentExpression = expression;
         unprocessedTokens = [];
 
-        acornWalk.fullAncestor(ast, walkerCallback);
+        acornWalk.fullAncestor(ast, fullAncestorTokenizingCallback);
 
         for (const token of unprocessedTokens) {
             if (token.type === ETokenType.variable) {
