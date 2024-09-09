@@ -192,27 +192,51 @@ function getLanguageService(id: string): LanguageService | undefined {
 
 /* JSON */
 
+const jsonUriToFileRegex: Record<string, string[]> = {};
+const jsonUriToSchema: Record<string, string> = {};
+
 const storyDataSchemaUri = "file:///storydata.schema.json";
 const headerMetadataSchemaUri = "file:///headermetadata.schema.json";
 export const storyDataJSONUri = "file:///storydata.json";
 export const headerMetadataJSONUri = "file:///headermetadata.json";
+
 const jsonLanguageService = getJSONLanguageService({
     schemaRequestService: (uri) => {
-        if (uri === storyDataSchemaUri) {
-            return Promise.resolve(storyDataSchema);
-        }
-        if (uri === headerMetadataSchemaUri) {
-            return Promise.resolve(headerMetadataSchema);
-        }
+        const schema = jsonUriToSchema[uri];
+        if (schema !== undefined) return Promise.resolve(schema);
+
         return Promise.reject(`Unabled to load schema at ${uri}`);
     },
 });
-jsonLanguageService.configure({
-    schemas: [
-        { fileMatch: ["*/storydata.json"], uri: storyDataSchemaUri },
-        { fileMatch: ["*/headermetadata.json"], uri: headerMetadataSchemaUri },
-    ],
-});
+
+/**
+ * Add a JSON schema to the JSON language service.
+ *
+ * @param uri URI for the schema (typically `file:///<filename>.schema.json`)
+ * @param fileRegex Regex for files that should have the schema applied to them.
+ * @param schema Schema as a string.
+ */
+export function addJsonSchema(
+    uri: string,
+    fileRegex: string[],
+    schema: string
+) {
+    jsonUriToFileRegex[uri] = fileRegex;
+    jsonUriToSchema[uri] = schema;
+
+    jsonLanguageService.configure({
+        schemas: Object.entries(jsonUriToFileRegex).map(([uri, regexes]) => {
+            return { fileMatch: regexes, uri: uri };
+        }),
+    });
+}
+
+addJsonSchema(storyDataSchemaUri, ["*/storydata.json"], storyDataSchema);
+addJsonSchema(
+    headerMetadataSchemaUri,
+    ["*/headermetadata.json"],
+    headerMetadataSchema
+);
 
 /**
  * Parse a JSON document.
