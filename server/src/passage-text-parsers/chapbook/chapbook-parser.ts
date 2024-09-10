@@ -311,117 +311,114 @@ function parseCustomInsertArguments(
         argsNode,
         (rawNode: acorn.Node, _: unknown, ancestors: acorn.Node[]) => {
             const node = rawNode as acorn.AnyNode;
-            // We only care about object properties whose keys are literal
+            // We only care about object properties whose keys are plain identifiers
             if (node.type !== "Property" || node.key.type !== "Identifier")
                 return;
 
             // Handle the sub-properties of firstArgument, optionalProps, and requiredProps
             if (node.value.type === "Literal" && ancestors.length === 4) {
-                const parentProperty = ancestors[
+                const parentPropNode = ancestors[
                     ancestors.length - 3
                 ] as acorn.AnyNode;
                 if (
-                    parentProperty.type === "Property" &&
-                    parentProperty.key.type === "Identifier"
-                ) {
-                    let errorNode: acorn.Node | undefined;
-                    let errorMessage = ""; // Placeholder
-                    let errorSeverity: DiagnosticSeverity =
-                        DiagnosticSeverity.Warning;
+                    parentPropNode.type !== "Property" ||
+                    parentPropNode.key.type !== "Identifier"
+                )
+                    return;
 
-                    if (parentProperty.key.name === "firstArgument") {
-                        if (node.key.name === "required") {
-                            if (typeof node.value.value === "string") {
-                                const requirement =
-                                    ArgumentRequirement[
-                                        node.value
-                                            .value as keyof typeof ArgumentRequirement
-                                    ];
-                                if (requirement !== undefined) {
-                                    firstArgRequired = requirement;
-                                } else {
-                                    errorNode = node.value;
-                                    errorMessage =
-                                        "Must be one of " +
-                                        Object.keys(ArgumentRequirement)
-                                            .map((v) => "'" + v + "'")
-                                            .join(", ") +
-                                        ".";
-                                }
-                            } else if (typeof node.value.value === "boolean") {
-                                firstArgRequired = node.value.value
-                                    ? ArgumentRequirement.required
-                                    : ArgumentRequirement.optional;
-                            } else {
-                                errorNode = node.value;
-                                errorMessage = "Must be a string or a boolean";
-                            }
-                        } else if (node.key.name === "placeholder") {
-                            if (typeof node.value.value === "string") {
-                                args.firstArgument.placeholder =
-                                    node.value.value;
-                            } else {
-                                errorNode = node.value;
-                                errorMessage = "Must be a string";
-                            }
-                        } else {
-                            errorNode = node.key;
-                            errorMessage =
-                                "Unrecognized property; must be 'required' or 'placeholder'";
-                        }
-                    } else if (
-                        parentProperty.key.name === "optionalProps" ||
-                        parentProperty.key.name === "requiredProps"
-                    ) {
-                        const props =
-                            parentProperty.key.name === "optionalProps"
-                                ? args.optionalProps
-                                : args.requiredProps;
+                const parentProp = parentPropNode.key.name;
+
+                let errorNode: acorn.Node | undefined;
+                let errorMessage = ""; // Placeholder
+                let errorSeverity: DiagnosticSeverity =
+                    DiagnosticSeverity.Warning;
+
+                if (parentProp === "firstArgument") {
+                    if (node.key.name === "required") {
                         if (typeof node.value.value === "string") {
-                            props[node.key.name] = node.value.value;
-                        } else if (node.value.value === null) {
-                            props[node.key.name] = null;
+                            const requirement =
+                                ArgumentRequirement[
+                                    node.value
+                                        .value as keyof typeof ArgumentRequirement
+                                ];
+                            if (requirement !== undefined) {
+                                firstArgRequired = requirement;
+                            } else {
+                                errorNode = node.value;
+                                errorMessage =
+                                    "Must be one of " +
+                                    Object.keys(ArgumentRequirement)
+                                        .map((v) => "'" + v + "'")
+                                        .join(", ") +
+                                    ".";
+                            }
+                        } else if (typeof node.value.value === "boolean") {
+                            firstArgRequired = node.value.value
+                                ? ArgumentRequirement.required
+                                : ArgumentRequirement.optional;
+                        } else {
+                            errorNode = node.value;
+                            errorMessage = "Must be a string or a boolean";
+                        }
+                    } else if (node.key.name === "placeholder") {
+                        if (typeof node.value.value === "string") {
+                            args.firstArgument.placeholder = node.value.value;
                         } else {
                             errorNode = node.value;
                             errorMessage = "Must be a string";
                         }
                     } else {
-                        errorNode = parentProperty.key;
+                        errorNode = node.key;
                         errorMessage =
-                            "Properties other than 'firstArgument', 'requiredProps', or 'optionalProps' are ignored.";
+                            "Unrecognized property; must be 'required' or 'placeholder'";
                     }
-
-                    if (errorNode !== undefined) {
-                        state.callbacks.onParseError(
-                            createDiagnostic(
-                                errorSeverity,
-                                state.textDocument,
-                                contentsIndex + errorNode.start,
-                                contentsIndex + errorNode.end,
-                                errorMessage
-                            )
-                        );
+                } else if (
+                    parentProp === "optionalProps" ||
+                    parentProp === "requiredProps"
+                ) {
+                    const props =
+                        parentProp === "optionalProps"
+                            ? args.optionalProps
+                            : args.requiredProps;
+                    if (typeof node.value.value === "string") {
+                        props[node.key.name] = node.value.value;
+                    } else if (node.value.value === null) {
+                        props[node.key.name] = null;
+                    } else {
+                        errorNode = node.value;
+                        errorMessage = "Must be a string";
                     }
                 }
-            } else if (
-                node.key.type === "Identifier" &&
-                ancestors.length === 2
-            ) {
-                if (
-                    node.key.name !== "firstArgument" &&
-                    node.key.name !== "optionalProps" &&
-                    node.key.name !== "requiredProps"
-                ) {
+
+                if (errorNode !== undefined) {
                     state.callbacks.onParseError(
                         createDiagnostic(
-                            DiagnosticSeverity.Warning,
+                            errorSeverity,
                             state.textDocument,
-                            contentsIndex + node.key.start,
-                            contentsIndex + node.key.end,
-                            "Properties other than 'firstArgument', 'requiredProps', or 'optionalProps' are ignored."
+                            contentsIndex + errorNode.start,
+                            contentsIndex + errorNode.end,
+                            errorMessage
                         )
                     );
                 }
+            } else if (
+                node.key.type === "Identifier" &&
+                ancestors.length === 2 &&
+                !hasOwnProperty(args, node.key.name)
+            ) {
+                state.callbacks.onParseError(
+                    createDiagnostic(
+                        DiagnosticSeverity.Warning,
+                        state.textDocument,
+                        contentsIndex + node.key.start,
+                        contentsIndex + node.key.end,
+                        "Properties other than " +
+                            Object.keys(args)
+                                .map((v) => "'" + v + "'")
+                                .join(", ") +
+                            +" are ignored."
+                    )
+                );
             }
         }
     );
