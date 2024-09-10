@@ -1,3 +1,4 @@
+import * as acorn from "acorn";
 import * as acornWalk from "acorn-walk";
 
 import { StoryFormatParsingState, capturePreTokenFor } from "..";
@@ -28,9 +29,10 @@ import {
     ArgumentRequirement,
     ValueType,
     InsertProperty,
+    InsertArguments,
 } from "./inserts";
 import { all as allModifiers, ModifierInfo } from "./modifiers";
-import { parseJSExpression } from "../../js-parser";
+import { parseJSExpressionStrict, tokenizeJSExpression } from "../../js-parser";
 import {
     Label,
     ProjectIndex,
@@ -65,6 +67,10 @@ export interface ChapbookFunctionInfo {
      * List of completions corresponding to this function.
      */
     completions?: string[];
+    /**
+     * Arguments to the function (if it's an insert).
+     */
+    arguments?: InsertArguments;
     /**
      * Chapbook version when this function became available.
      */
@@ -275,163 +281,166 @@ function findClosingDelimeterIndex(
 }
 
 /**
- * Types of object properties we parse.
- */
-enum jsObjectType {
-    str,
-    regex,
-    strArray,
-}
-
-/**
- * Extract a Javascript object property.
+ * Parse information about a custom insert's arguments.
  *
- * The property should be in the form:
- *    - `propertyName: "string value"`
- *    - `propertyName: 'string value'`
- *    - `propertyName: /regex value/i` (flags optional)
- *    - `propertyName: ['value 1', 'value 2']`
- *
- * @param propertyName Name of the Javascript object property to extract.
- * @param expectedType Type of the property's value.
- * @param contents String containing the object properties.
- * @param contentsIndex Index in the document where the contents begin (zero-based).
+ * @param argsNode Node in the AST containing the custom insert argument object.
+ * @param contentsIndex Index where the contents containing the node begin.
  * @param state Parsing state.
- * @returns Tuple of the property value as raw text, its index into contents, and the parsed value, or undefined if not found.
+ * @returns Parsed insert arguments, or undefined if they can't be parsed.
  */
-function extractJSObjectProperty(
-    propertyName: string,
-    expectedType: jsObjectType,
-    contents: string,
+function parseCustomInsertArguments(
+    argsNode: acorn.Node,
     contentsIndex: number,
     state: ParsingState
-): [string, number, string | RegExp | string[]] | undefined {
-    const m = new RegExp(`(?<=({|,)\\s*)${propertyName}:\\s?`, "s").exec(
-        contents
+): InsertArguments | undefined {
+    let firstArgRequired: ArgumentRequirement | undefined;
+    const args: InsertArguments = {
+        firstArgument: {
+            // Required placeholder; we'll take the actual value from firstArgRequired variable
+            required: ArgumentRequirement.ignored,
+        },
+        requiredProps: {},
+        optionalProps: {},
+    };
+
+    acornWalk.fullAncestor(
+        argsNode,
+        (rawNode: acorn.Node, _: unknown, ancestors: acorn.Node[]) => {
+            const node = rawNode as acorn.AnyNode;
+            // We only care about object properties whose keys are literal
+            if (node.type !== "Property" || node.key.type !== "Identifier")
+                return;
+
+            // Handle the sub-properties of firstArgument, optionalProps, and requiredProps
+            if (node.value.type === "Literal" && ancestors.length === 4) {
+                const parentProperty = ancestors[
+                    ancestors.length - 3
+                ] as acorn.AnyNode;
+                if (
+                    parentProperty.type === "Property" &&
+                    parentProperty.key.type === "Identifier"
+                ) {
+                    let errorNode: acorn.Node | undefined;
+                    let errorMessage = ""; // Placeholder
+                    let errorSeverity: DiagnosticSeverity =
+                        DiagnosticSeverity.Warning;
+
+                    if (parentProperty.key.name === "firstArgument") {
+                        if (node.key.name === "required") {
+                            if (typeof node.value.value === "string") {
+                                const requirement =
+                                    ArgumentRequirement[
+                                        node.value
+                                            .value as keyof typeof ArgumentRequirement
+                                    ];
+                                if (requirement !== undefined) {
+                                    firstArgRequired = requirement;
+                                } else {
+                                    errorNode = node.value;
+                                    errorMessage =
+                                        "Must be one of " +
+                                        Object.keys(ArgumentRequirement)
+                                            .map((v) => "'" + v + "'")
+                                            .join(", ") +
+                                        ".";
+                                }
+                            } else if (typeof node.value.value === "boolean") {
+                                firstArgRequired = node.value.value
+                                    ? ArgumentRequirement.required
+                                    : ArgumentRequirement.optional;
+                            } else {
+                                errorNode = node.value;
+                                errorMessage = "Must be a string or a boolean";
+                            }
+                        } else if (node.key.name === "placeholder") {
+                            if (typeof node.value.value === "string") {
+                                args.firstArgument.placeholder =
+                                    node.value.value;
+                            } else {
+                                errorNode = node.value;
+                                errorMessage = "Must be a string";
+                            }
+                        } else {
+                            errorNode = node.key;
+                            errorMessage =
+                                "Unrecognized property; must be 'required' or 'placeholder'";
+                        }
+                    } else if (
+                        parentProperty.key.name === "optionalProps" ||
+                        parentProperty.key.name === "requiredProps"
+                    ) {
+                        const props =
+                            parentProperty.key.name === "optionalProps"
+                                ? args.optionalProps
+                                : args.requiredProps;
+                        if (typeof node.value.value === "string") {
+                            props[node.key.name] = node.value.value;
+                        } else if (node.value.value === null) {
+                            props[node.key.name] = null;
+                        } else {
+                            errorNode = node.value;
+                            errorMessage = "Must be a string";
+                        }
+                    } else {
+                        errorNode = parentProperty.key;
+                        errorMessage =
+                            "Properties other than 'firstArgument', 'requiredProps', or 'optionalProps' are ignored.";
+                    }
+
+                    if (errorNode !== undefined) {
+                        state.callbacks.onParseError(
+                            createDiagnostic(
+                                errorSeverity,
+                                state.textDocument,
+                                contentsIndex + errorNode.start,
+                                contentsIndex + errorNode.end,
+                                errorMessage
+                            )
+                        );
+                    }
+                }
+            } else if (
+                node.key.type === "Identifier" &&
+                ancestors.length === 2
+            ) {
+                if (
+                    node.key.name !== "firstArgument" &&
+                    node.key.name !== "optionalProps" &&
+                    node.key.name !== "requiredProps"
+                ) {
+                    state.callbacks.onParseError(
+                        createDiagnostic(
+                            DiagnosticSeverity.Warning,
+                            state.textDocument,
+                            contentsIndex + node.key.start,
+                            contentsIndex + node.key.end,
+                            "Properties other than 'firstArgument', 'requiredProps', or 'optionalProps' are ignored."
+                        )
+                    );
+                }
+            }
+        }
     );
-    if (m === null) return undefined;
 
-    let retVal: string | RegExp | string[] | undefined = undefined;
-
-    let fullPropertyValue = "";
-    const fullPropertyNdx = m.index + m[0].length;
-    const firstChar = contents[fullPropertyNdx];
-
-    // String
-    if (
-        expectedType === jsObjectType.str &&
-        (firstChar === "'" || firstChar === '"')
-    ) {
-        const propertyValue = extractToMatchingDelimiter(
-            contents,
-            firstChar,
-            firstChar,
-            fullPropertyNdx + 1
-        );
-        if (propertyValue !== undefined) {
-            fullPropertyValue = `${firstChar}${propertyValue}${firstChar}`;
-            retVal = propertyValue;
-        }
-    }
-
-    // Regex
-    else if (expectedType === jsObjectType.regex && firstChar === "/") {
-        const propertyValue = extractToMatchingDelimiter(
-            contents,
-            "/",
-            "/",
-            fullPropertyNdx + 1
-        );
-        if (propertyValue !== undefined) {
-            // Regexes can have flags; capture and verify those
-            const matchFlagsNdx =
-                fullPropertyNdx + 1 + propertyValue.length + 1; // + 1s to skip the "/"s
-            const endPattern = /,|}|\r?\n|$/g;
-            endPattern.lastIndex = matchFlagsNdx;
-            const endNdx = endPattern.exec(contents)?.index;
-            let matchFlags = contents.slice(matchFlagsNdx, endNdx).trimEnd();
-            if (/[^dgimsuvy]/.test(matchFlags)) {
-                logErrorFor(
-                    matchFlags,
-                    matchFlagsNdx + contentsIndex,
-                    "Regular expression flags can only be d, g, i, m, s, u, v, and y",
-                    state
-                );
-                matchFlags = "";
-            }
-            try {
-                retVal = new RegExp(propertyValue, matchFlags);
-                fullPropertyValue = `/${propertyValue}/${matchFlags}`;
-            } catch (e) {
-                logErrorFor(
-                    `/${propertyValue}/${matchFlags}`,
-                    fullPropertyNdx + contentsIndex,
-                    `Invalid regular expression: ${e}`,
-                    state
-                );
-            }
-        }
-    }
-
-    // String array
-    else if (expectedType === jsObjectType.strArray && firstChar === "[") {
-        const propertyValue = extractToMatchingDelimiter(
-            contents,
-            "[",
-            "]",
-            fullPropertyNdx + 1
-        );
-        if (propertyValue !== undefined) {
-            // Extract the purported strings one at a time -- we can't use
-            // JSON parsing since the strings may be single quoted
-            const arr: string[] = [];
-            let currentArrNdx = 0;
-            const commaBracketPattern = / *([,\]]|$)/g;
-            while (currentArrNdx < propertyValue.length) {
-                // Find the next string and save it
-                let m = /^ *(['"])/.exec(propertyValue.slice(currentArrNdx));
-                if (m === null) break;
-                const arrString = extractToMatchingDelimiter(
-                    propertyValue,
-                    m[1],
-                    m[1],
-                    currentArrNdx + m[0].length
-                );
-                if (arrString === undefined) break;
-                arr.push(arrString);
-
-                // See if we need to keep going
-                currentArrNdx += m[0].length + arrString.length + 1; // + 1 to skip closing quote mark
-                commaBracketPattern.lastIndex = currentArrNdx;
-                m = commaBracketPattern.exec(propertyValue);
-                currentArrNdx += m !== null ? m[0].length : 0;
-                // If it's not found, or we found the end of the string or a closing bracket, stop
-                if (m === null || m[1] === "" || m[1] === "]") break;
-            }
-            if (arr.length > 0) {
-                retVal = arr;
-                fullPropertyValue = contents.slice(
-                    fullPropertyNdx,
-                    currentArrNdx
-                );
-            }
-        }
-    }
-
-    if (retVal !== undefined) {
-        return [fullPropertyValue, fullPropertyNdx, retVal];
+    if (firstArgRequired !== undefined) {
+        args.firstArgument.required = firstArgRequired;
+        return args;
     }
 
     return undefined;
 }
 
-interface CustomInsertOrModifierNodes {
+/**
+ * Information about a custom insert or modifier.
+ */
+interface CustomInsertOrModifierInformation {
     match: RegExp | undefined;
     matchIndex: number | undefined;
     name: string | undefined;
     description: string | undefined;
     syntax: string | undefined;
     completions: string[] | undefined;
+    insertArguments: InsertArguments | undefined;
 }
 
 /**
@@ -448,32 +457,95 @@ function parseCustomInsertOrModifierDefinition(
     symbolKind: ChapbookSymbolKind,
     state: ParsingState
 ): void {
-    const props: CustomInsertOrModifierNodes = {
+    const props: CustomInsertOrModifierInformation = {
         match: undefined,
         matchIndex: undefined,
         name: undefined,
         description: undefined,
         syntax: undefined,
         completions: undefined,
+        insertArguments: undefined,
     };
-    // Parse the contents as a JavaScript expression so we can extract the properties
+
     try {
+        // Parse the contents as a JavaScript expression so we can extract the properties
         const ast = parseJSExpressionStrict(contents);
         acornWalk.simple(ast, {
             Property(node) {
                 if (node.key.type === "Identifier") {
-                    if (node.value.type === "Literal") {
+                    // Arguments for a custom insert
+                    if (node.key.name === "arguments") {
+                        if (symbolKind === OChapbookSymbolKind.CustomInsert) {
+                            props.insertArguments = parseCustomInsertArguments(
+                                node.value,
+                                contentsIndex,
+                                state
+                            );
+                        } else {
+                            state.callbacks.onParseError(
+                                createDiagnostic(
+                                    DiagnosticSeverity.Warning,
+                                    state.textDocument,
+                                    contentsIndex + node.key.start,
+                                    contentsIndex + node.key.end,
+                                    "Arguments can only be specified for custom inserts"
+                                )
+                            );
+                        }
+                    }
+                    // Completions can be a string or array of strings
+                    else if (node.key.name === "completions") {
+                        if (
+                            node.value.type === "Literal" &&
+                            typeof node.value.value === "string"
+                        ) {
+                            props.completions = [node.value.value];
+                        } else if (node.value.type === "ArrayExpression") {
+                            const completions: string[] = [];
+                            for (const elem of node.value.elements) {
+                                if (elem === null) continue;
+                                if (
+                                    elem.type === "Literal" &&
+                                    typeof elem.value === "string"
+                                ) {
+                                    completions.push(elem.value);
+                                } else {
+                                    state.callbacks.onParseError(
+                                        createDiagnostic(
+                                            DiagnosticSeverity.Warning,
+                                            state.textDocument,
+                                            contentsIndex + elem.start,
+                                            contentsIndex + elem.end,
+                                            "Completions must be a string or an array of strings"
+                                        )
+                                    );
+                                }
+                            }
+                            props.completions = completions;
+                        } else {
+                            state.callbacks.onParseError(
+                                createDiagnostic(
+                                    DiagnosticSeverity.Warning,
+                                    state.textDocument,
+                                    contentsIndex + node.value.start,
+                                    contentsIndex + node.value.end,
+                                    "Completions must be a string or an array of strings"
+                                )
+                            );
+                        }
+                    }
+                    // String and regex values
+                    else if (
+                        node.value.type === "Literal" &&
+                        hasOwnProperty(props, node.key.name)
+                    ) {
                         if (typeof node.value.value === "string") {
-                            // The simple string values
                             if (node.key.name === "name") {
                                 props.name = node.value.value;
                             } else if (node.key.name === "description") {
                                 props.description = node.value.value;
                             } else if (node.key.name === "syntax") {
                                 props.syntax = node.value.value;
-                            } else if (node.key.name === "completions") {
-                                // Note that completions can be either a single string or an array of them (see below)
-                                props.completions = [node.value.value];
                             }
                         } else if (
                             node.key.name === "match" &&
@@ -482,22 +554,26 @@ function parseCustomInsertOrModifierDefinition(
                             // The regex value
                             props.match = node.value.value;
                             props.matchIndex = node.value.start;
-    }
-                    } else if (
-                        node.key.name === "completions" &&
-                        node.value.type === "ArrayExpression"
-                    ) {
-                        const completions: string[] = [];
-                        for (const elem of node.value.elements) {
-                            if (
-                                elem?.type === "Literal" &&
-                                typeof elem.value === "string"
-                            ) {
-                                completions.push(elem.value);
-                            }
+                        } else {
+                            // We only mark an error for the `match` property, as
+                            // that's the only thing Chapbook actually cares about
+                            const isMatch = node.key.name === "match";
+                            state.callbacks.onParseError(
+                                createDiagnostic(
+                                    isMatch
+                                        ? DiagnosticSeverity.Error
+                                        : DiagnosticSeverity.Warning,
+                                    state.textDocument,
+                                    contentsIndex + node.value.start,
+                                    contentsIndex + node.value.end,
+                                    "Must be a " +
+                                        (isMatch
+                                            ? "regular expression"
+                                            : "string")
+                                )
+                            );
                         }
-                        props.completions = completions;
-    }
+                    }
                 }
             },
         });
@@ -508,37 +584,40 @@ function parseCustomInsertOrModifierDefinition(
         // If there's no "name" property, use the match contents as the name
         if (props.name === undefined) props.name = props.match.source;
 
-    // Custom inserts must have a space in their match object
-    if (
-        symbolKind === OChapbookSymbolKind.CustomInsert &&
+        // Custom inserts must have a space in their match object
+        if (
+            symbolKind === OChapbookSymbolKind.CustomInsert &&
             props.match.source.indexOf(" ") === -1 &&
             props.match.source.indexOf("\\s") === -1
-    ) {
-        logErrorFor(
+        ) {
+            logErrorFor(
                 props.match.source,
                 props.matchIndex + 1 + contentsIndex, // + 1 to skip the leading "/"
-            "Custom inserts must have a space in their match",
-            state
-        );
-    }
+                "Custom inserts must have a space in their match",
+                state
+            );
+        }
 
-    // Save the match as a Regex in the associated label
-    const symbol: ChapbookSymbol = {
+        // Save the match as a Regex in the associated label
+        const symbol: ChapbookSymbol = {
             contents: props.name,
-        location: createLocationFor(
+            location: createLocationFor(
                 props.match.source,
                 props.matchIndex + 1 + contentsIndex, // + 1 to skip the leading "/"
-            state
-        ),
-        kind: symbolKind,
+                state
+            ),
+            kind: symbolKind,
             match: props.match,
-    };
+        };
         if (props.description !== undefined)
             symbol.description = props.description;
         if (props.syntax !== undefined) symbol.syntax = props.syntax;
         if (props.completions !== undefined)
             symbol.completions = props.completions;
-    state.callbacks.onSymbolDefinition(symbol);
+        if (props.insertArguments !== undefined)
+            symbol.arguments = props.insertArguments;
+
+        state.callbacks.onSymbolDefinition(symbol);
     } catch (err) {
         if (err instanceof SyntaxError) {
             const pos =
@@ -603,8 +682,9 @@ function parseEngineExtension(
             .map((n) => parseInt(n, 10));
 
         const end = Math.min(minVersion.length, curVersion.length);
+        let curIsGreater = false;
         for (let ndx = 0; ndx < end; ++ndx) {
-            if (curVersion[ndx] > minVersion[ndx]) {
+            if (curVersion[ndx] < minVersion[ndx]) {
                 logWarningFor(
                     version,
                     contentsIndex + 1,
@@ -612,10 +692,13 @@ function parseEngineExtension(
                     state
                 );
                 return;
-            } else if (curVersion[ndx] < minVersion[ndx]) break;
+            } else if (curVersion[ndx] > minVersion[ndx]) {
+                curIsGreater = true;
+                break;
+            }
         }
 
-        if (minVersion.length < curVersion.length) {
+        if (!curIsGreater && curVersion.length < minVersion.length) {
             logWarningFor(
                 version,
                 contentsIndex + 1,

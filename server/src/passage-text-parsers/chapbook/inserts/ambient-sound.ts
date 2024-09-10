@@ -4,7 +4,7 @@ export const ambientSound: InsertInfo = {
     name: "ambient sound",
     syntax: "{ambient sound: 'sound name', _volume: 0.5_}",
     description:
-        "Begins playing a previously-defined ambient sound. `volume` can be omitted; by default, the ambient sound is played at fulul volume.",
+        "Begins playing a previously-defined ambient sound. `volume` can be omitted; by default, the ambient sound is played at full volume.",
     match: /^ambient\s+sound/i,
     arguments: {
         firstArgument: {

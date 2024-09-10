@@ -2162,6 +2162,332 @@ describe("Chapbook Parsing", () => {
                 });
             });
 
+            it("should set a custom insert's symbol definition's first argument as required if boolean true", () => {
+                const header = ":: Passage\n";
+                const passage =
+                    "[javascript]\nengine.extend('2.0.1', () => {\nengine.template.inserts.add(\n{match: /hi\\s+there/, arguments: {\nfirstArgument: { required: true }\n}}\n);\n});\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    uri: "fake-uri",
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                state.storyFormat = {
+                    format: "Chapbook",
+                    formatVersion: "2.0.1",
+                };
+                const parser = uut.getChapbookParser(undefined);
+
+                parser?.parsePassageText(passage, header.length, state);
+                const result = callbacks.definitions[0] as ChapbookSymbol;
+
+                expect(callbacks.definitions.length).to.equal(1);
+                expect(ChapbookSymbol.is(result)).to.be.true;
+                expect(result).to.eql({
+                    contents: "hi\\s+there",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(4, 9, 4, 19)
+                    ),
+                    kind: OChapbookSymbolKind.CustomInsert,
+                    match: /hi\s+there/,
+                    arguments: {
+                        firstArgument: {
+                            required:
+                                insertsModule.ArgumentRequirement.required,
+                        },
+                        requiredProps: {},
+                        optionalProps: {},
+                    },
+                });
+            });
+
+            it("should set a custom insert's symbol definition's first argument as optional if boolean false", () => {
+                const header = ":: Passage\n";
+                const passage =
+                    "[javascript]\nengine.extend('2.0.1', () => {\nengine.template.inserts.add(\n{match: /hi\\s+there/, arguments: {\nfirstArgument: { required: false }\n}}\n);\n});\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    uri: "fake-uri",
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                state.storyFormat = {
+                    format: "Chapbook",
+                    formatVersion: "2.0.1",
+                };
+                const parser = uut.getChapbookParser(undefined);
+
+                parser?.parsePassageText(passage, header.length, state);
+                const result = callbacks.definitions[0] as ChapbookSymbol;
+
+                expect(callbacks.definitions.length).to.equal(1);
+                expect(ChapbookSymbol.is(result)).to.be.true;
+                expect(result).to.eql({
+                    contents: "hi\\s+there",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(4, 9, 4, 19)
+                    ),
+                    kind: OChapbookSymbolKind.CustomInsert,
+                    match: /hi\s+there/,
+                    arguments: {
+                        firstArgument: {
+                            required:
+                                insertsModule.ArgumentRequirement.optional,
+                        },
+                        requiredProps: {},
+                        optionalProps: {},
+                    },
+                });
+            });
+
+            it("should set a custom insert's symbol definition's first argument as required if set to 'required'", () => {
+                const header = ":: Passage\n";
+                const passage =
+                    "[javascript]\nengine.extend('2.0.1', () => {\nengine.template.inserts.add(\n{match: /hi\\s+there/, arguments: {\nfirstArgument: { required: 'required' }\n}}\n);\n});\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    uri: "fake-uri",
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                state.storyFormat = {
+                    format: "Chapbook",
+                    formatVersion: "2.0.1",
+                };
+                const parser = uut.getChapbookParser(undefined);
+
+                parser?.parsePassageText(passage, header.length, state);
+                const result = callbacks.definitions[0] as ChapbookSymbol;
+
+                expect(callbacks.definitions.length).to.equal(1);
+                expect(ChapbookSymbol.is(result)).to.be.true;
+                expect(result).to.eql({
+                    contents: "hi\\s+there",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(4, 9, 4, 19)
+                    ),
+                    kind: OChapbookSymbolKind.CustomInsert,
+                    match: /hi\s+there/,
+                    arguments: {
+                        firstArgument: {
+                            required:
+                                insertsModule.ArgumentRequirement.required,
+                        },
+                        requiredProps: {},
+                        optionalProps: {},
+                    },
+                });
+            });
+
+            it("should set a custom insert's symbol definition's first argument as optional if set to 'optional'", () => {
+                const header = ":: Passage\n";
+                const passage =
+                    "[javascript]\nengine.extend('2.0.1', () => {\nengine.template.inserts.add(\n{match: /hi\\s+there/, arguments: {\nfirstArgument: { required: 'optional' }\n}}\n);\n});\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    uri: "fake-uri",
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                state.storyFormat = {
+                    format: "Chapbook",
+                    formatVersion: "2.0.1",
+                };
+                const parser = uut.getChapbookParser(undefined);
+
+                parser?.parsePassageText(passage, header.length, state);
+                const result = callbacks.definitions[0] as ChapbookSymbol;
+
+                expect(callbacks.definitions.length).to.equal(1);
+                expect(ChapbookSymbol.is(result)).to.be.true;
+                expect(result).to.eql({
+                    contents: "hi\\s+there",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(4, 9, 4, 19)
+                    ),
+                    kind: OChapbookSymbolKind.CustomInsert,
+                    match: /hi\s+there/,
+                    arguments: {
+                        firstArgument: {
+                            required:
+                                insertsModule.ArgumentRequirement.optional,
+                        },
+                        requiredProps: {},
+                        optionalProps: {},
+                    },
+                });
+            });
+
+            it("should set a custom insert's symbol definition's first argument as ignored if set to 'ignored'", () => {
+                const header = ":: Passage\n";
+                const passage =
+                    "[javascript]\nengine.extend('2.0.1', () => {\nengine.template.inserts.add(\n{match: /hi\\s+there/, arguments: {\nfirstArgument: { required: 'ignored' }\n}}\n);\n});\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    uri: "fake-uri",
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                state.storyFormat = {
+                    format: "Chapbook",
+                    formatVersion: "2.0.1",
+                };
+                const parser = uut.getChapbookParser(undefined);
+
+                parser?.parsePassageText(passage, header.length, state);
+                const result = callbacks.definitions[0] as ChapbookSymbol;
+
+                expect(callbacks.definitions.length).to.equal(1);
+                expect(ChapbookSymbol.is(result)).to.be.true;
+                expect(result).to.eql({
+                    contents: "hi\\s+there",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(4, 9, 4, 19)
+                    ),
+                    kind: OChapbookSymbolKind.CustomInsert,
+                    match: /hi\s+there/,
+                    arguments: {
+                        firstArgument: {
+                            required: insertsModule.ArgumentRequirement.ignored,
+                        },
+                        requiredProps: {},
+                        optionalProps: {},
+                    },
+                });
+            });
+
+            it("should set a custom insert's symbol definition's first argument's placeholder if set in the file", () => {
+                const header = ":: Passage\n";
+                const passage =
+                    "[javascript]\nengine.extend('2.0.1', () => {\nengine.template.inserts.add(\n{match: /hi\\s+there/, arguments: {\nfirstArgument: { required: true, placeholder: \"'arg'\" }\n}}\n);\n});\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    uri: "fake-uri",
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                state.storyFormat = {
+                    format: "Chapbook",
+                    formatVersion: "2.0.1",
+                };
+                const parser = uut.getChapbookParser(undefined);
+
+                parser?.parsePassageText(passage, header.length, state);
+                const result = callbacks.definitions[0] as ChapbookSymbol;
+
+                expect(callbacks.definitions.length).to.equal(1);
+                expect(ChapbookSymbol.is(result)).to.be.true;
+                expect(result).to.eql({
+                    contents: "hi\\s+there",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(4, 9, 4, 19)
+                    ),
+                    kind: OChapbookSymbolKind.CustomInsert,
+                    match: /hi\s+there/,
+                    arguments: {
+                        firstArgument: {
+                            required:
+                                insertsModule.ArgumentRequirement.required,
+                            placeholder: "'arg'",
+                        },
+                        requiredProps: {},
+                        optionalProps: {},
+                    },
+                });
+            });
+
+            it("should set a custom insert's symbol definition's required properties and placeholders if set in the file", () => {
+                const header = ":: Passage\n";
+                const passage =
+                    "[javascript]\nengine.extend('2.0.1', () => {\nengine.template.inserts.add(\n{match: /hi\\s+there/, arguments: {\nfirstArgument: { required: true },\nrequiredProps: {\nfoo: null, bar: \"'bar'\"\n}\n}}\n);\n});\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    uri: "fake-uri",
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                state.storyFormat = {
+                    format: "Chapbook",
+                    formatVersion: "2.0.1",
+                };
+                const parser = uut.getChapbookParser(undefined);
+
+                parser?.parsePassageText(passage, header.length, state);
+                const result = callbacks.definitions[0] as ChapbookSymbol;
+
+                expect(callbacks.definitions.length).to.equal(1);
+                expect(ChapbookSymbol.is(result)).to.be.true;
+                expect(result).to.eql({
+                    contents: "hi\\s+there",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(4, 9, 4, 19)
+                    ),
+                    kind: OChapbookSymbolKind.CustomInsert,
+                    match: /hi\s+there/,
+                    arguments: {
+                        firstArgument: {
+                            required:
+                                insertsModule.ArgumentRequirement.required,
+                        },
+                        requiredProps: {
+                            foo: null,
+                            bar: "'bar'",
+                        },
+                        optionalProps: {},
+                    },
+                });
+            });
+
+            it("should set a custom insert's symbol definition's optional properties and placeholders if set in the file", () => {
+                const header = ":: Passage\n";
+                const passage =
+                    "[javascript]\nengine.extend('2.0.1', () => {\nengine.template.inserts.add(\n{match: /hi\\s+there/, arguments: {\nfirstArgument: { required: true },\noptionalProps: {\nfoo: null, bar: \"'bar'\"\n}\n}}\n);\n});\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    uri: "fake-uri",
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                state.storyFormat = {
+                    format: "Chapbook",
+                    formatVersion: "2.0.1",
+                };
+                const parser = uut.getChapbookParser(undefined);
+
+                parser?.parsePassageText(passage, header.length, state);
+                const result = callbacks.definitions[0] as ChapbookSymbol;
+
+                expect(callbacks.definitions.length).to.equal(1);
+                expect(ChapbookSymbol.is(result)).to.be.true;
+                expect(result).to.eql({
+                    contents: "hi\\s+there",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(4, 9, 4, 19)
+                    ),
+                    kind: OChapbookSymbolKind.CustomInsert,
+                    match: /hi\s+there/,
+                    arguments: {
+                        firstArgument: {
+                            required:
+                                insertsModule.ArgumentRequirement.required,
+                        },
+                        requiredProps: {},
+                        optionalProps: {
+                            foo: null,
+                            bar: "'bar'",
+                        },
+                    },
+                });
+            });
+
             it("should capture symbol definitions for multiple custom inserts in a passage", () => {
                 const header = ":: Passage\n";
                 const passage =
@@ -3199,6 +3525,33 @@ describe("Chapbook Parsing", () => {
                     expect(result.range).to.eql(Range.create(3, 0, 3, 20));
                 });
 
+                it("should error on a custom insert with a non-regex match object", () => {
+                    const header = ":: Passage\n";
+                    const passage =
+                        "[javascript]\nengine.extend('2.0.1', () => {\nengine.template.inserts.add(\n{match: 1}\n);\n});\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        uri: "fake-uri",
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    state.storyFormat = {
+                        format: "Chapbook",
+                        formatVersion: "2.0.1",
+                    };
+                    const parser = uut.getChapbookParser(undefined);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    const [result] = callbacks.errors;
+
+                    expect(callbacks.errors.length).to.equal(1);
+                    expect(result.severity).to.eql(DiagnosticSeverity.Error);
+                    expect(result.message).to.include(
+                        "Must be a regular expression"
+                    );
+                    expect(result.range).to.eql(Range.create(4, 8, 4, 9));
+                });
+
                 it("should error on a custom insert with no space in its match object", () => {
                     const header = ":: Passage\n";
                     const passage =
@@ -3247,10 +3600,10 @@ describe("Chapbook Parsing", () => {
                     expect(callbacks.errors).to.be.empty;
                 });
 
-                it("should error on a custom insert whose match object has incorrect regex flags", () => {
+                it("should warn on a custom insert with a non-string name", () => {
                     const header = ":: Passage\n";
                     const passage =
-                        "[javascript]\nengine.extend('2.0.1', () => {\nengine.template.inserts.add(\n{match: /hi there/q}\n);\n});\n";
+                        "[javascript]\nengine.extend('2.0.1', () => {\nengine.template.inserts.add(\n{match: /hi\\s+there/, \nname: 1}\n);\n});\n";
                     const callbacks = new MockCallbacks();
                     const state = buildParsingState({
                         uri: "fake-uri",
@@ -3267,17 +3620,15 @@ describe("Chapbook Parsing", () => {
                     const [result] = callbacks.errors;
 
                     expect(callbacks.errors.length).to.equal(1);
-                    expect(result.severity).to.eql(DiagnosticSeverity.Error);
-                    expect(result.message).to.include(
-                        "Regular expression flags can only be d, g, i, m, s, u, v, and y"
-                    );
-                    expect(result.range).to.eql(Range.create(4, 18, 4, 19));
+                    expect(result.severity).to.eql(DiagnosticSeverity.Warning);
+                    expect(result.message).to.include("Must be a string");
+                    expect(result.range).to.eql(Range.create(5, 6, 5, 7));
                 });
 
-                it("should error on a custom insert whose match object has a borked regex", () => {
+                it("should warn on a custom insert with a non-string description", () => {
                     const header = ":: Passage\n";
                     const passage =
-                        "[javascript]\nengine.extend('2.0.1', () => {\nengine.template.inserts.add(\n{match: /hi \\-/u}\n);\n});\n";
+                        "[javascript]\nengine.extend('2.0.1', () => {\nengine.template.inserts.add(\n{match: /hi\\s+there/, \ndescription: 1}\n);\n});\n";
                     const callbacks = new MockCallbacks();
                     const state = buildParsingState({
                         uri: "fake-uri",
@@ -3294,11 +3645,88 @@ describe("Chapbook Parsing", () => {
                     const [result] = callbacks.errors;
 
                     expect(callbacks.errors.length).to.equal(1);
-                    expect(result.severity).to.eql(DiagnosticSeverity.Error);
+                    expect(result.severity).to.eql(DiagnosticSeverity.Warning);
+                    expect(result.message).to.include("Must be a string");
+                    expect(result.range).to.eql(Range.create(5, 13, 5, 14));
+                });
+
+                it("should warn on a custom insert with a non-string syntax", () => {
+                    const header = ":: Passage\n";
+                    const passage =
+                        "[javascript]\nengine.extend('2.0.1', () => {\nengine.template.inserts.add(\n{match: /hi\\s+there/, \nsyntax: 1}\n);\n});\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        uri: "fake-uri",
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    state.storyFormat = {
+                        format: "Chapbook",
+                        formatVersion: "2.0.1",
+                    };
+                    const parser = uut.getChapbookParser(undefined);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    const [result] = callbacks.errors;
+
+                    expect(callbacks.errors.length).to.equal(1);
+                    expect(result.severity).to.eql(DiagnosticSeverity.Warning);
+                    expect(result.message).to.include("Must be a string");
+                    expect(result.range).to.eql(Range.create(5, 8, 5, 9));
+                });
+
+                it("should warn on a custom insert with non-string completions", () => {
+                    const header = ":: Passage\n";
+                    const passage =
+                        "[javascript]\nengine.extend('2.0.1', () => {\nengine.template.inserts.add(\n{match: /hi\\s+there/, completions: 1}\n);\n});\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        uri: "fake-uri",
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    state.storyFormat = {
+                        format: "Chapbook",
+                        formatVersion: "2.0.1",
+                    };
+                    const parser = uut.getChapbookParser(undefined);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    const [result] = callbacks.errors;
+
+                    expect(callbacks.errors.length).to.equal(1);
+                    expect(result.severity).to.eql(DiagnosticSeverity.Warning);
                     expect(result.message).to.include(
-                        "Invalid regular expression"
+                        "Completions must be a string or an array of strings"
                     );
-                    expect(result.range).to.eql(Range.create(4, 8, 4, 16));
+                    expect(result.range).to.eql(Range.create(4, 35, 4, 36));
+                });
+
+                it("should warn on a custom insert with non-strings in its array of completions", () => {
+                    const header = ":: Passage\n";
+                    const passage =
+                        "[javascript]\nengine.extend('2.0.1', () => {\nengine.template.inserts.add(\n{match: /hi\\s+there/, completions: [1, 'two']}\n);\n});\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        uri: "fake-uri",
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    state.storyFormat = {
+                        format: "Chapbook",
+                        formatVersion: "2.0.1",
+                    };
+                    const parser = uut.getChapbookParser(undefined);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    const [result] = callbacks.errors;
+
+                    expect(callbacks.errors.length).to.equal(1);
+                    expect(result.severity).to.eql(DiagnosticSeverity.Warning);
+                    expect(result.message).to.include(
+                        "Completions must be a string or an array of strings"
+                    );
+                    expect(result.range).to.eql(Range.create(4, 36, 4, 37));
                 });
             });
         });
