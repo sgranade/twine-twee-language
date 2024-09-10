@@ -18,6 +18,7 @@ import {
 import { all as allModifiers } from "./modifiers";
 import { removeAndCountPadding } from "../../utilities";
 import {
+    ChapbookFunctionInfo,
     divideChapbookPassage,
     getChapbookDefinitions,
     OChapbookSymbolKind,
@@ -267,7 +268,12 @@ function generateInsertCompletions(
 ): CompletionList | null {
     let i: number;
     const text = document.getText();
-    const inserts = allInserts();
+    // Merge built-in inserts and custom inserts into one list, since they share
+    // the ChapbookFunctionInfo interface
+    const inserts: ChapbookFunctionInfo[] = [
+        ...allInserts(),
+        ...getChapbookDefinitions(OChapbookSymbolKind.CustomInsert, index),
+    ];
 
     insertStopChar.lastIndex = insertContentStart;
     let insertNameEnd = insertStopChar.test(text)
@@ -297,7 +303,7 @@ function generateInsertCompletions(
                 let textEditText = label;
                 if (
                     colonMissing &&
-                    insert.arguments.firstArgument.required ===
+                    insert.arguments?.firstArgument.required ===
                         ArgumentRequirement.required
                 ) {
                     const placeholder =
@@ -309,7 +315,7 @@ function generateInsertCompletions(
                 // If there's no comma, put in placeholders for any required properties
                 if (commaMissing) {
                     for (const [name, info] of Object.entries(
-                        insert.arguments.requiredProps
+                        insert.arguments?.requiredProps || {}
                     )) {
                         textEditText += `, ${name}: ${insertPropertyPlaceholder(info, placeholderCount++)}`;
                     }
@@ -382,10 +388,12 @@ function generateInsertCompletions(
         if (text[insertSectionEnd] === ":") insertSectionEnd++;
 
         const propCompletions = insertPropertiesToCompletionItems(
-            insert.arguments.requiredProps
+            insert.arguments?.requiredProps || {}
         );
         propCompletions.push(
-            ...insertPropertiesToCompletionItems(insert.arguments.optionalProps)
+            ...insertPropertiesToCompletionItems(
+                insert.arguments?.optionalProps || {}
+            )
         );
         const completionList = CompletionList.create(propCompletions);
         completionList.itemDefaults = {
@@ -412,8 +420,8 @@ function generateInsertCompletions(
 
         // Create completions if the first argument's type supports it
         if (
-            insert.arguments.firstArgument.type === ValueType.passage ||
-            insert.arguments.firstArgument.type === ValueType.urlOrPassage
+            insert.arguments?.firstArgument.type === ValueType.passage ||
+            insert.arguments?.firstArgument.type === ValueType.urlOrPassage
         ) {
             return generatePassageCompletions(
                 document,
@@ -439,8 +447,8 @@ function generateInsertCompletions(
                 .slice(propertyNameStart, propertyNameEnd)
                 .trim();
             const propInfo =
-                insert.arguments.requiredProps[propName] ||
-                insert.arguments.optionalProps[propName];
+                insert.arguments?.requiredProps[propName] ||
+                insert.arguments?.optionalProps[propName];
 
             // Create completions if the property's value type supports it
             if (

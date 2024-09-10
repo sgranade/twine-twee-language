@@ -218,7 +218,7 @@ describe("Chapbook Completions", () => {
     });
 
     describe("Inserts", () => {
-        it("should suggest insert names after a {", () => {
+        it("should suggest built-in insert names after a {", () => {
             const doc = TextDocument.create(
                 "fake-uri",
                 "",
@@ -376,7 +376,7 @@ describe("Chapbook Completions", () => {
             expect(results?.items).to.be.empty;
         });
 
-        it("should suggest insert names after a { and only replace the word the position is in", () => {
+        it("should suggest built-in insert names after a { and only replace the word the position is in", () => {
             const doc = TextDocument.create(
                 "fake-uri",
                 "",
@@ -421,7 +421,7 @@ describe("Chapbook Completions", () => {
             );
         });
 
-        it("should suggest insert names after a { and before a ,", () => {
+        it("should suggest built-in insert names after a { and before a ,", () => {
             const doc = TextDocument.create(
                 "fake-uri",
                 "",
@@ -466,7 +466,7 @@ describe("Chapbook Completions", () => {
             );
         });
 
-        it("should suggest insert names after a { and before a :", () => {
+        it("should suggest built-in insert names after a { and before a :", () => {
             const doc = TextDocument.create(
                 "fake-uri",
                 "",
@@ -512,7 +512,49 @@ describe("Chapbook Completions", () => {
             );
         });
 
-        it("should add a colon for an insert with a required first argument after a { with no colon of its own", () => {
+        it("should suggest custom insert names after a { and before a :", () => {
+            const doc = TextDocument.create(
+                "fake-uri",
+                "",
+                0,
+                ":: Passage\nLet's try {te: 'first arg'"
+            );
+            const position = Position.create(1, 12);
+            const index = new Index();
+            index.setPassages("fake-uri", [
+                buildPassage({
+                    label: "passage",
+                    scope: Range.create(0, 0, 2, 0),
+                }),
+            ]);
+            index.setDefinitions("source-uri", [
+                {
+                    contents: "custom insert",
+                    location: Location.create(
+                        "source-uri",
+                        Range.create(5, 6, 7, 8)
+                    ),
+                    kind: OChapbookSymbolKind.CustomInsert,
+                    match: /custom\s+insert/i,
+                } as ChapbookSymbol,
+            ]);
+            const mockFunction = ImportMock.mockFunction(
+                insertsModule,
+                "all"
+            ).returns([]);
+            const parser = uut.getChapbookParser(undefined);
+
+            const results = parser?.generateCompletions(doc, position, index);
+            mockFunction.restore();
+
+            expect(results?.items[0].label).to.eql("custom insert");
+            expect(results?.items[0].textEditText).to.eql("custom insert");
+            expect(results?.itemDefaults?.editRange).to.eql(
+                Range.create(1, 11, 1, 13)
+            );
+        });
+
+        it("should add a colon for a built-in insert with a required first argument after a { with no colon of its own", () => {
             const doc = TextDocument.create(
                 "fake-uri",
                 "",
@@ -559,7 +601,57 @@ describe("Chapbook Completions", () => {
             );
         });
 
-        it("should add a colon for an insert with a required first argument after a { with a comma", () => {
+        it("should add a colon for a custom insert with a required first argument after a { with no colon of its own", () => {
+            const doc = TextDocument.create(
+                "fake-uri",
+                "",
+                0,
+                ":: Passage\nLet's try {te"
+            );
+            const position = Position.create(1, 12);
+            const index = new Index();
+            index.setPassages("fake-uri", [
+                buildPassage({
+                    label: "passage",
+                    scope: Range.create(0, 0, 2, 0),
+                }),
+            ]);
+            index.setDefinitions("source-uri", [
+                {
+                    contents: "custom insert",
+                    location: Location.create(
+                        "source-uri",
+                        Range.create(5, 6, 7, 8)
+                    ),
+                    kind: OChapbookSymbolKind.CustomInsert,
+                    match: /custom\s+insert/i,
+                    completions: ["custom insert"],
+                    arguments: {
+                        firstArgument: {
+                            required:
+                                insertsModule.ArgumentRequirement.required,
+                        },
+                    },
+                } as ChapbookSymbol,
+            ]);
+            const mockFunction = ImportMock.mockFunction(
+                insertsModule,
+                "all"
+            ).returns([]);
+            const parser = uut.getChapbookParser(undefined);
+
+            const results = parser?.generateCompletions(doc, position, index);
+            mockFunction.restore();
+
+            expect(results?.items[0].textEditText).to.eql(
+                "custom insert: '${1:arg}'"
+            );
+            expect(results?.itemDefaults?.editRange).to.eql(
+                Range.create(1, 11, 1, 13)
+            );
+        });
+
+        it("should add a colon for a built-in insert with a required first argument after a { with a comma", () => {
             const doc = TextDocument.create(
                 "fake-uri",
                 "",
@@ -606,7 +698,57 @@ describe("Chapbook Completions", () => {
             );
         });
 
-        it("should include an insert's required first argument's placeholder after a { with a comma", () => {
+        it("should add a colon for a custom insert with a required first argument after a { with a comma", () => {
+            const doc = TextDocument.create(
+                "fake-uri",
+                "",
+                0,
+                ":: Passage\nLet's try {te ,"
+            );
+            const position = Position.create(1, 12);
+            const index = new Index();
+            index.setPassages("fake-uri", [
+                buildPassage({
+                    label: "passage",
+                    scope: Range.create(0, 0, 2, 0),
+                }),
+            ]);
+            index.setDefinitions("source-uri", [
+                {
+                    contents: "custom insert",
+                    location: Location.create(
+                        "source-uri",
+                        Range.create(5, 6, 7, 8)
+                    ),
+                    kind: OChapbookSymbolKind.CustomInsert,
+                    match: /custom\s+insert/i,
+                    completions: ["custom insert"],
+                    arguments: {
+                        firstArgument: {
+                            required:
+                                insertsModule.ArgumentRequirement.required,
+                        },
+                    },
+                } as ChapbookSymbol,
+            ]);
+            const mockFunction = ImportMock.mockFunction(
+                insertsModule,
+                "all"
+            ).returns([]);
+            const parser = uut.getChapbookParser(undefined);
+
+            const results = parser?.generateCompletions(doc, position, index);
+            mockFunction.restore();
+
+            expect(results?.items[0].textEditText).to.eql(
+                "custom insert: '${1:arg}'"
+            );
+            expect(results?.itemDefaults?.editRange).to.eql(
+                Range.create(1, 11, 1, 14)
+            );
+        });
+
+        it("should include a built-in insert's required first argument's placeholder after a { with a comma", () => {
             const doc = TextDocument.create(
                 "fake-uri",
                 "",
@@ -654,7 +796,58 @@ describe("Chapbook Completions", () => {
             );
         });
 
-        it("should include an insert's required first argument and properties' placeholders after a {", () => {
+        it("should include a custom insert's required first argument's placeholder after a { with a comma", () => {
+            const doc = TextDocument.create(
+                "fake-uri",
+                "",
+                0,
+                ":: Passage\nLet's try {te ,"
+            );
+            const position = Position.create(1, 12);
+            const index = new Index();
+            index.setPassages("fake-uri", [
+                buildPassage({
+                    label: "passage",
+                    scope: Range.create(0, 0, 2, 0),
+                }),
+            ]);
+            index.setDefinitions("source-uri", [
+                {
+                    contents: "custom insert",
+                    location: Location.create(
+                        "source-uri",
+                        Range.create(5, 6, 7, 8)
+                    ),
+                    kind: OChapbookSymbolKind.CustomInsert,
+                    match: /custom\s+insert/i,
+                    completions: ["custom insert"],
+                    arguments: {
+                        firstArgument: {
+                            required:
+                                insertsModule.ArgumentRequirement.required,
+                            placeholder: "'URL'",
+                        },
+                    },
+                } as ChapbookSymbol,
+            ]);
+            const mockFunction = ImportMock.mockFunction(
+                insertsModule,
+                "all"
+            ).returns([]);
+            const parser = uut.getChapbookParser(undefined);
+
+            const results = parser?.generateCompletions(doc, position, index);
+            mockFunction.restore();
+
+            expect(results?.items[0].textEditText).to.eql(
+                "custom insert: '${1:URL}'"
+            );
+            expect(results?.itemDefaults?.editRange).to.eql(
+                Range.create(1, 11, 1, 14)
+            );
+        });
+
+        it("should include a built-in insert's required first argument and properties' placeholders after a {", () => {
             const doc = TextDocument.create(
                 "fake-uri",
                 "",
@@ -705,7 +898,63 @@ describe("Chapbook Completions", () => {
             );
         });
 
-        it("should include an insert's required first argument's placeholder but no required properties' placeholders after a { with a comma", () => {
+        it("should include a custom insert's required first argument and properties' placeholders after a {", () => {
+            const doc = TextDocument.create(
+                "fake-uri",
+                "",
+                0,
+                ":: Passage\nLet's try {te "
+            );
+            const position = Position.create(1, 12);
+            const index = new Index();
+            index.setPassages("fake-uri", [
+                buildPassage({
+                    label: "passage",
+                    scope: Range.create(0, 0, 2, 0),
+                }),
+            ]);
+            index.setDefinitions("source-uri", [
+                {
+                    contents: "custom insert",
+                    location: Location.create(
+                        "source-uri",
+                        Range.create(5, 6, 7, 8)
+                    ),
+                    kind: OChapbookSymbolKind.CustomInsert,
+                    match: /custom\s+insert/i,
+                    completions: ["custom insert"],
+                    arguments: {
+                        firstArgument: {
+                            required:
+                                insertsModule.ArgumentRequirement.required,
+                            placeholder: "'URL'",
+                        },
+                        requiredProps: {
+                            one: "true",
+                            two: "'falsy'",
+                        },
+                        optionalProps: {},
+                    },
+                } as ChapbookSymbol,
+            ]);
+            const mockFunction = ImportMock.mockFunction(
+                insertsModule,
+                "all"
+            ).returns([]);
+            const parser = uut.getChapbookParser(undefined);
+
+            const results = parser?.generateCompletions(doc, position, index);
+            mockFunction.restore();
+
+            expect(results?.items[0].textEditText).to.eql(
+                "custom insert: '${1:URL}', one: ${2:true}, two: '${3:falsy}'"
+            );
+            expect(results?.itemDefaults?.editRange).to.eql(
+                Range.create(1, 11, 1, 13)
+            );
+        });
+
+        it("should include a built-in insert's required first argument's placeholder but no required properties' placeholders after a { with a comma", () => {
             const doc = TextDocument.create(
                 "fake-uri",
                 "",
@@ -756,7 +1005,63 @@ describe("Chapbook Completions", () => {
             );
         });
 
-        it("should not add a colon after a { with a colon already there for an insert with a required first argument", () => {
+        it("should include a custom insert's required first argument's placeholder but no required properties' placeholders after a { with a comma", () => {
+            const doc = TextDocument.create(
+                "fake-uri",
+                "",
+                0,
+                ":: Passage\nLet's try {te ,"
+            );
+            const position = Position.create(1, 12);
+            const index = new Index();
+            index.setPassages("fake-uri", [
+                buildPassage({
+                    label: "passage",
+                    scope: Range.create(0, 0, 2, 0),
+                }),
+            ]);
+            index.setDefinitions("source-uri", [
+                {
+                    contents: "custom insert",
+                    location: Location.create(
+                        "source-uri",
+                        Range.create(5, 6, 7, 8)
+                    ),
+                    kind: OChapbookSymbolKind.CustomInsert,
+                    match: /custom\s+insert/i,
+                    completions: ["custom insert"],
+                    arguments: {
+                        firstArgument: {
+                            required:
+                                insertsModule.ArgumentRequirement.required,
+                            placeholder: "'URL'",
+                        },
+                        requiredProps: {
+                            one: "true",
+                            two: "'falsy'",
+                        },
+                        optionalProps: {},
+                    },
+                } as ChapbookSymbol,
+            ]);
+            const mockFunction = ImportMock.mockFunction(
+                insertsModule,
+                "all"
+            ).returns([]);
+            const parser = uut.getChapbookParser(undefined);
+
+            const results = parser?.generateCompletions(doc, position, index);
+            mockFunction.restore();
+
+            expect(results?.items[0].textEditText).to.eql(
+                "custom insert: '${1:URL}'"
+            );
+            expect(results?.itemDefaults?.editRange).to.eql(
+                Range.create(1, 11, 1, 14)
+            );
+        });
+
+        it("should not add a colon after a { with a colon already there for a built-in insert with a required first argument", () => {
             const doc = TextDocument.create(
                 "fake-uri",
                 "",
@@ -802,7 +1107,56 @@ describe("Chapbook Completions", () => {
             );
         });
 
-        it("should suggest passages after a { and a , and a : for first arguments that take a passage", () => {
+        it("should not add a colon after a { with a colon already there for a custom insert with a required first argument", () => {
+            const doc = TextDocument.create(
+                "fake-uri",
+                "",
+                0,
+                ":: Passage\nLet's try {te :"
+            );
+            const position = Position.create(1, 12);
+            const index = new Index();
+            index.setPassages("fake-uri", [
+                buildPassage({
+                    label: "passage",
+                    scope: Range.create(0, 0, 2, 0),
+                }),
+            ]);
+            index.setDefinitions("source-uri", [
+                {
+                    contents: "custom insert",
+                    location: Location.create(
+                        "source-uri",
+                        Range.create(5, 6, 7, 8)
+                    ),
+                    kind: OChapbookSymbolKind.CustomInsert,
+                    match: /custom\s+insert/i,
+                    completions: ["custom insert"],
+                    arguments: {
+                        firstArgument: {
+                            required:
+                                insertsModule.ArgumentRequirement.required,
+                            placeholder: "'URL'",
+                        },
+                    },
+                } as ChapbookSymbol,
+            ]);
+            const mockFunction = ImportMock.mockFunction(
+                insertsModule,
+                "all"
+            ).returns([]);
+            const parser = uut.getChapbookParser(undefined);
+
+            const results = parser?.generateCompletions(doc, position, index);
+            mockFunction.restore();
+
+            expect(results?.items[0].textEditText).to.eql("custom insert");
+            expect(results?.itemDefaults?.editRange).to.eql(
+                Range.create(1, 11, 1, 14)
+            );
+        });
+
+        it("should suggest passages after a { and a , and a : for a built-in insert's first arguments that take a passage", () => {
             const doc = TextDocument.create(
                 "fake-uri",
                 "",
@@ -849,7 +1203,7 @@ describe("Chapbook Completions", () => {
             );
         });
 
-        it("should suggest passages after a { and a , and a : for first arguments that take a urlOrPassage", () => {
+        it("should suggest passages after a { and a , and a : for a built-in insert's first arguments that take a urlOrPassage", () => {
             const doc = TextDocument.create(
                 "fake-uri",
                 "",
@@ -943,7 +1297,7 @@ describe("Chapbook Completions", () => {
             );
         });
 
-        it("should suggest insert properties after a { and a ,", () => {
+        it("should suggest built-in insert properties after a { and a ,", () => {
             const doc = TextDocument.create(
                 "fake-uri",
                 "",
@@ -991,7 +1345,62 @@ describe("Chapbook Completions", () => {
             );
         });
 
-        it("should suggest insert properties after a { and a , changing only the property at the completion position", () => {
+        it("should suggest custom insert properties after a { and a ,", () => {
+            const doc = TextDocument.create(
+                "fake-uri",
+                "",
+                0,
+                ":: Passage\nLet's try {custom insert, "
+            );
+            const position = Position.create(1, 25);
+            const index = new Index();
+            index.setPassages("fake-uri", [
+                buildPassage({
+                    label: "passage",
+                    scope: Range.create(0, 0, 2, 0),
+                }),
+            ]);
+            index.setDefinitions("source-uri", [
+                {
+                    contents: "custom insert",
+                    location: Location.create(
+                        "source-uri",
+                        Range.create(5, 6, 7, 8)
+                    ),
+                    kind: OChapbookSymbolKind.CustomInsert,
+                    match: /custom\s+insert/i,
+                    completions: ["custom insert"],
+                    arguments: {
+                        firstArgument: {
+                            required:
+                                insertsModule.ArgumentRequirement.required,
+                        },
+                        requiredProps: {
+                            one: null,
+                        },
+                        optionalProps: { two: "'value'" },
+                    },
+                } as ChapbookSymbol,
+            ]);
+            const mockFunction = ImportMock.mockFunction(
+                insertsModule,
+                "all"
+            ).returns([]);
+            const parser = uut.getChapbookParser(undefined);
+
+            const results = parser?.generateCompletions(doc, position, index);
+            mockFunction.restore();
+
+            expect(results?.items[0].label).to.eql("one");
+            expect(results?.items[0].textEditText).to.eql(" one: '${1:arg}'");
+            expect(results?.items[1].label).to.eql("two");
+            expect(results?.items[1].textEditText).to.eql(" two: '${1:value}'");
+            expect(results?.itemDefaults?.editRange).to.eql(
+                Range.create(1, 25, 1, 25)
+            );
+        });
+
+        it("should suggest built-in insert properties after a { and a , changing only the property at the completion position", () => {
             const doc = TextDocument.create(
                 "fake-uri",
                 "",
@@ -1039,7 +1448,62 @@ describe("Chapbook Completions", () => {
             );
         });
 
-        it("should not suggest insert property values after a { and a , and a : for general properties", () => {
+        it("should suggest custom insert properties after a { and a , changing only the property at the completion position", () => {
+            const doc = TextDocument.create(
+                "fake-uri",
+                "",
+                0,
+                ":: Passage\nLet's try {custom insert, :"
+            );
+            const position = Position.create(1, 25);
+            const index = new Index();
+            index.setPassages("fake-uri", [
+                buildPassage({
+                    label: "passage",
+                    scope: Range.create(0, 0, 2, 0),
+                }),
+            ]);
+            index.setDefinitions("source-uri", [
+                {
+                    contents: "custom insert",
+                    location: Location.create(
+                        "source-uri",
+                        Range.create(5, 6, 7, 8)
+                    ),
+                    kind: OChapbookSymbolKind.CustomInsert,
+                    match: /custom\s+insert/i,
+                    completions: ["custom insert"],
+                    arguments: {
+                        firstArgument: {
+                            required:
+                                insertsModule.ArgumentRequirement.required,
+                        },
+                        requiredProps: {
+                            one: null,
+                        },
+                        optionalProps: { two: null },
+                    },
+                } as ChapbookSymbol,
+            ]);
+            const mockFunction = ImportMock.mockFunction(
+                insertsModule,
+                "all"
+            ).returns([]);
+            const parser = uut.getChapbookParser(undefined);
+
+            const results = parser?.generateCompletions(doc, position, index);
+            mockFunction.restore();
+
+            expect(results?.items[0].label).to.eql("one");
+            expect(results?.items[0].textEditText).to.eql(" one: '${1:arg}'");
+            expect(results?.items[1].label).to.eql("two");
+            expect(results?.items[1].textEditText).to.eql(" two: '${1:arg}'");
+            expect(results?.itemDefaults?.editRange).to.eql(
+                Range.create(1, 25, 1, 27)
+            );
+        });
+
+        it("should not suggest built-in insert property values after a { and a , and a : for general properties", () => {
             const doc = TextDocument.create(
                 "fake-uri",
                 "",
@@ -1081,7 +1545,7 @@ describe("Chapbook Completions", () => {
             expect(results).to.be.null;
         });
 
-        it("should suggest passages for insert property values that take a passage after a { and a , and a :", () => {
+        it("should suggest passages for built-in insert property values that take a passage after a { and a , and a :", () => {
             const doc = TextDocument.create(
                 "fake-uri",
                 "",

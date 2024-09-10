@@ -123,11 +123,12 @@ export interface InsertArguments {
  */
 export interface InsertInfo extends ChapbookFunctionInfo {
     /**
-     * What to call this insert.
+     * What to call this insert. (Required for built-in insert info.)
      */
     name: string;
     /**
      * Which arguments the insert expects and completion/placeholder information about them.
+     * (Required for built-in insert info)
      */
     arguments: InsertArguments;
     /**

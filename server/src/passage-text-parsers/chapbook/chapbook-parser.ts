@@ -52,6 +52,10 @@ const lineExtractionPattern = /^([ \t]*?)\b(.*)$/gm;
  */
 export interface ChapbookFunctionInfo {
     /**
+     * What to call this function.
+     */
+    name?: string;
+    /**
      * Regular expression that matches invocations of this function.
      */
     match: RegExp;

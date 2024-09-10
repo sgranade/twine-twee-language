@@ -6,7 +6,7 @@ import { ChapbookFunctionInfo, ChapbookParsingState } from "../chapbook-parser";
  */
 export interface ModifierInfo extends ChapbookFunctionInfo {
     /**
-     * What to call this modifier.
+     * What to call this modifier. (Required for built-in modifiers.)
      */
     name: string;
     /**
