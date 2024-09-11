@@ -1,9 +1,4 @@
-import {
-    Diagnostic,
-    DiagnosticSeverity,
-    Location,
-    Range,
-} from "vscode-languageserver";
+import { Diagnostic, DiagnosticSeverity, Range } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { EmbeddedDocument } from "./embedded-languages";
@@ -13,7 +8,6 @@ import {
     References,
     StoryData,
     Symbol,
-    TwineSymbolKind,
 } from "./project-index";
 import { ParseLevel, ParserCallbacks, parse } from "./parser";
 import { DiagnosticsOptions } from "./server-options";

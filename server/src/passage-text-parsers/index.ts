@@ -3,6 +3,7 @@ import {
     Definition,
     Diagnostic,
     Hover,
+    Location,
     Position,
 } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
@@ -81,7 +82,7 @@ export interface StoryFormatParser {
      * Get a symbol's definition by a position in a document.
      *
      * @param document Document to get definition at.
-     * @param position Position in the document to find the definition at.
+     * @param position Position in the document to find the definition from.
      * @param index Twine project index.
      * @returns Definition, or undefined for no definition at the given position.
      */
@@ -90,6 +91,21 @@ export interface StoryFormatParser {
         position: Position,
         index: ProjectIndex
     ): Definition | undefined;
+    /**
+     * Get references to a symbol by a position in a document.
+     *
+     * @param document Document to get references at.
+     * @param position Position in the document to find the references from.
+     * @param index Twine project index.
+     * @param includeDefinition If true, include the symbol's definition in the references.
+     * @returns Reference locations, or undefined for no symbol at the given position.
+     */
+    getReferencesToSymbolAt(
+        document: TextDocument,
+        position: Position,
+        index: ProjectIndex,
+        includeDeclaration: boolean
+    ): Location[] | undefined;
 }
 
 /**

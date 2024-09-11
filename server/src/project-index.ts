@@ -177,12 +177,12 @@ export interface ProjectIndex {
     getParseErrors(uri: string): readonly Diagnostic[];
 
     /**
-     * Find the location of an indexed symbol by that symbol's name and kind.
+     * Find the definition of an indexed symbol by that symbol's name and kind.
      * @param name Symbol name.
      * @param kind Kind of symbol.
      * @returns Symbol's location, or undefined if not found.
      */
-    getSymbolLocationByName(
+    getSymbolDefinitionByName(
         name: string,
         kind: TwineSymbolKind
     ): Location | undefined;
@@ -344,7 +344,10 @@ export class Index implements ProjectIndex {
         return this._parseErrors[uri] ?? [];
     }
 
-    getSymbolLocationByName(name: string, kind: number): Location | undefined {
+    getSymbolDefinitionByName(
+        name: string,
+        kind: number
+    ): Location | undefined {
         // Special case passages, since they're not stored as definitions
         if (kind === TwineSymbolKind.Passage) {
             for (const passages of Object.values(this._passages)) {
@@ -414,7 +417,7 @@ export class Index implements ProjectIndex {
         const ref = this.getReferencesAt(uri, position);
         if (ref !== undefined) {
             // See if we have a matching symbol for this reference
-            const symbolLocation = this.getSymbolLocationByName(
+            const symbolLocation = this.getSymbolDefinitionByName(
                 ref.contents,
                 ref.kind
             );
@@ -436,32 +439,48 @@ export class Index implements ProjectIndex {
         position: Position,
         includeDeclaration: boolean
     ): References | undefined {
-        // First, see if we can get to a definition at the position
-        const symbol = this.getDefinitionBySymbolAt(uri, position);
-        if (symbol === undefined) return undefined;
-
-        // Next, scan through all document references to find this symbol's specific references.
         const references: References = {
-            contents: symbol.contents,
+            contents: "placeholder",
             locations: [],
-            kind: symbol.kind,
+            kind: 0,
         };
+
+        // See if there's a reference at this position
+        const initialReferences = this.getReferencesAt(uri, position);
+        if (initialReferences !== undefined) {
+            references.contents = initialReferences.contents;
+            references.kind = initialReferences.kind;
+        } else {
+            // If there are no references, is there a definition?
+            const symbolDefinition = this.getDefinitionAt(uri, position);
+            if (symbolDefinition !== undefined) {
+                references.contents = symbolDefinition.contents;
+                references.kind = symbolDefinition.kind;
+            } else return undefined;
+        }
+
+        // Next, scan through all document references to find additional reference locations
         for (const referencesPerKind of Object.values(this._references)) {
-            const localReferences = referencesPerKind[symbol.kind];
+            const localReferences = referencesPerKind[references.kind];
             if (localReferences !== undefined) {
                 const ref = localReferences.find(
-                    (ref) => ref.contents === symbol.contents
+                    (ref) => ref.contents === references.contents
                 );
                 if (ref !== undefined) {
-                    for (const loc of ref.locations) {
-                        references.locations.push(loc);
-                    }
+                    references.locations.push(...ref.locations);
                 }
             }
         }
 
+        // Finally, if we need the definition, find and include it
         if (includeDeclaration) {
-            references.locations.push(symbol.location);
+            const symbolDefinitionLocation = this.getSymbolDefinitionByName(
+                references.contents,
+                references.kind
+            );
+            if (symbolDefinitionLocation !== undefined) {
+                references.locations.push(symbolDefinitionLocation);
+            }
         }
 
         return references;

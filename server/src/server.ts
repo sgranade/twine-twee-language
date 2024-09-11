@@ -55,6 +55,7 @@ import {
 import { semanticTokensLegend } from "./tokens";
 import { generateDiagnostics } from "./validator";
 import { ParseLevel } from "./parser";
+import { getReferencesToSymbolAt } from "./references";
 
 const connection: Connection = createConnection(ProposedFeatures.all);
 
@@ -377,13 +378,17 @@ connection.onRenameRequest((params: RenameParams): WorkspaceEdit | null => {
 });
 
 connection.onReferences((params: ReferenceParams): Location[] | undefined => {
-    const references = projectIndex.getReferencesToSymbolAt(
-        params.textDocument.uri,
+    // TODO do I need the full document, or would the URI suffice?
+    const document = documents.get(params.textDocument.uri);
+    if (document === undefined) {
+        return undefined;
+    }
+    return getReferencesToSymbolAt(
+        document,
         params.position,
+        projectIndex,
         params.context.includeDeclaration
     );
-    if (references !== undefined) return references.locations;
-    return undefined;
 });
 
 connection.onRequest("textDocument/semanticTokens/full", (params) => {

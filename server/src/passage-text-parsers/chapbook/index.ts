@@ -22,5 +22,6 @@ export function getChapbookParser(
         generateDiagnostics: generateDiagnostics,
         generateHover: generateHover,
         getDefinitionAt: getDefinitionAt,
+        getReferencesToSymbolAt: () => undefined, // Chapbook doesn't need this
     };
 }

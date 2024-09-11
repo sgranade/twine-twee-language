@@ -283,7 +283,7 @@ describe("Project Index", () => {
         it("should return undefined for a non-existent symbol", () => {
             const index = new uut.Index();
 
-            const result = index.getSymbolLocationByName(
+            const result = index.getSymbolDefinitionByName(
                 "nopers",
                 uut.TwineSymbolKind.Passage
             );
@@ -305,7 +305,7 @@ describe("Project Index", () => {
             const index = new uut.Index();
             index.setPassages("fake-uri", passages);
 
-            const result = index.getSymbolLocationByName(
+            const result = index.getSymbolDefinitionByName(
                 "Passage 2",
                 uut.TwineSymbolKind.Passage
             );
@@ -337,7 +337,7 @@ describe("Project Index", () => {
             const index = new uut.Index();
             index.setDefinitions("fake-uri", definitions);
 
-            const result = index.getSymbolLocationByName("two", 25);
+            const result = index.getSymbolDefinitionByName("two", 25);
 
             expect(result).to.eql(
                 Location.create("fake-uri", Range.create(5, 6, 7, 8))
