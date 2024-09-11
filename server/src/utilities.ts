@@ -271,8 +271,8 @@ export function positionInRange(position: Position, range: Range): boolean {
  *
  * @param severity Diagnostic severity
  * @param textDocument Document to which the diagnostic applies.
- * @param start Start location in the text of the diagnostic message.
- * @param end End location in the text of the diagnostic message.
+ * @param start Start location in the document of the diagnostic message.
+ * @param end End location in the document of the diagnostic message.
  * @param message Diagnostic message.
  */
 export function createDiagnostic(
@@ -282,15 +282,42 @@ export function createDiagnostic(
     end: number,
     message: string
 ): Diagnostic {
-    const diagnostic: Diagnostic = {
-        severity: severity,
-        range: {
-            start: textDocument.positionAt(start),
-            end: textDocument.positionAt(end),
-        },
-        message: message,
-        source: "Twine",
-    };
+    return Diagnostic.create(
+        Range.create(
+            textDocument.positionAt(start),
+            textDocument.positionAt(end)
+        ),
+        message,
+        severity,
+        undefined,
+        "Twine"
+    );
+}
 
-    return diagnostic;
+/**
+ * Generate a diagnostic message for a given piece of text.
+ *
+ * Pass the text's location as a 0-based index into the document's text.
+ *
+ * @param severity Diagnostic severity
+ * @param textDocument Document to which the diagnostic applies.
+ * @param text Text to generate the diagnostic message about.
+ * @param at Location in the document of the text.
+ * @param message Diagnostic message.
+ * @returns
+ */
+export function createDiagnosticFor(
+    severity: DiagnosticSeverity,
+    textDocument: TextDocument,
+    text: string,
+    at: number,
+    message: string
+): Diagnostic {
+    return createDiagnostic(
+        severity,
+        textDocument,
+        at,
+        at + text.length,
+        message
+    );
 }

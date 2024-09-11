@@ -5,7 +5,7 @@ import { DiagnosticSeverity, Location, Range } from "vscode-languageserver";
 
 import { buildInsertInfo } from "./inserts/insert-builders";
 import { buildModifierInfo } from "./modifiers/modifier-builders";
-import { MockCallbacks, buildParsingState, buildPassage } from "../../builders";
+import { MockCallbacks, buildParsingState } from "../../builders";
 import { ParseLevel } from "../../../parser";
 import { TwineSymbolKind } from "../../../project-index";
 import { ETokenModifier, ETokenType } from "../../../tokens";
@@ -42,6 +42,7 @@ describe("Chapbook Parsing", () => {
         expect(callbacks.definitions.length).to.equal(1);
         expect(ChapbookSymbol.is(result)).to.be.true;
         expect(result).to.eql({
+            name: "hi",
             contents: "hi",
             location: Location.create("fake-uri", Range.create(4, 9, 4, 11)),
             kind: OChapbookSymbolKind.CustomInsert,
@@ -1988,6 +1989,7 @@ describe("Chapbook Parsing", () => {
                 expect(callbacks.definitions.length).to.equal(1);
                 expect(ChapbookSymbol.is(result)).to.be.true;
                 expect(result).to.eql({
+                    name: "hi\\s+there",
                     contents: "hi\\s+there",
                     location: Location.create(
                         "fake-uri",
@@ -2020,6 +2022,7 @@ describe("Chapbook Parsing", () => {
                 expect(callbacks.definitions.length).to.equal(1);
                 expect(ChapbookSymbol.is(result)).to.be.true;
                 expect(result).to.eql({
+                    name: "hi there",
                     contents: "hi there",
                     location: Location.create(
                         "fake-uri",
@@ -2052,6 +2055,7 @@ describe("Chapbook Parsing", () => {
                 expect(callbacks.definitions.length).to.equal(1);
                 expect(ChapbookSymbol.is(result)).to.be.true;
                 expect(result).to.eql({
+                    name: "hi\\s+there",
                     contents: "hi\\s+there",
                     description: "I am an insert!",
                     location: Location.create(
@@ -2085,6 +2089,7 @@ describe("Chapbook Parsing", () => {
                 expect(callbacks.definitions.length).to.equal(1);
                 expect(ChapbookSymbol.is(result)).to.be.true;
                 expect(result).to.eql({
+                    name: "hi\\s+there",
                     contents: "hi\\s+there",
                     syntax: "{hi there}",
                     location: Location.create(
@@ -2118,6 +2123,7 @@ describe("Chapbook Parsing", () => {
                 expect(callbacks.definitions.length).to.equal(1);
                 expect(ChapbookSymbol.is(result)).to.be.true;
                 expect(result).to.eql({
+                    name: "hi\\s+there",
                     contents: "hi\\s+there",
                     completions: ["one"],
                     location: Location.create(
@@ -2151,6 +2157,7 @@ describe("Chapbook Parsing", () => {
                 expect(callbacks.definitions.length).to.equal(1);
                 expect(ChapbookSymbol.is(result)).to.be.true;
                 expect(result).to.eql({
+                    name: "hi\\s+there",
                     contents: "hi\\s+there",
                     completions: ["one", "two"],
                     location: Location.create(
@@ -2184,6 +2191,7 @@ describe("Chapbook Parsing", () => {
                 expect(callbacks.definitions.length).to.equal(1);
                 expect(ChapbookSymbol.is(result)).to.be.true;
                 expect(result).to.eql({
+                    name: "hi\\s+there",
                     contents: "hi\\s+there",
                     location: Location.create(
                         "fake-uri",
@@ -2224,6 +2232,7 @@ describe("Chapbook Parsing", () => {
                 expect(callbacks.definitions.length).to.equal(1);
                 expect(ChapbookSymbol.is(result)).to.be.true;
                 expect(result).to.eql({
+                    name: "hi\\s+there",
                     contents: "hi\\s+there",
                     location: Location.create(
                         "fake-uri",
@@ -2264,6 +2273,7 @@ describe("Chapbook Parsing", () => {
                 expect(callbacks.definitions.length).to.equal(1);
                 expect(ChapbookSymbol.is(result)).to.be.true;
                 expect(result).to.eql({
+                    name: "hi\\s+there",
                     contents: "hi\\s+there",
                     location: Location.create(
                         "fake-uri",
@@ -2304,6 +2314,7 @@ describe("Chapbook Parsing", () => {
                 expect(callbacks.definitions.length).to.equal(1);
                 expect(ChapbookSymbol.is(result)).to.be.true;
                 expect(result).to.eql({
+                    name: "hi\\s+there",
                     contents: "hi\\s+there",
                     location: Location.create(
                         "fake-uri",
@@ -2344,6 +2355,7 @@ describe("Chapbook Parsing", () => {
                 expect(callbacks.definitions.length).to.equal(1);
                 expect(ChapbookSymbol.is(result)).to.be.true;
                 expect(result).to.eql({
+                    name: "hi\\s+there",
                     contents: "hi\\s+there",
                     location: Location.create(
                         "fake-uri",
@@ -2383,6 +2395,7 @@ describe("Chapbook Parsing", () => {
                 expect(callbacks.definitions.length).to.equal(1);
                 expect(ChapbookSymbol.is(result)).to.be.true;
                 expect(result).to.eql({
+                    name: "hi\\s+there",
                     contents: "hi\\s+there",
                     location: Location.create(
                         "fake-uri",
@@ -2424,6 +2437,7 @@ describe("Chapbook Parsing", () => {
                 expect(callbacks.definitions.length).to.equal(1);
                 expect(ChapbookSymbol.is(result)).to.be.true;
                 expect(result).to.eql({
+                    name: "hi\\s+there",
                     contents: "hi\\s+there",
                     location: Location.create(
                         "fake-uri",
@@ -2467,6 +2481,7 @@ describe("Chapbook Parsing", () => {
                 expect(callbacks.definitions.length).to.equal(1);
                 expect(ChapbookSymbol.is(result)).to.be.true;
                 expect(result).to.eql({
+                    name: "hi\\s+there",
                     contents: "hi\\s+there",
                     location: Location.create(
                         "fake-uri",
@@ -2521,6 +2536,7 @@ describe("Chapbook Parsing", () => {
                 expect(callbacks.definitions.length).to.equal(2);
                 expect(ChapbookSymbol.is(result0)).to.be.true;
                 expect(result0).to.eql({
+                    name: "hi\\s+there",
                     contents: "hi\\s+there",
                     location: Location.create(
                         "fake-uri",
@@ -2531,6 +2547,7 @@ describe("Chapbook Parsing", () => {
                 });
                 expect(ChapbookSymbol.is(result1)).to.be.true;
                 expect(result1).to.eql({
+                    name: "different\\s+insert",
                     contents: "different\\s+insert",
                     location: Location.create(
                         "fake-uri",
@@ -2563,6 +2580,7 @@ describe("Chapbook Parsing", () => {
                 expect(callbacks.definitions.length).to.equal(1);
                 expect(ChapbookSymbol.is(result)).to.be.true;
                 expect(result).to.eql({
+                    name: "hi\\s+there",
                     contents: "hi\\s+there",
                     location: Location.create(
                         "fake-uri",
@@ -2595,6 +2613,7 @@ describe("Chapbook Parsing", () => {
                 expect(callbacks.definitions.length).to.equal(1);
                 expect(ChapbookSymbol.is(result)).to.be.true;
                 expect(result).to.eql({
+                    name: "hi there",
                     contents: "hi there",
                     location: Location.create(
                         "fake-uri",
@@ -2627,6 +2646,7 @@ describe("Chapbook Parsing", () => {
                 expect(callbacks.definitions.length).to.equal(1);
                 expect(ChapbookSymbol.is(result)).to.be.true;
                 expect(result).to.eql({
+                    name: "hi\\s+there",
                     contents: "hi\\s+there",
                     description: "I'm a modifier!",
                     location: Location.create(
@@ -2660,6 +2680,7 @@ describe("Chapbook Parsing", () => {
                 expect(callbacks.definitions.length).to.equal(1);
                 expect(ChapbookSymbol.is(result)).to.be.true;
                 expect(result).to.eql({
+                    name: "hi\\s+there",
                     contents: "hi\\s+there",
                     syntax: "[hi there]",
                     location: Location.create(
@@ -2693,6 +2714,7 @@ describe("Chapbook Parsing", () => {
                 expect(callbacks.definitions.length).to.equal(1);
                 expect(ChapbookSymbol.is(result)).to.be.true;
                 expect(result).to.eql({
+                    name: "hi\\s+there",
                     contents: "hi\\s+there",
                     completions: ["one"],
                     location: Location.create(
@@ -2726,6 +2748,7 @@ describe("Chapbook Parsing", () => {
                 expect(callbacks.definitions.length).to.equal(1);
                 expect(ChapbookSymbol.is(result)).to.be.true;
                 expect(result).to.eql({
+                    name: "hi\\s+there",
                     contents: "hi\\s+there",
                     completions: ["one", "two"],
                     location: Location.create(
@@ -3238,7 +3261,7 @@ describe("Chapbook Parsing", () => {
                     expect(callbacks.errors.length).to.equal(1);
                     expect(result.severity).to.eql(DiagnosticSeverity.Error);
                     expect(result.message).to.include(
-                        'Insert "Mock Insert" requires a first argument'
+                        "Insert {Mock Insert} requires a first argument"
                     );
                     expect(result.range).to.eql(Range.create(1, 10, 1, 21));
                 });
@@ -3269,7 +3292,7 @@ describe("Chapbook Parsing", () => {
                     expect(callbacks.errors.length).to.equal(1);
                     expect(result.severity).to.eql(DiagnosticSeverity.Warning);
                     expect(result.message).to.include(
-                        'Insert "Mock Insert" will ignore this first argument'
+                        "Insert {Mock Insert} will ignore this first argument"
                     );
                     expect(result.range).to.eql(Range.create(1, 23, 1, 28));
                 });
@@ -3299,7 +3322,7 @@ describe("Chapbook Parsing", () => {
                     expect(callbacks.errors.length).to.equal(1);
                     expect(result.severity).to.eql(DiagnosticSeverity.Error);
                     expect(result.message).to.include(
-                        'Insert "Mock Insert" missing expected properties: expected, also'
+                        "Insert {Mock Insert} missing expected properties: expected, also"
                     );
                     expect(result.range).to.eql(Range.create(1, 10, 1, 21));
                 });
@@ -3353,7 +3376,7 @@ describe("Chapbook Parsing", () => {
                     expect(callbacks.errors.length).to.equal(1);
                     expect(result.severity).to.eql(DiagnosticSeverity.Warning);
                     expect(result.message).to.include(
-                        'Insert "Mock Insert" will ignore this property'
+                        "Insert {Mock Insert} will ignore this property"
                     );
                     expect(result.range).to.eql(Range.create(1, 23, 1, 27));
                 });

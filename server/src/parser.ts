@@ -29,7 +29,7 @@ import {
 } from "./language";
 import { ETokenType, SemanticToken, TokenModifier, TokenType } from "./tokens";
 import {
-    createDiagnostic,
+    createDiagnosticFor,
     nextLineIndex,
     pairwise,
     removeAndCountPadding,
@@ -117,18 +117,15 @@ export interface ParserCallbacks {
  *
  * @param text Document text to create the location for.
  * @param at Index where the text occurs in the document (zero-based).
- * @param state Parsing state.
+ * @param doc Text document.
  * @returns The location containing the text.
  */
 export function createLocationFor(
     text: string,
     at: number,
-    state: ParsingState
+    doc: TextDocument
 ): Location {
-    return Location.create(
-        state.textDocument.uri,
-        createRangeFor(text, at, state)
-    );
+    return Location.create(doc.uri, createRangeFor(text, at, doc));
 }
 
 /**
@@ -136,18 +133,15 @@ export function createLocationFor(
  *
  * @param text Document text to create the range for.
  * @param at Index where the text occurs in the document (zero-based).
- * @param state Parsing state.
+ * @param doc Text document.
  * @returns The range containing the text.
  */
 export function createRangeFor(
     text: string,
     at: number,
-    state: ParsingState
+    doc: TextDocument
 ): Range {
-    return Range.create(
-        state.textDocument.positionAt(at),
-        state.textDocument.positionAt(at + text.length)
-    );
+    return Range.create(doc.positionAt(at), doc.positionAt(at + text.length));
 }
 
 /**
@@ -156,18 +150,18 @@ export function createRangeFor(
  * @param text Document text for the symbol.
  * @param at Index where the text occurs in the document (zero-based).
  * @param kind Symbol kind.
- * @param state Parsing state.
+ * @param doc Text document.
  * @returns The symbol.
  */
 export function createSymbolFor(
     text: string,
     at: number,
     kind: number,
-    state: ParsingState
+    doc: TextDocument
 ): Symbol {
     return {
         contents: text,
-        location: createLocationFor(text, at, state),
+        location: createLocationFor(text, at, doc),
         kind: kind,
     };
 }
@@ -178,7 +172,7 @@ export function createSymbolFor(
  * @param text Document text that has the error.
  * @param at Index where the text occurs in the document (zero-based).
  * @param message Error message.
- * @param state Parsing state.
+ * @param doc Text document.
  */
 export function logErrorFor(
     text: string,
@@ -187,11 +181,11 @@ export function logErrorFor(
     state: ParsingState
 ): void {
     state.callbacks.onParseError(
-        createDiagnostic(
+        createDiagnosticFor(
             DiagnosticSeverity.Error,
             state.textDocument,
+            text,
             at,
-            at + text.length,
             message
         )
     );
@@ -212,11 +206,11 @@ export function logWarningFor(
     state: ParsingState
 ): void {
     state.callbacks.onParseError(
-        createDiagnostic(
+        createDiagnosticFor(
             DiagnosticSeverity.Warning,
             state.textDocument,
+            text,
             at,
-            at + text.length,
             message
         )
     );
@@ -280,7 +274,7 @@ export function parsePassageReference(
 
     state.callbacks.onSymbolReference({
         contents: passage,
-        location: createLocationFor(passage, at, state),
+        location: createLocationFor(passage, at, state.textDocument),
         kind: TwineSymbolKind.Passage,
     });
 }

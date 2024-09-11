@@ -196,7 +196,7 @@ export function tokenizeJSExpression(
                     location: createLocationFor(
                         token.text,
                         offset + token.at,
-                        state
+                        state.textDocument
                     ),
                 });
             }

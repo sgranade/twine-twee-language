@@ -44,7 +44,7 @@ engine.extend('2.0.0', () => {
         name: "icon of",
         syntax: "{icon of: 'icon', _mood: 'mood'_}",
         description: "Inserts a wizard or vampire icon with an optional mood icon. `icon` can be either `wizard` or `vampire`. `mood` is optional, and can be either `anger` or `love`.",
-        completions: 'icon of',
+        completions: "icon of",
         arguments: {
             firstArgument: {
                 required: true,

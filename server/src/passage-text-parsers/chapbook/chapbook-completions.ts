@@ -20,6 +20,7 @@ import { removeAndCountPadding } from "../../utilities";
 import {
     ChapbookFunctionInfo,
     divideChapbookPassage,
+    findStartOfModifierOrInsert,
     getChapbookDefinitions,
     OChapbookSymbolKind,
 } from "./chapbook-parser";
@@ -486,7 +487,7 @@ export function generateCompletions(
     );
     const passageTextOffset = document.offsetAt(passageTextScope.start);
     const passageText = document.getText(passageTextScope);
-    let i = offset - passageTextOffset;
+    let i: number | undefined = offset - passageTextOffset;
 
     // Split the passage text into the vars and content sections
     const passageParts = divideChapbookPassage(passageText);
@@ -497,31 +498,23 @@ export function generateCompletions(
     }
 
     // See if we're inside a modifier or insert
-    for (; i >= 0; i--) {
-        // Don't go further back than the current line
-        if (passageText[i] === "\n") break;
-        // { marks a potential insert; [ at the start of a line is a modifier
-        if (
-            passageText[i] === "{" ||
-            (passageText[i] === "[" && (i === 0 || passageText[i - 1] === "\n"))
-        ) {
-            break;
+    i = findStartOfModifierOrInsert(passageText, i);
+    if (i !== undefined) {
+        if (passageText[i] === "[") {
+            return generateModifierCompletions(
+                document,
+                passageTextOffset + i + 1,
+                offset,
+                index
+            );
+        } else if (passageText[i] === "{") {
+            return generateInsertCompletions(
+                document,
+                passageTextOffset + i + 1,
+                offset,
+                index
+            );
         }
-    }
-    if (passageText[i] === "[") {
-        return generateModifierCompletions(
-            document,
-            passageTextOffset + i + 1,
-            offset,
-            index
-        );
-    } else if (passageText[i] === "{") {
-        return generateInsertCompletions(
-            document,
-            passageTextOffset + i + 1,
-            offset,
-            index
-        );
     }
 
     return null;

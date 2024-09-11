@@ -1,5 +1,7 @@
 import * as acorn from "acorn";
 import * as acornWalk from "acorn-walk";
+import { Diagnostic, DiagnosticSeverity } from "vscode-languageserver";
+import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { StoryFormatParsingState, capturePreTokenFor } from "..";
 import {
@@ -21,6 +23,7 @@ import {
     versionCompare,
     createDiagnostic,
     hasOwnProperty,
+    createDiagnosticFor,
 } from "../../utilities";
 import {
     InsertTokens,
@@ -40,7 +43,6 @@ import {
     TwineSymbolKind,
 } from "../../project-index";
 import { EmbeddedDocument } from "../../embedded-languages";
-import { DiagnosticSeverity } from "vscode-languageserver";
 
 const varsSepPattern = /^--(\r?\n|$)/m;
 const conditionPattern = /((\((.+?)\)?)\s*)([^)]*)$/;
@@ -282,6 +284,93 @@ function findClosingDelimeterIndex(
     }
 
     return contents.length;
+}
+
+/**
+ * Given a position in text, scan backwards to find the start of a possible modifier or insert.
+ *
+ * @param text Text to scan.
+ * @param startOffset Where to begin in the text.
+ * @returns The index to the start of the possible modifier ("[") or insert ("{"), or undefined if not found.
+ */
+export function findStartOfModifierOrInsert(
+    text: string,
+    startOffset: number
+): number | undefined {
+    let start: number | undefined;
+
+    for (let i = startOffset; i >= 0; --i) {
+        // Don't go further back than the current line
+        if (text[i] === "\n") break;
+        // { marks a potential insert; [ at the start of a line is a modifier
+        if (
+            text[i] === "{" ||
+            (text[i] === "[" && (i === 0 || text[i - 1] === "\n"))
+        ) {
+            start = i;
+            break;
+        }
+    }
+
+    return start;
+}
+
+/**
+ * Find the end offset of a (possibly partial) insert given the start of that insert.
+ *
+ * @param text Text to extract the insert from.
+ * @param startOffset Offset to the starting "{" of the insert.
+ * @returns Offset to the end "}" (for complete inserts) or "\n" or end of the string (for partial inserts), or undefined if no end found.
+ */
+export function findEndOfPartialInsert(
+    text: string,
+    startOffset: number
+): number | undefined {
+    // Parsing code adapted from `render()` in `render-insert.ts` from Chapbook
+
+    // Scan forward until we reach:
+    // -   another '{', indicating that the original '{' isn't the start of an
+    //     insert
+    // -   a single or double quote, indicating the start of a string value
+    // -   a '}' that isn't inside a string, indicating the end of a possible
+    //     insert
+    // -   the end of the line
+    let inString = false;
+    let stringDelimiter;
+
+    for (let i = startOffset + 1; i < text.length; i++) {
+        switch (text[i]) {
+            case "{":
+                // We're not in an insert -- bail out
+                return undefined;
+
+            case "\n":
+                // Return this index as the end of the partial insert
+                return i;
+
+            case "'":
+            case '"':
+                // Ignore backslashed quotes.
+                if (i > 0 && text[i - 1] !== "\\") {
+                    // Toggle inString status as needed.
+                    if (!inString) {
+                        inString = true;
+                        stringDelimiter = text[i];
+                    } else if (inString && stringDelimiter === text[i]) {
+                        inString = false;
+                    }
+                }
+                break;
+
+            case "}":
+                if (!inString) {
+                    return i;
+                }
+                break;
+        }
+    }
+
+    return text.length;
 }
 
 /**
@@ -601,11 +690,12 @@ function parseCustomInsertOrModifierDefinition(
 
         // Save the match as a Regex in the associated label
         const symbol: ChapbookSymbol = {
+            name: props.name,
             contents: props.name,
             location: createLocationFor(
                 props.match.source,
                 props.matchIndex + 1 + contentsIndex, // + 1 to skip the leading "/"
-                state
+                state.textDocument
             ),
             kind: symbolKind,
             match: props.match,
@@ -850,7 +940,133 @@ function parseInsertArgument(
 }
 
 /**
- * Parse the contents of an insert.
+ * Validate arguments to an insert against that insert's requirements.
+ *
+ * This function is separate so other functions outside the main parsing loop
+ * can generate diagnostics for inserts, as when validating custom inserts,
+ * which can't happen until later.
+ *
+ * @param insert Information about the insert (built-in or custom).
+ * @param tokens Tokenized insert information.
+ * @param doc Text document containing the insert.
+ * @param storyFormatVersion Current Chapbook format version, if know.
+ * @returns List of any diagnostics from parsing the contents.
+ */
+export function validateInsertContents(
+    insert: ChapbookFunctionInfo,
+    tokens: InsertTokens,
+    doc: TextDocument,
+    storyFormatVersion?: string
+): Diagnostic[] {
+    const diagnostics: Diagnostic[] = [];
+
+    // Check the story format against insert since/removed version information
+    if (storyFormatVersion !== undefined) {
+        if (
+            insert.since !== undefined &&
+            versionCompare(storyFormatVersion, insert.since) <= 0
+        ) {
+            diagnostics.push(
+                createDiagnosticFor(
+                    DiagnosticSeverity.Error,
+                    doc,
+                    tokens.name.text,
+                    tokens.name.at,
+                    `Insert {${insert.name}} isn't available until Chapbook version ${insert.since} but your StoryFormat version is ${storyFormatVersion}`
+                )
+            );
+        } else if (
+            insert.removed !== undefined &&
+            versionCompare(storyFormatVersion, insert.removed) >= 0
+        ) {
+            diagnostics.push(
+                createDiagnosticFor(
+                    DiagnosticSeverity.Error,
+                    doc,
+                    tokens.name.text,
+                    tokens.name.at,
+                    `Insert {${insert.name}} was removed in Chapbook version ${insert.removed} and your StoryFormat version is ${storyFormatVersion}`
+                )
+            );
+        }
+    }
+
+    // Check for required and unknown arguments
+    // First up, first argument
+    if (
+        insert.arguments?.firstArgument.required ===
+            ArgumentRequirement.required &&
+        tokens.firstArgument === undefined
+    ) {
+        diagnostics.push(
+            createDiagnosticFor(
+                DiagnosticSeverity.Error,
+                doc,
+                tokens.name.text,
+                tokens.name.at,
+                `Insert {${insert.name}} requires a first argument`
+            )
+        );
+    } else if (
+        insert.arguments?.firstArgument.required ===
+            ArgumentRequirement.ignored &&
+        tokens.firstArgument !== undefined
+    ) {
+        diagnostics.push(
+            createDiagnosticFor(
+                DiagnosticSeverity.Warning,
+                doc,
+                tokens.firstArgument.text,
+                tokens.firstArgument.at,
+                `Insert {${insert.name}} will ignore this first argument`
+            )
+        );
+    }
+
+    // Second up, properties
+    const seenProperties: Set<string> = new Set();
+    for (const [propName, [propNameToken, propValueToken]] of Object.entries(
+        tokens.props
+    ) as [string, [Token, Token]][]) {
+        let propInfo: string | InsertProperty | null | undefined =
+            insert.arguments?.requiredProps[propName];
+
+        if (propInfo !== undefined) {
+            seenProperties.add(propName);
+        } else {
+            propInfo = insert.arguments?.optionalProps[propName];
+            if (propInfo === undefined)
+                diagnostics.push(
+                    createDiagnosticFor(
+                        DiagnosticSeverity.Warning,
+                        doc,
+                        propNameToken.text,
+                        propNameToken.at,
+                        `Insert {${insert.name}} will ignore this property`
+                    )
+                );
+        }
+    }
+    const unseenProperties = Object.keys(
+        insert.arguments?.requiredProps || {}
+    ).filter((k) => !seenProperties.has(k));
+    if (unseenProperties.length > 0) {
+        diagnostics.push(
+            createDiagnosticFor(
+                DiagnosticSeverity.Error,
+                doc,
+                tokens.name.text,
+                tokens.name.at,
+                `Insert {${insert.name}} missing expected properties: ${unseenProperties.join(", ")}`
+            )
+        );
+    }
+
+    return diagnostics;
+}
+
+/**
+ * Parse the contents of an insert, capturing variable references and semantic tokens.
  *
  * @param tokens Tokenized insert information.
  * @param state Parsing state.
@@ -871,7 +1087,7 @@ function parseInsertContents(
             insert !== undefined
                 ? OChapbookSymbolKind.BuiltInInsert
                 : OChapbookSymbolKind.CustomInsert,
-            state
+            state.textDocument
         )
     );
 
@@ -901,61 +1117,22 @@ function parseInsertContents(
         );
     }
 
-    // If the reference is to a possible custom insert, there's nothing else for us to do right now
+    // If the reference is to a possible custom insert, there's nothing else for us to do right now.
+    // Its validation will happen at the overall validation step, since we need access to the
+    // full index's custom insert information.
     if (insert === undefined) return;
 
-    // Check the insert's version against our story format version
-    const formatVersion = state.storyFormat?.formatVersion;
-    if (formatVersion !== undefined) {
-        if (
-            insert.since !== undefined &&
-            versionCompare(formatVersion, insert.since) <= 0
-        ) {
-            logErrorFor(
-                tokens.name.text,
-                tokens.name.at,
-                `Insert {${insert.name}} isn't available until Chapbook version ${insert.since} but your StoryFormat version is ${formatVersion}`,
-                state
-            );
-        } else if (
-            insert.removed !== undefined &&
-            versionCompare(formatVersion, insert.removed) >= 0
-        ) {
-            logErrorFor(
-                tokens.name.text,
-                tokens.name.at,
-                `Insert {${insert.name}} was removed in Chapbook version ${insert.removed} and your StoryFormat version is ${formatVersion}`,
-                state
-            );
-        }
+    // Validate the contents and capture any diagnostics that validation raises
+    for (const diagnostic of validateInsertContents(
+        insert,
+        tokens,
+        state.textDocument,
+        state.storyFormat?.formatVersion
+    )) {
+        state.callbacks.onParseError(diagnostic);
     }
 
-    // Check for required and unknown arguments
-    // First up, first argument
-    if (
-        insert.arguments.firstArgument.required ===
-            ArgumentRequirement.required &&
-        tokens.firstArgument === undefined
-    ) {
-        logErrorFor(
-            tokens.name.text,
-            tokens.name.at,
-            `Insert "${insert.name}" requires a first argument`,
-            state
-        );
-    } else if (
-        insert.arguments.firstArgument.required ===
-            ArgumentRequirement.ignored &&
-        tokens.firstArgument !== undefined
-    ) {
-        logWarningFor(
-            tokens.firstArgument.text,
-            tokens.firstArgument.at,
-            `Insert "${insert.name}" will ignore this first argument`,
-            state
-        );
-    }
-
+    // Capture any tokens associated with the first argument
     parseInsertArgument(
         tokens.firstArgument,
         insert.arguments.firstArgument.type,
@@ -963,26 +1140,13 @@ function parseInsertContents(
         chapbookState
     );
 
-    // Second up, properties
-    const seenProperties: Set<string> = new Set();
-    for (const [propName, [propNameToken, propValueToken]] of Object.entries(
+    // Capture any tokens associated with property arguments
+    for (const [propName, [, propValueToken]] of Object.entries(
         tokens.props
     ) as [string, [Token, Token]][]) {
         let propInfo: string | InsertProperty | null | undefined =
-            insert.arguments.requiredProps[propName];
-
-        if (propInfo !== undefined) {
-            seenProperties.add(propName);
-        } else {
-            propInfo = insert.arguments.optionalProps[propName];
-            if (propInfo === undefined)
-                logWarningFor(
-                    propNameToken.text,
-                    propNameToken.at,
-                    `Insert "${insert.name}" will ignore this property`,
-                    state
-                );
-        }
+            insert.arguments.requiredProps[propName] ||
+            insert.arguments.optionalProps[propName];
 
         if (InsertProperty.is(propInfo)) {
             parseInsertArgument(
@@ -993,31 +1157,142 @@ function parseInsertContents(
             );
         }
     }
-    const unseenProperties = Object.keys(insert.arguments.requiredProps).filter(
-        (k) => !seenProperties.has(k)
-    );
-    if (unseenProperties.length > 0) {
-        logErrorFor(
-            tokens.name.text,
-            tokens.name.at,
-            `Insert "${insert.name}" missing expected properties: ${unseenProperties.join(", ")}`,
-            state
-        );
-    }
 
-    // Third up, whatever additional checks the insert wants to do
+    // Finally, let the in-built insert do any parsing it needs to do
     insert.parse(tokens, state, chapbookState);
 }
 
 /**
- * Parse a Chapbook insert.
+ * Turn the raw text of an insert into tokens.
+ *
+ * Tokenizing can turn up errors. To capture and report them, pass a parsing state
+ * to the function. (This is optional so functions outside of the main parsing loop
+ * can re-tokenize an insert, as when validating custom inserts, which can't happen
+ * until later.)
+ *
+ * @param insert Text of the insert, including the {}.
+ * @param insertIndex Index in the document where the insert begins (zero-based).
+ * @param state Optional parsing state.
+ * @returns
+ */
+export function tokenizeInsert(
+    insert: string,
+    insertIndex: number,
+    state?: ParsingState
+): InsertTokens {
+    // Functional inserts follow the form: {function name: arg, property1: value1, property2: value2}
+    // Get rid of the {} in the insert
+    insert = insert.slice(1, -1);
+    insertIndex++;
+
+    // Find where the function's name ends
+    const functionNameStopChar = /[,:]/g;
+    const functionNameEnd = functionNameStopChar.test(insert)
+        ? functionNameStopChar.lastIndex - 1
+        : insert.length;
+    let functionName = insert.slice(0, functionNameEnd);
+    let functionIndex = 0;
+    [functionName, functionIndex] = skipSpaces(functionName, functionIndex);
+
+    // Tokenized insert information
+    // Note that the token's given locations are relative to the entire document
+    // instead of being relative to the insert's index.
+    const insertTokens: InsertTokens = {
+        name: Token.create(functionName, insertIndex + functionIndex),
+        firstArgument: undefined,
+        props: {},
+    };
+
+    let remainingContents = insert.slice(functionNameEnd);
+    let remainingContentsIndex = functionNameEnd;
+
+    // If there's a colon after the function name, handle the argument
+    if (remainingContents[0] === ":") {
+        let argumentIndex = remainingContentsIndex + 1; // Skip the ":"
+        let argument = remainingContents.slice(1);
+        [argument, argumentIndex] = skipSpaces(argument, argumentIndex);
+
+        [argument, remainingContents, remainingContentsIndex] =
+            extractInsertArgument(argument, argumentIndex);
+
+        // Save the tokens and parse the argument as a JS expression
+        insertTokens.firstArgument = Token.create(
+            argument,
+            insertIndex + argumentIndex
+        );
+    }
+
+    // If there's a comma after the function section, tokenize the properties
+    if (remainingContents[0] === ",") {
+        while (remainingContents.trim()) {
+            if (remainingContents[0] === ",") {
+                // Skip the comma
+                remainingContents = remainingContents.slice(1);
+                remainingContentsIndex++;
+            }
+            // Get the property name, which goes up to the next colon
+            const colonIndex = remainingContents.indexOf(":");
+            if (colonIndex === -1) break;
+            let currentProperty = remainingContents.slice(0, colonIndex);
+            let currentPropertyIndex = remainingContentsIndex;
+            [currentProperty, currentPropertyIndex] = skipSpaces(
+                currentProperty,
+                currentPropertyIndex
+            );
+            remainingContentsIndex += colonIndex + 1; // To skip the ":"
+            remainingContents = remainingContents.slice(colonIndex + 1);
+
+            // Properties can't have spaces bee tee dubs
+            const spaceIndex = currentProperty.lastIndexOf(" ");
+            if (spaceIndex !== -1 && state !== undefined) {
+                logErrorFor(
+                    currentProperty,
+                    insertIndex + currentPropertyIndex,
+                    "Properties can't have spaces",
+                    state
+                );
+            }
+
+            // The property's value extends to the next comma (indicating another property)
+            // or the end of the insert
+            let currentValueIndex = remainingContentsIndex;
+            let currentValue = remainingContents;
+            [currentValue, currentValueIndex] = skipSpaces(
+                currentValue,
+                currentValueIndex
+            );
+
+            [currentValue, remainingContents, remainingContentsIndex] =
+                extractInsertArgument(currentValue, currentValueIndex);
+
+            // If the property is well formed, capture it to pass to individual inserts
+            if (spaceIndex === -1) {
+                insertTokens.props[currentProperty] = [
+                    Token.create(
+                        currentProperty,
+                        insertIndex + currentPropertyIndex
+                    ),
+                    Token.create(currentValue, insertIndex + currentValueIndex),
+                ];
+            }
+        }
+    }
+
+    return insertTokens;
+}
+
+/**
+ * Parse a Chapbook insert or variable.
+ *
+ * Captures semantic tokens and variable references inside the {variable} or {insert function},
+ * and (if an insert) checks the insert's arguments.
  *
  * @param insert Text of the insert, including the {}.
  * @param insertIndex Index in the document where the insert begins (zero-based).
  * @param state Parsing state.
  * @param chapbookState Chapbook-specific parsing state.
  */
-function parseInsert(
+function parseInsertOrVariable(
     insert: string,
     insertIndex: number,
     state: ParsingState,
@@ -1062,121 +1337,38 @@ function parseInsert(
     }
 
     // Functional inserts follow the form: {function name: arg, property1: value1, property2: value2}
-    // Get rid of the {} in the insert
-    insert = insert.slice(1, -1);
-    insertIndex++;
+    const insertTokens = tokenizeInsert(insert, insertIndex, state);
 
-    // Find where the function's name ends
-    const functionNameStopChar = /[,:]/g;
-    const functionNameEnd = functionNameStopChar.test(insert)
-        ? functionNameStopChar.lastIndex - 1
-        : insert.length;
-    let functionName = insert.slice(0, functionNameEnd);
-    let functionIndex = 0;
-    [functionName, functionIndex] = skipSpaces(functionName, functionIndex);
-
-    // Tokenized insert information
-    // Note that the token's given locations are relative to the entire document
+    // Note that the tokens' given locations are relative to the entire document
     // instead of being relative to the insert's index.
-    const insertTokens: InsertTokens = {
-        name: Token.create(functionName, insertIndex + functionIndex),
-        firstArgument: undefined,
-        props: {},
-    };
 
-    let remainingContents = insert.slice(functionNameEnd);
-    let remainingContentsIndex = functionNameEnd;
-
-    // If there's a colon after the function name, handle the argument
-    if (remainingContents[0] === ":") {
-        let argumentIndex = remainingContentsIndex + 1; // Skip the ":"
-        let argument = remainingContents.slice(1);
-        [argument, argumentIndex] = skipSpaces(argument, argumentIndex);
-
-        [argument, remainingContents, remainingContentsIndex] =
-            extractInsertArgument(argument, argumentIndex);
-
-        // Save the tokens and parse the argument as a JS expression
-        insertTokens.firstArgument = Token.create(
-            argument,
-            insertIndex + argumentIndex
-        );
+    // Create semantic tokens and variable references for the arugment and properties
+    if (insertTokens.firstArgument !== undefined) {
+        // Parse the first argument as a JS expression and capture semantic tokens & var references
         createVariableReferences(
             tokenizeJSExpression(
-                argument,
-                insertIndex + argumentIndex,
+                insertTokens.firstArgument.text,
+                insertTokens.firstArgument.at,
                 state,
                 chapbookState
             ),
             state
         );
     }
-
-    // If there's a comma after the function section, tokenize the properties
-    if (remainingContents[0] === ",") {
-        while (remainingContents.trim()) {
-            if (remainingContents[0] === ",") {
-                // Skip the comma
-                remainingContents = remainingContents.slice(1);
-                remainingContentsIndex++;
-            }
-            // Get the property name, which goes up to the next colon
-            const colonIndex = remainingContents.indexOf(":");
-            if (colonIndex === -1) break;
-            let currentProperty = remainingContents.slice(0, colonIndex);
-            let currentPropertyIndex = remainingContentsIndex;
-            [currentProperty, currentPropertyIndex] = skipSpaces(
-                currentProperty,
-                currentPropertyIndex
-            );
-            remainingContentsIndex += colonIndex + 1; // To skip the ":"
-            remainingContents = remainingContents.slice(colonIndex + 1);
-
-            // Properties can't have spaces bee tee dubs
-            const spaceIndex = currentProperty.lastIndexOf(" ");
-            if (spaceIndex !== -1) {
-                logErrorFor(
-                    currentProperty,
-                    insertIndex + currentPropertyIndex,
-                    "Properties can't have spaces",
-                    state
-                );
-            }
-
-            // The property's value extends to the next comma (indicating another property)
-            // or the end of the insert
-            let currentValueIndex = remainingContentsIndex;
-            let currentValue = remainingContents;
-            [currentValue, currentValueIndex] = skipSpaces(
-                currentValue,
-                currentValueIndex
-            );
-
-            [currentValue, remainingContents, remainingContentsIndex] =
-                extractInsertArgument(currentValue, currentValueIndex);
-
-            // If the property is well formed, capture it to pass to individual inserts
-            if (spaceIndex === -1) {
-                insertTokens.props[currentProperty] = [
-                    Token.create(
-                        currentProperty,
-                        insertIndex + currentPropertyIndex
-                    ),
-                    Token.create(currentValue, insertIndex + currentValueIndex),
-                ];
-
-                // Parse the value as JavaScript
-                createVariableReferences(
-                    tokenizeJSExpression(
-                        currentValue,
-                        insertIndex + currentValueIndex,
-                        state,
-                        chapbookState
-                    ),
-                    state
-                );
-            }
-        }
+    for (const [, propValueToken] of Object.values(insertTokens.props) as [
+        Token,
+        Token,
+    ][]) {
+        // Parse properties' values as JavaScript
+        createVariableReferences(
+            tokenizeJSExpression(
+                propValueToken.text,
+                propValueToken.at,
+                state,
+                chapbookState
+            ),
+            state
+        );
     }
 
     // Parse the insert contents
@@ -1291,7 +1483,7 @@ function parseTextSubsection(
                                 startCurly,
                                 i + 1
                             );
-                            parseInsert(
+                            parseInsertOrVariable(
                                 insertSrc,
                                 subsectionIndex + startCurly,
                                 state,
@@ -1356,7 +1548,7 @@ function parseModifier(
                     modifier !== undefined
                         ? OChapbookSymbolKind.BuiltInModifier
                         : OChapbookSymbolKind.CustomModifier,
-                    state
+                    state.textDocument
                 )
             );
 
