@@ -1404,15 +1404,10 @@ function parseTextSubsection(
 ): void {
     if (chapbookState.modifierKind === ModifierKind.Javascript) {
         findEngineExtensions(subsection, subsectionIndex, state);
-        createVariableReferences(
-            tokenizeJSExpression(
-                subsection,
-                subsectionIndex,
-                state,
-                chapbookState
-            ),
-            state
-        );
+        // We'll tokenize the contents, but not capture variable
+        // references, as they mostly won't be set in Chapbook
+        // vars sections and thus would cause a lot of spurious warnings
+        tokenizeJSExpression(subsection, subsectionIndex, state, chapbookState);
     } else if (chapbookState.modifierKind === ModifierKind.Css) {
         state.callbacks.onEmbeddedDocument(
             EmbeddedDocument.create(

@@ -626,7 +626,7 @@ describe("Chapbook Parsing", () => {
                 });
             });
 
-            it("should capture variables in a javascript modifier", () => {
+            it("should not capture variables in a javascript modifier", () => {
                 const header = ":: Passage\n";
                 const passage = "Stuff\n\n[javascript]\n  newVar = 1;\n";
                 const callbacks = new MockCallbacks();
@@ -637,17 +637,18 @@ describe("Chapbook Parsing", () => {
                 const parser = uut.getChapbookParser(undefined);
 
                 parser?.parsePassageText(passage, header.length, state);
-                const [, result] = callbacks.references;
+                const result = callbacks.references;
 
-                expect(callbacks.references.length).to.equal(2);
-                expect(result).to.eql({
-                    contents: "newVar",
-                    location: Location.create(
-                        "fake-uri",
-                        Range.create(4, 2, 4, 8)
-                    ),
-                    kind: OChapbookSymbolKind.Variable,
-                });
+                expect(result).to.eql([
+                    {
+                        contents: "javascript",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(3, 1, 3, 11)
+                        ),
+                        kind: OChapbookSymbolKind.BuiltInModifier,
+                    },
+                ]);
             });
 
             it("should set an embedded document for a CSS modifier", () => {
