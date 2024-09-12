@@ -47,7 +47,9 @@ import { EmbeddedDocument } from "../../embedded-languages";
 const varsSepPattern = /^--(\r?\n|$)/m;
 const conditionPattern = /((\((.+?)\)?)\s*)([^)]*)$/;
 const modifierPattern = /^([ \t]*)\[([^[].+[^\]])\](\s*?)(?:\r?\n|$)/gm;
-const lineExtractionPattern = /^([ \t]*?)\b(.*)$/gm;
+const varsLineExtractionPattern = /^([ \t]*?)\b(.*)$/gm;
+const varsLineVarOnlyExtractionPattern =
+    /^(\s*)([A-Za-z$_][A-Za-z0-9$_]*)?.*$/gmu;
 
 /**
  * A Chapbook function such as an insert or modifier.
@@ -1745,6 +1747,35 @@ function parseTextSection(
 }
 
 /**
+ * Parse only the variables being set in the vars section of a Chapbook passage.
+ *
+ * @param section The vars section.
+ * @param sectionIndex Index in the document where the vars section begins (zero-based).
+ * @param state Parsing state
+ */
+function parseVarsSectionForSetVarsOnly(
+    section: string,
+    sectionIndex: number,
+    state: ParsingState
+): void {
+    // Parse line by line
+    varsLineVarOnlyExtractionPattern.lastIndex = 0;
+    for (const m of section.matchAll(varsLineVarOnlyExtractionPattern)) {
+        // Matches are [line (0), leading whitespace (1), variable name being set (2; may not be there)]
+        if (m[2] !== undefined) {
+            state.callbacks.onSymbolReference(
+                createSymbolFor(
+                    m[2],
+                    sectionIndex + m.index + m[1].length,
+                    OChapbookSymbolKind.VariableSet,
+                    state.textDocument
+                )
+            );
+        }
+    }
+}
+
+/**
  * Parse the vars section of a Chapbook passage.
  *
  * @param section The vars section.
@@ -1758,8 +1789,8 @@ function parseVarsSection(
     chapbookState: ChapbookParsingState
 ): void {
     // Parse line by line
-    lineExtractionPattern.lastIndex = 0;
-    for (const m of section.matchAll(lineExtractionPattern)) {
+    varsLineExtractionPattern.lastIndex = 0;
+    for (const m of section.matchAll(varsLineExtractionPattern)) {
         // Matches are [line (0), leading whitespace (1), contents (2)]
         // Skip blank lines
         if (m[0].trim() === "") continue;
@@ -1945,6 +1976,15 @@ export function parsePassageText(
             // Even if we don't parse passage contents, look for calls to
             // `engine.extend()` so we can capture custom inserts and modifiers
             findEngineExtensions(passageText, textIndex, state);
+            // as well as variables being set
+            const passageParts = divideChapbookPassage(passageText);
+            if (passageParts.vars !== undefined) {
+                parseVarsSectionForSetVarsOnly(
+                    passageParts.vars,
+                    textIndex,
+                    state
+                );
+            }
         }
         return;
     }

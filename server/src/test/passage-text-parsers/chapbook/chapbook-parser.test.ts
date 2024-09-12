@@ -50,6 +50,33 @@ describe("Chapbook Parsing", () => {
         });
     });
 
+    it("should parse a variable set in a vars section even when only parsing passage names", () => {
+        const header = ":: Passage\n";
+        const passage = "var1.prop: var2\n--\nThis is {var3}\n";
+        const callbacks = new MockCallbacks();
+        const state = buildParsingState({
+            uri: "fake-uri",
+            content: header + passage,
+            callbacks: callbacks,
+            parseLevel: ParseLevel.PassageNames,
+        });
+        state.storyFormat = {
+            format: "Chapbook",
+            formatVersion: "2.0.1",
+        };
+        const parser = uut.getChapbookParser(undefined);
+
+        parser?.parsePassageText(passage, header.length, state);
+        const result = callbacks.references[0];
+
+        expect(callbacks.references.length).to.equal(1);
+        expect(result).to.eql({
+            contents: "var1",
+            location: Location.create("fake-uri", Range.create(1, 0, 1, 4)),
+            kind: OChapbookSymbolKind.VariableSet,
+        });
+    });
+
     it("should not parse engine extension calls when only parsing the StoryData passage", () => {
         const header = ":: Passage\n";
         const passage =
