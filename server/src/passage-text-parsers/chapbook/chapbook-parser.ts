@@ -143,6 +143,9 @@ export const OChapbookSymbolKind = {
     CustomModifier: TwineSymbolKind._end + 3,
     CustomInsert: TwineSymbolKind._end + 4,
     Variable: TwineSymbolKind._end + 5,
+    // Additional symbol for a variable being set in the vars section (the
+    // regular variable symbol will also be captured)
+    VariableSet: TwineSymbolKind._end + 6,
 };
 export type ChapbookSymbolKind =
     (typeof OChapbookSymbolKind)[keyof typeof OChapbookSymbolKind];
@@ -214,13 +217,18 @@ export function getChapbookDefinitions(
  *
  * @param vars List of variables as labels.
  * @param state Parsing state.
+ * @param kind Kind of symbol reference to create.
  */
-function createVariableReferences(vars: Label[], state: ParsingState): void {
+function createVariableReferences(
+    vars: Label[],
+    state: ParsingState,
+    kind: ChapbookSymbolKind = OChapbookSymbolKind.Variable
+): void {
     for (const v of vars) {
         state.callbacks.onSymbolReference({
             contents: v.contents,
             location: v.location,
-            kind: OChapbookSymbolKind.Variable,
+            kind: kind,
         });
     }
 }
@@ -1844,7 +1852,8 @@ function parseVarsSection(
             );
         }
 
-        // Set tokens and variable references for the variable name
+        // Capture the variable name reference as being set by this vars section
+        // and update the token for the name to show that it's being modified.
         createVariableReferences(
             tokenizeJSExpression(
                 name,
@@ -1852,7 +1861,17 @@ function parseVarsSection(
                 state,
                 chapbookState
             ),
-            state
+            state,
+            OChapbookSymbolKind.VariableSet
+        );
+        // Because we only create symbols for variables and not any referenced
+        // properties, we need to split off any properties
+        capturePreTokenFor(
+            name.split(".", 1)[0],
+            sectionIndex + nameIndex,
+            ETokenType.variable,
+            [ETokenModifier.modification],
+            chapbookState
         );
 
         // Handle the value

@@ -29,6 +29,29 @@ interface astUnprocessedToken {
 let currentExpression: string = "";
 let unprocessedTokens: astUnprocessedToken[] = [];
 
+const builtInJSObjects = new Set([
+    "Object",
+    "Function",
+    "Boolean",
+    "Symbol",
+    "Error",
+    "Number",
+    "BigInt",
+    "Math",
+    "Date",
+    "String",
+    "Array",
+    "Map",
+    "Set",
+    "WeakMap",
+    "WeakSet",
+    "ArrayBuffer",
+    "SharedArrayBuffer",
+    "DataView",
+    "Atomics",
+    "JSON",
+]);
+
 /**
  * Callback at each node in the AST, capturing tokens of interest.
  *
@@ -50,11 +73,12 @@ function fullAncestorTokenizingCallback(
     const node = rawNode as acorn.AnyNode;
     if (node.type === "Identifier") {
         const ancestor = ancestors[ancestors.length - 2];
-        // Don't record placeholders, instantiated classes, or function names
+        // Don't record placeholders, instantiated classes, function names, or built-in objects
         if (
             node.name !== "✖" &&
             ancestor?.type !== "NewExpression" &&
-            ancestor?.type !== "CallExpression"
+            ancestor?.type !== "CallExpression" &&
+            !builtInJSObjects.has(node.name)
         ) {
             unprocessedTokens.push({
                 text: node.name,

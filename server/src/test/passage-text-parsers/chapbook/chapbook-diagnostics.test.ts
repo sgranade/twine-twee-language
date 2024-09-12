@@ -19,6 +19,81 @@ import * as uut from "../../../passage-text-parsers/chapbook";
 import { ArgumentRequirement } from "../../../passage-text-parsers/chapbook/inserts";
 
 describe("Chapbook Diagnostics", () => {
+    describe("variables", () => {
+        it("should warn on a variable with no matching variable setting", () => {
+            const doc = TextDocument.create(
+                "fake-uri",
+                "",
+                0,
+                "Let's try {var1}"
+            );
+            const index = new Index();
+            index.setReferences("fake-uri", [
+                {
+                    contents: "var1",
+                    locations: [
+                        Location.create("fake-uri", Range.create(1, 2, 3, 4)),
+                    ],
+                    kind: OChapbookSymbolKind.Variable,
+                },
+            ]);
+            const diagnosticOptions = defaultDiagnosticsOptions;
+            const parser = uut.getChapbookParser(undefined);
+
+            const results = parser?.generateDiagnostics(
+                doc,
+                index,
+                diagnosticOptions
+            );
+
+            expect(results).to.eql([
+                Diagnostic.create(
+                    Range.create(1, 2, 3, 4),
+                    "Variable \"var1\" isn't set in any vars section. Make sure you've spelled it correctly.",
+                    DiagnosticSeverity.Warning
+                ),
+            ]);
+        });
+
+        it("should not warn on a variable with no matching variable setting", () => {
+            const doc = TextDocument.create(
+                "fake-uri",
+                "",
+                0,
+                "Let's try {var1}"
+            );
+            const index = new Index();
+            index.setReferences("fake-uri", [
+                {
+                    contents: "var1",
+                    locations: [
+                        Location.create("fake-uri", Range.create(1, 2, 3, 4)),
+                    ],
+                    kind: OChapbookSymbolKind.Variable,
+                },
+            ]);
+            index.setReferences("other-uri", [
+                {
+                    contents: "var1",
+                    locations: [
+                        Location.create("other-uri", Range.create(5, 6, 7, 8)),
+                    ],
+                    kind: OChapbookSymbolKind.VariableSet,
+                },
+            ]);
+            const diagnosticOptions = defaultDiagnosticsOptions;
+            const parser = uut.getChapbookParser(undefined);
+
+            const results = parser?.generateDiagnostics(
+                doc,
+                index,
+                diagnosticOptions
+            );
+
+            expect(results).to.be.empty;
+        });
+    });
+
     describe("inserts and modifiers", () => {
         it("should warn on an unrecognized insert", () => {
             const doc = TextDocument.create(

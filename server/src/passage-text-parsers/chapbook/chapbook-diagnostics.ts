@@ -28,6 +28,34 @@ export function generateDiagnostics(
     const diagnostics: Diagnostic[] = [];
     const text = document.getText();
 
+    // Check for variables that don't have a matching set statement in a vars section
+    const varSetNamesWithDuplicates: string[] = [];
+    for (const uri of index.getIndexedUris()) {
+        varSetNamesWithDuplicates.push(
+            ...(index
+                .getReferences(uri, OChapbookSymbolKind.VariableSet)
+                ?.map((ref) => ref.contents) || [])
+        );
+    }
+    const varSetNames = new Set(varSetNamesWithDuplicates);
+    for (const varRef of index.getReferences(
+        document.uri,
+        OChapbookSymbolKind.Variable
+    ) || []) {
+        if (!varSetNames.has(varRef.contents)) {
+            const message = `Variable "${varRef.contents}" isn't set in any vars section. Make sure you've spelled it correctly.`;
+            diagnostics.push(
+                ...varRef.locations.map((loc) =>
+                    Diagnostic.create(
+                        loc.range,
+                        message,
+                        DiagnosticSeverity.Warning
+                    )
+                )
+            );
+        }
+    }
+
     // Check for unrecognized custom inserts (if that option is set) and
     // any argument errors in recognized custom inserts
     const customInserts = getChapbookDefinitions(
