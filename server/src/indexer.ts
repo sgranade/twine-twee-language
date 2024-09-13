@@ -111,16 +111,17 @@ export function updateProjectIndex(
         diagnosticsOptions
     );
 
-    // Collate the array of individual references by name
+    // Collate the array of individual references by kind and name
     const referencesMap: Record<string, References> = {};
     for (const symbol of indexingState.references) {
-        const ref = referencesMap[symbol.contents] || {
+        const key = `${symbol.kind},${symbol.contents}`;
+        const ref = referencesMap[key] || {
             contents: symbol.contents,
             locations: [],
             kind: symbol.kind,
         };
         ref.locations.push(symbol.location);
-        referencesMap[symbol.contents] = ref;
+        referencesMap[key] = ref;
     }
     const references = Object.values(referencesMap);
 

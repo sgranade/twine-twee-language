@@ -4,6 +4,7 @@ import { generateCompletions } from "./chapbook-completions";
 import { getDefinitionAt } from "./chapbook-definitions";
 import { generateDiagnostics } from "./chapbook-diagnostics";
 import { generateHover } from "./chapbook-hover";
+import { getReferencesToSymbolAt } from "./chapbook-references";
 
 /**
  * Get passage text parser for the Chapbook story format.
@@ -22,6 +23,6 @@ export function getChapbookParser(
         generateDiagnostics: generateDiagnostics,
         generateHover: generateHover,
         getDefinitionAt: getDefinitionAt,
-        getReferencesToSymbolAt: () => undefined, // Chapbook doesn't need this
+        getReferencesToSymbolAt: getReferencesToSymbolAt,
     };
 }

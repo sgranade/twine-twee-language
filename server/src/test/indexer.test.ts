@@ -161,6 +161,72 @@ describe("Indexer", () => {
             ]);
         });
 
+        it("should add references with different kinds but the same name to the index", () => {
+            const doc = buildDocument({
+                uri: "test-uri",
+                content: "::Passage 1\nYup\n\n",
+            });
+            const index = new Index();
+            // Because passage references only show up in passage contents, we
+            // need to mock the passage text parser to create a reference
+            const mockFunction = ImportMock.mockFunction(
+                ptpModule,
+                "getStoryFormatParser"
+            ).callsFake(() => {
+                return {
+                    id: "FakeFormat",
+                    parsePassageText: (
+                        passageText: string,
+                        textIndex: number,
+                        state: ParsingState
+                    ) => {
+                        if (passageText === "Yup\n\n") {
+                            state.callbacks.onSymbolReference({
+                                contents: "passage",
+                                location: Location.create(
+                                    "test-uri",
+                                    Range.create(1, 2, 3, 4)
+                                ),
+                                kind: 1,
+                            });
+                            state.callbacks.onSymbolReference({
+                                contents: "passage",
+                                location: Location.create(
+                                    "test-uri",
+                                    Range.create(1, 2, 3, 4)
+                                ),
+                                kind: 2,
+                            });
+                        }
+                    },
+                };
+            });
+
+            uut.updateProjectIndex(doc, ParseLevel.Full, index);
+            mockFunction.restore();
+            const result_0 = index.getReferences("test-uri", 1);
+            const result_1 = index.getReferences("test-uri", 2);
+
+            expect(result_0).to.eql([
+                {
+                    contents: "passage",
+                    locations: [
+                        Location.create("test-uri", Range.create(1, 2, 3, 4)),
+                    ],
+                    kind: 1,
+                },
+            ]);
+            expect(result_1).to.eql([
+                {
+                    contents: "passage",
+                    locations: [
+                        Location.create("test-uri", Range.create(1, 2, 3, 4)),
+                    ],
+                    kind: 2,
+                },
+            ]);
+        });
+
         it("should add the story title to the index", () => {
             const doc = buildDocument({
                 uri: "test-uri",
