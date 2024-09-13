@@ -135,7 +135,7 @@ function fullAncestorTokenizingCallback(
     ) {
         unprocessedTokens.push({
             text: node.operator,
-            at: node.start,
+            at: node.prefix ? node.start : node.end - node.operator.length,
             type: ETokenType.operator,
             modifiers: [],
         });
