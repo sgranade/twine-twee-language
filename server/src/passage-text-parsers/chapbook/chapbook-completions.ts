@@ -40,6 +40,11 @@ function generateVariableCompletions(
                 .getReferences(uri, OChapbookSymbolKind.Variable)
                 ?.map((x) => x.contents) || [])
         );
+        variableCompletions.push(
+            ...(index
+                .getReferences(uri, OChapbookSymbolKind.VariableSet)
+                ?.map((x) => x.contents) || [])
+        );
     }
     return CompletionList.create(
         Array.from(new Set<string>(variableCompletions)).map((c) => {

@@ -17,7 +17,7 @@ import * as uut from "../../../passage-text-parsers/chapbook";
 
 describe("Chapbook Completions", () => {
     describe("Variables", () => {
-        it("should suggest variables in the vars section", () => {
+        it("should suggest variables (both set and otherwise) in the vars section", () => {
             const doc = TextDocument.create(
                 "fake-uri",
                 "",
@@ -45,13 +45,14 @@ describe("Chapbook Completions", () => {
                     locations: [
                         Location.create("fake-uri", Range.create(5, 6, 7, 8)),
                     ],
-                    kind: OChapbookSymbolKind.Variable,
+                    kind: OChapbookSymbolKind.VariableSet,
                 },
             ]);
             const parser = uut.getChapbookParser(undefined);
 
             const results = parser?.generateCompletions(doc, position, index);
 
+            expect(results?.items.length).to.equal(2);
             expect(results?.items[0]?.label).to.eql("var1");
             expect(results?.items[1]?.label).to.eql("anotherVar");
         });
