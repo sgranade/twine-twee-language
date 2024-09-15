@@ -927,7 +927,7 @@ function parseInsertArgument(
 ): void {
     if (
         token !== undefined &&
-        (token.text.startsWith("'") || token.text.startsWith("'"))
+        (token.text.startsWith("'") || token.text.startsWith('"'))
     ) {
         if (
             argType === ValueType.passage ||

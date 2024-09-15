@@ -1548,7 +1548,7 @@ describe("Chapbook Parsing", () => {
 
                 it("should create a passage reference for a first arg that's a passage", () => {
                     const header = ":: Passage\n";
-                    const passage = "Insert: {mock insert:  'arg'}";
+                    const passage = 'Insert: {mock insert:  "arg"}';
                     const callbacks = new MockCallbacks();
                     const insert = buildInsertInfo({
                         match: /^mock insert/,
