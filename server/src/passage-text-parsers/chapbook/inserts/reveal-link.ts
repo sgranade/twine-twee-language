@@ -37,18 +37,7 @@ export const revealLink: InsertInfo = {
                     state
                 );
             }
-        } else if (passageProp !== undefined) {
-            const m = /^(['"])(.*)\1$/.exec(passageProp[1].text);
-            if (m !== null) {
-                const content = m[2];
-                parsePassageReference(
-                    content,
-                    passageProp[1].at + 1,
-                    state,
-                    chapbookState
-                );
-            }
-        } else {
+        } else if (passageProp === undefined) {
             logErrorFor(
                 args.name.text,
                 args.name.at,

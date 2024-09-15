@@ -19,17 +19,11 @@ export const embedPassage: InsertInfo = {
     completions: ["embed passage"],
     parse(args, state, chapbookState) {
         if (args.firstArgument) {
-            // If the first argument is a string, it's a passage
-            const m = /^(['"])(.*)\1$/.exec(args.firstArgument.text);
-            if (m !== null) {
-                const content = m[2];
-                parsePassageReference(
-                    content,
-                    args.firstArgument.at + 1,
-                    state,
-                    chapbookState
-                );
-            } else if (!/^\S*$/.test(args.firstArgument.text)) {
+            // If the first argument is a string, it's a passage. Otherwise it has to be a variable
+            if (
+                !/^(['"])(.*)\1$/.test(args.firstArgument.text) &&
+                !/^\S*$/.test(args.firstArgument.text)
+            ) {
                 logErrorFor(
                     args.firstArgument.text,
                     args.firstArgument.at,
