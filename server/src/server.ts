@@ -41,8 +41,10 @@ import { generateCompletions } from "./completions";
 import { getDefinitionAt } from "./definition";
 import { generateHover } from "./hover";
 import { updateProjectIndex } from "./indexer";
+import { ParseLevel } from "./parser";
 import { Index } from "./project-index";
-import { generateRenames } from "./searches";
+import { getReferencesToSymbolAt } from "./references";
+import { generateRenames, prepareRename } from "./searches";
 import {
     DiagnosticsOptions,
     defaultDiagnosticsOptions,
@@ -53,9 +55,8 @@ import {
     generateSymbols,
 } from "./structure";
 import { semanticTokensLegend } from "./tokens";
+import { positionInRange } from "./utilities";
 import { generateDiagnostics } from "./validator";
-import { ParseLevel } from "./parser";
-import { getReferencesToSymbolAt } from "./references";
 
 const connection: Connection = createConnection(ProposedFeatures.all);
 
@@ -358,14 +359,11 @@ connection.onNotification(CustomMessages.RequestReindex, () => {
 });
 
 connection.onPrepareRename((params: PrepareRenameParams): Range | undefined => {
-    const symbol = projectIndex.getDefinitionAt(
+    return prepareRename(
         params.textDocument.uri,
-        params.position
+        params.position,
+        projectIndex
     );
-    if (symbol !== undefined) {
-        return symbol.location.range;
-    }
-    return undefined;
 });
 
 connection.onRenameRequest((params: RenameParams): WorkspaceEdit | null => {

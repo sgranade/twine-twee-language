@@ -8,7 +8,52 @@ import { buildPassage } from "./builders";
 import * as uut from "../searches";
 
 describe("Searches", () => {
-    describe("Renames", () => {
+    describe("Prepare Renames", () => {
+        it("should return the range of a definition at the location", () => {
+            const index = new Index();
+            index.setDefinitions("source-uri", [
+                {
+                    contents: "defined",
+                    kind: TwineSymbolKind.Passage,
+                    location: Location.create(
+                        "source-uri",
+                        Range.create(3, 4, 3, 7)
+                    ),
+                },
+            ]);
+
+            const result = uut.prepareRename(
+                "source-uri",
+                Position.create(3, 5),
+                index
+            );
+
+            expect(result).to.eql(Range.create(3, 4, 3, 7));
+        });
+
+        it("should return the range of a reference at the location", () => {
+            const index = new Index();
+            index.setReferences("source-uri", [
+                {
+                    contents: "defined",
+                    kind: TwineSymbolKind.Passage,
+                    locations: [
+                        Location.create("source-uri", Range.create(3, 4, 3, 7)),
+                    ],
+                },
+            ]);
+
+            const result = uut.prepareRename(
+                "source-uri",
+                Position.create(3, 5),
+                index
+            );
+
+            expect(result).to.eql(Range.create(3, 4, 3, 7));
+        });
+    });
+
+    describe("Generate Renames", () => {
         describe("Passages", () => {
             it("should rename passages at the passage's actual location", () => {
                 const passages = [
