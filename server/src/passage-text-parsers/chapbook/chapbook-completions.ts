@@ -9,21 +9,16 @@ import {
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { ProjectIndex } from "../../project-index";
-import {
-    ArgumentRequirement,
-    InsertProperty,
-    ValueType,
-    all as allInserts,
-} from "./inserts";
-import { all as allModifiers } from "./modifiers";
 import { removeAndCountPadding } from "../../utilities";
 import {
-    ChapbookFunctionInfo,
     divideChapbookPassage,
     findStartOfModifierOrInsert,
     getChapbookDefinitions,
-    OChapbookSymbolKind,
 } from "./chapbook-parser";
+import { ChapbookFunctionInfo, OChapbookSymbolKind } from "./types";
+import { all as allInserts } from "./inserts";
+import { all as allModifiers } from "./modifiers";
+import { ArgumentRequirement, InsertProperty, ValueType } from "./types";
 
 /**
  * Generate completions for all variables.
@@ -168,7 +163,7 @@ function insertPropertyPlaceholder(
     tabStop?: number
 ): string {
     let placeholder = "'arg'";
-    if (InsertProperty.is(info)) {
+    if (InsertProperty.is(info) && info.placeholder !== undefined) {
         placeholder = info.placeholder;
     } else if (typeof info === "string") {
         placeholder = info;
@@ -309,19 +304,19 @@ function generateInsertCompletions(
                 let textEditText = label;
                 if (
                     colonMissing &&
-                    insert.arguments?.firstArgument.required ===
+                    insert.firstArgument?.required ===
                         ArgumentRequirement.required
                 ) {
                     const placeholder =
-                        insert.arguments.firstArgument.placeholder !== undefined
-                            ? insert.arguments.firstArgument.placeholder
+                        insert.firstArgument?.placeholder !== undefined
+                            ? insert.firstArgument.placeholder
                             : "'arg'";
                     textEditText += `: ${placeholderWithTabStop(placeholder, placeholderCount++)}`;
                 }
                 // If there's no comma, put in placeholders for any required properties
                 if (commaMissing) {
                     for (const [name, info] of Object.entries(
-                        insert.arguments?.requiredProps || {}
+                        insert.requiredProps || {}
                     )) {
                         textEditText += `, ${name}: ${insertPropertyPlaceholder(info, placeholderCount++)}`;
                     }
@@ -394,12 +389,10 @@ function generateInsertCompletions(
         if (text[insertSectionEnd] === ":") insertSectionEnd++;
 
         const propCompletions = insertPropertiesToCompletionItems(
-            insert.arguments?.requiredProps || {}
+            insert.requiredProps || {}
         );
         propCompletions.push(
-            ...insertPropertiesToCompletionItems(
-                insert.arguments?.optionalProps || {}
-            )
+            ...insertPropertiesToCompletionItems(insert.optionalProps || {})
         );
         const completionList = CompletionList.create(propCompletions);
         completionList.itemDefaults = {
@@ -426,8 +419,8 @@ function generateInsertCompletions(
 
         // Create completions if the first argument's type supports it
         if (
-            insert.arguments?.firstArgument.type === ValueType.passage ||
-            insert.arguments?.firstArgument.type === ValueType.urlOrPassage
+            insert.firstArgument?.type === ValueType.passage ||
+            insert.firstArgument?.type === ValueType.urlOrPassage
         ) {
             return generatePassageCompletions(
                 document,
@@ -453,8 +446,8 @@ function generateInsertCompletions(
                 .slice(propertyNameStart, propertyNameEnd)
                 .trim();
             const propInfo =
-                insert.arguments?.requiredProps[propName] ||
-                insert.arguments?.optionalProps[propName];
+                insert.requiredProps?.[propName] ||
+                insert.optionalProps?.[propName];
 
             // Create completions if the property's value type supports it
             if (

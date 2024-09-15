@@ -1,9 +1,6 @@
-import {
-    logErrorFor,
-    logWarningFor,
-    parsePassageReference,
-} from "../../../parser";
-import { ArgumentRequirement, InsertInfo, ValueType } from "./types";
+import { logErrorFor, logWarningFor } from "../../../parser";
+import { ArgumentRequirement, ValueType } from "../types";
+import { InsertInfo } from "./types";
 
 export const revealLink: InsertInfo = {
     name: "reveal link",
@@ -11,16 +8,14 @@ export const revealLink: InsertInfo = {
     description:
         "Renders a link that expands to show either\n1. the `text` property (when defined) or\n2. the contents of the passage that has the name specified by the `passage` property (when defined)\nwhen clicked or tapped.",
     match: /^reveal\s+link/i,
-    arguments: {
-        firstArgument: {
-            required: ArgumentRequirement.required,
-            placeholder: "'label'",
-        },
-        requiredProps: {},
-        optionalProps: {
-            text: "'revealed text'",
-            passage: { placeholder: "'passage name'", type: ValueType.passage },
-        },
+    firstArgument: {
+        required: ArgumentRequirement.required,
+        placeholder: "'label'",
+    },
+    requiredProps: {},
+    optionalProps: {
+        text: "'revealed text'",
+        passage: { placeholder: "'passage name'", type: ValueType.passage },
     },
     completions: ["reveal link"],
     parse(args, state, chapbookState) {

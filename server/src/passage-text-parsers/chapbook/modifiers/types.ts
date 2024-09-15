@@ -1,5 +1,6 @@
 import { ParsingState } from "../../../parser";
-import { ChapbookFunctionInfo, ChapbookParsingState } from "../chapbook-parser";
+import { ChapbookParsingState } from "../chapbook-parser";
+import { ChapbookFunctionInfo } from "../types";
 
 /**
  * A parser for a specific modifier.

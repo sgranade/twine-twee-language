@@ -4,6 +4,8 @@ import { Diagnostic, DiagnosticSeverity } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { StoryFormatParsingState, capturePreTokenFor } from "..";
+import { EmbeddedDocument } from "../../embedded-languages";
+import { parseJSExpressionStrict, tokenizeJSExpression } from "../../js-parser";
 import {
     ParsingState,
     logWarningFor,
@@ -16,6 +18,7 @@ import {
     parseHtml,
     ParseLevel,
 } from "../../parser";
+import { Label, ProjectIndex, Symbol } from "../../project-index";
 import { ETokenType, ETokenModifier } from "../../tokens";
 import {
     skipSpaces,
@@ -25,24 +28,19 @@ import {
     hasOwnProperty,
     createDiagnosticFor,
 } from "../../utilities";
-import {
-    InsertTokens,
-    all as allInserts,
-    Token,
-    ArgumentRequirement,
-    ValueType,
-    InsertProperty,
-    InsertArguments,
-} from "./inserts";
+import { InsertTokens, Token, all as allInserts } from "./inserts";
 import { all as allModifiers, ModifierInfo } from "./modifiers";
-import { parseJSExpressionStrict, tokenizeJSExpression } from "../../js-parser";
 import {
-    Label,
-    ProjectIndex,
-    Symbol,
-    TwineSymbolKind,
-} from "../../project-index";
-import { EmbeddedDocument } from "../../embedded-languages";
+    ArgumentRequirement,
+    ChapbookFunctionInfo,
+    ChapbookSymbol,
+    ChapbookSymbolKind,
+    FirstArgument,
+    InsertProperty,
+    InsertPropertyRecord,
+    OChapbookSymbolKind,
+    ValueType,
+} from "./types";
 
 const varsSepPattern = /^--(\r?\n|$)/m;
 const conditionPattern = /((\((.+?)\)?)\s*)([^)]*)$/;
@@ -50,122 +48,6 @@ const modifierPattern = /^([ \t]*)\[([^[].+[^\]])\](\s*?)(?:\r?\n|$)/gm;
 const varsLineExtractionPattern = /^([ \t]*?)\b(.*)$/gm;
 const varsLineVarOnlyExtractionPattern =
     /^(\s*)([A-Za-z$_][A-Za-z0-9$_]*)?.*$/gmu;
-
-/**
- * A Chapbook function such as an insert or modifier.
- */
-export interface ChapbookFunctionInfo {
-    /**
-     * What to call this function.
-     */
-    name?: string;
-    /**
-     * Regular expression that matches invocations of this function.
-     */
-    match: RegExp;
-    /**
-     * Function's syntax. Shown on hover; supports markdown.
-     */
-    syntax?: string;
-    /**
-     * Function's description. Shown on hover; supports markdown.
-     */
-    description?: string;
-    /**
-     * List of completions corresponding to this function.
-     */
-    completions?: string[];
-    /**
-     * Arguments to the function (if it's an insert).
-     */
-    arguments?: InsertArguments;
-    /**
-     * Chapbook version when this function became available.
-     */
-    since?: string;
-    /**
-     * Chapbook version when this function became deprecated.
-     */
-    deprecated?: string;
-    /**
-     * Chapbook version when this function was removed.
-     */
-    removed?: string;
-}
-export namespace ChapbookFunctionInfo {
-    /**
-     * Type guard for ChapbookSymbol.
-     */
-    export function is(val: any): val is ChapbookFunctionInfo {
-        if (typeof val !== "object" || Array.isArray(val) || val === null)
-            return false;
-        return (val as ChapbookFunctionInfo).match !== undefined;
-    }
-    /**
-     * Is a function available in a given Chapbook version?
-     *
-     * @param info Function information.
-     * @param version Chapbook version.
-     * @returns True if the function is available in the Chapbook version; false otherwise.
-     */
-    export function exists(
-        info: ChapbookFunctionInfo,
-        version: string
-    ): boolean {
-        if (info.since === undefined) return true;
-        if (info.removed === undefined)
-            return versionCompare(version, info.since) >= 0;
-        return (
-            versionCompare(version, info.since) >= 0 &&
-            versionCompare(version, info.removed) < 0
-        );
-    }
-    /**
-     * Is a function deprecated in a given Chapbook version?
-     *
-     * @param info Function information.
-     * @param version Chapbook version.
-     * @returns True if the function is deprecated in the Chapbook version; false otherwise.
-     */
-    export function isDeprecated(
-        info: ChapbookFunctionInfo,
-        version: string
-    ): boolean {
-        if (info.deprecated === undefined) return false;
-        return versionCompare(version, info.deprecated) >= 0;
-    }
-}
-
-/**
- * Kind of a Chapbook symbol.
- */
-export const OChapbookSymbolKind = {
-    BuiltInModifier: TwineSymbolKind._end + 1,
-    BuiltInInsert: TwineSymbolKind._end + 2,
-    CustomModifier: TwineSymbolKind._end + 3,
-    CustomInsert: TwineSymbolKind._end + 4,
-    Variable: TwineSymbolKind._end + 5,
-    // Additional symbol for a variable being set in the vars section (the
-    // regular variable symbol will also be captured)
-    VariableSet: TwineSymbolKind._end + 6,
-};
-export type ChapbookSymbolKind =
-    (typeof OChapbookSymbolKind)[keyof typeof OChapbookSymbolKind];
-
-/**
- * A Chapbook symbol, which corresponds to a modifier, insert, or variable.
- */
-export interface ChapbookSymbol extends Symbol, ChapbookFunctionInfo {}
-export namespace ChapbookSymbol {
-    /**
-     * Type guard for ChapbookSymbol.
-     */
-    export function is(val: any): val is ChapbookSymbol {
-        if (typeof val !== "object" || Array.isArray(val) || val === null)
-            return false;
-        return (val as ChapbookSymbol).match !== undefined;
-    }
-}
 
 /**
  * Type of Chapbook modifier.
@@ -384,6 +266,28 @@ export function findEndOfPartialInsert(
 }
 
 /**
+ * An insert's expected arguments and completion/placeholder information.
+ */
+interface InsertArguments {
+    /**
+     * Is a first argument required?
+     */
+    firstArgument: {
+        required: ArgumentRequirement;
+        placeholder?: string;
+        type?: ValueType;
+    };
+    /**
+     * Properties that must be present, with their placeholder (string) or full optional info.
+     */
+    requiredProps: InsertPropertyRecord;
+    /**
+     * Properties that may be present, with their optional info.
+     */
+    optionalProps: InsertPropertyRecord;
+}
+
+/**
  * Parse information about a custom insert's arguments.
  *
  * @param argsNode Node in the AST containing the custom insert argument object.
@@ -540,7 +444,9 @@ interface CustomInsertOrModifierInformation {
     description: string | undefined;
     syntax: string | undefined;
     completions: string[] | undefined;
-    insertArguments: InsertArguments | undefined;
+    firstArgument: FirstArgument | undefined;
+    requiredProps: InsertPropertyRecord | undefined;
+    optionalProps: InsertPropertyRecord | undefined;
 }
 
 /**
@@ -564,7 +470,9 @@ function parseCustomInsertOrModifierDefinition(
         description: undefined,
         syntax: undefined,
         completions: undefined,
-        insertArguments: undefined,
+        firstArgument: undefined,
+        requiredProps: undefined,
+        optionalProps: undefined,
     };
 
     try {
@@ -576,11 +484,17 @@ function parseCustomInsertOrModifierDefinition(
                     // Arguments for a custom insert
                     if (node.key.name === "arguments") {
                         if (symbolKind === OChapbookSymbolKind.CustomInsert) {
-                            props.insertArguments = parseCustomInsertArguments(
+                            const insertArguments = parseCustomInsertArguments(
                                 node.value,
                                 contentsIndex,
                                 state
                             );
+                            props.firstArgument =
+                                insertArguments?.firstArgument;
+                            props.requiredProps =
+                                insertArguments?.requiredProps;
+                            props.optionalProps =
+                                insertArguments?.optionalProps;
                         } else {
                             state.callbacks.onParseError(
                                 createDiagnostic(
@@ -715,8 +629,12 @@ function parseCustomInsertOrModifierDefinition(
         if (props.syntax !== undefined) symbol.syntax = props.syntax;
         if (props.completions !== undefined)
             symbol.completions = props.completions;
-        if (props.insertArguments !== undefined)
-            symbol.arguments = props.insertArguments;
+        if (props.firstArgument !== undefined)
+            symbol.firstArgument = props.firstArgument;
+        if (props.requiredProps !== undefined)
+            symbol.requiredProps = props.requiredProps;
+        if (props.optionalProps !== undefined)
+            symbol.optionalProps = props.optionalProps;
 
         state.callbacks.onSymbolDefinition(symbol);
     } catch (err) {
@@ -1004,8 +922,7 @@ export function validateInsertContents(
     // Check for required and unknown arguments
     // First up, first argument
     if (
-        insert.arguments?.firstArgument.required ===
-            ArgumentRequirement.required &&
+        insert.firstArgument?.required === ArgumentRequirement.required &&
         tokens.firstArgument === undefined
     ) {
         diagnostics.push(
@@ -1018,8 +935,7 @@ export function validateInsertContents(
             )
         );
     } else if (
-        insert.arguments?.firstArgument.required ===
-            ArgumentRequirement.ignored &&
+        insert.firstArgument?.required === ArgumentRequirement.ignored &&
         tokens.firstArgument !== undefined
     ) {
         diagnostics.push(
@@ -1039,12 +955,12 @@ export function validateInsertContents(
         tokens.props
     ) as [string, [Token, Token]][]) {
         let propInfo: string | InsertProperty | null | undefined =
-            insert.arguments?.requiredProps[propName];
+            insert.requiredProps?.[propName];
 
         if (propInfo !== undefined) {
             seenProperties.add(propName);
         } else {
-            propInfo = insert.arguments?.optionalProps[propName];
+            propInfo = insert.optionalProps?.[propName];
             if (propInfo === undefined)
                 diagnostics.push(
                     createDiagnosticFor(
@@ -1057,9 +973,9 @@ export function validateInsertContents(
                 );
         }
     }
-    const unseenProperties = Object.keys(
-        insert.arguments?.requiredProps || {}
-    ).filter((k) => !seenProperties.has(k));
+    const unseenProperties = Object.keys(insert.requiredProps || {}).filter(
+        (k) => !seenProperties.has(k)
+    );
     if (unseenProperties.length > 0) {
         diagnostics.push(
             createDiagnosticFor(
@@ -1145,7 +1061,7 @@ function parseInsertContents(
     // Capture any tokens associated with the first argument
     parseInsertArgument(
         tokens.firstArgument,
-        insert.arguments.firstArgument.type,
+        insert.firstArgument.type,
         state,
         chapbookState
     );
@@ -1155,8 +1071,7 @@ function parseInsertContents(
         tokens.props
     ) as [string, [Token, Token]][]) {
         let propInfo: string | InsertProperty | null | undefined =
-            insert.arguments.requiredProps[propName] ||
-            insert.arguments.optionalProps[propName];
+            insert.requiredProps[propName] || insert.optionalProps[propName];
 
         if (InsertProperty.is(propInfo)) {
             parseInsertArgument(

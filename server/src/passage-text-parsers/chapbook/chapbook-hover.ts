@@ -2,11 +2,8 @@ import { Hover, MarkupKind, Position } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { ProjectIndex } from "../../project-index";
-import {
-    ChapbookFunctionInfo,
-    getChapbookDefinitions,
-    OChapbookSymbolKind,
-} from "./chapbook-parser";
+import { getChapbookDefinitions } from "./chapbook-parser";
+import { ChapbookFunctionInfo, OChapbookSymbolKind } from "./types";
 import { all as allInserts } from "./inserts";
 import { all as allModifiers } from "./modifiers";
 

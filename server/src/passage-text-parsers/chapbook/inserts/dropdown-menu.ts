@@ -1,4 +1,5 @@
-import { ArgumentRequirement, InsertInfo } from "./types";
+import { ArgumentRequirement } from "../types";
+import { InsertInfo } from "./types";
 
 export const dropdownMenu: InsertInfo = {
     name: "dropdown menu",
@@ -6,14 +7,12 @@ export const dropdownMenu: InsertInfo = {
     description:
         "Renders a dropdown menu that runs through the options listed in `choices`, saving the option the player selected to the variable named. `for 'variableName'` can be omitted; Chapbook will not save the selected value anywhere.",
     match: /^dropdown\s+menu(\s+for)?/i,
-    arguments: {
-        firstArgument: {
-            required: ArgumentRequirement.optional,
-            placeholder: "'variableName'",
-        },
-        requiredProps: { choices: "['one', 'two', 'three']" },
-        optionalProps: {},
+    firstArgument: {
+        required: ArgumentRequirement.optional,
+        placeholder: "'variableName'",
     },
+    requiredProps: { choices: "['one', 'two', 'three']" },
+    optionalProps: {},
     completions: ["dropdown menu"],
-    parse(args, state, chapbookState) {},
+    parse: () => {},
 };

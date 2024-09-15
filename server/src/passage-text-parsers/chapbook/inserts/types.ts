@@ -1,4 +1,10 @@
-import { ChapbookFunctionInfo, ChapbookParsingState } from "../chapbook-parser";
+import { ChapbookParsingState } from "../chapbook-parser";
+import {
+    ChapbookFunctionInfo,
+    FirstArgument,
+    InsertPropertyRecord,
+} from "../types";
+import { ArgumentRequirement, InsertProperty, ValueType } from "../types";
 import { ParsingState } from "../../../parser";
 
 /**
@@ -48,77 +54,6 @@ export interface InsertTokens {
 }
 
 /**
- * Whether an insert's argument is required.
- */
-export enum ArgumentRequirement {
-    required,
-    optional,
-    ignored,
-}
-
-/**
- * What kind of value an insert argument or property takes.
- */
-export enum ValueType {
-    /**
-     * Javascript expression
-     */
-    expression,
-    /**
-     * Number
-     */
-    number,
-    /**
-     * A Twine passage
-     */
-    passage,
-    /**
-     * Either a Twine passage or a URL link
-     */
-    urlOrPassage,
-}
-
-/**
- * Information about an insert property.
- */
-export interface InsertProperty {
-    type?: ValueType;
-    placeholder: string;
-}
-export namespace InsertProperty {
-    /**
-     * Type guard for InsertProperty.
-     */
-    export function is(val: any): val is InsertProperty {
-        if (typeof val !== "object" || Array.isArray(val) || val === null)
-            return false;
-        return (val as InsertProperty).placeholder !== undefined;
-    }
-}
-
-/**
- * An insert's expected arguments and completion/placeholder information.
- */
-export interface InsertArguments {
-    /**
-     * Is a first argument required?
-     */
-    firstArgument: {
-        required: ArgumentRequirement;
-        placeholder?: string;
-        type?: ValueType;
-    };
-    /**
-     * Properties that must be present, with their placeholder (string) or full optional info.
-     */
-    requiredProps: Record<string, string | InsertProperty | null>;
-    /**
-     * Properties that may be present, with their optional info.
-     */
-    optionalProps: Record<string, string | InsertProperty | null>;
-}
-
-/**
  * A parser for a specific insert.
  */
 export interface InsertInfo extends ChapbookFunctionInfo {
@@ -127,10 +62,17 @@ export interface InsertInfo extends ChapbookFunctionInfo {
      */
     name: string;
     /**
-     * Which arguments the insert expects and completion/placeholder information about them.
-     * (Required for built-in insert info)
+     * Is there a required or optional first argument? (Required for built-in insert info)
      */
-    arguments: InsertArguments;
+    firstArgument: FirstArgument;
+    /**
+     * Properties that must be present, with their placeholder (string) or full optional info.
+     */
+    requiredProps: Record<string, string | InsertProperty | null>;
+    /**
+     * Properties that may be present, with their optional info.
+     */
+    optionalProps: Record<string, string | InsertProperty | null>;
     /**
      * Parses the insert.
      * @param tokens Tokenized insert information.

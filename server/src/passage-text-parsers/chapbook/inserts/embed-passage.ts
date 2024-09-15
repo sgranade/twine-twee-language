@@ -1,5 +1,6 @@
-import { logErrorFor, parsePassageReference } from "../../../parser";
-import { ArgumentRequirement, InsertInfo, ValueType } from "./types";
+import { logErrorFor } from "../../../parser";
+import { ArgumentRequirement, ValueType } from "../types";
+import { InsertInfo } from "./types";
 
 export const embedPassage: InsertInfo = {
     name: "embed passage",
@@ -7,15 +8,13 @@ export const embedPassage: InsertInfo = {
     description:
         "Renders the passage named in the insert. This executed any vars section in that passage.",
     match: /^embed\s+passage(\s+named)?/i,
-    arguments: {
-        firstArgument: {
-            required: ArgumentRequirement.required,
-            placeholder: "'passage name'",
-            type: ValueType.passage,
-        },
-        requiredProps: {},
-        optionalProps: {},
+    firstArgument: {
+        required: ArgumentRequirement.required,
+        placeholder: "'passage name'",
+        type: ValueType.passage,
     },
+    requiredProps: {},
+    optionalProps: {},
     completions: ["embed passage"],
     parse(args, state, chapbookState) {
         if (args.firstArgument) {

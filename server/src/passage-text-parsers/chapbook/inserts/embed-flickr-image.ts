@@ -1,4 +1,5 @@
-import { ArgumentRequirement, InsertInfo } from "./types";
+import { ArgumentRequirement } from "../types";
+import { InsertInfo } from "./types";
 
 export const embedFlickrImage: InsertInfo = {
     name: "embed Flickr",
@@ -6,14 +7,12 @@ export const embedFlickrImage: InsertInfo = {
     description:
         "Renders an image hosted on Flickr with alt text specified by `alt`.",
     match: /^embed\s+flickr(\s+image)?/i,
-    arguments: {
-        firstArgument: {
-            required: ArgumentRequirement.required,
-            placeholder: "'embed code'",
-        },
-        requiredProps: {},
-        optionalProps: { alt: "'alternate text'" },
+    firstArgument: {
+        required: ArgumentRequirement.required,
+        placeholder: "'embed code'",
     },
+    requiredProps: {},
+    optionalProps: { alt: "'alternate text'" },
     completions: ["embed Flickr"],
-    parse(args, state, chapbookState) {},
+    parse: () => {},
 };

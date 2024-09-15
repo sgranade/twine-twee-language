@@ -9,7 +9,11 @@ import { Index } from "../../../project-index";
 import {
     ChapbookSymbol,
     OChapbookSymbolKind,
-} from "../../../passage-text-parsers/chapbook/chapbook-parser";
+} from "../../../passage-text-parsers/chapbook/types";
+import {
+    ArgumentRequirement,
+    ValueType,
+} from "../../../passage-text-parsers/chapbook/types";
 import * as insertsModule from "../../../passage-text-parsers/chapbook/inserts";
 import * as modifiersModule from "../../../passage-text-parsers/chapbook/modifiers";
 
@@ -240,13 +244,11 @@ describe("Chapbook Completions", () => {
                 description: "desc",
                 match: /^test\s+insert/i,
                 completions: ["test insert"],
-                arguments: {
-                    firstArgument: {
-                        required: insertsModule.ArgumentRequirement.optional,
-                    },
-                    requiredProps: {},
-                    optionalProps: {},
+                firstArgument: {
+                    required: ArgumentRequirement.optional,
                 },
+                requiredProps: {},
+                optionalProps: {},
                 parse: () => {},
             };
             const mockFunction = ImportMock.mockFunction(
@@ -398,13 +400,11 @@ describe("Chapbook Completions", () => {
                 description: "desc",
                 match: /^test\s+insert/i,
                 completions: ["test insert"],
-                arguments: {
-                    firstArgument: {
-                        required: insertsModule.ArgumentRequirement.optional,
-                    },
-                    requiredProps: {},
-                    optionalProps: {},
+                firstArgument: {
+                    required: ArgumentRequirement.optional,
                 },
+                requiredProps: {},
+                optionalProps: {},
                 parse: () => {},
             };
             const mockFunction = ImportMock.mockFunction(
@@ -443,13 +443,11 @@ describe("Chapbook Completions", () => {
                 description: "desc",
                 match: /^test\s+insert/i,
                 completions: ["test insert"],
-                arguments: {
-                    firstArgument: {
-                        required: insertsModule.ArgumentRequirement.optional,
-                    },
-                    requiredProps: {},
-                    optionalProps: {},
+                firstArgument: {
+                    required: ArgumentRequirement.optional,
                 },
+                requiredProps: {},
+                optionalProps: {},
                 parse: () => {},
             };
             const mockFunction = ImportMock.mockFunction(
@@ -488,13 +486,11 @@ describe("Chapbook Completions", () => {
                 description: "desc",
                 match: /^test\s+insert/i,
                 completions: ["test insert"],
-                arguments: {
-                    firstArgument: {
-                        required: insertsModule.ArgumentRequirement.optional,
-                    },
-                    requiredProps: {},
-                    optionalProps: {},
+                firstArgument: {
+                    required: ArgumentRequirement.optional,
                 },
+                requiredProps: {},
+                optionalProps: {},
                 parse: () => {},
             };
             const mockFunction = ImportMock.mockFunction(
@@ -576,13 +572,11 @@ describe("Chapbook Completions", () => {
                 description: "desc",
                 match: /^test\s+insert/i,
                 completions: ["test insert"],
-                arguments: {
-                    firstArgument: {
-                        required: insertsModule.ArgumentRequirement.required,
-                    },
-                    requiredProps: {},
-                    optionalProps: {},
+                firstArgument: {
+                    required: ArgumentRequirement.required,
                 },
+                requiredProps: {},
+                optionalProps: {},
                 parse: () => {},
             };
             const mockFunction = ImportMock.mockFunction(
@@ -627,10 +621,12 @@ describe("Chapbook Completions", () => {
                     kind: OChapbookSymbolKind.CustomInsert,
                     match: /custom\s+insert/i,
                     completions: ["custom insert"],
+                    firstArgument: {
+                        required: ArgumentRequirement.required,
+                    },
                     arguments: {
                         firstArgument: {
-                            required:
-                                insertsModule.ArgumentRequirement.required,
+                            required: ArgumentRequirement.required,
                         },
                     },
                 } as ChapbookSymbol,
@@ -673,13 +669,11 @@ describe("Chapbook Completions", () => {
                 description: "desc",
                 match: /^test\s+insert/i,
                 completions: ["test insert"],
-                arguments: {
-                    firstArgument: {
-                        required: insertsModule.ArgumentRequirement.required,
-                    },
-                    requiredProps: {},
-                    optionalProps: {},
+                firstArgument: {
+                    required: ArgumentRequirement.required,
                 },
+                requiredProps: {},
+                optionalProps: {},
                 parse: () => {},
             };
             const mockFunction = ImportMock.mockFunction(
@@ -724,10 +718,12 @@ describe("Chapbook Completions", () => {
                     kind: OChapbookSymbolKind.CustomInsert,
                     match: /custom\s+insert/i,
                     completions: ["custom insert"],
+                    firstArgument: {
+                        required: ArgumentRequirement.required,
+                    },
                     arguments: {
                         firstArgument: {
-                            required:
-                                insertsModule.ArgumentRequirement.required,
+                            required: ArgumentRequirement.required,
                         },
                     },
                 } as ChapbookSymbol,
@@ -770,14 +766,12 @@ describe("Chapbook Completions", () => {
                 description: "desc",
                 match: /^test\s+insert/i,
                 completions: ["test insert"],
-                arguments: {
-                    firstArgument: {
-                        required: insertsModule.ArgumentRequirement.required,
-                        placeholder: "'URL'",
-                    },
-                    requiredProps: {},
-                    optionalProps: {},
+                firstArgument: {
+                    required: ArgumentRequirement.required,
+                    placeholder: "'URL'",
                 },
+                requiredProps: {},
+                optionalProps: {},
                 parse: () => {},
             };
             const mockFunction = ImportMock.mockFunction(
@@ -822,10 +816,13 @@ describe("Chapbook Completions", () => {
                     kind: OChapbookSymbolKind.CustomInsert,
                     match: /custom\s+insert/i,
                     completions: ["custom insert"],
+                    firstArgument: {
+                        required: ArgumentRequirement.required,
+                        placeholder: "'URL'",
+                    },
                     arguments: {
                         firstArgument: {
-                            required:
-                                insertsModule.ArgumentRequirement.required,
+                            required: ArgumentRequirement.required,
                             placeholder: "'URL'",
                         },
                     },
@@ -869,17 +866,15 @@ describe("Chapbook Completions", () => {
                 description: "desc",
                 match: /^test\s+insert/i,
                 completions: ["test insert"],
-                arguments: {
-                    firstArgument: {
-                        required: insertsModule.ArgumentRequirement.required,
-                        placeholder: "'URL'",
-                    },
-                    requiredProps: {
-                        one: "true",
-                        two: "'falsy'",
-                    },
-                    optionalProps: {},
+                firstArgument: {
+                    required: ArgumentRequirement.required,
+                    placeholder: "'URL'",
                 },
+                requiredProps: {
+                    one: "true",
+                    two: "'falsy'",
+                },
+                optionalProps: {},
                 parse: () => {},
             };
             const mockFunction = ImportMock.mockFunction(
@@ -924,10 +919,18 @@ describe("Chapbook Completions", () => {
                     kind: OChapbookSymbolKind.CustomInsert,
                     match: /custom\s+insert/i,
                     completions: ["custom insert"],
+                    firstArgument: {
+                        required: ArgumentRequirement.required,
+                        placeholder: "'URL'",
+                    },
+                    requiredProps: {
+                        one: "true",
+                        two: "'falsy'",
+                    },
+                    optionalProps: {},
                     arguments: {
                         firstArgument: {
-                            required:
-                                insertsModule.ArgumentRequirement.required,
+                            required: ArgumentRequirement.required,
                             placeholder: "'URL'",
                         },
                         requiredProps: {
@@ -976,17 +979,12 @@ describe("Chapbook Completions", () => {
                 description: "desc",
                 match: /^test\s+insert/i,
                 completions: ["test insert"],
-                arguments: {
-                    firstArgument: {
-                        required: insertsModule.ArgumentRequirement.required,
-                        placeholder: "'URL'",
-                    },
-                    requiredProps: {
-                        one: "true",
-                        two: "'falsy'",
-                    },
-                    optionalProps: {},
+                firstArgument: {
+                    required: ArgumentRequirement.required,
+                    placeholder: "'URL'",
                 },
+                requiredProps: {},
+                optionalProps: {},
                 parse: () => {},
             };
             const mockFunction = ImportMock.mockFunction(
@@ -1031,10 +1029,13 @@ describe("Chapbook Completions", () => {
                     kind: OChapbookSymbolKind.CustomInsert,
                     match: /custom\s+insert/i,
                     completions: ["custom insert"],
+                    firstArgument: {
+                        required: ArgumentRequirement.required,
+                        placeholder: "'URL'",
+                    },
                     arguments: {
                         firstArgument: {
-                            required:
-                                insertsModule.ArgumentRequirement.required,
+                            required: ArgumentRequirement.required,
                             placeholder: "'URL'",
                         },
                         requiredProps: {
@@ -1083,14 +1084,12 @@ describe("Chapbook Completions", () => {
                 description: "desc",
                 match: /^test\s+insert/i,
                 completions: ["test insert"],
-                arguments: {
-                    firstArgument: {
-                        required: insertsModule.ArgumentRequirement.required,
-                        placeholder: "'URL'",
-                    },
-                    requiredProps: {},
-                    optionalProps: {},
+                firstArgument: {
+                    required: ArgumentRequirement.required,
+                    placeholder: "'URL'",
                 },
+                requiredProps: {},
+                optionalProps: {},
                 parse: () => {},
             };
             const mockFunction = ImportMock.mockFunction(
@@ -1135,8 +1134,7 @@ describe("Chapbook Completions", () => {
                     completions: ["custom insert"],
                     arguments: {
                         firstArgument: {
-                            required:
-                                insertsModule.ArgumentRequirement.required,
+                            required: ArgumentRequirement.required,
                             placeholder: "'URL'",
                         },
                     },
@@ -1178,14 +1176,12 @@ describe("Chapbook Completions", () => {
                 description: "desc",
                 match: /^test\s+insert/i,
                 completions: ["test insert"],
-                arguments: {
-                    firstArgument: {
-                        required: insertsModule.ArgumentRequirement.optional,
-                        type: insertsModule.ValueType.passage,
-                    },
-                    requiredProps: {},
-                    optionalProps: {},
+                firstArgument: {
+                    required: ArgumentRequirement.optional,
+                    type: ValueType.passage,
                 },
+                requiredProps: {},
+                optionalProps: {},
                 parse: () => {},
             };
             const mockFunction = ImportMock.mockFunction(
@@ -1225,14 +1221,12 @@ describe("Chapbook Completions", () => {
                 description: "desc",
                 match: /^test\s+insert/i,
                 completions: ["test insert"],
-                arguments: {
-                    firstArgument: {
-                        required: insertsModule.ArgumentRequirement.optional,
-                        type: insertsModule.ValueType.urlOrPassage,
-                    },
-                    requiredProps: {},
-                    optionalProps: {},
+                firstArgument: {
+                    required: ArgumentRequirement.optional,
+                    type: ValueType.urlOrPassage,
                 },
+                requiredProps: {},
+                optionalProps: {},
                 parse: () => {},
             };
             const mockFunction = ImportMock.mockFunction(
@@ -1272,14 +1266,12 @@ describe("Chapbook Completions", () => {
                 description: "desc",
                 match: /^test\s+insert/i,
                 completions: ["test insert"],
-                arguments: {
-                    firstArgument: {
-                        required: insertsModule.ArgumentRequirement.optional,
-                        type: insertsModule.ValueType.passage,
-                    },
-                    requiredProps: {},
-                    optionalProps: {},
+                firstArgument: {
+                    required: ArgumentRequirement.optional,
+                    type: ValueType.passage,
                 },
+                requiredProps: {},
+                optionalProps: {},
                 parse: () => {},
             };
             const mockFunction = ImportMock.mockFunction(
@@ -1319,13 +1311,11 @@ describe("Chapbook Completions", () => {
                 description: "desc",
                 match: /^test\s+insert/i,
                 completions: ["test insert"],
-                arguments: {
-                    firstArgument: {
-                        required: insertsModule.ArgumentRequirement.optional,
-                    },
-                    requiredProps: { one: null },
-                    optionalProps: { two: { placeholder: "'value'" } },
+                firstArgument: {
+                    required: ArgumentRequirement.optional,
                 },
+                requiredProps: { one: null },
+                optionalProps: { two: { placeholder: "'value'" } },
                 parse: () => {},
             };
             const mockFunction = ImportMock.mockFunction(
@@ -1371,10 +1361,16 @@ describe("Chapbook Completions", () => {
                     kind: OChapbookSymbolKind.CustomInsert,
                     match: /custom\s+insert/i,
                     completions: ["custom insert"],
+                    firstArgument: {
+                        required: ArgumentRequirement.required,
+                    },
+                    requiredProps: {
+                        one: null,
+                    },
+                    optionalProps: { two: "'value'" },
                     arguments: {
                         firstArgument: {
-                            required:
-                                insertsModule.ArgumentRequirement.required,
+                            required: ArgumentRequirement.required,
                         },
                         requiredProps: {
                             one: null,
@@ -1422,13 +1418,11 @@ describe("Chapbook Completions", () => {
                 description: "desc",
                 match: /^test\s+insert/i,
                 completions: ["test insert"],
-                arguments: {
-                    firstArgument: {
-                        required: insertsModule.ArgumentRequirement.optional,
-                    },
-                    requiredProps: { one: null },
-                    optionalProps: { two: null },
+                firstArgument: {
+                    required: ArgumentRequirement.optional,
                 },
+                requiredProps: { one: null },
+                optionalProps: { two: null },
                 parse: () => {},
             };
             const mockFunction = ImportMock.mockFunction(
@@ -1474,10 +1468,16 @@ describe("Chapbook Completions", () => {
                     kind: OChapbookSymbolKind.CustomInsert,
                     match: /custom\s+insert/i,
                     completions: ["custom insert"],
+                    firstArgument: {
+                        required: ArgumentRequirement.required,
+                    },
+                    requiredProps: {
+                        one: null,
+                    },
+                    optionalProps: { two: null },
                     arguments: {
                         firstArgument: {
-                            required:
-                                insertsModule.ArgumentRequirement.required,
+                            required: ArgumentRequirement.required,
                         },
                         requiredProps: {
                             one: null,
@@ -1525,13 +1525,11 @@ describe("Chapbook Completions", () => {
                 description: "desc",
                 match: /^test\s+insert/i,
                 completions: ["test insert"],
-                arguments: {
-                    firstArgument: {
-                        required: insertsModule.ArgumentRequirement.optional,
-                    },
-                    requiredProps: { one: null },
-                    optionalProps: { two: null },
+                firstArgument: {
+                    required: ArgumentRequirement.optional,
                 },
+                requiredProps: { one: null },
+                optionalProps: { two: null },
                 parse: () => {},
             };
             const mockFunction = ImportMock.mockFunction(
@@ -1567,18 +1565,16 @@ describe("Chapbook Completions", () => {
                 description: "desc",
                 match: /^test\s+insert/i,
                 completions: ["test insert"],
-                arguments: {
-                    firstArgument: {
-                        required: insertsModule.ArgumentRequirement.optional,
-                    },
-                    requiredProps: {
-                        one: {
-                            placeholder: "arg",
-                            type: insertsModule.ValueType.passage,
-                        },
-                    },
-                    optionalProps: { two: null },
+                firstArgument: {
+                    required: ArgumentRequirement.optional,
                 },
+                requiredProps: {
+                    one: {
+                        placeholder: "arg",
+                        type: ValueType.passage,
+                    },
+                },
+                optionalProps: { two: null },
                 parse: () => {},
             };
             const mockFunction = ImportMock.mockFunction(

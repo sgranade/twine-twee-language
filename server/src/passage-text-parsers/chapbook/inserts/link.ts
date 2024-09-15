@@ -1,5 +1,6 @@
 import { parsePassageReference } from "../../../parser";
-import { ArgumentRequirement, InsertInfo, ValueType } from "./types";
+import { ArgumentRequirement, ValueType } from "../types";
+import { InsertInfo } from "./types";
 
 export const link: InsertInfo = {
     name: "link to",
@@ -7,15 +8,13 @@ export const link: InsertInfo = {
     description:
         "Renders a link to a passage name or address. `label` may be omitted; Chapbook will use the passage name or URL as label instead.",
     match: /^link\s+to/i,
-    arguments: {
-        firstArgument: {
-            required: ArgumentRequirement.required,
-            placeholder: "'passage name or URL'",
-            type: ValueType.urlOrPassage,
-        },
-        requiredProps: {},
-        optionalProps: { label: "'label'" },
+    firstArgument: {
+        required: ArgumentRequirement.required,
+        placeholder: "'passage name or URL'",
+        type: ValueType.urlOrPassage,
     },
+    requiredProps: {},
+    optionalProps: { label: "'label'" },
     completions: ["link to"],
     parse(args, state, chapbookState) {
         // If the first arg isn't a URL, then it's a passage

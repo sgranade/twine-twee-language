@@ -12,7 +12,11 @@ import { ETokenModifier, ETokenType } from "../../../tokens";
 import {
     ChapbookSymbol,
     OChapbookSymbolKind,
-} from "../../../passage-text-parsers/chapbook/chapbook-parser";
+} from "../../../passage-text-parsers/chapbook/types";
+import {
+    ArgumentRequirement,
+    ValueType,
+} from "../../../passage-text-parsers/chapbook/types";
 import * as insertsModule from "../../../passage-text-parsers/chapbook/inserts";
 import * as modifiersModule from "../../../passage-text-parsers/chapbook/modifiers";
 
@@ -1553,8 +1557,7 @@ describe("Chapbook Parsing", () => {
                     const insert = buildInsertInfo({
                         match: /^mock insert/,
                     });
-                    insert.arguments.firstArgument.type =
-                        insertsModule.ValueType.passage;
+                    insert.firstArgument.type = ValueType.passage;
                     const allTokens: insertsModule.InsertTokens[] = [];
                     insert.parse = (tokens) => {
                         allTokens.push(tokens);
@@ -1592,8 +1595,7 @@ describe("Chapbook Parsing", () => {
                     const insert = buildInsertInfo({
                         match: /^mock insert/,
                     });
-                    insert.arguments.firstArgument.type =
-                        insertsModule.ValueType.passage;
+                    insert.firstArgument.type = ValueType.passage;
                     const allTokens: insertsModule.InsertTokens[] = [];
                     insert.parse = (tokens) => {
                         allTokens.push(tokens);
@@ -1628,8 +1630,7 @@ describe("Chapbook Parsing", () => {
                     const insert = buildInsertInfo({
                         match: /^mock insert/,
                     });
-                    insert.arguments.firstArgument.type =
-                        insertsModule.ValueType.urlOrPassage;
+                    insert.firstArgument.type = ValueType.urlOrPassage;
                     const allTokens: insertsModule.InsertTokens[] = [];
                     insert.parse = (tokens) => {
                         allTokens.push(tokens);
@@ -1667,8 +1668,7 @@ describe("Chapbook Parsing", () => {
                     const insert = buildInsertInfo({
                         match: /^mock insert/,
                     });
-                    insert.arguments.firstArgument.type =
-                        insertsModule.ValueType.urlOrPassage;
+                    insert.firstArgument.type = ValueType.urlOrPassage;
                     const allTokens: insertsModule.InsertTokens[] = [];
                     insert.parse = (tokens) => {
                         allTokens.push(tokens);
@@ -1704,8 +1704,7 @@ describe("Chapbook Parsing", () => {
                     const insert = buildInsertInfo({
                         match: /^mock insert/,
                     });
-                    insert.arguments.firstArgument.type =
-                        insertsModule.ValueType.urlOrPassage;
+                    insert.firstArgument.type = ValueType.urlOrPassage;
                     const allTokens: insertsModule.InsertTokens[] = [];
                     insert.parse = (tokens) => {
                         allTokens.push(tokens);
@@ -1736,8 +1735,7 @@ describe("Chapbook Parsing", () => {
                     const insert = buildInsertInfo({
                         match: /^mock insert/,
                     });
-                    insert.arguments.firstArgument.type =
-                        insertsModule.ValueType.urlOrPassage;
+                    insert.firstArgument.type = ValueType.urlOrPassage;
                     const allTokens: insertsModule.InsertTokens[] = [];
                     insert.parse = (tokens) => {
                         allTokens.push(tokens);
@@ -1772,8 +1770,7 @@ describe("Chapbook Parsing", () => {
                     const insert = buildInsertInfo({
                         match: /^mock insert/,
                     });
-                    insert.arguments.firstArgument.type =
-                        insertsModule.ValueType.urlOrPassage;
+                    insert.firstArgument.type = ValueType.urlOrPassage;
                     const allTokens: insertsModule.InsertTokens[] = [];
                     insert.parse = (tokens) => {
                         allTokens.push(tokens);
@@ -1810,8 +1807,7 @@ describe("Chapbook Parsing", () => {
                     const insert = buildInsertInfo({
                         match: /^mock insert/,
                     });
-                    insert.arguments.firstArgument.type =
-                        insertsModule.ValueType.urlOrPassage;
+                    insert.firstArgument.type = ValueType.urlOrPassage;
                     const allTokens: insertsModule.InsertTokens[] = [];
                     insert.parse = (tokens) => {
                         allTokens.push(tokens);
@@ -1847,10 +1843,10 @@ describe("Chapbook Parsing", () => {
                     const insert = buildInsertInfo({
                         match: /^mock insert/,
                     });
-                    insert.arguments.requiredProps = {
+                    insert.requiredProps = {
                         prop1: {
                             placeholder: "",
-                            type: insertsModule.ValueType.passage,
+                            type: ValueType.passage,
                         },
                     };
                     const allTokens: insertsModule.InsertTokens[] = [];
@@ -1890,16 +1886,16 @@ describe("Chapbook Parsing", () => {
                     const insert = buildInsertInfo({
                         match: /^mock insert/,
                     });
-                    insert.arguments.requiredProps = {
+                    insert.requiredProps = {
                         prop1: {
                             placeholder: "",
-                            type: insertsModule.ValueType.passage,
+                            type: ValueType.passage,
                         },
                     };
-                    insert.arguments.optionalProps = {
+                    insert.optionalProps = {
                         prop2: {
                             placeholder: "",
-                            type: insertsModule.ValueType.passage,
+                            type: ValueType.passage,
                         },
                     };
                     const allTokens: insertsModule.InsertTokens[] = [];
@@ -2253,14 +2249,11 @@ describe("Chapbook Parsing", () => {
                     ),
                     kind: OChapbookSymbolKind.CustomInsert,
                     match: /hi\s+there/,
-                    arguments: {
-                        firstArgument: {
-                            required:
-                                insertsModule.ArgumentRequirement.required,
-                        },
-                        requiredProps: {},
-                        optionalProps: {},
+                    firstArgument: {
+                        required: ArgumentRequirement.required,
                     },
+                    requiredProps: {},
+                    optionalProps: {},
                 });
             });
 
@@ -2294,14 +2287,11 @@ describe("Chapbook Parsing", () => {
                     ),
                     kind: OChapbookSymbolKind.CustomInsert,
                     match: /hi\s+there/,
-                    arguments: {
-                        firstArgument: {
-                            required:
-                                insertsModule.ArgumentRequirement.optional,
-                        },
-                        requiredProps: {},
-                        optionalProps: {},
+                    firstArgument: {
+                        required: ArgumentRequirement.optional,
                     },
+                    requiredProps: {},
+                    optionalProps: {},
                 });
             });
 
@@ -2335,14 +2325,11 @@ describe("Chapbook Parsing", () => {
                     ),
                     kind: OChapbookSymbolKind.CustomInsert,
                     match: /hi\s+there/,
-                    arguments: {
-                        firstArgument: {
-                            required:
-                                insertsModule.ArgumentRequirement.required,
-                        },
-                        requiredProps: {},
-                        optionalProps: {},
+                    firstArgument: {
+                        required: ArgumentRequirement.required,
                     },
+                    requiredProps: {},
+                    optionalProps: {},
                 });
             });
 
@@ -2376,14 +2363,11 @@ describe("Chapbook Parsing", () => {
                     ),
                     kind: OChapbookSymbolKind.CustomInsert,
                     match: /hi\s+there/,
-                    arguments: {
-                        firstArgument: {
-                            required:
-                                insertsModule.ArgumentRequirement.optional,
-                        },
-                        requiredProps: {},
-                        optionalProps: {},
+                    firstArgument: {
+                        required: ArgumentRequirement.optional,
                     },
+                    requiredProps: {},
+                    optionalProps: {},
                 });
             });
 
@@ -2417,13 +2401,11 @@ describe("Chapbook Parsing", () => {
                     ),
                     kind: OChapbookSymbolKind.CustomInsert,
                     match: /hi\s+there/,
-                    arguments: {
-                        firstArgument: {
-                            required: insertsModule.ArgumentRequirement.ignored,
-                        },
-                        requiredProps: {},
-                        optionalProps: {},
+                    firstArgument: {
+                        required: ArgumentRequirement.ignored,
                     },
+                    requiredProps: {},
+                    optionalProps: {},
                 });
             });
 
@@ -2457,15 +2439,12 @@ describe("Chapbook Parsing", () => {
                     ),
                     kind: OChapbookSymbolKind.CustomInsert,
                     match: /hi\s+there/,
-                    arguments: {
-                        firstArgument: {
-                            required:
-                                insertsModule.ArgumentRequirement.required,
-                            placeholder: "'arg'",
-                        },
-                        requiredProps: {},
-                        optionalProps: {},
+                    firstArgument: {
+                        required: ArgumentRequirement.required,
+                        placeholder: "'arg'",
                     },
+                    requiredProps: {},
+                    optionalProps: {},
                 });
             });
 
@@ -2499,17 +2478,14 @@ describe("Chapbook Parsing", () => {
                     ),
                     kind: OChapbookSymbolKind.CustomInsert,
                     match: /hi\s+there/,
-                    arguments: {
-                        firstArgument: {
-                            required:
-                                insertsModule.ArgumentRequirement.required,
-                        },
-                        requiredProps: {
-                            foo: null,
-                            bar: "'bar'",
-                        },
-                        optionalProps: {},
+                    firstArgument: {
+                        required: ArgumentRequirement.required,
                     },
+                    requiredProps: {
+                        foo: null,
+                        bar: "'bar'",
+                    },
+                    optionalProps: {},
                 });
             });
 
@@ -2543,16 +2519,13 @@ describe("Chapbook Parsing", () => {
                     ),
                     kind: OChapbookSymbolKind.CustomInsert,
                     match: /hi\s+there/,
-                    arguments: {
-                        firstArgument: {
-                            required:
-                                insertsModule.ArgumentRequirement.required,
-                        },
-                        requiredProps: {},
-                        optionalProps: {
-                            foo: null,
-                            bar: "'bar'",
-                        },
+                    firstArgument: {
+                        required: ArgumentRequirement.required,
+                    },
+                    requiredProps: {},
+                    optionalProps: {
+                        foo: null,
+                        bar: "'bar'",
                     },
                 });
             });
@@ -3295,8 +3268,7 @@ describe("Chapbook Parsing", () => {
                     const callbacks = new MockCallbacks();
                     const insert = buildInsertInfo({
                         match: /^mock insert/,
-                        firstArgRequired:
-                            insertsModule.ArgumentRequirement.required,
+                        firstArgRequired: ArgumentRequirement.required,
                     });
                     const state = buildParsingState({
                         content: header + passage,
@@ -3326,8 +3298,7 @@ describe("Chapbook Parsing", () => {
                     const callbacks = new MockCallbacks();
                     const insert = buildInsertInfo({
                         match: /^mock insert/,
-                        firstArgRequired:
-                            insertsModule.ArgumentRequirement.ignored,
+                        firstArgRequired: ArgumentRequirement.ignored,
                     });
                     const state = buildParsingState({
                         content: header + passage,

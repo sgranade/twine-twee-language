@@ -7,10 +7,10 @@ import {
     findEndOfPartialInsert,
     findStartOfModifierOrInsert,
     getChapbookDefinitions,
-    OChapbookSymbolKind,
     tokenizeInsert,
     validateInsertContents,
 } from "./chapbook-parser";
+import { OChapbookSymbolKind } from "./types";
 
 /**
  * Generate Chapbook-specific diagnostics.
@@ -72,7 +72,12 @@ export function generateDiagnostics(
         if (insert !== undefined) {
             // We need to re-parse the custom insert and check for errors
             // if we have information about that custom insert's arguments
-            if (insert.arguments === undefined) continue;
+            if (
+                insert.firstArgument === undefined &&
+                insert.requiredProps === undefined &&
+                insert.optionalProps === undefined
+            )
+                continue;
 
             for (const loc of insertRef.locations) {
                 // Find the start of the insert

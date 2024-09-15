@@ -1,5 +1,5 @@
+import { ArgumentRequirement } from "../../../../passage-text-parsers/chapbook/types";
 import {
-    ArgumentRequirement,
     InsertInfo,
     InsertTokens,
 } from "../../../../passage-text-parsers/chapbook/inserts";
@@ -16,11 +16,9 @@ export function buildInsertInfo({
         name: name,
         description: description,
         match: match,
-        arguments: {
-            firstArgument: { required: firstArgRequired },
-            requiredProps: requiredProps,
-            optionalProps: optionalProps,
-        },
+        firstArgument: { required: firstArgRequired },
+        requiredProps: requiredProps,
+        optionalProps: optionalProps,
         completions: [],
         parse: () => {},
     };

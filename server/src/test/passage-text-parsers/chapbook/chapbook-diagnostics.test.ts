@@ -13,10 +13,10 @@ import { defaultDiagnosticsOptions } from "../../../server-options";
 import {
     ChapbookSymbol,
     OChapbookSymbolKind,
-} from "../../../passage-text-parsers/chapbook/chapbook-parser";
+} from "../../../passage-text-parsers/chapbook/types";
+import { ArgumentRequirement } from "../../../passage-text-parsers/chapbook/types";
 
 import * as uut from "../../../passage-text-parsers/chapbook";
-import { ArgumentRequirement } from "../../../passage-text-parsers/chapbook/inserts";
 
 describe("Chapbook Diagnostics", () => {
     describe("variables", () => {
@@ -220,6 +220,9 @@ describe("Chapbook Diagnostics", () => {
                     ),
                     kind: OChapbookSymbolKind.CustomInsert,
                     match: /custom\s+insert/,
+                    firstArgument: {
+                        required: ArgumentRequirement.required,
+                    },
                     arguments: {
                         firstArgument: {
                             required: ArgumentRequirement.required,
@@ -275,6 +278,9 @@ describe("Chapbook Diagnostics", () => {
                     ),
                     kind: OChapbookSymbolKind.CustomInsert,
                     match: /custom\s+insert/,
+                    firstArgument: {
+                        required: ArgumentRequirement.ignored,
+                    },
                     arguments: {
                         firstArgument: {
                             required: ArgumentRequirement.ignored,
@@ -330,6 +336,11 @@ describe("Chapbook Diagnostics", () => {
                     ),
                     kind: OChapbookSymbolKind.CustomInsert,
                     match: /custom\s+insert/,
+                    firstArgument: {
+                        required: ArgumentRequirement.ignored,
+                    },
+                    requiredProps: { expected: null, also: null },
+                    optionalProps: {},
                     arguments: {
                         firstArgument: {
                             required: ArgumentRequirement.ignored,
@@ -387,6 +398,9 @@ describe("Chapbook Diagnostics", () => {
                     ),
                     kind: OChapbookSymbolKind.CustomInsert,
                     match: /custom\s+insert/,
+                    firstArgument: {
+                        required: ArgumentRequirement.ignored,
+                    },
                     arguments: {
                         firstArgument: {
                             required: ArgumentRequirement.ignored,

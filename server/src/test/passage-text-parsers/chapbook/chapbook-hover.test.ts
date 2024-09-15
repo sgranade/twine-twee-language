@@ -10,7 +10,7 @@ import { Index } from "../../../project-index";
 import {
     ChapbookSymbol,
     OChapbookSymbolKind,
-} from "../../../passage-text-parsers/chapbook/chapbook-parser";
+} from "../../../passage-text-parsers/chapbook/types";
 import * as insertsModule from "../../../passage-text-parsers/chapbook/inserts";
 import * as modifiersModule from "../../../passage-text-parsers/chapbook/modifiers";
 

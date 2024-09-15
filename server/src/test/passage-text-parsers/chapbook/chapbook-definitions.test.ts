@@ -8,7 +8,7 @@ import { defaultDiagnosticsOptions } from "../../../server-options";
 import {
     ChapbookSymbol,
     OChapbookSymbolKind,
-} from "../../../passage-text-parsers/chapbook/chapbook-parser";
+} from "../../../passage-text-parsers/chapbook/types";
 
 import * as uut from "../../../passage-text-parsers/chapbook";
 

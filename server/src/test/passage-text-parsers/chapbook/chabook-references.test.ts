@@ -5,7 +5,7 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { Index } from "../../../project-index";
 import { defaultDiagnosticsOptions } from "../../../server-options";
-import { OChapbookSymbolKind } from "../../../passage-text-parsers/chapbook/chapbook-parser";
+import { OChapbookSymbolKind } from "../../../passage-text-parsers/chapbook/types";
 
 import * as uut from "../../../passage-text-parsers/chapbook";
 

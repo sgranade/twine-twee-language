@@ -1,4 +1,5 @@
-import { ArgumentRequirement, InsertInfo } from "./types";
+import { ArgumentRequirement } from "../types";
+import { InsertInfo } from "./types";
 
 export const embedUnsplashImage: InsertInfo = {
     name: "embed Unsplash image",
@@ -6,14 +7,12 @@ export const embedUnsplashImage: InsertInfo = {
     description:
         "Renders an image hosted on Unsplash with alt text specified by `alt`.",
     match: /^embed\s+unsplash(\s+image)?/i,
-    arguments: {
-        firstArgument: {
-            required: ArgumentRequirement.required,
-            placeholder: "'url'",
-        },
-        requiredProps: {},
-        optionalProps: { alt: "'alternate text'" },
+    firstArgument: {
+        required: ArgumentRequirement.required,
+        placeholder: "'url'",
     },
+    requiredProps: {},
+    optionalProps: { alt: "'alternate text'" },
     completions: ["embed Unsplash"],
-    parse(args, state, chapbookState) {},
+    parse: () => {},
 };

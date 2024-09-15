@@ -1,4 +1,5 @@
-import { ArgumentRequirement, InsertInfo, ValueType } from "./types";
+import { ArgumentRequirement, ValueType } from "../types";
+import { InsertInfo } from "./types";
 
 export const ambientSound: InsertInfo = {
     name: "ambient sound",
@@ -6,18 +7,16 @@ export const ambientSound: InsertInfo = {
     description:
         "Begins playing a previously-defined ambient sound. `volume` can be omitted; by default, the ambient sound is played at full volume.",
     match: /^ambient\s+sound/i,
-    arguments: {
-        firstArgument: {
-            required: ArgumentRequirement.required,
-            placeholder: "'sound name'",
-        },
-        requiredProps: {},
-        optionalProps: {
-            volume: { placeholder: "0.5", type: ValueType.number },
-        },
+    firstArgument: {
+        required: ArgumentRequirement.required,
+        placeholder: "'sound name'",
+    },
+    requiredProps: {},
+    optionalProps: {
+        volume: { placeholder: "0.5", type: ValueType.number },
     },
     completions: ["ambient sound"],
-    parse(args, state, chapbookState) {},
+    parse: () => {},
 };
 
 // {no ambient sound} is, under the hood, just {ambient sound} with
@@ -28,11 +27,9 @@ export const noAmbientSound: InsertInfo = {
     syntax: "{no ambient sound}",
     description: "Cancels all playing ambient sounds.",
     match: /^no ambient\s+sound/i,
-    arguments: {
-        firstArgument: { required: ArgumentRequirement.optional },
-        requiredProps: {},
-        optionalProps: {},
-    },
+    firstArgument: { required: ArgumentRequirement.optional },
+    requiredProps: {},
+    optionalProps: {},
     completions: ["no ambient sound"],
     parse: () => {},
 };
