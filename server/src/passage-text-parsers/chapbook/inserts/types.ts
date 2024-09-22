@@ -1,10 +1,5 @@
 import { ChapbookParsingState } from "../chapbook-parser";
-import {
-    ChapbookFunctionInfo,
-    FirstArgument,
-    InsertPropertyRecord,
-} from "../types";
-import { ArgumentRequirement, InsertProperty, ValueType } from "../types";
+import { ChapbookFunctionInfo, FirstArgument, InsertProperty } from "../types";
 import { ParsingState } from "../../../parser";
 
 /**
@@ -29,6 +24,20 @@ export namespace Token {
     export function create(text: string, at: number): Token {
         return { text: text, at: at };
     }
+}
+
+/**
+ * Tokenized modifier information.
+ */
+export interface ModifierTokens {
+    /**
+     * Modifier's name as invoked.
+     */
+    name: Token;
+    /**
+     * First argument to the modifier, if any.
+     */
+    firstArgument: Token | undefined;
 }
 
 /**

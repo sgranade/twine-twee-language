@@ -18,7 +18,7 @@ import {
     parseHtml,
     ParseLevel,
 } from "../../parser";
-import { Label, ProjectIndex, Symbol } from "../../project-index";
+import { Label, ProjectIndex } from "../../project-index";
 import { ETokenType, ETokenModifier } from "../../tokens";
 import {
     skipSpaces,
@@ -28,8 +28,13 @@ import {
     hasOwnProperty,
     createDiagnosticFor,
 } from "../../utilities";
-import { InsertTokens, Token, all as allInserts } from "./inserts";
-import { all as allModifiers, ModifierInfo } from "./modifiers";
+import {
+    InsertTokens,
+    ModifierTokens,
+    Token,
+    all as allInserts,
+} from "./inserts";
+import { all as allModifiers } from "./modifiers";
 import {
     ArgumentRequirement,
     ChapbookFunctionInfo,
@@ -48,6 +53,17 @@ const modifierPattern = /^([ \t]*)\[([^[].+[^\]])\](\s*?)(?:\r?\n|$)/gm;
 const varsLineExtractionPattern = /^([ \t]*?)\b(.*)$/gm;
 const varsLineVarOnlyExtractionPattern =
     /^(\s*)([A-Za-z$_][A-Za-z0-9$_]*)?.*$/gmu;
+
+/**
+ * Built-in lookup values in Chapbook.
+ */
+export const lookupVariables: readonly string[] = [
+    "browser",
+    "engine",
+    "now",
+    "passage",
+    "story",
+];
 
 /**
  * Type of Chapbook modifier.
@@ -266,9 +282,27 @@ export function findEndOfPartialInsert(
 }
 
 /**
+ * Find the end offset of a (possibly partial) modifier given the start of that modifier.
+ *
+ * @param text Text to extract the modifier from.
+ * @param startOffset Offset to the starting "[" of the modifier.
+ * @returns Offset to the end "]" (for complete modifiers) or "\n" or end of the string (for partial modifiers), or undefined if no end found.
+ */
+export function findEndOfPartialModifier(
+    text: string,
+    startOffset: number
+): number | undefined {
+    // Look for the end bracket or end of line
+    const pattern = /]|\r?\n/gm;
+    pattern.lastIndex = startOffset;
+    const m = pattern.exec(text) || undefined;
+    return m?.index;
+}
+
+/**
  * An insert's expected arguments and completion/placeholder information.
  */
-interface InsertArguments {
+interface FunctionArguments {
     /**
      * Is a first argument required?
      */
@@ -288,20 +322,22 @@ interface InsertArguments {
 }
 
 /**
- * Parse information about a custom insert's arguments.
+ * Parse information about a custom insert/modifier's arguments.
  *
- * @param argsNode Node in the AST containing the custom insert argument object.
+ * @param argsNode Node in the AST containing the custom  argument object.
  * @param contentsIndex Index where the contents containing the node begin.
+ * @param symbolKind Kind of contents being parsed.
  * @param state Parsing state.
- * @returns Parsed insert arguments, or undefined if they can't be parsed.
+ * @returns Parsed arguments, or undefined if they can't be parsed.
  */
-function parseCustomInsertArguments(
+function parseCustomFunctionArguments(
     argsNode: acorn.Node,
     contentsIndex: number,
+    symbolKind: ChapbookSymbolKind,
     state: ParsingState
-): InsertArguments | undefined {
+): FunctionArguments | undefined {
     let firstArgRequired: ArgumentRequirement | undefined;
-    const args: InsertArguments = {
+    const args: FunctionArguments = {
         firstArgument: {
             // Required placeholder; we'll take the actual value from firstArgRequired variable
             required: ArgumentRequirement.ignored,
@@ -379,17 +415,22 @@ function parseCustomInsertArguments(
                     parentProp === "optionalProps" ||
                     parentProp === "requiredProps"
                 ) {
-                    const props =
-                        parentProp === "optionalProps"
-                            ? args.optionalProps
-                            : args.requiredProps;
-                    if (typeof node.value.value === "string") {
-                        props[node.key.name] = node.value.value;
-                    } else if (node.value.value === null) {
-                        props[node.key.name] = null;
+                    if (symbolKind === OChapbookSymbolKind.CustomModifier) {
+                        errorMessage = `${parentProp} are ignored for a custom modifier`;
+                        errorNode = parentPropNode.key;
                     } else {
-                        errorNode = node.value;
-                        errorMessage = "Must be a string";
+                        const props =
+                            parentProp === "optionalProps"
+                                ? args.optionalProps
+                                : args.requiredProps;
+                        if (typeof node.value.value === "string") {
+                            props[node.key.name] = node.value.value;
+                        } else if (node.value.value === null) {
+                            props[node.key.name] = null;
+                        } else {
+                            errorNode = node.value;
+                            errorMessage = "Must be a string";
+                        }
                     }
                 }
 
@@ -483,28 +524,18 @@ function parseCustomInsertOrModifierDefinition(
                 if (node.key.type === "Identifier") {
                     // Arguments for a custom insert
                     if (node.key.name === "arguments") {
+                        const insertArguments = parseCustomFunctionArguments(
+                            node.value,
+                            contentsIndex,
+                            symbolKind,
+                            state
+                        );
+                        props.firstArgument = insertArguments?.firstArgument;
                         if (symbolKind === OChapbookSymbolKind.CustomInsert) {
-                            const insertArguments = parseCustomInsertArguments(
-                                node.value,
-                                contentsIndex,
-                                state
-                            );
-                            props.firstArgument =
-                                insertArguments?.firstArgument;
                             props.requiredProps =
                                 insertArguments?.requiredProps;
                             props.optionalProps =
                                 insertArguments?.optionalProps;
-                        } else {
-                            state.callbacks.onParseError(
-                                createDiagnostic(
-                                    DiagnosticSeverity.Warning,
-                                    state.textDocument,
-                                    contentsIndex + node.key.start,
-                                    contentsIndex + node.key.end,
-                                    "Arguments can only be specified for custom inserts"
-                                )
-                            );
                         }
                     }
                     // Completions can be a string or array of strings
@@ -830,14 +861,66 @@ function extractInsertArgument(
 }
 
 /**
- * Parse an argument to an insert (either 1st argument or property value).
+ * Check a function version against the current Chapbook story format version.
  *
- * @param token Token for the insert argument.
+ * @param funcInfo Information about the function.
+ * @param text How the function was evoked in the document.
+ * @param at Where the function was evoked in the document.
+ * @param storyFormatVersion Story format version.
+ * @param doc Document containing the function.
+ * @returns Generated diagnostics.
+ */
+function validateFunctionVersion(
+    funcInfo: ChapbookFunctionInfo,
+    text: string,
+    at: number,
+    storyFormatVersion: string | undefined,
+    doc: TextDocument
+): Diagnostic[] {
+    const diagnostics: Diagnostic[] = [];
+
+    if (storyFormatVersion !== undefined) {
+        if (
+            funcInfo.since !== undefined &&
+            versionCompare(storyFormatVersion, funcInfo.since) <= 0
+        ) {
+            diagnostics.push(
+                createDiagnosticFor(
+                    DiagnosticSeverity.Error,
+                    doc,
+                    text,
+                    at,
+                    `\`${funcInfo.name}\` isn't available until Chapbook version ${funcInfo.since} but your StoryFormat version is ${storyFormatVersion}`
+                )
+            );
+        } else if (
+            funcInfo.removed !== undefined &&
+            versionCompare(storyFormatVersion, funcInfo.removed) >= 0
+        ) {
+            diagnostics.push(
+                createDiagnosticFor(
+                    DiagnosticSeverity.Error,
+                    doc,
+                    text,
+                    at,
+                    `\`${funcInfo.name}\` was removed in Chapbook version ${funcInfo.removed} and your StoryFormat version is ${storyFormatVersion}`
+                )
+            );
+        }
+    }
+
+    return diagnostics;
+}
+
+/**
+ * Parse an argument to a Chapbook function (either insert/modifier 1st argument or insert property value).
+ *
+ * @param token Token for the argument.
  * @param argType Expected type of argument.
  * @param state Parsing state.
  * @param chapbookState Chapbook-specific parsing state.
  */
-function parseInsertArgument(
+function parseFunctionArgument(
     token: Token | undefined,
     argType: ValueType | undefined,
     state: ParsingState,
@@ -868,6 +951,66 @@ function parseInsertArgument(
 }
 
 /**
+ * Validate a function version (modifier/insert) and its first argument.
+ *
+ * @param funcInfo Information about the function.
+ * @param name Tokenized function name.
+ * @param firstArgument Tokenized first argument to the function.
+ * @param storyFormatVersion Current Chapbook format version, if known.
+ * @param doc Text document containing the function.
+ * @returns List of any diagnostics from validating the function and first argument.
+ */
+export function validateFunctionAndFirstArgument(
+    funcInfo: ChapbookFunctionInfo,
+    name: Token,
+    firstArgument: Token | undefined,
+    storyFormatVersion: string | undefined,
+    doc: TextDocument
+): Diagnostic[] {
+    // Check the story format against insert since/removed version information
+    const diagnostics = validateFunctionVersion(
+        funcInfo,
+        name.text,
+        name.at,
+        storyFormatVersion,
+        doc
+    );
+
+    // Check for required and unknown arguments
+    // First up, first argument
+    if (
+        funcInfo.firstArgument?.required === ArgumentRequirement.required &&
+        (firstArgument === undefined || firstArgument.text.trim() === "")
+    ) {
+        diagnostics.push(
+            createDiagnosticFor(
+                DiagnosticSeverity.Error,
+                doc,
+                name.text,
+                name.at,
+                `\`${funcInfo.name}\` requires a first argument`
+            )
+        );
+    } else if (
+        funcInfo.firstArgument?.required === ArgumentRequirement.ignored &&
+        firstArgument !== undefined &&
+        firstArgument.text.trim() !== ""
+    ) {
+        diagnostics.push(
+            createDiagnosticFor(
+                DiagnosticSeverity.Warning,
+                doc,
+                firstArgument.text,
+                firstArgument.at,
+                `\`${funcInfo.name}\` will ignore this first argument`
+            )
+        );
+    }
+
+    return diagnostics;
+}
+
+/**
  * Validate arguments to an insert against that insert's requirements.
  *
  * This function is separate so other functions outside the main parsing loop
@@ -886,70 +1029,17 @@ export function validateInsertContents(
     doc: TextDocument,
     storyFormatVersion?: string
 ): Diagnostic[] {
-    const diagnostics: Diagnostic[] = [];
-
     // Check the story format against insert since/removed version information
-    if (storyFormatVersion !== undefined) {
-        if (
-            insert.since !== undefined &&
-            versionCompare(storyFormatVersion, insert.since) <= 0
-        ) {
-            diagnostics.push(
-                createDiagnosticFor(
-                    DiagnosticSeverity.Error,
-                    doc,
-                    tokens.name.text,
-                    tokens.name.at,
-                    `Insert {${insert.name}} isn't available until Chapbook version ${insert.since} but your StoryFormat version is ${storyFormatVersion}`
-                )
-            );
-        } else if (
-            insert.removed !== undefined &&
-            versionCompare(storyFormatVersion, insert.removed) >= 0
-        ) {
-            diagnostics.push(
-                createDiagnosticFor(
-                    DiagnosticSeverity.Error,
-                    doc,
-                    tokens.name.text,
-                    tokens.name.at,
-                    `Insert {${insert.name}} was removed in Chapbook version ${insert.removed} and your StoryFormat version is ${storyFormatVersion}`
-                )
-            );
-        }
-    }
+    // as well as the first argument's existence (or lack thereof)
+    const diagnostics = validateFunctionAndFirstArgument(
+        insert,
+        tokens.name,
+        tokens.firstArgument,
+        storyFormatVersion,
+        doc
+    );
 
-    // Check for required and unknown arguments
-    // First up, first argument
-    if (
-        insert.firstArgument?.required === ArgumentRequirement.required &&
-        tokens.firstArgument === undefined
-    ) {
-        diagnostics.push(
-            createDiagnosticFor(
-                DiagnosticSeverity.Error,
-                doc,
-                tokens.name.text,
-                tokens.name.at,
-                `Insert {${insert.name}} requires a first argument`
-            )
-        );
-    } else if (
-        insert.firstArgument?.required === ArgumentRequirement.ignored &&
-        tokens.firstArgument !== undefined
-    ) {
-        diagnostics.push(
-            createDiagnosticFor(
-                DiagnosticSeverity.Warning,
-                doc,
-                tokens.firstArgument.text,
-                tokens.firstArgument.at,
-                `Insert {${insert.name}} will ignore this first argument`
-            )
-        );
-    }
-
-    // Second up, properties
+    // Check for required and unknown properties
     const seenProperties: Set<string> = new Set();
     for (const [propName, [propNameToken, propValueToken]] of Object.entries(
         tokens.props
@@ -1059,7 +1149,7 @@ function parseInsertContents(
     }
 
     // Capture any tokens associated with the first argument
-    parseInsertArgument(
+    parseFunctionArgument(
         tokens.firstArgument,
         insert.firstArgument.type,
         state,
@@ -1074,7 +1164,7 @@ function parseInsertContents(
             insert.requiredProps[propName] || insert.optionalProps[propName];
 
         if (InsertProperty.is(propInfo)) {
-            parseInsertArgument(
+            parseFunctionArgument(
                 propValueToken,
                 propInfo.type,
                 state,
@@ -1428,118 +1518,168 @@ function parseTextSubsection(
 }
 
 /**
+ * Turn the raw text of a modifier into tokens.
+ *
+ * @param modifierText Full modifier text without the brackets ([]).
+ * @param modifierIndex Index in the document where the modifier text begins (zero-based).
+ * @param modifierInfo Info about the modifier that goes with the modifierText (if any).
+ * @returns Tokens for the modifier, or undefined if the text doesn't match the modifier information.
+ */
+export function tokenizeModifier(
+    modifierText: string,
+    modifierIndex: number,
+    modifierInfo: ChapbookFunctionInfo | undefined
+): ModifierTokens | undefined {
+    const match = modifierInfo?.match.exec(modifierText) || undefined;
+    if (match !== undefined) {
+        const modifierName = match[0];
+        modifierIndex += match.index;
+        let modifierArg = modifierText.substring(
+            match.index + modifierName.length
+        );
+        let modifierArgIndex = modifierIndex + modifierName.length;
+        [modifierArg, modifierArgIndex] = skipSpaces(
+            modifierArg,
+            modifierArgIndex
+        );
+        return {
+            name: Token.create(modifierName, modifierIndex),
+            firstArgument:
+                modifierArg !== ""
+                    ? Token.create(modifierArg, modifierArgIndex)
+                    : undefined,
+        };
+    }
+
+    return undefined;
+}
+
+/**
  * Parse the contents of a Chapbook modifier.
  *
- * @param modifier Full modifier text without the brackets ([]).
+ * @param modifierText Full modifier text without the brackets ([]).
  * @param modifierIndex Index in the document where the modifier text begins (zero-based).
  * @param state Parsing state.
  * @param chapbookState Chapbook-specific parsing state.
  */
 function parseModifier(
-    modifier: string,
+    modifierText: string,
     modifierIndex: number,
     state: ParsingState,
     chapbookState: ChapbookParsingState
 ): void {
-    let firstToken = true;
-    let remainingModifier = modifier;
-    let tokenIndex = modifierIndex;
-    const modifiers = allModifiers();
+    [modifierText, modifierIndex] = skipSpaces(modifierText, modifierIndex);
+    if (modifierText === "") {
+        return;
+    }
 
-    while (remainingModifier) {
-        [remainingModifier, tokenIndex] = skipSpaces(
-            remainingModifier,
-            tokenIndex
+    const modifier = allModifiers().find((i) => i.match.test(modifierText));
+
+    const modifierTokens = tokenizeModifier(
+        modifierText,
+        modifierIndex,
+        modifier
+    );
+    // If we recognize the modifier, check its version and let it parse the contents,
+    // which can set the text block state in chapbookState
+    if (modifier !== undefined && modifierTokens !== undefined) {
+        // Store a reference to the insert
+        state.callbacks.onSymbolReference(
+            createSymbolFor(
+                modifierTokens.name.text,
+                modifierTokens.name.at,
+                OChapbookSymbolKind.BuiltInModifier,
+                state.textDocument
+            )
         );
-        if (remainingModifier === "") {
-            break;
+
+        // Handle modifier-specific parsing, which can set the text block state in chapbookState
+        // (This needs to be done before setting tokens)
+        modifier.parse(modifierText, state, chapbookState);
+
+        // Tokenize the first token as a function, unless the modifier is a note.
+        // Also capture whether or not the modifier is deprecated.
+        const deprecated =
+            state.storyFormat?.formatVersion !== undefined &&
+            modifier?.deprecated !== undefined &&
+            versionCompare(
+                state.storyFormat.formatVersion,
+                modifier.deprecated
+            ) <= 0;
+        capturePreTokenFor(
+            modifierTokens.name.text,
+            modifierTokens.name.at,
+            chapbookState.modifierKind == ModifierKind.Note
+                ? ETokenType.comment
+                : ETokenType.function,
+            deprecated ? [ETokenModifier.deprecated] : [],
+            chapbookState
+        );
+
+        // Validate the function information and its first argument
+        for (const diagnostic of validateFunctionAndFirstArgument(
+            modifier,
+            modifierTokens.name,
+            modifierTokens.firstArgument,
+            state.storyFormat?.formatVersion,
+            state.textDocument
+        )) {
+            state.callbacks.onParseError(diagnostic);
         }
 
-        let modifier: ModifierInfo | undefined = undefined;
-
-        // See if we're referencing a built-in modifier (only on the first token!)
-        if (firstToken) {
-            modifier = modifiers.find((i) => i.match.test(remainingModifier));
-            // Store a reference to the insert (either built-in or custom)
-            state.callbacks.onSymbolReference(
-                createSymbolFor(
-                    remainingModifier,
-                    tokenIndex,
-                    modifier !== undefined
-                        ? OChapbookSymbolKind.BuiltInModifier
-                        : OChapbookSymbolKind.CustomModifier,
-                    state.textDocument
-                )
-            );
-
-            // If we recognize the modifier, check its version, and let it parse the contents,
-            // which can set the text block state in chapbookState
-            if (modifier !== undefined) {
-                const formatVersion = state.storyFormat?.formatVersion;
-                if (formatVersion !== undefined) {
-                    if (
-                        modifier.since !== undefined &&
-                        versionCompare(formatVersion, modifier.since) <= 0
-                    ) {
-                        logErrorFor(
-                            remainingModifier,
-                            tokenIndex,
-                            `Modifier [${modifier.name}] isn't available until Chapbook version ${modifier.since} but your StoryFormat version is ${formatVersion}`,
-                            state
-                        );
-                    } else if (
-                        modifier.removed !== undefined &&
-                        versionCompare(formatVersion, modifier.removed) >= 0
-                    ) {
-                        logErrorFor(
-                            remainingModifier,
-                            tokenIndex,
-                            `Modifier [${modifier.name}] was removed in Chapbook version ${modifier.removed} and your StoryFormat version is ${formatVersion}`,
-                            state
-                        );
-                    }
-                }
-
-                // Handle modifier-specific parsing, which can set the text block state in chapbookState
-                modifier.parse(remainingModifier, state, chapbookState);
+        // If there's an argument to the modifier, tokenize and parse it
+        if (modifierTokens.firstArgument !== undefined) {
+            // If the modifier's argument has a type, then we tokenize it as JS.
+            // Otherwise, tokenize it as function parameters
+            if (modifier.firstArgument?.type !== undefined) {
+                createVariableReferences(
+                    tokenizeJSExpression(
+                        modifierTokens.firstArgument.text,
+                        modifierTokens.firstArgument.at,
+                        state,
+                        chapbookState
+                    ),
+                    state
+                );
+            } else {
+                // Tokenize
+                capturePreTokenFor(
+                    modifierTokens.firstArgument.text,
+                    modifierTokens.firstArgument.at,
+                    ETokenType.parameter,
+                    [],
+                    chapbookState
+                );
             }
-        }
 
-        const token = remainingModifier.split(/\s/, 1)[0];
-        if (firstToken) {
-            // Tokenize the first token as a function, unless the modifier is a note.
-            // Also capture whether or not the modifier is deprecated.
-            const deprecated =
-                state.storyFormat?.formatVersion !== undefined &&
-                modifier?.deprecated !== undefined &&
-                versionCompare(
-                    state.storyFormat.formatVersion,
-                    modifier.deprecated
-                ) <= 0;
-            capturePreTokenFor(
-                token,
-                tokenIndex,
-                chapbookState.modifierKind == ModifierKind.Note
-                    ? ETokenType.comment
-                    : ETokenType.function,
-                deprecated ? [ETokenModifier.deprecated] : [],
-                chapbookState
-            );
-
-            firstToken = false;
-        } else {
-            // All other components of the modifier get treated as parameters
-            capturePreTokenFor(
-                token,
-                tokenIndex,
-                ETokenType.parameter,
-                [],
+            // Parsing happens after tokenizing b/c parsing can
+            // change what semantic tokens apply
+            parseFunctionArgument(
+                modifierTokens.firstArgument,
+                modifier.firstArgument?.type,
+                state,
                 chapbookState
             );
         }
+    } else {
+        // Store a reference to the (custom) modifier
+        state.callbacks.onSymbolReference(
+            createSymbolFor(
+                modifierText,
+                modifierIndex,
+                OChapbookSymbolKind.CustomModifier,
+                state.textDocument
+            )
+        );
 
-        remainingModifier = remainingModifier.substring(token.length);
-        tokenIndex += token.length;
+        // Tokenize the entire thing as a function
+        capturePreTokenFor(
+            modifierText,
+            modifierIndex,
+            ETokenType.function,
+            [],
+            chapbookState
+        );
     }
 }
 

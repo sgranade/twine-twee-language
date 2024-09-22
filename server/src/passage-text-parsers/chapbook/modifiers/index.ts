@@ -1,7 +1,7 @@
 import { after } from "./after";
 import { align } from "./align";
 import { append } from "./append";
-import { conditionals } from "./conditionals";
+import { ifConditionals, elseConditional } from "./conditionals";
 import { cont } from "./continue";
 import { css } from "./css";
 import { javascript } from "./javascript";
@@ -14,7 +14,8 @@ const builtins: ModifierInfo[] = [
     after,
     align,
     append,
-    conditionals,
+    ifConditionals,
+    elseConditional,
     cont,
     css,
     javascript,

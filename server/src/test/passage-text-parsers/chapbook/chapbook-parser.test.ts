@@ -417,315 +417,671 @@ describe("Chapbook Parsing", () => {
         });
 
         describe("modifiers", () => {
-            it("should capture a reference for a known modifier", () => {
-                const header = ":: Passage\n";
-                const passage = "[mock-mod]\nContent\n";
-                const callbacks = new MockCallbacks();
-                const modifier = buildModifierInfo({
-                    match: /^mock-mod/,
-                });
-                const state = buildParsingState({
-                    uri: "fake-uri",
-                    content: header + passage,
-                    callbacks: callbacks,
-                });
-                const parser = uut.getChapbookParser(undefined);
-                const mockFunction = ImportMock.mockFunction(
-                    modifiersModule,
-                    "all"
-                ).returns([modifier]);
+            describe("basic semantic tokens", () => {
+                it("should set semantic tokens for known modifiers", () => {
+                    const header = ":: Passage\n";
+                    const passage = "[ mod1 ; mod1 nice  nice ]\nContent\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const modifier = buildModifierInfo({
+                        description: "My description!",
+                        match: /^mod1/,
+                    });
+                    const mockFunction = ImportMock.mockFunction(
+                        modifiersModule,
+                        "all"
+                    ).returns([modifier]);
+                    const parser = uut.getChapbookParser(undefined);
 
-                parser?.parsePassageText(passage, header.length, state);
-                mockFunction.restore();
-                const result = callbacks.references[0];
+                    parser?.parsePassageText(passage, header.length, state);
+                    mockFunction.restore();
+                    const [mod1Token, mod2Token, mod2Param1] = callbacks.tokens;
 
-                expect(callbacks.references.length).to.equal(1);
-                expect(result).to.eql({
-                    contents: "mock-mod",
-                    location: Location.create(
-                        "fake-uri",
-                        Range.create(1, 1, 1, 9)
-                    ),
-                    kind: OChapbookSymbolKind.BuiltInModifier,
+                    expect(callbacks.tokens.length).to.equal(3);
+                    expect(mod1Token).to.eql({
+                        line: 1,
+                        char: 2,
+                        length: 4,
+                        tokenType: ETokenType.function,
+                        tokenModifiers: [],
+                    });
+                    expect(mod2Token).to.eql({
+                        line: 1,
+                        char: 9,
+                        length: 4,
+                        tokenType: ETokenType.function,
+                        tokenModifiers: [],
+                    });
+                    expect(mod2Param1).to.eql({
+                        line: 1,
+                        char: 14,
+                        length: 10,
+                        tokenType: ETokenType.parameter,
+                        tokenModifiers: [],
+                    });
+                });
+
+                it("should set semantic tokens for unknown modifiers", () => {
+                    const header = ":: Passage\n";
+                    const passage = "[ mod1 ; mod2 nice  nice ]\nContent\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    const [mod1Token, mod2Token] = callbacks.tokens;
+
+                    expect(callbacks.tokens.length).to.equal(2);
+                    expect(mod1Token).to.eql({
+                        line: 1,
+                        char: 2,
+                        length: 4,
+                        tokenType: ETokenType.function,
+                        tokenModifiers: [],
+                    });
+                    expect(mod2Token).to.eql({
+                        line: 1,
+                        char: 9,
+                        length: 15,
+                        tokenType: ETokenType.function,
+                        tokenModifiers: [],
+                    });
+                });
+
+                it("should indicate deprecation in a modifier's semantic token if applicable", () => {
+                    const header = ":: Passage\n";
+                    const passage = "[mod1]\nContent\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    state.storyFormat = {
+                        format: "Chapbook",
+                        formatVersion: "2.1",
+                    };
+                    const parser = uut.getChapbookParser("2.1");
+                    const modifier = buildModifierInfo({
+                        description: "My description!",
+                        match: /^mod1/,
+                    });
+                    modifier.deprecated = "2.1";
+                    const mockFunction = ImportMock.mockFunction(
+                        modifiersModule,
+                        "all"
+                    ).returns([modifier]);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    mockFunction.restore();
+                    const [mod1Token] = callbacks.tokens;
+
+                    expect(callbacks.tokens.length).to.equal(1);
+                    expect(mod1Token).to.eql({
+                        line: 1,
+                        char: 1,
+                        length: 4,
+                        tokenType: ETokenType.function,
+                        tokenModifiers: [ETokenModifier.deprecated],
+                    });
+                });
+
+                it("should set semantic tokens for modifiers that take quote marks into account", () => {
+                    const header = ":: Passage\n";
+                    const passage = '[ mod1 "and\\"; so" ; mod2 ]\nContent\n';
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    const [mod1Token, mod2Token] = callbacks.tokens;
+
+                    expect(callbacks.tokens.length).to.equal(2);
+                    expect(mod1Token).to.eql({
+                        line: 1,
+                        char: 2,
+                        length: 16,
+                        tokenType: ETokenType.function,
+                        tokenModifiers: [],
+                    });
+                    expect(mod2Token).to.eql({
+                        line: 1,
+                        char: 21,
+                        length: 4,
+                        tokenType: ETokenType.function,
+                        tokenModifiers: [],
+                    });
+                });
+
+                it("should set a comment token for a note modifier", () => {
+                    const header = ":: Passage\n";
+                    const passage = "[ note ]\nContent\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    const [token] = callbacks.tokens;
+
+                    expect(callbacks.tokens.length).to.equal(2);
+                    expect(token).to.eql({
+                        line: 1,
+                        char: 2,
+                        length: 4,
+                        tokenType: ETokenType.comment,
+                        tokenModifiers: [],
+                    });
+                });
+
+                it("should set a semantic token for a note modifier", () => {
+                    const header = ":: Passage\n";
+                    const passage =
+                        "Content before\n" +
+                        "[mod; n.b. ]\n" +
+                        "A note\nMore note\n" +
+                        "[continue]\nUnnoteable.\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    const [modToken, nbToken, noteToken1, noteToken2] =
+                        callbacks.tokens;
+
+                    expect(callbacks.tokens.length).to.equal(5);
+                    expect(modToken).to.eql({
+                        line: 2,
+                        char: 1,
+                        length: 3,
+                        tokenType: ETokenType.function,
+                        tokenModifiers: [],
+                    });
+                    expect(nbToken).to.eql({
+                        line: 2,
+                        char: 6,
+                        length: 4,
+                        tokenType: ETokenType.comment,
+                        tokenModifiers: [],
+                    });
+                    expect(noteToken1).to.eql({
+                        line: 3,
+                        char: 0,
+                        length: 6,
+                        tokenType: ETokenType.comment,
+                        tokenModifiers: [],
+                    });
+                    expect(noteToken2).to.eql({
+                        line: 4,
+                        char: 0,
+                        length: 9,
+                        tokenType: ETokenType.comment,
+                        tokenModifiers: [],
+                    });
                 });
             });
 
-            it("should capture a reference for an unknown modifier", () => {
-                const header = ":: Passage\n";
-                const passage = "[mock-mod]\nContent\n";
-                const callbacks = new MockCallbacks();
-                const state = buildParsingState({
-                    uri: "fake-uri",
-                    content: header + passage,
-                    callbacks: callbacks,
-                });
-                const parser = uut.getChapbookParser(undefined);
-                const mockFunction = ImportMock.mockFunction(
-                    modifiersModule,
-                    "all"
-                ).returns([]);
+            describe("contents parsing", () => {
+                it("should capture a reference for a known modifier", () => {
+                    const header = ":: Passage\n";
+                    const passage = "[mock-mod]\nContent\n";
+                    const callbacks = new MockCallbacks();
+                    const modifier = buildModifierInfo({
+                        match: /^mock-mod/,
+                    });
+                    const state = buildParsingState({
+                        uri: "fake-uri",
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
+                    const mockFunction = ImportMock.mockFunction(
+                        modifiersModule,
+                        "all"
+                    ).returns([modifier]);
 
-                parser?.parsePassageText(passage, header.length, state);
-                mockFunction.restore();
-                const result = callbacks.references[0];
+                    parser?.parsePassageText(passage, header.length, state);
+                    mockFunction.restore();
+                    const result = callbacks.references[0];
 
-                expect(callbacks.references.length).to.equal(1);
-                expect(result).to.eql({
-                    contents: "mock-mod",
-                    location: Location.create(
-                        "fake-uri",
-                        Range.create(1, 1, 1, 9)
-                    ),
-                    kind: OChapbookSymbolKind.CustomModifier,
-                });
-            });
-
-            it("should set semantic tokens for modifiers", () => {
-                const header = ":: Passage\n";
-                const passage = "[ mod1 ; mod2 nice  nice ]\nContent\n";
-                const callbacks = new MockCallbacks();
-                const state = buildParsingState({
-                    content: header + passage,
-                    callbacks: callbacks,
-                });
-                const parser = uut.getChapbookParser(undefined);
-
-                parser?.parsePassageText(passage, header.length, state);
-                const [mod1Token, mod2Token, mod2Param1, mod2Param2] =
-                    callbacks.tokens;
-
-                expect(callbacks.tokens.length).to.equal(4);
-                expect(mod1Token).to.eql({
-                    line: 1,
-                    char: 2,
-                    length: 4,
-                    tokenType: ETokenType.function,
-                    tokenModifiers: [],
-                });
-                expect(mod2Token).to.eql({
-                    line: 1,
-                    char: 9,
-                    length: 4,
-                    tokenType: ETokenType.function,
-                    tokenModifiers: [],
-                });
-                expect(mod2Param1).to.eql({
-                    line: 1,
-                    char: 14,
-                    length: 4,
-                    tokenType: ETokenType.parameter,
-                    tokenModifiers: [],
-                });
-                expect(mod2Param2).to.eql({
-                    line: 1,
-                    char: 20,
-                    length: 4,
-                    tokenType: ETokenType.parameter,
-                    tokenModifiers: [],
-                });
-            });
-
-            it("should indicate deprecation in a modifier's semantic token if applicable", () => {
-                const header = ":: Passage\n";
-                const passage = "[mod1]\nContent\n";
-                const callbacks = new MockCallbacks();
-                const state = buildParsingState({
-                    content: header + passage,
-                    callbacks: callbacks,
-                });
-                state.storyFormat = {
-                    format: "Chapbook",
-                    formatVersion: "2.1",
-                };
-                const parser = uut.getChapbookParser("2.1");
-                const modifier = buildModifierInfo({
-                    description: "My description!",
-                    match: /^mod1/,
-                });
-                modifier.deprecated = "2.1";
-                const mockFunction = ImportMock.mockFunction(
-                    modifiersModule,
-                    "all"
-                ).returns([modifier]);
-
-                parser?.parsePassageText(passage, header.length, state);
-                mockFunction.restore();
-                const [mod1Token] = callbacks.tokens;
-
-                expect(callbacks.tokens.length).to.equal(1);
-                expect(mod1Token).to.eql({
-                    line: 1,
-                    char: 1,
-                    length: 4,
-                    tokenType: ETokenType.function,
-                    tokenModifiers: [ETokenModifier.deprecated],
-                });
-            });
-
-            it("should set semantic tokens for modifiers that take quote marks into account", () => {
-                const header = ":: Passage\n";
-                const passage = '[ mod1 "and\\"; so" ; mod2 ]\nContent\n';
-                const callbacks = new MockCallbacks();
-                const state = buildParsingState({
-                    content: header + passage,
-                    callbacks: callbacks,
-                });
-                const parser = uut.getChapbookParser(undefined);
-
-                parser?.parsePassageText(passage, header.length, state);
-                const [mod1Token, mod1Param1, mod1Param2, mod2Token] =
-                    callbacks.tokens;
-
-                expect(callbacks.tokens.length).to.equal(4);
-                expect(mod1Token).to.eql({
-                    line: 1,
-                    char: 2,
-                    length: 4,
-                    tokenType: ETokenType.function,
-                    tokenModifiers: [],
-                });
-                expect(mod1Param1).to.eql({
-                    line: 1,
-                    char: 7,
-                    length: 7,
-                    tokenType: ETokenType.parameter,
-                    tokenModifiers: [],
-                });
-                expect(mod1Param2).to.eql({
-                    line: 1,
-                    char: 15,
-                    length: 3,
-                    tokenType: ETokenType.parameter,
-                    tokenModifiers: [],
-                });
-                expect(mod2Token).to.eql({
-                    line: 1,
-                    char: 21,
-                    length: 4,
-                    tokenType: ETokenType.function,
-                    tokenModifiers: [],
-                });
-            });
-
-            it("should set a comment token for a note modifier", () => {
-                const header = ":: Passage\n";
-                const passage = "[ note ]\nContent\n";
-                const callbacks = new MockCallbacks();
-                const state = buildParsingState({
-                    content: header + passage,
-                    callbacks: callbacks,
-                });
-                const parser = uut.getChapbookParser(undefined);
-
-                parser?.parsePassageText(passage, header.length, state);
-                const [token] = callbacks.tokens;
-
-                expect(callbacks.tokens.length).to.equal(2);
-                expect(token).to.eql({
-                    line: 1,
-                    char: 2,
-                    length: 4,
-                    tokenType: ETokenType.comment,
-                    tokenModifiers: [],
-                });
-            });
-
-            it("should not capture variables in a javascript modifier", () => {
-                const header = ":: Passage\n";
-                const passage = "Stuff\n\n[javascript]\n  newVar = 1;\n";
-                const callbacks = new MockCallbacks();
-                const state = buildParsingState({
-                    content: header + passage,
-                    callbacks: callbacks,
-                });
-                const parser = uut.getChapbookParser(undefined);
-
-                parser?.parsePassageText(passage, header.length, state);
-                const result = callbacks.references;
-
-                expect(result).to.eql([
-                    {
-                        contents: "javascript",
+                    expect(callbacks.references.length).to.equal(1);
+                    expect(result).to.eql({
+                        contents: "mock-mod",
                         location: Location.create(
                             "fake-uri",
-                            Range.create(3, 1, 3, 11)
+                            Range.create(1, 1, 1, 9)
                         ),
                         kind: OChapbookSymbolKind.BuiltInModifier,
-                    },
-                ]);
-            });
-
-            it("should set an embedded document for a CSS modifier", () => {
-                const header = ":: Passage\n";
-                const passage =
-                    "Content before\n" +
-                    "[mod; cSs ]\n" +
-                    "Fake CSS\nMore fake\n" +
-                    "[continue]\nNot CSS.\n";
-                const callbacks = new MockCallbacks();
-                const state = buildParsingState({
-                    content: header + passage,
-                    callbacks: callbacks,
+                    });
                 });
-                const parser = uut.getChapbookParser(undefined);
 
-                parser?.parsePassageText(passage, header.length, state);
-                // The first embedded document is the entire passage
-                const [, result] = callbacks.embeddedDocuments;
+                it("should capture a reference for an unknown modifier", () => {
+                    const header = ":: Passage\n";
+                    const passage = "[mock-mod]\nContent\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        uri: "fake-uri",
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
+                    const mockFunction = ImportMock.mockFunction(
+                        modifiersModule,
+                        "all"
+                    ).returns([]);
 
-                expect(result.document.getText()).to.eql(
-                    "Fake CSS\nMore fake\n"
-                );
-                expect(result.document.languageId).to.eql("css");
-                expect(result.range).to.eql(Range.create(3, 0, 5, 0));
-            });
+                    parser?.parsePassageText(passage, header.length, state);
+                    mockFunction.restore();
+                    const result = callbacks.references[0];
 
-            it("should set a semantic token for a note modifier", () => {
-                const header = ":: Passage\n";
-                const passage =
-                    "Content before\n" +
-                    "[mod; n.b. ]\n" +
-                    "A note\nMore note\n" +
-                    "[continue]\nUnnoteable.\n";
-                const callbacks = new MockCallbacks();
-                const state = buildParsingState({
-                    content: header + passage,
-                    callbacks: callbacks,
+                    expect(callbacks.references.length).to.equal(1);
+                    expect(result).to.eql({
+                        contents: "mock-mod",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(1, 1, 1, 9)
+                        ),
+                        kind: OChapbookSymbolKind.CustomModifier,
+                    });
                 });
-                const parser = uut.getChapbookParser(undefined);
 
-                parser?.parsePassageText(passage, header.length, state);
-                const [modToken, nbToken, noteToken1, noteToken2] =
-                    callbacks.tokens;
+                it("should send the full text to the matching modifier", () => {
+                    const header = ":: Passage\n";
+                    const passage = "[mock-mod stuff that follows!]\nContent\n";
+                    const callbacks = new MockCallbacks();
+                    const modifier = buildModifierInfo({
+                        match: /^mock-mod/,
+                    });
+                    let passedText: string | undefined;
+                    modifier.parse = (text: string) => {
+                        passedText = text;
+                    };
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
+                    const mockFunction = ImportMock.mockFunction(
+                        modifiersModule,
+                        "all"
+                    ).returns([modifier]);
 
-                expect(callbacks.tokens.length).to.equal(5);
-                expect(modToken).to.eql({
-                    line: 2,
-                    char: 1,
-                    length: 3,
-                    tokenType: ETokenType.function,
-                    tokenModifiers: [],
+                    parser?.parsePassageText(passage, header.length, state);
+                    mockFunction.restore();
+
+                    expect(passedText).to.equal("mock-mod stuff that follows!");
                 });
-                expect(nbToken).to.eql({
-                    line: 2,
-                    char: 6,
-                    length: 4,
-                    tokenType: ETokenType.comment,
-                    tokenModifiers: [],
+
+                it("should create a variable reference for a first arg that's an expression and contains a variable", () => {
+                    const header = ":: Passage\n";
+                    const passage = "[mock mod tempy]\nContent\n";
+                    const callbacks = new MockCallbacks();
+                    const modifier = buildModifierInfo({
+                        match: /^mock\s+mod/,
+                    });
+                    modifier.firstArgument = {
+                        required: ArgumentRequirement.required,
+                        type: ValueType.expression,
+                    };
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
+                    const mockFunction = ImportMock.mockFunction(
+                        modifiersModule,
+                        "all"
+                    ).returns([modifier]);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    mockFunction.restore();
+                    const result = callbacks.references[1];
+
+                    expect(callbacks.references.length).to.equal(2);
+                    expect(result).to.eql({
+                        contents: "tempy",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(1, 10, 1, 15)
+                        ),
+                        kind: OChapbookSymbolKind.Variable,
+                    });
                 });
-                expect(noteToken1).to.eql({
-                    line: 3,
-                    char: 0,
-                    length: 6,
-                    tokenType: ETokenType.comment,
-                    tokenModifiers: [],
+
+                it("should create a passage reference for a first arg that's a passage", () => {
+                    const header = ":: Passage\n";
+                    const passage = "[mock-mod 'arg']\nContent\n";
+                    const callbacks = new MockCallbacks();
+                    const modifier = buildModifierInfo({
+                        match: /^mock-mod/,
+                    });
+                    modifier.firstArgument = {
+                        required: ArgumentRequirement.required,
+                        type: ValueType.passage,
+                    };
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
+                    const mockFunction = ImportMock.mockFunction(
+                        modifiersModule,
+                        "all"
+                    ).returns([modifier]);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    mockFunction.restore();
+                    const result = callbacks.references[1];
+
+                    expect(callbacks.references.length).to.equal(2);
+                    expect(result).to.eql({
+                        contents: "arg",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(1, 11, 1, 14)
+                        ),
+                        kind: TwineSymbolKind.Passage,
+                    });
                 });
-                expect(noteToken2).to.eql({
-                    line: 4,
-                    char: 0,
-                    length: 9,
-                    tokenType: ETokenType.comment,
-                    tokenModifiers: [],
+
+                it("should create a passage semantic token for a first arg that's a passage", () => {
+                    const header = ":: Passage\n";
+                    const passage = "[mock-mod 'arg']\nContent\n";
+                    const callbacks = new MockCallbacks();
+                    const modifier = buildModifierInfo({
+                        match: /^mock-mod/,
+                    });
+                    modifier.firstArgument = {
+                        required: ArgumentRequirement.required,
+                        type: ValueType.passage,
+                    };
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
+                    const mockFunction = ImportMock.mockFunction(
+                        modifiersModule,
+                        "all"
+                    ).returns([modifier]);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    mockFunction.restore();
+                    const [, firstArgToken] = callbacks.tokens;
+
+                    expect(firstArgToken).to.eql({
+                        line: 1,
+                        char: 11,
+                        length: 3,
+                        tokenType: ETokenType.class,
+                        tokenModifiers: [],
+                    });
+                });
+
+                it("should create a passage reference for a non-link first arg that's a urlOrPassage", () => {
+                    const header = ":: Passage\n";
+                    const passage = "[mock-mod 'arg']\nContent\n";
+                    const callbacks = new MockCallbacks();
+                    const modifier = buildModifierInfo({
+                        match: /^mock-mod/,
+                    });
+                    modifier.firstArgument = {
+                        required: ArgumentRequirement.required,
+                        type: ValueType.urlOrPassage,
+                    };
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
+                    const mockFunction = ImportMock.mockFunction(
+                        modifiersModule,
+                        "all"
+                    ).returns([modifier]);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    mockFunction.restore();
+                    const result = callbacks.references[1];
+
+                    expect(callbacks.references.length).to.equal(2);
+                    expect(result).to.eql({
+                        contents: "arg",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(1, 11, 1, 14)
+                        ),
+                        kind: TwineSymbolKind.Passage,
+                    });
+                });
+
+                it("should create a passage semantic token for a non-link first arg that's a urlOrPassage", () => {
+                    const header = ":: Passage\n";
+                    const passage = "[mock-mod 'arg']\nContent\n";
+                    const callbacks = new MockCallbacks();
+                    const modifier = buildModifierInfo({
+                        match: /^mock-mod/,
+                    });
+                    modifier.firstArgument = {
+                        required: ArgumentRequirement.required,
+                        type: ValueType.urlOrPassage,
+                    };
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
+                    const mockFunction = ImportMock.mockFunction(
+                        modifiersModule,
+                        "all"
+                    ).returns([modifier]);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    mockFunction.restore();
+                    const [, firstArgToken] = callbacks.tokens;
+
+                    expect(firstArgToken).to.eql({
+                        line: 1,
+                        char: 11,
+                        length: 3,
+                        tokenType: ETokenType.class,
+                        tokenModifiers: [],
+                    });
+                });
+
+                it("should not create a passage reference for a link first arg that's a urlOrPassage", () => {
+                    const header = ":: Passage\n";
+                    const passage = "[mock-mod 'https://link.com']\nContent\n";
+                    const callbacks = new MockCallbacks();
+                    const modifier = buildModifierInfo({
+                        match: /^mock-mod/,
+                    });
+                    modifier.firstArgument = {
+                        required: ArgumentRequirement.required,
+                        type: ValueType.urlOrPassage,
+                    };
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
+                    const mockFunction = ImportMock.mockFunction(
+                        modifiersModule,
+                        "all"
+                    ).returns([modifier]);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    mockFunction.restore();
+                    const result = callbacks.references;
+
+                    expect(result.length).to.equal(1); // There should only be the reference to the modifier itself
+                    expect(result[0].contents).to.eql("mock-mod");
+                });
+
+                it("should create a string semantic token for a non-link first arg that's a urlOrPassage", () => {
+                    const header = ":: Passage\n";
+                    const passage = "[mock-mod 'https://link.com']\nContent\n";
+                    const callbacks = new MockCallbacks();
+                    const modifier = buildModifierInfo({
+                        match: /^mock-mod/,
+                    });
+                    modifier.firstArgument = {
+                        required: ArgumentRequirement.required,
+                        type: ValueType.urlOrPassage,
+                    };
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
+                    const mockFunction = ImportMock.mockFunction(
+                        modifiersModule,
+                        "all"
+                    ).returns([modifier]);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    mockFunction.restore();
+                    const [, firstArgToken] = callbacks.tokens;
+
+                    expect(firstArgToken).to.eql({
+                        line: 1,
+                        char: 10,
+                        length: 18,
+                        tokenType: ETokenType.string,
+                        tokenModifiers: [],
+                    });
+                });
+
+                it("should create a variable reference for a non-string first arg that's a urlOrPassage", () => {
+                    const header = ":: Passage\n";
+                    const passage = "[mock-mod  arg]\nContent\n";
+                    const callbacks = new MockCallbacks();
+                    const modifier = buildModifierInfo({
+                        match: /^mock-mod/,
+                    });
+                    modifier.firstArgument = {
+                        required: ArgumentRequirement.required,
+                        type: ValueType.urlOrPassage,
+                    };
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
+                    const mockFunction = ImportMock.mockFunction(
+                        modifiersModule,
+                        "all"
+                    ).returns([modifier]);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    mockFunction.restore();
+                    const result = callbacks.references[1];
+
+                    expect(callbacks.references.length).to.equal(2);
+                    expect(result).to.eql({
+                        contents: "arg",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(1, 11, 1, 14)
+                        ),
+                        kind: OChapbookSymbolKind.Variable,
+                    });
+                });
+
+                it("should create a variable semantic token for a non-string first arg that's a urlOrPassage", () => {
+                    const header = ":: Passage\n";
+                    const passage = "[mock-mod  arg]\nContent\n";
+                    const callbacks = new MockCallbacks();
+                    const modifier = buildModifierInfo({
+                        match: /^mock-mod/,
+                    });
+                    modifier.firstArgument = {
+                        required: ArgumentRequirement.required,
+                        type: ValueType.urlOrPassage,
+                    };
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
+                    const mockFunction = ImportMock.mockFunction(
+                        modifiersModule,
+                        "all"
+                    ).returns([modifier]);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    mockFunction.restore();
+                    const [, firstArgToken] = callbacks.tokens;
+
+                    expect(firstArgToken).to.eql({
+                        line: 1,
+                        char: 11,
+                        length: 3,
+                        tokenType: ETokenType.variable,
+                        tokenModifiers: [],
+                    });
+                });
+
+                it("should not capture variables in a javascript modifier", () => {
+                    const header = ":: Passage\n";
+                    const passage = "Stuff\n\n[javascript]\n  newVar = 1;\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    const result = callbacks.references;
+
+                    expect(result).to.eql([
+                        {
+                            contents: "javascript",
+                            location: Location.create(
+                                "fake-uri",
+                                Range.create(3, 1, 3, 11)
+                            ),
+                            kind: OChapbookSymbolKind.BuiltInModifier,
+                        },
+                    ]);
+                });
+
+                it("should set an embedded document for a CSS modifier", () => {
+                    const header = ":: Passage\n";
+                    const passage =
+                        "Content before\n" +
+                        "[mod; cSs ]\n" +
+                        "Fake CSS\nMore fake\n" +
+                        "[continue]\nNot CSS.\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    // The first embedded document is the entire passage
+                    const [, result] = callbacks.embeddedDocuments;
+
+                    expect(result.document.getText()).to.eql(
+                        "Fake CSS\nMore fake\n"
+                    );
+                    expect(result.document.languageId).to.eql("css");
+                    expect(result.range).to.eql(Range.create(3, 0, 5, 0));
                 });
             });
         });
@@ -1489,10 +1845,6 @@ describe("Chapbook Parsing", () => {
                     const insert = buildInsertInfo({
                         match: /^mock insert/,
                     });
-                    const allTokens: insertsModule.InsertTokens[] = [];
-                    insert.parse = (tokens) => {
-                        allTokens.push(tokens);
-                    };
                     const state = buildParsingState({
                         content: header + passage,
                         callbacks: callbacks,
@@ -1550,6 +1902,40 @@ describe("Chapbook Parsing", () => {
                     expect(allTokens[0].props).to.be.empty;
                 });
 
+                it("should create a variable reference for a first arg that's an expression and contains a variable", () => {
+                    const header = ":: Passage\n";
+                    const passage = "Insert: {mock insert:  tempy}";
+                    const callbacks = new MockCallbacks();
+                    const insert = buildInsertInfo({
+                        match: /^mock insert/,
+                    });
+                    insert.firstArgument.type = ValueType.expression;
+                    const state = buildParsingState({
+                        uri: "fake-uri",
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
+                    const mockFunction = ImportMock.mockFunction(
+                        insertsModule,
+                        "all"
+                    ).returns([insert]);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    mockFunction.restore();
+                    const result = callbacks.references[0];
+
+                    expect(callbacks.references.length).to.equal(2);
+                    expect(result).to.eql({
+                        contents: "tempy",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(1, 23, 1, 28)
+                        ),
+                        kind: OChapbookSymbolKind.Variable,
+                    });
+                });
+
                 it("should create a passage reference for a first arg that's a passage", () => {
                     const header = ":: Passage\n";
                     const passage = 'Insert: {mock insert:  "arg"}';
@@ -1558,10 +1944,6 @@ describe("Chapbook Parsing", () => {
                         match: /^mock insert/,
                     });
                     insert.firstArgument.type = ValueType.passage;
-                    const allTokens: insertsModule.InsertTokens[] = [];
-                    insert.parse = (tokens) => {
-                        allTokens.push(tokens);
-                    };
                     const state = buildParsingState({
                         uri: "fake-uri",
                         content: header + passage,
@@ -1596,10 +1978,6 @@ describe("Chapbook Parsing", () => {
                         match: /^mock insert/,
                     });
                     insert.firstArgument.type = ValueType.passage;
-                    const allTokens: insertsModule.InsertTokens[] = [];
-                    insert.parse = (tokens) => {
-                        allTokens.push(tokens);
-                    };
                     const state = buildParsingState({
                         content: header + passage,
                         callbacks: callbacks,
@@ -1631,10 +2009,6 @@ describe("Chapbook Parsing", () => {
                         match: /^mock insert/,
                     });
                     insert.firstArgument.type = ValueType.urlOrPassage;
-                    const allTokens: insertsModule.InsertTokens[] = [];
-                    insert.parse = (tokens) => {
-                        allTokens.push(tokens);
-                    };
                     const state = buildParsingState({
                         uri: "fake-uri",
                         content: header + passage,
@@ -1669,10 +2043,6 @@ describe("Chapbook Parsing", () => {
                         match: /^mock insert/,
                     });
                     insert.firstArgument.type = ValueType.urlOrPassage;
-                    const allTokens: insertsModule.InsertTokens[] = [];
-                    insert.parse = (tokens) => {
-                        allTokens.push(tokens);
-                    };
                     const state = buildParsingState({
                         content: header + passage,
                         callbacks: callbacks,
@@ -1705,10 +2075,6 @@ describe("Chapbook Parsing", () => {
                         match: /^mock insert/,
                     });
                     insert.firstArgument.type = ValueType.urlOrPassage;
-                    const allTokens: insertsModule.InsertTokens[] = [];
-                    insert.parse = (tokens) => {
-                        allTokens.push(tokens);
-                    };
                     const state = buildParsingState({
                         content: header + passage,
                         callbacks: callbacks,
@@ -1736,10 +2102,6 @@ describe("Chapbook Parsing", () => {
                         match: /^mock insert/,
                     });
                     insert.firstArgument.type = ValueType.urlOrPassage;
-                    const allTokens: insertsModule.InsertTokens[] = [];
-                    insert.parse = (tokens) => {
-                        allTokens.push(tokens);
-                    };
                     const state = buildParsingState({
                         content: header + passage,
                         callbacks: callbacks,
@@ -1771,10 +2133,6 @@ describe("Chapbook Parsing", () => {
                         match: /^mock insert/,
                     });
                     insert.firstArgument.type = ValueType.urlOrPassage;
-                    const allTokens: insertsModule.InsertTokens[] = [];
-                    insert.parse = (tokens) => {
-                        allTokens.push(tokens);
-                    };
                     const state = buildParsingState({
                         content: header + passage,
                         callbacks: callbacks,
@@ -1808,10 +2166,6 @@ describe("Chapbook Parsing", () => {
                         match: /^mock insert/,
                     });
                     insert.firstArgument.type = ValueType.urlOrPassage;
-                    const allTokens: insertsModule.InsertTokens[] = [];
-                    insert.parse = (tokens) => {
-                        allTokens.push(tokens);
-                    };
                     const state = buildParsingState({
                         content: header + passage,
                         callbacks: callbacks,
@@ -1848,10 +2202,6 @@ describe("Chapbook Parsing", () => {
                             placeholder: "",
                             type: ValueType.passage,
                         },
-                    };
-                    const allTokens: insertsModule.InsertTokens[] = [];
-                    insert.parse = (tokens) => {
-                        allTokens.push(tokens);
                     };
                     const state = buildParsingState({
                         content: header + passage,
@@ -1897,10 +2247,6 @@ describe("Chapbook Parsing", () => {
                             placeholder: "",
                             type: ValueType.passage,
                         },
-                    };
-                    const allTokens: insertsModule.InsertTokens[] = [];
-                    insert.parse = (tokens) => {
-                        allTokens.push(tokens);
                     };
                     const state = buildParsingState({
                         content: header + passage,
@@ -2618,7 +2964,7 @@ describe("Chapbook Parsing", () => {
                 });
             });
 
-            it("should set the symbol definition's name to the name property for a custom modifier", () => {
+            it("should set a custom modifier symbol definition's name to the name property", () => {
                 const header = ":: Passage\n";
                 const passage =
                     "[javascript]\nengine.extend('2.0.1', () => {\nengine.template.modifiers.add(\n{match: /hi\\s+there/, name: \"hi there\"}\n);\n});\n";
@@ -2651,7 +2997,7 @@ describe("Chapbook Parsing", () => {
                 });
             });
 
-            it("should set the symbol definition's description to the description property for a custom modifier", () => {
+            it("should set a custom modifier symbol definition's description to the description property", () => {
                 const header = ":: Passage\n";
                 const passage =
                     "[javascript]\nengine.extend('2.0.1', () => {\nengine.template.modifiers.add(\n{match: /hi\\s+there/, description: \"I'm a modifier!\"}\n);\n});\n";
@@ -2685,7 +3031,7 @@ describe("Chapbook Parsing", () => {
                 });
             });
 
-            it("should set the symbol definition's syntax to the syntax property for a custom modifier", () => {
+            it("should set a custom modifier symbol definition's syntax to the syntax property", () => {
                 const header = ":: Passage\n";
                 const passage =
                     "[javascript]\nengine.extend('2.0.1', () => {\nengine.template.modifiers.add(\n{match: /hi\\s+there/, syntax: \"[hi there]\"}\n);\n});\n";
@@ -2719,7 +3065,7 @@ describe("Chapbook Parsing", () => {
                 });
             });
 
-            it("should set the symbol definition's completions to the completions property for a custom modifier with a single string", () => {
+            it("should set a custom modifier symbol definition's completions to the completions property for a single string", () => {
                 const header = ":: Passage\n";
                 const passage =
                     "[javascript]\nengine.extend('2.0.1', () => {\nengine.template.modifiers.add(\n{match: /hi\\s+there/, completions: \"one\"}\n);\n});\n";
@@ -2753,7 +3099,7 @@ describe("Chapbook Parsing", () => {
                 });
             });
 
-            it("should set the symbol definition's completions to the completions property for a custom modifier with an array of strings", () => {
+            it("should set a custom modifier symbol definition's completions to the completions property for an array of strings", () => {
                 const header = ":: Passage\n";
                 const passage =
                     '[javascript]\nengine.extend(\'2.0.1\', () => {\nengine.template.modifiers.add(\n{match: /hi\\s+there/, completions: ["one", "two"]}\n);\n});\n';
@@ -2784,6 +3130,223 @@ describe("Chapbook Parsing", () => {
                     ),
                     kind: OChapbookSymbolKind.CustomModifier,
                     match: /hi\s+there/,
+                });
+            });
+
+            it("should set a custom modifier symbol definition's first argument as required if boolean true", () => {
+                const header = ":: Passage\n";
+                const passage =
+                    "[javascript]\nengine.extend('2.0.1', () => {\nengine.template.modifiers.add(\n{match: /hi\\s+there/, arguments: {\nfirstArgument: { required: true }\n}}\n);\n});\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    uri: "fake-uri",
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                state.storyFormat = {
+                    format: "Chapbook",
+                    formatVersion: "2.0.1",
+                };
+                const parser = uut.getChapbookParser(undefined);
+
+                parser?.parsePassageText(passage, header.length, state);
+                const result = callbacks.definitions[0] as ChapbookSymbol;
+
+                expect(callbacks.definitions.length).to.equal(1);
+                expect(ChapbookSymbol.is(result)).to.be.true;
+                expect(result).to.eql({
+                    name: "hi\\s+there",
+                    contents: "hi\\s+there",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(4, 9, 4, 19)
+                    ),
+                    kind: OChapbookSymbolKind.CustomModifier,
+                    match: /hi\s+there/,
+                    firstArgument: {
+                        required: ArgumentRequirement.required,
+                    },
+                });
+            });
+
+            it("should set a custom modifier symbol definition's first argument as optional if boolean false", () => {
+                const header = ":: Passage\n";
+                const passage =
+                    "[javascript]\nengine.extend('2.0.1', () => {\nengine.template.modifiers.add(\n{match: /hi\\s+there/, arguments: {\nfirstArgument: { required: false }\n}}\n);\n});\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    uri: "fake-uri",
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                state.storyFormat = {
+                    format: "Chapbook",
+                    formatVersion: "2.0.1",
+                };
+                const parser = uut.getChapbookParser(undefined);
+
+                parser?.parsePassageText(passage, header.length, state);
+                const result = callbacks.definitions[0] as ChapbookSymbol;
+
+                expect(callbacks.definitions.length).to.equal(1);
+                expect(ChapbookSymbol.is(result)).to.be.true;
+                expect(result).to.eql({
+                    name: "hi\\s+there",
+                    contents: "hi\\s+there",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(4, 9, 4, 19)
+                    ),
+                    kind: OChapbookSymbolKind.CustomModifier,
+                    match: /hi\s+there/,
+                    firstArgument: {
+                        required: ArgumentRequirement.optional,
+                    },
+                });
+            });
+
+            it("should set a custom modifier symbol definition's first argument as required if set to 'required'", () => {
+                const header = ":: Passage\n";
+                const passage =
+                    "[javascript]\nengine.extend('2.0.1', () => {\nengine.template.modifiers.add(\n{match: /hi\\s+there/, arguments: {\nfirstArgument: { required: 'required' }\n}}\n);\n});\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    uri: "fake-uri",
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                state.storyFormat = {
+                    format: "Chapbook",
+                    formatVersion: "2.0.1",
+                };
+                const parser = uut.getChapbookParser(undefined);
+
+                parser?.parsePassageText(passage, header.length, state);
+                const result = callbacks.definitions[0] as ChapbookSymbol;
+
+                expect(callbacks.definitions.length).to.equal(1);
+                expect(ChapbookSymbol.is(result)).to.be.true;
+                expect(result).to.eql({
+                    name: "hi\\s+there",
+                    contents: "hi\\s+there",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(4, 9, 4, 19)
+                    ),
+                    kind: OChapbookSymbolKind.CustomModifier,
+                    match: /hi\s+there/,
+                    firstArgument: {
+                        required: ArgumentRequirement.required,
+                    },
+                });
+            });
+
+            it("should set a custom modifier symbol definition's first argument as optional if set to 'optional'", () => {
+                const header = ":: Passage\n";
+                const passage =
+                    "[javascript]\nengine.extend('2.0.1', () => {\nengine.template.modifiers.add(\n{match: /hi\\s+there/, arguments: {\nfirstArgument: { required: 'optional' }\n}}\n);\n});\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    uri: "fake-uri",
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                state.storyFormat = {
+                    format: "Chapbook",
+                    formatVersion: "2.0.1",
+                };
+                const parser = uut.getChapbookParser(undefined);
+
+                parser?.parsePassageText(passage, header.length, state);
+                const result = callbacks.definitions[0] as ChapbookSymbol;
+
+                expect(callbacks.definitions.length).to.equal(1);
+                expect(ChapbookSymbol.is(result)).to.be.true;
+                expect(result).to.eql({
+                    name: "hi\\s+there",
+                    contents: "hi\\s+there",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(4, 9, 4, 19)
+                    ),
+                    kind: OChapbookSymbolKind.CustomModifier,
+                    match: /hi\s+there/,
+                    firstArgument: {
+                        required: ArgumentRequirement.optional,
+                    },
+                });
+            });
+
+            it("should set a custom modifier symbol definition's first argument as ignored if set to 'ignored'", () => {
+                const header = ":: Passage\n";
+                const passage =
+                    "[javascript]\nengine.extend('2.0.1', () => {\nengine.template.modifiers.add(\n{match: /hi\\s+there/, arguments: {\nfirstArgument: { required: 'ignored' }\n}}\n);\n});\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    uri: "fake-uri",
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                state.storyFormat = {
+                    format: "Chapbook",
+                    formatVersion: "2.0.1",
+                };
+                const parser = uut.getChapbookParser(undefined);
+
+                parser?.parsePassageText(passage, header.length, state);
+                const result = callbacks.definitions[0] as ChapbookSymbol;
+
+                expect(callbacks.definitions.length).to.equal(1);
+                expect(ChapbookSymbol.is(result)).to.be.true;
+                expect(result).to.eql({
+                    name: "hi\\s+there",
+                    contents: "hi\\s+there",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(4, 9, 4, 19)
+                    ),
+                    kind: OChapbookSymbolKind.CustomModifier,
+                    match: /hi\s+there/,
+                    firstArgument: {
+                        required: ArgumentRequirement.ignored,
+                    },
+                });
+            });
+
+            it("should set a custom modifier symbol definition's first argument's placeholder", () => {
+                const header = ":: Passage\n";
+                const passage =
+                    "[javascript]\nengine.extend('2.0.1', () => {\nengine.template.modifiers.add(\n{match: /hi\\s+there/, arguments: {\nfirstArgument: { required: true, placeholder: \"'arg'\" }\n}}\n);\n});\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    uri: "fake-uri",
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                state.storyFormat = {
+                    format: "Chapbook",
+                    formatVersion: "2.0.1",
+                };
+                const parser = uut.getChapbookParser(undefined);
+
+                parser?.parsePassageText(passage, header.length, state);
+                const result = callbacks.definitions[0] as ChapbookSymbol;
+
+                expect(callbacks.definitions.length).to.equal(1);
+                expect(ChapbookSymbol.is(result)).to.be.true;
+                expect(result).to.eql({
+                    name: "hi\\s+there",
+                    contents: "hi\\s+there",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(4, 9, 4, 19)
+                    ),
+                    kind: OChapbookSymbolKind.CustomModifier,
+                    match: /hi\s+there/,
+                    firstArgument: {
+                        required: ArgumentRequirement.required,
+                        placeholder: "'arg'",
+                    },
                 });
             });
         });
@@ -2986,7 +3549,7 @@ describe("Chapbook Parsing", () => {
                     expect(callbacks.errors.length).to.equal(1);
                     expect(result.severity).to.eql(DiagnosticSeverity.Error);
                     expect(result.message).to.include(
-                        "Modifier [modMe] isn't available until Chapbook version 2.1.1 but your StoryFormat version is 2.1"
+                        "`modMe` isn't available until Chapbook version 2.1.1 but your StoryFormat version is 2.1"
                     );
                     expect(result.range).to.eql(Range.create(3, 1, 3, 4));
                 });
@@ -3021,7 +3584,7 @@ describe("Chapbook Parsing", () => {
                     expect(callbacks.errors.length).to.equal(1);
                     expect(result.severity).to.eql(DiagnosticSeverity.Error);
                     expect(result.message).to.include(
-                        "Modifier [modMe] was removed in Chapbook version 2.1 and your StoryFormat version is 2.1"
+                        "`modMe` was removed in Chapbook version 2.1 and your StoryFormat version is 2.1"
                     );
                     expect(result.range).to.eql(Range.create(3, 1, 3, 4));
                 });
@@ -3133,7 +3696,7 @@ describe("Chapbook Parsing", () => {
                     expect(callbacks.errors.length).to.equal(1);
                     expect(result.severity).to.eql(DiagnosticSeverity.Error);
                     expect(result.message).to.include(
-                        "Insert {fn insert} isn't available until Chapbook version 2.1.1 but your StoryFormat version is 2.1"
+                        "`fn insert` isn't available until Chapbook version 2.1.1 but your StoryFormat version is 2.1"
                     );
                     expect(result.range).to.eql(Range.create(3, 11, 3, 20));
                 });
@@ -3169,7 +3732,7 @@ describe("Chapbook Parsing", () => {
                     expect(callbacks.errors.length).to.equal(1);
                     expect(result.severity).to.eql(DiagnosticSeverity.Error);
                     expect(result.message).to.include(
-                        "Insert {fn insert} was removed in Chapbook version 2.1 and your StoryFormat version is 2.1"
+                        "`fn insert` was removed in Chapbook version 2.1 and your StoryFormat version is 2.1"
                     );
                     expect(result.range).to.eql(Range.create(3, 11, 3, 20));
                 });
@@ -3287,7 +3850,7 @@ describe("Chapbook Parsing", () => {
                     expect(callbacks.errors.length).to.equal(1);
                     expect(result.severity).to.eql(DiagnosticSeverity.Error);
                     expect(result.message).to.include(
-                        "Insert {Mock Insert} requires a first argument"
+                        "`Mock Insert` requires a first argument"
                     );
                     expect(result.range).to.eql(Range.create(1, 10, 1, 21));
                 });
@@ -3317,7 +3880,7 @@ describe("Chapbook Parsing", () => {
                     expect(callbacks.errors.length).to.equal(1);
                     expect(result.severity).to.eql(DiagnosticSeverity.Warning);
                     expect(result.message).to.include(
-                        "Insert {Mock Insert} will ignore this first argument"
+                        "`Mock Insert` will ignore this first argument"
                     );
                     expect(result.range).to.eql(Range.create(1, 23, 1, 28));
                 });
@@ -3775,6 +4338,60 @@ describe("Chapbook Parsing", () => {
                         "Completions must be a string or an array of strings"
                     );
                     expect(result.range).to.eql(Range.create(4, 36, 4, 37));
+                });
+
+                it("should warn on a custom modifier with requiredProps", () => {
+                    const header = ":: Passage\n";
+                    const passage =
+                        "[javascript]\nengine.extend('2.0.1', () => {\nengine.template.modifiers.add(\n{match: /hi\\s+there/,\narguments: {\nrequiredProps: {\nfoo: null\n}\n}\n}\n);\n});\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        uri: "fake-uri",
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    state.storyFormat = {
+                        format: "Chapbook",
+                        formatVersion: "2.0.1",
+                    };
+                    const parser = uut.getChapbookParser(undefined);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    const [result] = callbacks.errors;
+
+                    expect(callbacks.errors.length).to.equal(1);
+                    expect(result.severity).to.eql(DiagnosticSeverity.Warning);
+                    expect(result.message).to.include(
+                        "requiredProps are ignored for a custom modifier"
+                    );
+                    expect(result.range).to.eql(Range.create(6, 0, 6, 13));
+                });
+
+                it("should warn on a custom modifier with optionalProps", () => {
+                    const header = ":: Passage\n";
+                    const passage =
+                        "[javascript]\nengine.extend('2.0.1', () => {\nengine.template.modifiers.add(\n{match: /hi\\s+there/,\narguments: {\noptionalProps: {\nfoo: null\n}\n}\n}\n);\n});\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        uri: "fake-uri",
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    state.storyFormat = {
+                        format: "Chapbook",
+                        formatVersion: "2.0.1",
+                    };
+                    const parser = uut.getChapbookParser(undefined);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    const [result] = callbacks.errors;
+
+                    expect(callbacks.errors.length).to.equal(1);
+                    expect(result.severity).to.eql(DiagnosticSeverity.Warning);
+                    expect(result.message).to.include(
+                        "optionalProps are ignored for a custom modifier"
+                    );
+                    expect(result.range).to.eql(Range.create(6, 0, 6, 13));
                 });
             });
         });

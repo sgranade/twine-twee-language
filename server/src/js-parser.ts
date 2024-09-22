@@ -165,7 +165,10 @@ function fullAncestorTokenizingCallback(
  * @returns Top-most node in the AST.
  */
 export function parseJSExpressionStrict(expression: string): acorn.Expression {
-    return acorn.parseExpressionAt(expression, 0, { ecmaVersion: 2020 });
+    return acorn.parseExpressionAt(expression, 0, {
+        ecmaVersion: 2020,
+        sourceType: "script",
+    });
 }
 
 /**

@@ -55,6 +55,35 @@ describe("Chapbook Diagnostics", () => {
             ]);
         });
 
+        it("should not warn on a reference to a built-in lookup variable", () => {
+            const doc = TextDocument.create(
+                "fake-uri",
+                "",
+                0,
+                "Let's try {passage.name}"
+            );
+            const index = new Index();
+            index.setReferences("fake-uri", [
+                {
+                    contents: "passage",
+                    locations: [
+                        Location.create("fake-uri", Range.create(1, 2, 3, 4)),
+                    ],
+                    kind: OChapbookSymbolKind.Variable,
+                },
+            ]);
+            const diagnosticOptions = defaultDiagnosticsOptions;
+            const parser = uut.getChapbookParser(undefined);
+
+            const results = parser?.generateDiagnostics(
+                doc,
+                index,
+                diagnosticOptions
+            );
+
+            expect(results).to.be.empty;
+        });
+
         it("should not warn on a variable with no matching variable setting", () => {
             const doc = TextDocument.create(
                 "fake-uri",
@@ -223,11 +252,6 @@ describe("Chapbook Diagnostics", () => {
                     firstArgument: {
                         required: ArgumentRequirement.required,
                     },
-                    arguments: {
-                        firstArgument: {
-                            required: ArgumentRequirement.required,
-                        },
-                    },
                 } as ChapbookSymbol,
             ]);
             index.setReferences("fake-uri", [
@@ -252,7 +276,7 @@ describe("Chapbook Diagnostics", () => {
             expect(results).to.eql([
                 Diagnostic.create(
                     Range.create(0, 11, 0, 24),
-                    "Insert {custom insert} requires a first argument",
+                    "`custom insert` requires a first argument",
                     DiagnosticSeverity.Error,
                     undefined,
                     "Twine"
@@ -281,11 +305,6 @@ describe("Chapbook Diagnostics", () => {
                     firstArgument: {
                         required: ArgumentRequirement.ignored,
                     },
-                    arguments: {
-                        firstArgument: {
-                            required: ArgumentRequirement.ignored,
-                        },
-                    },
                 } as ChapbookSymbol,
             ]);
             index.setReferences("fake-uri", [
@@ -310,7 +329,7 @@ describe("Chapbook Diagnostics", () => {
             expect(results).to.eql([
                 Diagnostic.create(
                     Range.create(0, 26, 0, 32),
-                    "Insert {custom insert} will ignore this first argument",
+                    "`custom insert` will ignore this first argument",
                     DiagnosticSeverity.Warning,
                     undefined,
                     "Twine"
@@ -341,13 +360,6 @@ describe("Chapbook Diagnostics", () => {
                     },
                     requiredProps: { expected: null, also: null },
                     optionalProps: {},
-                    arguments: {
-                        firstArgument: {
-                            required: ArgumentRequirement.ignored,
-                        },
-                        requiredProps: { expected: null, also: null },
-                        optionalProps: {},
-                    },
                 } as ChapbookSymbol,
             ]);
             index.setReferences("fake-uri", [
@@ -400,13 +412,6 @@ describe("Chapbook Diagnostics", () => {
                     match: /custom\s+insert/,
                     firstArgument: {
                         required: ArgumentRequirement.ignored,
-                    },
-                    arguments: {
-                        firstArgument: {
-                            required: ArgumentRequirement.ignored,
-                        },
-                        requiredProps: {},
-                        optionalProps: {},
                     },
                 } as ChapbookSymbol,
             ]);
@@ -545,6 +550,112 @@ describe("Chapbook Diagnostics", () => {
             );
 
             expect(results).to.be.empty;
+        });
+
+        it("should error on a custom modifier reference with a missing required first argument", () => {
+            const doc = TextDocument.create(
+                "fake-uri",
+                "",
+                0,
+                "[mod-me]\nI'm modified!"
+            );
+            const index = new Index();
+            index.setDefinitions("source-uri", [
+                {
+                    name: "mod-me",
+                    contents: "mod-me",
+                    location: Location.create(
+                        "source-uri",
+                        Range.create(5, 6, 7, 8)
+                    ),
+                    kind: OChapbookSymbolKind.CustomModifier,
+                    match: /mod-me/,
+                    firstArgument: {
+                        required: ArgumentRequirement.required,
+                    },
+                } as ChapbookSymbol,
+            ]);
+            index.setReferences("fake-uri", [
+                {
+                    contents: "mod-me",
+                    locations: [
+                        Location.create("fake-uri", Range.create(0, 1, 0, 7)),
+                    ],
+                    kind: OChapbookSymbolKind.CustomModifier,
+                },
+            ]);
+            const diagnosticOptions = defaultDiagnosticsOptions;
+            diagnosticOptions.warnings.unknownMacro = true;
+            const parser = uut.getChapbookParser(undefined);
+
+            const results = parser?.generateDiagnostics(
+                doc,
+                index,
+                diagnosticOptions
+            );
+
+            expect(results).to.eql([
+                Diagnostic.create(
+                    Range.create(0, 1, 0, 7),
+                    "`mod-me` requires a first argument",
+                    DiagnosticSeverity.Error,
+                    undefined,
+                    "Twine"
+                ),
+            ]);
+        });
+
+        it("should warn on a custom modifier reference with an ignored required first argument", () => {
+            const doc = TextDocument.create(
+                "fake-uri",
+                "",
+                0,
+                "[mod-me arg]\nI'm modified!"
+            );
+            const index = new Index();
+            index.setDefinitions("source-uri", [
+                {
+                    name: "mod-me",
+                    contents: "mod-me",
+                    location: Location.create(
+                        "source-uri",
+                        Range.create(5, 6, 7, 8)
+                    ),
+                    kind: OChapbookSymbolKind.CustomModifier,
+                    match: /mod-me/,
+                    firstArgument: {
+                        required: ArgumentRequirement.ignored,
+                    },
+                } as ChapbookSymbol,
+            ]);
+            index.setReferences("fake-uri", [
+                {
+                    contents: "mod-me",
+                    locations: [
+                        Location.create("fake-uri", Range.create(0, 1, 0, 7)),
+                    ],
+                    kind: OChapbookSymbolKind.CustomModifier,
+                },
+            ]);
+            const diagnosticOptions = defaultDiagnosticsOptions;
+            diagnosticOptions.warnings.unknownMacro = true;
+            const parser = uut.getChapbookParser(undefined);
+
+            const results = parser?.generateDiagnostics(
+                doc,
+                index,
+                diagnosticOptions
+            );
+
+            expect(results).to.eql([
+                Diagnostic.create(
+                    Range.create(0, 8, 0, 11),
+                    "`mod-me` will ignore this first argument",
+                    DiagnosticSeverity.Warning,
+                    undefined,
+                    "Twine"
+                ),
+            ]);
         });
     });
 });

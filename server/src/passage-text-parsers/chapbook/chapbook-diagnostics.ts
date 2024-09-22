@@ -5,59 +5,34 @@ import { ProjectIndex } from "../../project-index";
 import { DiagnosticsOptions } from "../../server-options";
 import {
     findEndOfPartialInsert,
+    findEndOfPartialModifier,
     findStartOfModifierOrInsert,
     getChapbookDefinitions,
+    lookupVariables,
     tokenizeInsert,
+    tokenizeModifier,
+    validateFunctionAndFirstArgument,
     validateInsertContents,
 } from "./chapbook-parser";
 import { OChapbookSymbolKind } from "./types";
 
 /**
- * Generate Chapbook-specific diagnostics.
+ * Generate diagnostics involving custom inserts.
  *
  * @param document Document to validate and generate diagnostics against.
  * @param index Index of the Twine project.
+ * @param text Text of the document.
  * @param diagnosticsOptions Options for what optional diagnostics to report.
  * @returns List of diagnostic messages.
  */
-export function generateDiagnostics(
+function generateCustomInsertDiagnostics(
     document: TextDocument,
     index: ProjectIndex,
+    text: string,
     diagnosticsOptions: DiagnosticsOptions
 ): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];
-    const text = document.getText();
 
-    // Check for variables that don't have a matching set statement in a vars section
-    const varSetNamesWithDuplicates: string[] = [];
-    for (const uri of index.getIndexedUris()) {
-        varSetNamesWithDuplicates.push(
-            ...(index
-                .getReferences(uri, OChapbookSymbolKind.VariableSet)
-                ?.map((ref) => ref.contents) || [])
-        );
-    }
-    const varSetNames = new Set(varSetNamesWithDuplicates);
-    for (const varRef of index.getReferences(
-        document.uri,
-        OChapbookSymbolKind.Variable
-    ) || []) {
-        if (!varSetNames.has(varRef.contents)) {
-            const message = `Variable "${varRef.contents}" isn't set in any vars section. Make sure you've spelled it correctly.`;
-            diagnostics.push(
-                ...varRef.locations.map((loc) =>
-                    Diagnostic.create(
-                        loc.range,
-                        message,
-                        DiagnosticSeverity.Warning
-                    )
-                )
-            );
-        }
-    }
-
-    // Check for unrecognized custom inserts (if that option is set) and
-    // any argument errors in recognized custom inserts
     const customInserts = getChapbookDefinitions(
         OChapbookSymbolKind.CustomInsert,
         index
@@ -116,6 +91,26 @@ export function generateDiagnostics(
         }
     }
 
+    return diagnostics;
+}
+
+/**
+ * Generate diagnostics involving custom modifiers.
+ *
+ * @param document Document to validate and generate diagnostics against.
+ * @param index Index of the Twine project.
+ * @param text Text of the document.
+ * @param diagnosticsOptions Options for what optional diagnostics to report.
+ * @returns List of diagnostic messages.
+ */
+function generateCustomModifierDiagnostics(
+    document: TextDocument,
+    index: ProjectIndex,
+    text: string,
+    diagnosticsOptions: DiagnosticsOptions
+): Diagnostic[] {
+    const diagnostics: Diagnostic[] = [];
+
     const customModifiers = getChapbookDefinitions(
         OChapbookSymbolKind.CustomModifier,
         index
@@ -128,7 +123,35 @@ export function generateDiagnostics(
             i.match.test(modRef.contents)
         );
         if (modifier !== undefined) {
-            // TODO validate modifier arguments when we add that for custom modifiers
+            // We only validate arguments if the modifier has ones defined
+            if (modifier.firstArgument === undefined) continue;
+
+            for (const loc of modRef.locations) {
+                // Find the start of the modifier
+                let startNdx = findStartOfModifierOrInsert(
+                    text,
+                    document.offsetAt(loc.range.start)
+                );
+                if (startNdx === undefined) continue;
+
+                const endNdx = findEndOfPartialModifier(text, startNdx);
+                if (endNdx === undefined) continue;
+                startNdx++; // To skip the opening "["
+                const modText = text.substring(startNdx, endNdx);
+
+                const modTokens = tokenizeModifier(modText, startNdx, modifier);
+                if (modTokens !== undefined) {
+                    diagnostics.push(
+                        ...validateFunctionAndFirstArgument(
+                            modifier,
+                            modTokens.name,
+                            modTokens.firstArgument,
+                            index.getStoryData()?.storyFormat?.formatVersion,
+                            document
+                        )
+                    );
+                }
+            }
         } else if (diagnosticsOptions.warnings.unknownMacro) {
             diagnostics.push(
                 ...modRef.locations.map((loc) =>
@@ -141,6 +164,73 @@ export function generateDiagnostics(
             );
         }
     }
+
+    return diagnostics;
+}
+
+/**
+ * Generate Chapbook-specific diagnostics.
+ *
+ * @param document Document to validate and generate diagnostics against.
+ * @param index Index of the Twine project.
+ * @param diagnosticsOptions Options for what optional diagnostics to report.
+ * @returns List of diagnostic messages.
+ */
+export function generateDiagnostics(
+    document: TextDocument,
+    index: ProjectIndex,
+    diagnosticsOptions: DiagnosticsOptions
+): Diagnostic[] {
+    const diagnostics: Diagnostic[] = [];
+    const text = document.getText();
+
+    // Check for variables that don't have a matching set statement in a vars section
+    const varSetNamesWithDuplicates: string[] = [...lookupVariables];
+    for (const uri of index.getIndexedUris()) {
+        varSetNamesWithDuplicates.push(
+            ...(index
+                .getReferences(uri, OChapbookSymbolKind.VariableSet)
+                ?.map((ref) => ref.contents) || [])
+        );
+    }
+    const varSetNames = new Set(varSetNamesWithDuplicates);
+    for (const varRef of index.getReferences(
+        document.uri,
+        OChapbookSymbolKind.Variable
+    ) || []) {
+        if (!varSetNames.has(varRef.contents)) {
+            const message = `Variable "${varRef.contents}" isn't set in any vars section. Make sure you've spelled it correctly.`;
+            diagnostics.push(
+                ...varRef.locations.map((loc) =>
+                    Diagnostic.create(
+                        loc.range,
+                        message,
+                        DiagnosticSeverity.Warning
+                    )
+                )
+            );
+        }
+    }
+
+    // Check for unrecognized custom inserts (if that option is set) and
+    // any argument errors in recognized custom inserts
+    diagnostics.push(
+        ...generateCustomInsertDiagnostics(
+            document,
+            index,
+            text,
+            diagnosticsOptions
+        )
+    );
+
+    diagnostics.push(
+        ...generateCustomModifierDiagnostics(
+            document,
+            index,
+            text,
+            diagnosticsOptions
+        )
+    );
 
     return diagnostics;
 }

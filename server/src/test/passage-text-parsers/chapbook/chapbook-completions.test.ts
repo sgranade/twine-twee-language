@@ -14,10 +14,12 @@ import {
     ArgumentRequirement,
     ValueType,
 } from "../../../passage-text-parsers/chapbook/types";
+import { buildModifierInfo } from "./modifiers/modifier-builders";
 import * as insertsModule from "../../../passage-text-parsers/chapbook/inserts";
 import * as modifiersModule from "../../../passage-text-parsers/chapbook/modifiers";
 
 import * as uut from "../../../passage-text-parsers/chapbook";
+import { buildInsertInfo } from "./inserts/insert-builders";
 
 describe("Chapbook Completions", () => {
     describe("Variables", () => {
@@ -63,7 +65,7 @@ describe("Chapbook Completions", () => {
     });
 
     describe("Modifiers", () => {
-        it("should suggest modifiers after a [ at the start of the line", () => {
+        it("should suggest built-in modifiers after a [ at the start of the line", () => {
             const doc = TextDocument.create(
                 "fake-uri",
                 "",
@@ -83,7 +85,7 @@ describe("Chapbook Completions", () => {
             const results = parser?.generateCompletions(doc, position, index);
 
             expect(results?.itemDefaults?.editRange).to.eql(
-                Range.create(1, 1, 1, 7)
+                Range.create(1, 2, 1, 7)
             );
         });
 
@@ -105,6 +107,7 @@ describe("Chapbook Completions", () => {
             index.setDefinitions("source-uri", [
                 {
                     contents: "custom modifier",
+                    name: "custom modifier",
                     location: Location.create(
                         "source-uri",
                         Range.create(5, 6, 7, 8)
@@ -145,7 +148,7 @@ describe("Chapbook Completions", () => {
             const results = parser?.generateCompletions(doc, position, index);
 
             expect(results?.itemDefaults?.editRange).to.eql(
-                Range.create(1, 1, 1, 6)
+                Range.create(1, 2, 1, 6)
             );
         });
 
@@ -169,7 +172,7 @@ describe("Chapbook Completions", () => {
             const results = parser?.generateCompletions(doc, position, index);
 
             expect(results?.itemDefaults?.editRange).to.eql(
-                Range.create(1, 11, 1, 17)
+                Range.create(1, 12, 1, 17)
             );
         });
 
@@ -193,7 +196,7 @@ describe("Chapbook Completions", () => {
             const results = parser?.generateCompletions(doc, position, index);
 
             expect(results?.itemDefaults?.editRange).to.eql(
-                Range.create(1, 1, 1, 7)
+                Range.create(1, 2, 1, 7)
             );
         });
 
@@ -217,7 +220,257 @@ describe("Chapbook Completions", () => {
             const results = parser?.generateCompletions(doc, position, index);
 
             expect(results?.itemDefaults?.editRange).to.eql(
-                Range.create(1, 11, 1, 16)
+                Range.create(1, 12, 1, 16)
+            );
+        });
+
+        it("should suggest a built-in modifier's required first argument's placeholder after a [ and the modifier name", () => {
+            const doc = TextDocument.create(
+                "fake-uri",
+                "",
+                0,
+                ":: Passage\n[ mod "
+            );
+            const position = Position.create(1, 6);
+            const index = new Index();
+            index.setPassages("fake-uri", [
+                buildPassage({
+                    label: "passage",
+                    scope: Range.create(0, 0, 2, 0),
+                }),
+            ]);
+            const modifier = buildModifierInfo({ name: "mod", match: /^mod/i });
+            modifier.completions = ["mod"];
+            modifier.firstArgument = {
+                required: ArgumentRequirement.required,
+                placeholder: "'URL'",
+            };
+            const mockFunction = ImportMock.mockFunction(
+                modifiersModule,
+                "all"
+            ).returns([modifier]);
+            const parser = uut.getChapbookParser(undefined);
+
+            const results = parser?.generateCompletions(doc, position, index);
+            mockFunction.restore();
+
+            expect(results?.items[0].textEditText).to.eql("mod '${1:URL}'");
+            expect(results?.itemDefaults?.editRange).to.eql(
+                Range.create(1, 2, 1, 6)
+            );
+        });
+
+        it("should suggest a custom modifier's required first argument's placeholder after a [ and the modifier name", () => {
+            const doc = TextDocument.create(
+                "fake-uri",
+                "",
+                0,
+                ":: Passage\n[ custom mod "
+            );
+            const position = Position.create(1, 4);
+            const index = new Index();
+            index.setPassages("fake-uri", [
+                buildPassage({
+                    label: "passage",
+                    scope: Range.create(0, 0, 2, 0),
+                }),
+            ]);
+            index.setDefinitions("source-uri", [
+                {
+                    name: "custom mod",
+                    contents: "custom mod",
+                    location: Location.create(
+                        "source-uri",
+                        Range.create(5, 6, 7, 8)
+                    ),
+                    firstArgument: {
+                        required: ArgumentRequirement.required,
+                        placeholder: "'URL'",
+                    },
+                    kind: OChapbookSymbolKind.CustomModifier,
+                    match: /^custom mod/i,
+                } as ChapbookSymbol,
+            ]);
+            const parser = uut.getChapbookParser(undefined);
+            const mockFunction = ImportMock.mockFunction(
+                modifiersModule,
+                "all"
+            ).returns([]);
+
+            const results = parser?.generateCompletions(doc, position, index);
+            mockFunction.restore();
+
+            expect(results?.items[0].textEditText).to.eql(
+                "custom mod '${1:URL}'"
+            );
+            expect(results?.itemDefaults?.editRange).to.eql(
+                Range.create(1, 2, 1, 13)
+            );
+        });
+
+        it("should suggest passages after a [ and modifier name for a built-in modifier's first argument that takes a passage", () => {
+            const doc = TextDocument.create(
+                "fake-uri",
+                "",
+                0,
+                ":: Passage\n[ mod "
+            );
+            const position = Position.create(1, 6);
+            const index = new Index();
+            index.setPassages("fake-uri", [
+                buildPassage({
+                    label: "I'm a passage!",
+                    scope: Range.create(0, 0, 2, 0),
+                }),
+            ]);
+            const modifier = buildModifierInfo({ name: "mod", match: /^mod/i });
+            modifier.completions = ["mod"];
+            modifier.firstArgument = {
+                required: ArgumentRequirement.optional,
+                type: ValueType.passage,
+            };
+            const mockFunction = ImportMock.mockFunction(
+                modifiersModule,
+                "all"
+            ).returns([modifier]);
+            const parser = uut.getChapbookParser(undefined);
+
+            const results = parser?.generateCompletions(doc, position, index);
+            mockFunction.restore();
+
+            expect(results?.items[0].label).to.eql("I'm a passage!");
+            expect(results?.items[0].textEditText).to.eql("'I'm a passage!'");
+            expect(results?.itemDefaults?.editRange).to.eql(
+                Range.create(1, 6, 1, 6)
+            );
+        });
+
+        it("should suggest passages after a [ and modifier name for a custom modifier's first argument that takes a passage", () => {
+            const doc = TextDocument.create(
+                "fake-uri",
+                "",
+                0,
+                ":: Passage\n[ custom mod "
+            );
+            const position = Position.create(1, 12);
+            const index = new Index();
+            index.setPassages("fake-uri", [
+                buildPassage({
+                    label: "I'm a passage!",
+                    scope: Range.create(0, 0, 2, 0),
+                }),
+            ]);
+            index.setDefinitions("source-uri", [
+                {
+                    contents: "custom mod",
+                    location: Location.create(
+                        "source-uri",
+                        Range.create(5, 6, 7, 8)
+                    ),
+                    kind: OChapbookSymbolKind.CustomModifier,
+                    match: /^custom mod/i,
+                    firstArgument: {
+                        required: ArgumentRequirement.optional,
+                        type: ValueType.passage,
+                    },
+                } as ChapbookSymbol,
+            ]);
+            const parser = uut.getChapbookParser(undefined);
+            const mockFunction = ImportMock.mockFunction(
+                modifiersModule,
+                "all"
+            ).returns([]);
+
+            const results = parser?.generateCompletions(doc, position, index);
+            mockFunction.restore();
+
+            expect(results?.items[0].label).to.eql("I'm a passage!");
+            expect(results?.items[0].textEditText).to.eql("'I'm a passage!'");
+            expect(results?.itemDefaults?.editRange).to.eql(
+                Range.create(1, 13, 1, 13)
+            );
+        });
+
+        it("should suggest passages after a [ and modifier name for a built-in modifier's first argument that takes a urlOrPassage", () => {
+            const doc = TextDocument.create(
+                "fake-uri",
+                "",
+                0,
+                ":: Passage\n[ mod "
+            );
+            const position = Position.create(1, 6);
+            const index = new Index();
+            index.setPassages("fake-uri", [
+                buildPassage({
+                    label: "I'm a passage!",
+                    scope: Range.create(0, 0, 2, 0),
+                }),
+            ]);
+            const modifier = buildModifierInfo({ name: "mod", match: /^mod/i });
+            modifier.completions = ["mod"];
+            modifier.firstArgument = {
+                required: ArgumentRequirement.optional,
+                type: ValueType.urlOrPassage,
+            };
+            const mockFunction = ImportMock.mockFunction(
+                modifiersModule,
+                "all"
+            ).returns([modifier]);
+            const parser = uut.getChapbookParser(undefined);
+
+            const results = parser?.generateCompletions(doc, position, index);
+            mockFunction.restore();
+
+            expect(results?.items[0].label).to.eql("I'm a passage!");
+            expect(results?.items[0].textEditText).to.eql("'I'm a passage!'");
+            expect(results?.itemDefaults?.editRange).to.eql(
+                Range.create(1, 6, 1, 6)
+            );
+        });
+
+        it("should suggest passages after a [ and modifier name for a custom modifier's first argument that takes a urlOrPassage", () => {
+            const doc = TextDocument.create(
+                "fake-uri",
+                "",
+                0,
+                ":: Passage\n[ custom mod "
+            );
+            const position = Position.create(1, 12);
+            const index = new Index();
+            index.setPassages("fake-uri", [
+                buildPassage({
+                    label: "I'm a passage!",
+                    scope: Range.create(0, 0, 2, 0),
+                }),
+            ]);
+            index.setDefinitions("source-uri", [
+                {
+                    contents: "custom mod",
+                    location: Location.create(
+                        "source-uri",
+                        Range.create(5, 6, 7, 8)
+                    ),
+                    kind: OChapbookSymbolKind.CustomModifier,
+                    match: /^custom mod/i,
+                    firstArgument: {
+                        required: ArgumentRequirement.optional,
+                        type: ValueType.urlOrPassage,
+                    },
+                } as ChapbookSymbol,
+            ]);
+            const parser = uut.getChapbookParser(undefined);
+            const mockFunction = ImportMock.mockFunction(
+                modifiersModule,
+                "all"
+            ).returns([]);
+
+            const results = parser?.generateCompletions(doc, position, index);
+            mockFunction.restore();
+
+            expect(results?.items[0].label).to.eql("I'm a passage!");
+            expect(results?.items[0].textEditText).to.eql("'I'm a passage!'");
+            expect(results?.itemDefaults?.editRange).to.eql(
+                Range.create(1, 13, 1, 13)
             );
         });
     });
@@ -760,19 +1013,14 @@ describe("Chapbook Completions", () => {
                     scope: Range.create(0, 0, 2, 0),
                 }),
             ]);
-            const insert: insertsModule.InsertInfo = {
+            const insert = buildInsertInfo({
                 name: "test insert",
-                syntax: "test insert",
-                description: "desc",
                 match: /^test\s+insert/i,
-                completions: ["test insert"],
-                firstArgument: {
-                    required: ArgumentRequirement.required,
-                    placeholder: "'URL'",
-                },
-                requiredProps: {},
-                optionalProps: {},
-                parse: () => {},
+            });
+            insert.completions = ["test insert"];
+            insert.firstArgument = {
+                required: ArgumentRequirement.required,
+                placeholder: "'URL'",
             };
             const mockFunction = ImportMock.mockFunction(
                 insertsModule,
@@ -860,22 +1108,15 @@ describe("Chapbook Completions", () => {
                     scope: Range.create(0, 0, 2, 0),
                 }),
             ]);
-            const insert: insertsModule.InsertInfo = {
+            const insert = buildInsertInfo({
                 name: "test insert",
-                syntax: "test insert",
-                description: "desc",
                 match: /^test\s+insert/i,
-                completions: ["test insert"],
-                firstArgument: {
-                    required: ArgumentRequirement.required,
-                    placeholder: "'URL'",
-                },
-                requiredProps: {
-                    one: "true",
-                    two: "'falsy'",
-                },
-                optionalProps: {},
-                parse: () => {},
+                requiredProps: { one: "true", two: "'falsy'" },
+            });
+            insert.completions = ["test insert"];
+            insert.firstArgument = {
+                required: ArgumentRequirement.required,
+                placeholder: "'URL'",
             };
             const mockFunction = ImportMock.mockFunction(
                 insertsModule,
@@ -973,19 +1214,14 @@ describe("Chapbook Completions", () => {
                     scope: Range.create(0, 0, 2, 0),
                 }),
             ]);
-            const insert: insertsModule.InsertInfo = {
+            const insert = buildInsertInfo({
                 name: "test insert",
-                syntax: "test insert",
-                description: "desc",
                 match: /^test\s+insert/i,
-                completions: ["test insert"],
-                firstArgument: {
-                    required: ArgumentRequirement.required,
-                    placeholder: "'URL'",
-                },
-                requiredProps: {},
-                optionalProps: {},
-                parse: () => {},
+            });
+            insert.completions = ["test insert"];
+            insert.firstArgument = {
+                required: ArgumentRequirement.required,
+                placeholder: "'URL'",
             };
             const mockFunction = ImportMock.mockFunction(
                 insertsModule,
@@ -1078,19 +1314,14 @@ describe("Chapbook Completions", () => {
                     scope: Range.create(0, 0, 2, 0),
                 }),
             ]);
-            const insert: insertsModule.InsertInfo = {
+            const insert = buildInsertInfo({
                 name: "test insert",
-                syntax: "test insert",
-                description: "desc",
                 match: /^test\s+insert/i,
-                completions: ["test insert"],
-                firstArgument: {
-                    required: ArgumentRequirement.required,
-                    placeholder: "'URL'",
-                },
-                requiredProps: {},
-                optionalProps: {},
-                parse: () => {},
+            });
+            insert.completions = ["test insert"];
+            insert.firstArgument = {
+                required: ArgumentRequirement.required,
+                placeholder: "'URL'",
             };
             const mockFunction = ImportMock.mockFunction(
                 insertsModule,
@@ -1155,7 +1386,7 @@ describe("Chapbook Completions", () => {
             );
         });
 
-        it("should suggest passages after a { and a , and a : for a built-in insert's first arguments that take a passage", () => {
+        it("should suggest passages after a { and a , and a : for a built-in insert's first argument that takes a passage", () => {
             const doc = TextDocument.create(
                 "fake-uri",
                 "",
@@ -1170,19 +1401,14 @@ describe("Chapbook Completions", () => {
                     scope: Range.create(0, 0, 2, 0),
                 }),
             ]);
-            const insert: insertsModule.InsertInfo = {
+            const insert = buildInsertInfo({
                 name: "test insert",
-                syntax: "test insert",
-                description: "desc",
                 match: /^test\s+insert/i,
-                completions: ["test insert"],
-                firstArgument: {
-                    required: ArgumentRequirement.optional,
-                    type: ValueType.passage,
-                },
-                requiredProps: {},
-                optionalProps: {},
-                parse: () => {},
+            });
+            insert.completions = ["test insert"];
+            insert.firstArgument = {
+                required: ArgumentRequirement.optional,
+                type: ValueType.passage,
             };
             const mockFunction = ImportMock.mockFunction(
                 insertsModule,
@@ -1200,7 +1426,54 @@ describe("Chapbook Completions", () => {
             );
         });
 
-        it("should suggest passages after a { and a , and a : for a built-in insert's first arguments that take a urlOrPassage", () => {
+        it("should suggest passages after a { and a , and a : for a custom insert's first argument that takes a passage", () => {
+            const doc = TextDocument.create(
+                "fake-uri",
+                "",
+                0,
+                ":: Passage\nLet's try {custom insert: }"
+            );
+            const position = Position.create(1, 26);
+            const index = new Index();
+            index.setPassages("fake-uri", [
+                buildPassage({
+                    label: "I'm a passage!",
+                    scope: Range.create(0, 0, 2, 0),
+                }),
+            ]);
+            index.setDefinitions("source-uri", [
+                {
+                    contents: "custom insert",
+                    location: Location.create(
+                        "source-uri",
+                        Range.create(5, 6, 7, 8)
+                    ),
+                    kind: OChapbookSymbolKind.CustomInsert,
+                    match: /custom\s+insert/i,
+                    completions: ["custom insert"],
+                    firstArgument: {
+                        required: ArgumentRequirement.optional,
+                        type: ValueType.passage,
+                    },
+                } as ChapbookSymbol,
+            ]);
+            const mockFunction = ImportMock.mockFunction(
+                insertsModule,
+                "all"
+            ).returns([]);
+            const parser = uut.getChapbookParser(undefined);
+
+            const results = parser?.generateCompletions(doc, position, index);
+            mockFunction.restore();
+
+            expect(results?.items[0].label).to.eql("I'm a passage!");
+            expect(results?.items[0].textEditText).to.eql("'I'm a passage!'");
+            expect(results?.itemDefaults?.editRange).to.eql(
+                Range.create(1, 26, 1, 26)
+            );
+        });
+
+        it("should suggest passages after a { and a , and a : for a built-in insert's first argument that takes a urlOrPassage", () => {
             const doc = TextDocument.create(
                 "fake-uri",
                 "",
@@ -1215,19 +1488,14 @@ describe("Chapbook Completions", () => {
                     scope: Range.create(0, 0, 2, 0),
                 }),
             ]);
-            const insert: insertsModule.InsertInfo = {
+            const insert = buildInsertInfo({
                 name: "test insert",
-                syntax: "test insert",
-                description: "desc",
                 match: /^test\s+insert/i,
-                completions: ["test insert"],
-                firstArgument: {
-                    required: ArgumentRequirement.optional,
-                    type: ValueType.urlOrPassage,
-                },
-                requiredProps: {},
-                optionalProps: {},
-                parse: () => {},
+            });
+            insert.completions = ["test insert"];
+            insert.firstArgument = {
+                required: ArgumentRequirement.optional,
+                type: ValueType.urlOrPassage,
             };
             const mockFunction = ImportMock.mockFunction(
                 insertsModule,
@@ -1242,6 +1510,53 @@ describe("Chapbook Completions", () => {
             expect(results?.items[0].textEditText).to.eql("'passage'");
             expect(results?.itemDefaults?.editRange).to.eql(
                 Range.create(1, 24, 1, 24)
+            );
+        });
+
+        it("should suggest passages after a { and a , and a : for a custom insert's first argument that takes a urlOrPassage", () => {
+            const doc = TextDocument.create(
+                "fake-uri",
+                "",
+                0,
+                ":: Passage\nLet's try {custom insert: }"
+            );
+            const position = Position.create(1, 26);
+            const index = new Index();
+            index.setPassages("fake-uri", [
+                buildPassage({
+                    label: "I'm a passage!",
+                    scope: Range.create(0, 0, 2, 0),
+                }),
+            ]);
+            index.setDefinitions("source-uri", [
+                {
+                    contents: "custom insert",
+                    location: Location.create(
+                        "source-uri",
+                        Range.create(5, 6, 7, 8)
+                    ),
+                    kind: OChapbookSymbolKind.CustomInsert,
+                    match: /custom\s+insert/i,
+                    completions: ["custom insert"],
+                    firstArgument: {
+                        required: ArgumentRequirement.optional,
+                        type: ValueType.urlOrPassage,
+                    },
+                } as ChapbookSymbol,
+            ]);
+            const mockFunction = ImportMock.mockFunction(
+                insertsModule,
+                "all"
+            ).returns([]);
+            const parser = uut.getChapbookParser(undefined);
+
+            const results = parser?.generateCompletions(doc, position, index);
+            mockFunction.restore();
+
+            expect(results?.items[0].label).to.eql("I'm a passage!");
+            expect(results?.items[0].textEditText).to.eql("'I'm a passage!'");
+            expect(results?.itemDefaults?.editRange).to.eql(
+                Range.create(1, 26, 1, 26)
             );
         });
 
@@ -1260,19 +1575,14 @@ describe("Chapbook Completions", () => {
                     scope: Range.create(0, 0, 2, 0),
                 }),
             ]);
-            const insert: insertsModule.InsertInfo = {
+            const insert = buildInsertInfo({
                 name: "test insert",
-                syntax: "test insert",
-                description: "desc",
                 match: /^test\s+insert/i,
-                completions: ["test insert"],
-                firstArgument: {
-                    required: ArgumentRequirement.optional,
-                    type: ValueType.passage,
-                },
-                requiredProps: {},
-                optionalProps: {},
-                parse: () => {},
+            });
+            insert.completions = ["test insert"];
+            insert.firstArgument = {
+                required: ArgumentRequirement.optional,
+                type: ValueType.passage,
             };
             const mockFunction = ImportMock.mockFunction(
                 insertsModule,
@@ -1305,18 +1615,15 @@ describe("Chapbook Completions", () => {
                     scope: Range.create(0, 0, 2, 0),
                 }),
             ]);
-            const insert: insertsModule.InsertInfo = {
+            const insert = buildInsertInfo({
                 name: "test insert",
-                syntax: "test insert",
-                description: "desc",
                 match: /^test\s+insert/i,
-                completions: ["test insert"],
-                firstArgument: {
-                    required: ArgumentRequirement.optional,
-                },
                 requiredProps: { one: null },
                 optionalProps: { two: { placeholder: "'value'" } },
-                parse: () => {},
+            });
+            insert.completions = ["test insert"];
+            insert.firstArgument = {
+                required: ArgumentRequirement.optional,
             };
             const mockFunction = ImportMock.mockFunction(
                 insertsModule,
@@ -1412,18 +1719,15 @@ describe("Chapbook Completions", () => {
                     scope: Range.create(0, 0, 2, 0),
                 }),
             ]);
-            const insert: insertsModule.InsertInfo = {
+            const insert = buildInsertInfo({
                 name: "test insert",
-                syntax: "test insert",
-                description: "desc",
                 match: /^test\s+insert/i,
-                completions: ["test insert"],
-                firstArgument: {
-                    required: ArgumentRequirement.optional,
-                },
                 requiredProps: { one: null },
                 optionalProps: { two: null },
-                parse: () => {},
+            });
+            insert.completions = ["test insert"];
+            insert.firstArgument = {
+                required: ArgumentRequirement.optional,
             };
             const mockFunction = ImportMock.mockFunction(
                 insertsModule,
@@ -1519,18 +1823,15 @@ describe("Chapbook Completions", () => {
                     scope: Range.create(0, 0, 2, 0),
                 }),
             ]);
-            const insert: insertsModule.InsertInfo = {
+            const insert = buildInsertInfo({
                 name: "test insert",
-                syntax: "test insert",
-                description: "desc",
                 match: /^test\s+insert/i,
-                completions: ["test insert"],
-                firstArgument: {
-                    required: ArgumentRequirement.optional,
-                },
                 requiredProps: { one: null },
                 optionalProps: { two: null },
-                parse: () => {},
+            });
+            insert.completions = ["test insert"];
+            insert.firstArgument = {
+                required: ArgumentRequirement.optional,
             };
             const mockFunction = ImportMock.mockFunction(
                 insertsModule,
@@ -1559,15 +1860,9 @@ describe("Chapbook Completions", () => {
                     scope: Range.create(0, 0, 2, 0),
                 }),
             ]);
-            const insert: insertsModule.InsertInfo = {
+            const insert = buildInsertInfo({
                 name: "test insert",
-                syntax: "test insert",
-                description: "desc",
                 match: /^test\s+insert/i,
-                completions: ["test insert"],
-                firstArgument: {
-                    required: ArgumentRequirement.optional,
-                },
                 requiredProps: {
                     one: {
                         placeholder: "arg",
@@ -1575,7 +1870,10 @@ describe("Chapbook Completions", () => {
                     },
                 },
                 optionalProps: { two: null },
-                parse: () => {},
+            });
+            insert.completions = ["test insert"];
+            insert.firstArgument = {
+                required: ArgumentRequirement.optional,
             };
             const mockFunction = ImportMock.mockFunction(
                 insertsModule,

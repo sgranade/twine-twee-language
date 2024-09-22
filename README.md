@@ -30,12 +30,39 @@ The plugin recognizes [custom inserts] and [modifiers][custom modifiers] defined
 -   `syntax` (string): What the author will type to use your custom insert/modifier, such as "[custom modifier]" or "{new insert: 'text to display'}". Shown when hovering over the insert/modifier.
 -   `description` (string): What your custom insert/modifier does. Shown when hovering over it.
 -   `completions` (string or array of strings): The text to be used when VS Code tries to auto-complete your insert/modifier. If the insert or modifier can be invoked in multiple ways, use an array of strings. For example, the `[if]` and `[else]` modifiers are represented by a single modifier, and its completions are `['if', 'else']`.
+-   `arguments` (object; see below): The argument and (for custom inserts) properties the custom insert/modifier takes, whether they're required or optional, and their default values.
 
-For custom inserts, you can also specify its arguments.
+Here's how the example custom modifier from the Chapbook documentation could use these properties.
 
--   `arguments` (object; see below): The argument and properties a custom insert takes, whether they're required or optional, and their default values.
+```
+[JavaScript]
+engine.extend('2.0.0', () => {
+  engine.template.modifiers.add({
+    name: "remove",
+    syntax: "[remove _letters_], [also remove _letters_]",
+    description: "Remove letters from a passage.",
+    completions: ["remove", "also remove"],
+    arguments: {
+        firstArgument: {
+            required: true,
+            placeholder: "letters"
+        }
+    },
+    match: /^(also\s)?remove\b/i,
+    process(output, {invocation, state}) {
+      const invokeLetters = invocation.replace(/^(also\s)?remove\s/, '').split('');
 
-Here's how the example custom insert from the Chapbook documentation could use these properties.
+      state.letters = (state.letters ?? []).concat(invokeLetters);
+
+      for (const letter of state.letters) {
+        output.text = output.text.replace(new RegExp(letter, 'gi'), 'X');
+      }
+    }
+  });
+});
+```
+
+And here's how the custom insert from the Chapbook documentation could use these properties.
 
 ```
 [JavaScript]
@@ -82,13 +109,13 @@ engine.extend('2.0.0', () => {
 });
 ```
 
-Custom insert arguments are defined by the `arguments` object. It supports three properties.
+Custom insert/modifier arguments are defined by the `arguments` object. It supports three properties.
 
--   `firstArgument` (object, required): Information about the first argument to the insert. It has two properties:
+-   `firstArgument` (object, required): Information about the first argument to the insert/modifier. It has two properties:
     -   `required` (string or boolean, required): Whether the first argument is `'required'` (or `true`), `'optional'` (or `false`), or `'ignored'`.
     -   `placeholder` (string, optional): The placeholder to put in place of the first argument when completing the insert in the editor.
--   `requiredProps` (object, optional): An object containing properties that the insert must have, along with the placeholder to put in their place.
--   `optionalProps` (object, optional): An object containing properties that the insert accepts, but aren't required.
+-   `requiredProps` (object, optional, insert only): An object containing properties that the insert must have, along with the placeholder to put in their place.
+-   `optionalProps` (object, optional, insert only): An object containing properties that the insert accepts, but aren't required.
 
 ## Installation
 

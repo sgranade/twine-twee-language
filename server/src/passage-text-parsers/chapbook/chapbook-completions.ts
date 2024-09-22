@@ -9,7 +9,7 @@ import {
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { ProjectIndex } from "../../project-index";
-import { removeAndCountPadding } from "../../utilities";
+import { removeAndCountPadding, skipSpaces } from "../../utilities";
 import {
     divideChapbookPassage,
     findStartOfModifierOrInsert,
@@ -74,6 +74,12 @@ function generateModifierCompletions(
 ): CompletionList | null {
     const text = document.getText();
     let i = offset;
+    // Merge built-in and custom modifiers into one list, since they share
+    // the ChapbookFunctionInfo interface
+    const modifiers: ChapbookFunctionInfo[] = [
+        ...allModifiers(),
+        ...getChapbookDefinitions(OChapbookSymbolKind.CustomModifier, index),
+    ];
 
     // Make sure we don't need to move the modifier content start
     // to a semicolon
@@ -94,16 +100,64 @@ function generateModifierCompletions(
         ? modifierStopChar.lastIndex - 1
         : text.length;
 
+    let modifierText = text.slice(modifierContentStart, modifierContentEnd);
+    [modifierText, modifierContentStart] = skipSpaces(
+        modifierText,
+        modifierContentStart
+    );
+    const modifier = modifiers.find((modifier) =>
+        modifier.match.test(modifierText)
+    );
+    const modifierMatch = modifier?.match.exec(modifierText) || undefined;
+
+    if (modifier !== undefined && modifierMatch !== undefined) {
+        // If we found a modifier, then the first text matches and we should create
+        // argument completions, if any
+        if (
+            modifier.firstArgument?.type === ValueType.passage ||
+            modifier.firstArgument?.type === ValueType.urlOrPassage
+        ) {
+            return generatePassageCompletions(
+                document,
+                text.slice(
+                    modifierContentStart + modifierMatch[0].length,
+                    modifierContentEnd
+                ),
+                modifierContentStart + modifierMatch[0].length,
+                modifierContentEnd,
+                index
+            );
+        } else if (
+            modifier.firstArgument?.required === ArgumentRequirement.required
+        ) {
+            const label = modifier.name || modifier.match.source;
+            const textEditText = `${label} ${placeholderWithTabStop(modifier.firstArgument.placeholder || "arg", 1)}`;
+            const completionList = CompletionList.create([
+                {
+                    label: label,
+                    kind: CompletionItemKind.Function,
+                    textEditText: textEditText,
+                },
+            ]);
+            completionList.itemDefaults = {
+                insertTextFormat: InsertTextFormat.Snippet,
+                editRange: Range.create(
+                    document.positionAt(modifierContentStart),
+                    document.positionAt(modifierContentEnd)
+                ),
+            };
+            return completionList;
+        } else {
+            return null;
+        }
+    }
+
     const modifierCompletions: string[] = [];
-    for (const modifier of allModifiers()) {
+    for (const modifier of modifiers) {
         if (modifier.completions !== undefined)
             modifierCompletions.push(...modifier.completions);
-    }
-    for (const customModifier of getChapbookDefinitions(
-        OChapbookSymbolKind.CustomModifier,
-        index
-    )) {
-        modifierCompletions.push(customModifier.contents);
+        else if (modifier.name !== undefined)
+            modifierCompletions.push(modifier.name);
     }
     // If we're at a semicolon, put a space before each modifier's name
     const leadingSpace = atSemicolon ? " " : "";
