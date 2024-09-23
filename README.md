@@ -111,10 +111,16 @@ engine.extend('2.0.0', () => {
 
 Custom insert/modifier arguments are defined by the `arguments` object. It supports three properties.
 
--   `firstArgument` (object, required): Information about the first argument to the insert/modifier. It has two properties:
+-   `firstArgument` (object, required): Information about the first argument to the insert/modifier. It has the following properties:
     -   `required` (string or boolean, required): Whether the first argument is `'required'` (or `true`), `'optional'` (or `false`), or `'ignored'`.
-    -   `placeholder` (string, optional): The placeholder to put in place of the first argument when completing the insert in the editor.
--   `requiredProps` (object, optional, insert only): An object containing properties that the insert must have, along with the placeholder to put in their place.
+    -   `placeholder` (string, optional): The placeholder to put in place of the first argument when autocompleting the insert in the editor.
+    -   `type` (string, optional): The kind of value the first argument takes: `'expression'` (a Javascript expression), `'number'`, `'passage'` (a reference to a Twee passage name), `'urlOrPassage'` (either a link or a Twee passage name).
+-   `requiredProps` (object, optional, insert only): An object containing properties that the insert must have, with each property having one of three values:
+    -   `null` if the property's value shouldn't be autocompleted.
+    -   A string which will be the property value's placeholder when being autocompleted.
+    -   An object with the following properties:
+        -   `placeholder` (string, optional): The placeholder to put as the property's value when autocompleting.
+        -   `type` (string, optional): The kind of value the property takes: `'expression'` (a Javascript expression), `'number'`, `'passage'` (a reference to a Twee passage name), `'urlOrPassage'` (either a link or a Twee passage name).
 -   `optionalProps` (object, optional, insert only): An object containing properties that the insert accepts, but aren't required.
 
 ## Installation

@@ -354,8 +354,16 @@ function parseCustomFunctionArguments(
             if (node.type !== "Property" || node.key.type !== "Identifier")
                 return;
 
+            let errorNode: acorn.Node | undefined;
+            let errorMessage = ""; // Placeholder
+            let errorSeverity: DiagnosticSeverity = DiagnosticSeverity.Warning;
+
             // Handle the sub-properties of firstArgument, optionalProps, and requiredProps
-            if (node.value.type === "Literal" && ancestors.length === 4) {
+            if (
+                (node.value.type === "Literal" ||
+                    node.value.type === "ObjectExpression") &&
+                ancestors.length === 4
+            ) {
                 const parentPropNode = ancestors[
                     ancestors.length - 3
                 ] as acorn.AnyNode;
@@ -367,12 +375,12 @@ function parseCustomFunctionArguments(
 
                 const parentProp = parentPropNode.key.name;
 
-                let errorNode: acorn.Node | undefined;
-                let errorMessage = ""; // Placeholder
-                let errorSeverity: DiagnosticSeverity =
-                    DiagnosticSeverity.Warning;
-
-                if (parentProp === "firstArgument") {
+                // firstArgument parsing
+                if (
+                    parentProp === "firstArgument" &&
+                    node.value.type === "Literal"
+                ) {
+                    // "required" property
                     if (node.key.name === "required") {
                         if (typeof node.value.value === "string") {
                             const requirement =
@@ -399,19 +407,43 @@ function parseCustomFunctionArguments(
                             errorNode = node.value;
                             errorMessage = "Must be a string or a boolean";
                         }
-                    } else if (node.key.name === "placeholder") {
+                    }
+                    // "placeholder" property
+                    else if (node.key.name === "placeholder") {
                         if (typeof node.value.value === "string") {
                             args.firstArgument.placeholder = node.value.value;
                         } else {
                             errorNode = node.value;
                             errorMessage = "Must be a string";
                         }
+                    }
+                    // "type" property
+                    else if (node.key.name === "type") {
+                        const valueType =
+                            typeof node.value.value === "string"
+                                ? ValueType[
+                                      node.value.value as keyof typeof ValueType
+                                  ]
+                                : undefined;
+                        if (valueType === undefined) {
+                            errorNode = node.value;
+                            errorMessage =
+                                "Must be one of " +
+                                Object.keys(ValueType)
+                                    .map((v) => "'" + v + "'")
+                                    .join(", ") +
+                                ".";
+                        } else {
+                            args.firstArgument.type = valueType;
+                        }
                     } else {
                         errorNode = node.key;
                         errorMessage =
-                            "Unrecognized property; must be 'required' or 'placeholder'";
+                            "Unrecognized property; must be 'required', 'placeholder', or 'type'";
                     }
-                } else if (
+                }
+                // optionalProps/requiredProps parsing
+                else if (
                     parentProp === "optionalProps" ||
                     parentProp === "requiredProps"
                 ) {
@@ -423,44 +455,96 @@ function parseCustomFunctionArguments(
                             parentProp === "optionalProps"
                                 ? args.optionalProps
                                 : args.requiredProps;
-                        if (typeof node.value.value === "string") {
-                            props[node.key.name] = node.value.value;
-                        } else if (node.value.value === null) {
-                            props[node.key.name] = null;
-                        } else {
-                            errorNode = node.value;
-                            errorMessage = "Must be a string";
+
+                        // Literal property: either a string or null
+                        if (node.value.type === "Literal") {
+                            if (typeof node.value.value === "string") {
+                                props[node.key.name] = node.value.value;
+                            } else if (node.value.value === null) {
+                                props[node.key.name] = null;
+                            } else {
+                                errorNode = node.value;
+                                errorMessage = "Must be a string";
+                            }
+                        }
+                        // InsertProperty object
+                        else {
+                            const insertProperty: InsertProperty = {};
+                            for (const subnode of node.value.properties) {
+                                if (
+                                    subnode.type === "Property" &&
+                                    subnode.key.type === "Identifier" &&
+                                    subnode.value.type === "Literal"
+                                ) {
+                                    // "type" property
+                                    if (subnode.key.name === "type") {
+                                        const valueType =
+                                            typeof subnode.value.value ===
+                                            "string"
+                                                ? ValueType[
+                                                      subnode.value
+                                                          .value as keyof typeof ValueType
+                                                  ]
+                                                : undefined;
+                                        if (valueType === undefined) {
+                                            errorNode = subnode.value;
+                                            errorMessage =
+                                                "Must be one of " +
+                                                Object.keys(ValueType)
+                                                    .map((v) => "'" + v + "'")
+                                                    .join(", ") +
+                                                ".";
+                                        } else {
+                                            insertProperty.type = valueType;
+                                        }
+                                    }
+                                    // "placeholder" property
+                                    else if (
+                                        subnode.key.name === "placeholder"
+                                    ) {
+                                        if (
+                                            typeof subnode.value.value ===
+                                            "string"
+                                        ) {
+                                            insertProperty.placeholder =
+                                                subnode.value.value;
+                                        } else {
+                                            errorNode = subnode.value;
+                                            errorMessage = "Must be a string";
+                                        }
+                                    } else {
+                                        errorNode = subnode.key;
+                                        errorMessage =
+                                            "Unrecognized property; must be 'placeholder' or 'type'";
+                                    }
+                                }
+                            }
+                            props[node.key.name] = insertProperty;
                         }
                     }
-                }
-
-                if (errorNode !== undefined) {
-                    state.callbacks.onParseError(
-                        createDiagnostic(
-                            errorSeverity,
-                            state.textDocument,
-                            contentsIndex + errorNode.start,
-                            contentsIndex + errorNode.end,
-                            errorMessage
-                        )
-                    );
                 }
             } else if (
                 node.key.type === "Identifier" &&
                 ancestors.length === 2 &&
                 !hasOwnProperty(args, node.key.name)
             ) {
+                errorNode = node.key;
+                errorMessage =
+                    "Properties other than " +
+                    Object.keys(args)
+                        .map((v) => "'" + v + "'")
+                        .join(", ") +
+                    +" are ignored.";
+            }
+
+            if (errorNode !== undefined) {
                 state.callbacks.onParseError(
                     createDiagnostic(
-                        DiagnosticSeverity.Warning,
+                        errorSeverity,
                         state.textDocument,
-                        contentsIndex + node.key.start,
-                        contentsIndex + node.key.end,
-                        "Properties other than " +
-                            Object.keys(args)
-                                .map((v) => "'" + v + "'")
-                                .join(", ") +
-                            +" are ignored."
+                        contentsIndex + errorNode.start,
+                        contentsIndex + errorNode.end,
+                        errorMessage
                     )
                 );
             }

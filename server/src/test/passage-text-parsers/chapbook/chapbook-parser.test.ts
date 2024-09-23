@@ -21,6 +21,7 @@ import * as insertsModule from "../../../passage-text-parsers/chapbook/inserts";
 import * as modifiersModule from "../../../passage-text-parsers/chapbook/modifiers";
 
 import * as uut from "../../../passage-text-parsers/chapbook";
+import { type } from "os";
 
 describe("Chapbook Parsing", () => {
     it("should parse engine extension calls even when only parsing passage names", () => {
@@ -2794,10 +2795,166 @@ describe("Chapbook Parsing", () => {
                 });
             });
 
+            it("should set a custom insert's symbol definition's first argument's type as an expression if set to 'expression'", () => {
+                const header = ":: Passage\n";
+                const passage =
+                    "[javascript]\nengine.extend('2.0.1', () => {\nengine.template.inserts.add(\n{match: /hi\\s+there/, arguments: {\nfirstArgument: { required: true, type: 'expression' }\n}}\n);\n});\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    uri: "fake-uri",
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                state.storyFormat = {
+                    format: "Chapbook",
+                    formatVersion: "2.0.1",
+                };
+                const parser = uut.getChapbookParser(undefined);
+
+                parser?.parsePassageText(passage, header.length, state);
+                const result = callbacks.definitions[0] as ChapbookSymbol;
+
+                expect(callbacks.definitions.length).to.equal(1);
+                expect(ChapbookSymbol.is(result)).to.be.true;
+                expect(result).to.eql({
+                    name: "hi\\s+there",
+                    contents: "hi\\s+there",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(4, 9, 4, 19)
+                    ),
+                    kind: OChapbookSymbolKind.CustomInsert,
+                    match: /hi\s+there/,
+                    firstArgument: {
+                        required: ArgumentRequirement.required,
+                        type: ValueType.expression,
+                    },
+                    requiredProps: {},
+                    optionalProps: {},
+                });
+            });
+
+            it("should set a custom insert's symbol definition's first argument's type as a number if set to 'number'", () => {
+                const header = ":: Passage\n";
+                const passage =
+                    "[javascript]\nengine.extend('2.0.1', () => {\nengine.template.inserts.add(\n{match: /hi\\s+there/, arguments: {\nfirstArgument: { required: true, type: 'number' }\n}}\n);\n});\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    uri: "fake-uri",
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                state.storyFormat = {
+                    format: "Chapbook",
+                    formatVersion: "2.0.1",
+                };
+                const parser = uut.getChapbookParser(undefined);
+
+                parser?.parsePassageText(passage, header.length, state);
+                const result = callbacks.definitions[0] as ChapbookSymbol;
+
+                expect(callbacks.definitions.length).to.equal(1);
+                expect(ChapbookSymbol.is(result)).to.be.true;
+                expect(result).to.eql({
+                    name: "hi\\s+there",
+                    contents: "hi\\s+there",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(4, 9, 4, 19)
+                    ),
+                    kind: OChapbookSymbolKind.CustomInsert,
+                    match: /hi\s+there/,
+                    firstArgument: {
+                        required: ArgumentRequirement.required,
+                        type: ValueType.number,
+                    },
+                    requiredProps: {},
+                    optionalProps: {},
+                });
+            });
+
+            it("should set a custom insert's symbol definition's first argument's type as a passage if set to 'passage'", () => {
+                const header = ":: Passage\n";
+                const passage =
+                    "[javascript]\nengine.extend('2.0.1', () => {\nengine.template.inserts.add(\n{match: /hi\\s+there/, arguments: {\nfirstArgument: { required: true, type: 'passage' }\n}}\n);\n});\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    uri: "fake-uri",
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                state.storyFormat = {
+                    format: "Chapbook",
+                    formatVersion: "2.0.1",
+                };
+                const parser = uut.getChapbookParser(undefined);
+
+                parser?.parsePassageText(passage, header.length, state);
+                const result = callbacks.definitions[0] as ChapbookSymbol;
+
+                expect(callbacks.definitions.length).to.equal(1);
+                expect(ChapbookSymbol.is(result)).to.be.true;
+                expect(result).to.eql({
+                    name: "hi\\s+there",
+                    contents: "hi\\s+there",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(4, 9, 4, 19)
+                    ),
+                    kind: OChapbookSymbolKind.CustomInsert,
+                    match: /hi\s+there/,
+                    firstArgument: {
+                        required: ArgumentRequirement.required,
+                        type: ValueType.passage,
+                    },
+                    requiredProps: {},
+                    optionalProps: {},
+                });
+            });
+
+            it("should set a custom insert's symbol definition's first argument's type as urlOrPassage if set to 'urlOrPassage'", () => {
+                const header = ":: Passage\n";
+                const passage =
+                    "[javascript]\nengine.extend('2.0.1', () => {\nengine.template.inserts.add(\n{match: /hi\\s+there/, arguments: {\nfirstArgument: { required: true, type: 'urlOrPassage' }\n}}\n);\n});\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    uri: "fake-uri",
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                state.storyFormat = {
+                    format: "Chapbook",
+                    formatVersion: "2.0.1",
+                };
+                const parser = uut.getChapbookParser(undefined);
+
+                parser?.parsePassageText(passage, header.length, state);
+                const result = callbacks.definitions[0] as ChapbookSymbol;
+
+                expect(callbacks.definitions.length).to.equal(1);
+                expect(ChapbookSymbol.is(result)).to.be.true;
+                expect(result).to.eql({
+                    name: "hi\\s+there",
+                    contents: "hi\\s+there",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(4, 9, 4, 19)
+                    ),
+                    kind: OChapbookSymbolKind.CustomInsert,
+                    match: /hi\s+there/,
+                    firstArgument: {
+                        required: ArgumentRequirement.required,
+                        type: ValueType.urlOrPassage,
+                    },
+                    requiredProps: {},
+                    optionalProps: {},
+                });
+            });
+
             it("should set a custom insert's symbol definition's required properties and placeholders if set in the file", () => {
                 const header = ":: Passage\n";
                 const passage =
-                    "[javascript]\nengine.extend('2.0.1', () => {\nengine.template.inserts.add(\n{match: /hi\\s+there/, arguments: {\nfirstArgument: { required: true },\nrequiredProps: {\nfoo: null, bar: \"'bar'\"\n}\n}}\n);\n});\n";
+                    "[javascript]\nengine.extend('2.0.1', () => {\nengine.template.inserts.add(\n{match: /hi\\s+there/, arguments: {\nfirstArgument: { required: true },\nrequiredProps: {\nfoo: null, bar: \"'bar'\", baz: {type: 'number', placeholder: '3'}\n}\n}}\n);\n});\n";
                 const callbacks = new MockCallbacks();
                 const state = buildParsingState({
                     uri: "fake-uri",
@@ -2830,6 +2987,10 @@ describe("Chapbook Parsing", () => {
                     requiredProps: {
                         foo: null,
                         bar: "'bar'",
+                        baz: {
+                            type: ValueType.number,
+                            placeholder: "3",
+                        },
                     },
                     optionalProps: {},
                 });
@@ -2838,7 +2999,7 @@ describe("Chapbook Parsing", () => {
             it("should set a custom insert's symbol definition's optional properties and placeholders if set in the file", () => {
                 const header = ":: Passage\n";
                 const passage =
-                    "[javascript]\nengine.extend('2.0.1', () => {\nengine.template.inserts.add(\n{match: /hi\\s+there/, arguments: {\nfirstArgument: { required: true },\noptionalProps: {\nfoo: null, bar: \"'bar'\"\n}\n}}\n);\n});\n";
+                    "[javascript]\nengine.extend('2.0.1', () => {\nengine.template.inserts.add(\n{match: /hi\\s+there/, arguments: {\nfirstArgument: { required: true },\noptionalProps: {\nfoo: null, bar: \"'bar'\", baz: {type: 'number', placeholder: '3'}\n}\n}}\n);\n});\n";
                 const callbacks = new MockCallbacks();
                 const state = buildParsingState({
                     uri: "fake-uri",
@@ -2872,6 +3033,10 @@ describe("Chapbook Parsing", () => {
                     optionalProps: {
                         foo: null,
                         bar: "'bar'",
+                        baz: {
+                            type: ValueType.number,
+                            placeholder: "3",
+                        },
                     },
                 });
             });
