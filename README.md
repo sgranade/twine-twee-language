@@ -34,77 +34,83 @@ The plugin recognizes [custom inserts] and [modifiers][custom modifiers] defined
 
 Here's how the example custom modifier from the Chapbook documentation could use these properties.
 
-```
-[JavaScript]
-engine.extend('2.0.0', () => {
-  engine.template.modifiers.add({
-    name: "remove",
-    syntax: "[remove _letters_], [also remove _letters_]",
-    description: "Remove letters from a passage.",
-    completions: ["remove", "also remove"],
-    arguments: {
-        firstArgument: {
-            required: true,
-            placeholder: "letters"
-        }
-    },
-    match: /^(also\s)?remove\b/i,
-    process(output, {invocation, state}) {
-      const invokeLetters = invocation.replace(/^(also\s)?remove\s/, '').split('');
+```javascript
+[JavaScript];
+engine.extend("2.0.0", () => {
+    engine.template.modifiers.add({
+        name: "remove",
+        syntax: "[remove _letters_], [also remove _letters_]",
+        description: "Remove letters from a passage.",
+        completions: ["remove", "also remove"],
+        arguments: {
+            firstArgument: {
+                required: true,
+                placeholder: "letters",
+            },
+        },
+        match: /^(also\s)?remove\b/i,
+        process(output, { invocation, state }) {
+            const invokeLetters = invocation
+                .replace(/^(also\s)?remove\s/, "")
+                .split("");
 
-      state.letters = (state.letters ?? []).concat(invokeLetters);
+            state.letters = (state.letters ?? []).concat(invokeLetters);
 
-      for (const letter of state.letters) {
-        output.text = output.text.replace(new RegExp(letter, 'gi'), 'X');
-      }
-    }
-  });
+            for (const letter of state.letters) {
+                output.text = output.text.replace(
+                    new RegExp(letter, "gi"),
+                    "X"
+                );
+            }
+        },
+    });
 });
 ```
 
 And here's how the custom insert from the Chapbook documentation could use these properties.
 
-```
-[JavaScript]
-engine.extend('2.0.0', () => {
+```javascript
+[JavaScript];
+engine.extend("2.0.0", () => {
     engine.template.inserts.add({
         name: "icon of",
         syntax: "{icon of: 'icon', _mood: 'mood'_}",
-        description: "Inserts a wizard or vampire icon with an optional mood icon. `icon` can be either `wizard` or `vampire`. `mood` is optional, and can be either `anger` or `love`.",
+        description:
+            "Inserts a wizard or vampire icon with an optional mood icon. `icon` can be either `wizard` or `vampire`. `mood` is optional, and can be either `anger` or `love`.",
         completions: "icon of",
         arguments: {
             firstArgument: {
                 required: true,
-                placeholder: "'icon'"
+                placeholder: "'icon'",
             },
             optionalProps: {
-                mood: "'mood'"
-            }
+                mood: "'mood'",
+            },
         },
         match: /^icon of/i,
         render(firstArg, props, invocation) {
-            let result = '';
+            let result = "";
 
-            if (firstArg.toLowerCase() === 'wizard') {
-                result = '🧙';
+            if (firstArg.toLowerCase() === "wizard") {
+                result = "🧙";
             }
 
-            if (firstArg.toLowerCase() === 'vampire') {
-                result = '🧛';
+            if (firstArg.toLowerCase() === "vampire") {
+                result = "🧛";
             }
 
             switch (props.mood.toLowerCase()) {
-                case 'anger':
-                    result += '💥';
+                case "anger":
+                    result += "💥";
                     break;
 
-                case 'love':
-                    result += '❤️';
+                case "love":
+                    result += "❤️";
                     break;
             }
 
             return result;
-        }
+        },
     });
 });
 ```
@@ -122,6 +128,30 @@ Custom insert/modifier arguments are defined by the `arguments` object. It suppo
         -   `placeholder` (string, optional): The placeholder to put as the property's value when autocompleting.
         -   `type` (string, optional): The kind of value the property takes: `'expression'` (a Javascript expression), `'number'`, `'passage'` (a reference to a Twee passage name), `'urlOrPassage'` (either a link or a Twee passage name).
 -   `optionalProps` (object, optional, insert only): An object containing properties that the insert accepts, but aren't required.
+
+As an example, here's how the `{ambient sound}` arguments are defined.
+
+```javascript
+{
+    name: "ambient sound",
+    syntax: "{ambient sound: 'sound name', _volume: 0.5_}",
+    description: "Begins playing a previously-defined ambient sound. `volume` can be omitted; by default, the ambient sound is played at full volume.",
+    completions: ["ambient sound"],
+    arguments: {
+        firstArgument: {
+            required: true,
+            placeholder: "'sound name'"
+        },
+        optionalProps: {
+            volume: {
+                placeholder: "0.5",
+                type: "number"
+            }
+        }
+    },
+    match: /^ambient\s+sound/i
+}
+```
 
 ## Installation
 

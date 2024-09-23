@@ -101,10 +101,13 @@ function generateModifierCompletions(
         : text.length;
 
     let modifierText = text.slice(modifierContentStart, modifierContentEnd);
-    [modifierText, modifierContentStart] = skipSpaces(
-        modifierText,
-        modifierContentStart
-    );
+    // Skip only the spaces on the left
+    for (i = 0; i < modifierText.length && modifierText[i] === " "; ++i);
+    if (i < modifierText.length) {
+        modifierText = modifierText.substring(i);
+        modifierContentStart += i;
+    }
+
     const modifier = modifiers.find((modifier) =>
         modifier.match.test(modifierText)
     );
@@ -127,6 +130,8 @@ function generateModifierCompletions(
                 modifierContentEnd,
                 index
             );
+        } else if (modifier.firstArgument?.type === ValueType.expression) {
+            return generateVariableCompletions(index);
         } else if (
             modifier.firstArgument?.required === ArgumentRequirement.required
         ) {
@@ -483,6 +488,8 @@ function generateInsertCompletions(
                 insertSectionEnd,
                 index
             );
+        } else if (insert.firstArgument?.type === ValueType.expression) {
+            return generateVariableCompletions(index);
         }
     } else {
         // Property value
@@ -504,17 +511,21 @@ function generateInsertCompletions(
                 insert.optionalProps?.[propName];
 
             // Create completions if the property's value type supports it
-            if (
-                InsertProperty.is(propInfo) &&
-                propInfo.type === ValueType.passage
-            ) {
-                return generatePassageCompletions(
-                    document,
-                    text.slice(insertSectionStart, insertSectionEnd),
-                    insertSectionStart,
-                    insertSectionEnd,
-                    index
-                );
+            if (InsertProperty.is(propInfo)) {
+                if (
+                    propInfo.type === ValueType.passage ||
+                    propInfo.type === ValueType.urlOrPassage
+                ) {
+                    return generatePassageCompletions(
+                        document,
+                        text.slice(insertSectionStart, insertSectionEnd),
+                        insertSectionStart,
+                        insertSectionEnd,
+                        index
+                    );
+                } else if (propInfo.type === ValueType.expression) {
+                    return generateVariableCompletions(index);
+                }
             }
         }
     }
