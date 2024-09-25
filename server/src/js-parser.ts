@@ -23,11 +23,23 @@ interface astUnprocessedToken {
     text: string;
     at: number;
     type: TokenType;
+    scope?: string;
     modifiers: TokenModifier[];
 }
 
+/**
+ * Label for a parsed javascript property.
+ */
+export interface JSPropertyLabel extends Label {
+    /**
+     * The property's scope, if known. A reference for `subprop` from `var.prop.subprop` will
+     * have a scope of `var.prop`.
+     */
+    scope?: string;
+}
+
 let currentExpression: string = "";
-let unprocessedTokens: astUnprocessedToken[] = [];
+let unprocessedTokens: Record<number, astUnprocessedToken> = {};
 
 const builtInJSObjects = new Set([
     "Object",
@@ -51,6 +63,31 @@ const builtInJSObjects = new Set([
     "Atomics",
     "JSON",
 ]);
+
+/**
+ * Determine the scope of a property.
+ *
+ * A member expression for `subprop` from `var.prop.subprop` will result in a scope of `var.prop`.
+ *
+ * If the scope includes any computed proeprties (i.e. `var['prop'].subprop`) then no scope
+ * will be returned.
+ *
+ * @param node Member expression node containing the property.
+ * @returns The property's scope, or undefined if it can't be statically determined.
+ */
+function propertyScope(node: acorn.MemberExpression): string | undefined {
+    const scope: string[] = [];
+    while (node.object.type === "MemberExpression") {
+        node = node.object;
+        // Give up if we hit a computed or non-identifier property
+        if (node.computed || node.property.type !== "Identifier")
+            return undefined;
+        scope.push(node.property.name);
+    }
+    if (node.object.type !== "Identifier") return undefined;
+    scope.push(node.object.name);
+    return scope.reverse().join(".");
+}
 
 /**
  * Callback at each node in the AST, capturing tokens of interest.
@@ -80,79 +117,98 @@ function fullAncestorTokenizingCallback(
             ancestor?.type !== "CallExpression" &&
             !builtInJSObjects.has(node.name)
         ) {
-            unprocessedTokens.push({
+            unprocessedTokens[node.start] = {
                 text: node.name,
                 at: node.start,
                 type: ETokenType.variable,
                 modifiers: [],
-            });
+            };
         }
     } else if (node.type === "Literal" && node.raw !== undefined) {
         const semanticType = typeofToSemantic[typeof node.value];
         if (semanticType !== undefined) {
-            unprocessedTokens.push({
+            unprocessedTokens[node.start] = {
                 text: node.raw,
                 at: node.start,
                 type: semanticType,
                 modifiers: [],
-            });
+            };
         }
     } else if (
         node.type === "AssignmentExpression" ||
         node.type === "BinaryExpression" ||
         node.type === "LogicalExpression"
     ) {
-        unprocessedTokens.push({
+        const at = currentExpression.indexOf(node.operator, node.left.end);
+        unprocessedTokens[at] = {
             text: node.operator,
-            at: currentExpression.indexOf(node.operator, node.left.end),
+            at: at,
             type: ETokenType.operator,
             modifiers: [],
-        });
-    } else if (
-        node.type === "CallExpression" &&
-        node.callee.type === "Identifier"
-    ) {
-        unprocessedTokens.push({
-            text: node.callee.name,
-            at: node.callee.start,
-            type: ETokenType.function,
-            modifiers: [],
-        });
+        };
+    } else if (node.type === "CallExpression") {
+        if (node.callee.type === "Identifier") {
+            unprocessedTokens[node.callee.start] = {
+                text: node.callee.name,
+                at: node.callee.start,
+                type: ETokenType.function,
+                modifiers: [],
+            };
+        } else if (
+            node.callee.type === "MemberExpression" &&
+            node.callee.property.type === "Identifier"
+        ) {
+            unprocessedTokens[node.callee.property.start] = {
+                text: node.callee.property.name,
+                at: node.callee.property.start,
+                type: ETokenType.function,
+                modifiers: [],
+            };
+        }
     } else if (
         node.type === "MemberExpression" &&
         !node.computed &&
         node.property.type === "Identifier"
     ) {
-        unprocessedTokens.push({
+        const token: astUnprocessedToken = {
             text: node.property.name,
             at: node.property.start,
             type: ETokenType.property,
             modifiers: [],
-        });
+        };
+        const scope = propertyScope(node);
+        if (scope !== undefined) {
+            const varName = scope.split(".", 1)[0];
+            // Don't save a property belonging to a built-in function
+            if (builtInJSObjects.has(varName)) return;
+            token.scope = scope;
+        }
+        unprocessedTokens[token.at] = token;
     } else if (
         node.type === "UnaryExpression" ||
         node.type === "UpdateExpression"
     ) {
-        unprocessedTokens.push({
+        const at = node.prefix ? node.start : node.end - node.operator.length;
+        unprocessedTokens[at] = {
             text: node.operator,
-            at: node.prefix ? node.start : node.end - node.operator.length,
+            at: at,
             type: ETokenType.operator,
             modifiers: [],
-        });
+        };
     } else if (node.type === "Property" && node.key.type === "Identifier") {
-        unprocessedTokens.push({
+        unprocessedTokens[node.start] = {
             text: node.key.name,
             at: node.start,
             type: ETokenType.property,
             modifiers: [],
-        });
+        };
     } else if (node.type === "VariableDeclaration") {
-        unprocessedTokens.push({
+        unprocessedTokens[node.start] = {
             text: node.kind,
             at: node.start,
             type: ETokenType.variable,
             modifiers: [],
-        });
+        };
     }
 }
 
@@ -193,38 +249,55 @@ export function parseJSExpression(expression: string): acorn.Node | undefined {
 }
 
 /**
- * Tokenize a JavaScript expression and find referenced variables in it.
+ * Tokenize a JavaScript expression and find referenced variables and properties in it.
+ *
+ * Returned properties are only those for which the parser could trace their "ownership"
+ * back to a root variable.
  *
  * @param expression Expression to parse.
  * @param offset Offset into the document where the expression occurs.
  * @param state Parsing state.
  * @param passageState Passage state object that will collect tokens.
- * @returns List of variable labels found in parsing.
+ * @returns Two-tuple with separate lists of variable and property labels found in parsing.
  */
 export function tokenizeJSExpression(
     expression: string,
     offset: number,
     state: ParsingState,
     passageState: StoryFormatParsingState
-): Label[] {
-    const labels: Label[] = [];
+): [Label[], JSPropertyLabel[]] {
+    const vars: Label[] = [];
+    const props: JSPropertyLabel[] = [];
 
     const ast = parseJSExpression(expression);
     if (ast !== undefined) {
         currentExpression = expression;
-        unprocessedTokens = [];
+        unprocessedTokens = {};
 
         acornWalk.fullAncestor(ast, fullAncestorTokenizingCallback);
 
-        for (const token of unprocessedTokens) {
+        for (const token of Object.values(unprocessedTokens)) {
             if (token.type === ETokenType.variable) {
-                labels.push({
+                vars.push({
                     contents: token.text,
                     location: createLocationFor(
                         token.text,
                         offset + token.at,
                         state.textDocument
                     ),
+                });
+            } else if (
+                token.type === ETokenType.property &&
+                token.scope !== undefined
+            ) {
+                props.push({
+                    contents: token.text,
+                    location: createLocationFor(
+                        token.text,
+                        offset + token.at,
+                        state.textDocument
+                    ),
+                    scope: token.scope,
                 });
             }
             capturePreTokenFor(
@@ -237,5 +310,5 @@ export function tokenizeJSExpression(
         }
     }
 
-    return labels;
+    return [vars, props];
 }

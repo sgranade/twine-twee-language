@@ -181,6 +181,8 @@ export const OChapbookSymbolKind = {
     // Additional symbol for a variable being set in the vars section (the
     // regular variable symbol will also be captured)
     VariableSet: TwineSymbolKind._end + 6,
+    Property: TwineSymbolKind._end + 7,
+    PropertySet: TwineSymbolKind._end + 8,
 };
 export type ChapbookSymbolKind =
     (typeof OChapbookSymbolKind)[keyof typeof OChapbookSymbolKind];

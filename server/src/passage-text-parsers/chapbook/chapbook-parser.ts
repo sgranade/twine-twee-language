@@ -5,7 +5,11 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { StoryFormatParsingState, capturePreTokenFor } from "..";
 import { EmbeddedDocument } from "../../embedded-languages";
-import { parseJSExpressionStrict, tokenizeJSExpression } from "../../js-parser";
+import {
+    JSPropertyLabel,
+    parseJSExpressionStrict,
+    tokenizeJSExpression,
+} from "../../js-parser";
 import {
     ParsingState,
     logWarningFor,
@@ -52,17 +56,34 @@ const conditionPattern = /((\((.+?)\)?)\s*)([^)]*)$/;
 const modifierPattern = /^([ \t]*)\[([^[].+[^\]])\](\s*?)(?:\r?\n|$)/gm;
 const varsLineExtractionPattern = /^([ \t]*?)\b(.*)$/gm;
 const varsLineVarOnlyExtractionPattern =
-    /^(\s*)([A-Za-z$_][A-Za-z0-9$_]*)?.*$/gmu;
+    /^(\s*)([A-Za-z$_][A-Za-z0-9$_.]*)?.*$/gmu;
 
 /**
  * Built-in lookup values in Chapbook.
  */
 export const lookupVariables: readonly string[] = [
-    "browser",
-    "engine",
-    "now",
-    "passage",
-    "story",
+    "browser.darkTheme",
+    "browser.darkSystemTheme",
+    "browser.height",
+    "browser.online",
+    "browser.width",
+    "engine.version",
+    "now.datestamp",
+    "now.day",
+    "now.hour",
+    "now.minute",
+    "now.month",
+    "now.monthName",
+    "now.second",
+    "now.timestamp",
+    "now.weekday",
+    "now.weekdayName",
+    "now.year",
+    "passage.from",
+    "passage.fromText",
+    "passage.name",
+    "passage.visits",
+    "story.name",
 ];
 
 /**
@@ -113,22 +134,39 @@ export function getChapbookDefinitions(
 }
 
 /**
- * Create symbol references for parsed variables.
+ * Create symbol references for parsed variables and properties.
  *
- * @param vars List of variables as labels.
+ * @param varsAndProps Tuple with separate lists of variables and properties.
  * @param state Parsing state.
- * @param kind Kind of symbol reference to create.
+ * @param isSet True if the variables and properties are being set (assigned to).
  */
-function createVariableReferences(
-    vars: Label[],
+function createVariableAndPropertyReferences(
+    varsAndProps: [Label[], JSPropertyLabel[]],
     state: ParsingState,
-    kind: ChapbookSymbolKind = OChapbookSymbolKind.Variable
+    isSet: boolean = false
 ): void {
-    for (const v of vars) {
+    const varKind = isSet
+        ? OChapbookSymbolKind.VariableSet
+        : OChapbookSymbolKind.Variable;
+    for (const v of varsAndProps[0]) {
         state.callbacks.onSymbolReference({
             contents: v.contents,
             location: v.location,
-            kind: kind,
+            kind: varKind,
+        });
+    }
+    const propKind = isSet
+        ? OChapbookSymbolKind.PropertySet
+        : OChapbookSymbolKind.Property;
+    for (const p of varsAndProps[1]) {
+        // If there's a scope, add it to the name, b/c we save properties in their
+        // full object context (ex: `var.prop.subprop`).
+        const contents =
+            p.scope !== undefined ? `${p.scope}.${p.contents}` : p.contents;
+        state.callbacks.onSymbolReference({
+            contents: contents,
+            location: p.location,
+            kind: propKind,
         });
     }
 }
@@ -1411,7 +1449,7 @@ function parseInsertOrVariable(
         );
 
         // Parse the value as JavaScript
-        createVariableReferences(
+        createVariableAndPropertyReferences(
             tokenizeJSExpression(
                 invocation,
                 insertIndex + invocationIndex,
@@ -1444,7 +1482,7 @@ function parseInsertOrVariable(
     // Create semantic tokens and variable references for the arugment and properties
     if (insertTokens.firstArgument !== undefined) {
         // Parse the first argument as a JS expression and capture semantic tokens & var references
-        createVariableReferences(
+        createVariableAndPropertyReferences(
             tokenizeJSExpression(
                 insertTokens.firstArgument.text,
                 insertTokens.firstArgument.at,
@@ -1459,7 +1497,7 @@ function parseInsertOrVariable(
         Token,
     ][]) {
         // Parse properties' values as JavaScript
-        createVariableReferences(
+        createVariableAndPropertyReferences(
             tokenizeJSExpression(
                 propValueToken.text,
                 propValueToken.at,
@@ -1493,8 +1531,8 @@ function parseTextSubsection(
 ): void {
     if (chapbookState.modifierKind === ModifierKind.Javascript) {
         findEngineExtensions(subsection, subsectionIndex, state);
-        // We'll tokenize the contents, but not capture variable
-        // references, as they mostly won't be set in Chapbook
+        // We'll tokenize the contents, but not capture variable and
+        // property references, as they mostly won't be set in Chapbook
         // vars sections and thus would cause a lot of spurious warnings
         tokenizeJSExpression(subsection, subsectionIndex, state, chapbookState);
     } else if (chapbookState.modifierKind === ModifierKind.Css) {
@@ -1716,7 +1754,7 @@ function parseModifier(
             // If the modifier's argument has a type, then we tokenize it as JS.
             // Otherwise, tokenize it as function parameters
             if (modifier.firstArgument?.type !== undefined) {
-                createVariableReferences(
+                createVariableAndPropertyReferences(
                     tokenizeJSExpression(
                         modifierTokens.firstArgument.text,
                         modifierTokens.firstArgument.at,
@@ -1881,13 +1919,13 @@ function parseTextSection(
 }
 
 /**
- * Parse only the variables being set in the vars section of a Chapbook passage.
+ * Parse only the variables and their properties being set in the vars section of a Chapbook passage.
  *
  * @param section The vars section.
  * @param sectionIndex Index in the document where the vars section begins (zero-based).
  * @param state Parsing state
  */
-function parseVarsSectionForSetVarsOnly(
+function parseVarsSectionForSetVarsAndPropsOnly(
     section: string,
     sectionIndex: number,
     state: ParsingState
@@ -1895,16 +1933,25 @@ function parseVarsSectionForSetVarsOnly(
     // Parse line by line
     varsLineVarOnlyExtractionPattern.lastIndex = 0;
     for (const m of section.matchAll(varsLineVarOnlyExtractionPattern)) {
-        // Matches are [line (0), leading whitespace (1), variable name being set (2; may not be there)]
+        // Matches are [line (0), leading whitespace (1), variable name (and properties) being set (2; may not be there)]
         if (m[2] !== undefined) {
-            state.callbacks.onSymbolReference(
-                createSymbolFor(
-                    m[2],
-                    sectionIndex + m.index + m[1].length,
-                    OChapbookSymbolKind.VariableSet,
-                    state.textDocument
-                )
-            );
+            const ndx = sectionIndex + m.index + m[1].length;
+            let scope = "";
+            for (const [i, elem] of m[2].split(".").entries()) {
+                state.callbacks.onSymbolReference({
+                    contents: scope + elem,
+                    location: createLocationFor(
+                        elem,
+                        ndx + scope.length,
+                        state.textDocument
+                    ),
+                    kind:
+                        i == 0
+                            ? OChapbookSymbolKind.VariableSet
+                            : OChapbookSymbolKind.PropertySet,
+                });
+                scope += `${elem}.`;
+            }
         }
     }
 }
@@ -1961,7 +2008,7 @@ function parseVarsSection(
                     state
                 );
             } else {
-                createVariableReferences(
+                createVariableAndPropertyReferences(
                     tokenizeJSExpression(
                         conditionMatch[3],
                         sectionIndex +
@@ -2019,7 +2066,7 @@ function parseVarsSection(
 
         // Capture the variable name reference as being set by this vars section
         // and update the token for the name to show that it's being modified.
-        createVariableReferences(
+        createVariableAndPropertyReferences(
             tokenizeJSExpression(
                 name,
                 sectionIndex + nameIndex,
@@ -2027,24 +2074,27 @@ function parseVarsSection(
                 chapbookState
             ),
             state,
-            OChapbookSymbolKind.VariableSet
+            true
         );
-        // Because we only create symbols for variables and not any referenced
-        // properties, we need to split off any properties
-        capturePreTokenFor(
-            name.split(".", 1)[0],
-            sectionIndex + nameIndex,
-            ETokenType.variable,
-            [ETokenModifier.modification],
-            chapbookState
-        );
+        // Capture tokens for variables and properties
+        const varsAndProps = name.split(".");
+        for (let i = 0, ndx = nameIndex; i < varsAndProps.length; ++i) {
+            capturePreTokenFor(
+                varsAndProps[i],
+                sectionIndex + ndx,
+                i == 0 ? ETokenType.variable : ETokenType.property,
+                [ETokenModifier.modification],
+                chapbookState
+            );
+            ndx += varsAndProps[i].length + 1; // + 1 for the period
+        }
 
         // Handle the value
         let [value, valueIndex] = skipSpaces(
             m[2].slice(colonIndex + 1),
             m.index + m[1].length + colonIndex + 1
         );
-        createVariableReferences(
+        createVariableAndPropertyReferences(
             tokenizeJSExpression(
                 value,
                 sectionIndex + valueIndex,
@@ -2113,7 +2163,7 @@ export function parsePassageText(
             // as well as variables being set
             const passageParts = divideChapbookPassage(passageText);
             if (passageParts.vars !== undefined) {
-                parseVarsSectionForSetVarsOnly(
+                parseVarsSectionForSetVarsAndPropsOnly(
                     passageParts.vars,
                     textIndex,
                     state

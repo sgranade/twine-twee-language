@@ -184,24 +184,53 @@ export function generateDiagnostics(
     const diagnostics: Diagnostic[] = [];
     const text = document.getText();
 
-    // Check for variables that don't have a matching set statement in a vars section
-    const varSetNamesWithDuplicates: string[] = [...lookupVariables];
+    // Check for variables and properties that don't have a matching set statement in a vars section
+    const propSetNamesWithDuplicates: string[] = [...lookupVariables];
     for (const uri of index.getIndexedUris()) {
-        varSetNamesWithDuplicates.push(
+        propSetNamesWithDuplicates.push(
+            ...(index
+                .getReferences(uri, OChapbookSymbolKind.PropertySet)
+                ?.map((ref) => ref.contents) || [])
+        );
+    }
+    const propSetNames = new Set(propSetNamesWithDuplicates);
+    const varNamesWithDuplicates = lookupVariables.map(
+        (x) => x.split(".", 1)[0]
+    );
+    for (const uri of index.getIndexedUris()) {
+        varNamesWithDuplicates.push(
             ...(index
                 .getReferences(uri, OChapbookSymbolKind.VariableSet)
                 ?.map((ref) => ref.contents) || [])
         );
     }
-    const varSetNames = new Set(varSetNamesWithDuplicates);
+    const varSetNames = new Set(varNamesWithDuplicates);
+
     for (const varRef of index.getReferences(
         document.uri,
         OChapbookSymbolKind.Variable
     ) || []) {
         if (!varSetNames.has(varRef.contents)) {
-            const message = `Variable "${varRef.contents}" isn't set in any vars section. Make sure you've spelled it correctly.`;
+            const message = `"${varRef.contents}" isn't set in any vars section. Make sure you've spelled it correctly.`;
             diagnostics.push(
                 ...varRef.locations.map((loc) =>
+                    Diagnostic.create(
+                        loc.range,
+                        message,
+                        DiagnosticSeverity.Warning
+                    )
+                )
+            );
+        }
+    }
+    for (const propRef of index.getReferences(
+        document.uri,
+        OChapbookSymbolKind.Property
+    ) || []) {
+        if (!propSetNames.has(propRef.contents)) {
+            const message = `"${propRef.contents}" isn't set in any vars section. Make sure you've spelled it correctly.`;
+            diagnostics.push(
+                ...propRef.locations.map((loc) =>
                     Diagnostic.create(
                         loc.range,
                         message,

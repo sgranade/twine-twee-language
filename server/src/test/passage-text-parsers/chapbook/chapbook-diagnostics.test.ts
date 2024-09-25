@@ -49,10 +49,48 @@ describe("Chapbook Diagnostics", () => {
             expect(results).to.eql([
                 Diagnostic.create(
                     Range.create(1, 2, 3, 4),
-                    "Variable \"var1\" isn't set in any vars section. Make sure you've spelled it correctly.",
+                    "\"var1\" isn't set in any vars section. Make sure you've spelled it correctly.",
                     DiagnosticSeverity.Warning
                 ),
             ]);
+        });
+
+        it("should not warn on a variable with a matching variable setting", () => {
+            const doc = TextDocument.create(
+                "fake-uri",
+                "",
+                0,
+                "Let's try {var1}"
+            );
+            const index = new Index();
+            index.setReferences("fake-uri", [
+                {
+                    contents: "var1",
+                    locations: [
+                        Location.create("fake-uri", Range.create(1, 2, 3, 4)),
+                    ],
+                    kind: OChapbookSymbolKind.Variable,
+                },
+            ]);
+            index.setReferences("other-uri", [
+                {
+                    contents: "var1",
+                    locations: [
+                        Location.create("other-uri", Range.create(5, 6, 7, 8)),
+                    ],
+                    kind: OChapbookSymbolKind.VariableSet,
+                },
+            ]);
+            const diagnosticOptions = defaultDiagnosticsOptions;
+            const parser = uut.getChapbookParser(undefined);
+
+            const results = parser?.generateDiagnostics(
+                doc,
+                index,
+                diagnosticOptions
+            );
+
+            expect(results).to.be.empty;
         });
 
         it("should not warn on a reference to a built-in lookup variable", () => {
@@ -84,12 +122,12 @@ describe("Chapbook Diagnostics", () => {
             expect(results).to.be.empty;
         });
 
-        it("should not warn on a variable with no matching variable setting", () => {
+        it("should warn on a property with no matching property setting", () => {
             const doc = TextDocument.create(
                 "fake-uri",
                 "",
                 0,
-                "Let's try {var1}"
+                "Let's try {var1.prop}"
             );
             const index = new Index();
             index.setReferences("fake-uri", [
@@ -100,6 +138,13 @@ describe("Chapbook Diagnostics", () => {
                     ],
                     kind: OChapbookSymbolKind.Variable,
                 },
+                {
+                    contents: "var1.prop",
+                    locations: [
+                        Location.create("fake-uri", Range.create(5, 6, 7, 8)),
+                    ],
+                    kind: OChapbookSymbolKind.Property,
+                },
             ]);
             index.setReferences("other-uri", [
                 {
@@ -108,6 +153,67 @@ describe("Chapbook Diagnostics", () => {
                         Location.create("other-uri", Range.create(5, 6, 7, 8)),
                     ],
                     kind: OChapbookSymbolKind.VariableSet,
+                },
+            ]);
+            const diagnosticOptions = defaultDiagnosticsOptions;
+            const parser = uut.getChapbookParser(undefined);
+
+            const results = parser?.generateDiagnostics(
+                doc,
+                index,
+                diagnosticOptions
+            );
+
+            expect(results).to.eql([
+                Diagnostic.create(
+                    Range.create(5, 6, 7, 8),
+                    "\"var1.prop\" isn't set in any vars section. Make sure you've spelled it correctly.",
+                    DiagnosticSeverity.Warning
+                ),
+            ]);
+        });
+
+        it("should not warn on a property with a matching property setting", () => {
+            const doc = TextDocument.create(
+                "fake-uri",
+                "",
+                0,
+                "Let's try {var1.prop}"
+            );
+            const index = new Index();
+            index.setReferences("fake-uri", [
+                {
+                    contents: "var1",
+                    locations: [
+                        Location.create("fake-uri", Range.create(1, 2, 3, 4)),
+                    ],
+                    kind: OChapbookSymbolKind.Variable,
+                },
+                {
+                    contents: "var1.prop",
+                    locations: [
+                        Location.create("fake-uri", Range.create(5, 6, 7, 8)),
+                    ],
+                    kind: OChapbookSymbolKind.Property,
+                },
+            ]);
+            index.setReferences("other-uri", [
+                {
+                    contents: "var1",
+                    locations: [
+                        Location.create("other-uri", Range.create(5, 6, 7, 8)),
+                    ],
+                    kind: OChapbookSymbolKind.VariableSet,
+                },
+                {
+                    contents: "var1.prop",
+                    locations: [
+                        Location.create(
+                            "other-uri",
+                            Range.create(9, 10, 11, 12)
+                        ),
+                    ],
+                    kind: OChapbookSymbolKind.PropertySet,
                 },
             ]);
             const diagnosticOptions = defaultDiagnosticsOptions;

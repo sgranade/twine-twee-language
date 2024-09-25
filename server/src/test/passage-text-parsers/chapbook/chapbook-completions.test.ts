@@ -1,7 +1,7 @@
 import "mocha";
 import { expect } from "chai";
 import { ImportMock } from "ts-mock-imports";
-import { Location, Position, Range } from "vscode-languageserver";
+import { Location, Position, Range, TextEdit } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { buildPassage } from "../../builders";
@@ -61,6 +61,66 @@ describe("Chapbook Completions", () => {
             expect(results?.items.length).to.equal(2);
             expect(results?.items[0]?.label).to.eql("var1");
             expect(results?.items[1]?.label).to.eql("anotherVar");
+        });
+
+        it("should suggest properties (both set and otherwise) that follow a variable in the vars section", () => {
+            const doc = TextDocument.create(
+                "fake-uri",
+                "",
+                0,
+                ":: Passage\nvar1.\n--\nContent"
+            );
+            const position = Position.create(1, 5);
+            const index = new Index();
+            index.setPassages("fake-uri", [
+                buildPassage({
+                    label: "passage",
+                    scope: Range.create(0, 0, 4, 0),
+                }),
+            ]);
+            index.setReferences("fake-uri", [
+                {
+                    contents: "var1",
+                    locations: [
+                        Location.create("fake-uri", Range.create(1, 2, 3, 4)),
+                    ],
+                    kind: OChapbookSymbolKind.Variable,
+                },
+                {
+                    contents: "nope.prop",
+                    locations: [
+                        Location.create("fake-uri", Range.create(5, 6, 7, 8)),
+                    ],
+                    kind: OChapbookSymbolKind.PropertySet,
+                },
+                {
+                    contents: "var1.otherprop",
+                    locations: [
+                        Location.create(
+                            "fake-uri",
+                            Range.create(9, 10, 11, 12)
+                        ),
+                    ],
+                    kind: OChapbookSymbolKind.Property,
+                },
+                {
+                    contents: "var1.anotherprop",
+                    locations: [
+                        Location.create(
+                            "fake-uri",
+                            Range.create(13, 14, 15, 16)
+                        ),
+                    ],
+                    kind: OChapbookSymbolKind.PropertySet,
+                },
+            ]);
+            const parser = uut.getChapbookParser(undefined);
+
+            const results = parser?.generateCompletions(doc, position, index);
+
+            expect(results?.items.length).to.equal(2);
+            expect(results?.items[0]?.label).to.eql("otherprop");
+            expect(results?.items[1]?.label).to.eql("anotherprop");
         });
     });
 
@@ -351,6 +411,66 @@ describe("Chapbook Completions", () => {
             expect(results?.items[0]?.label).to.eql("var1");
         });
 
+        it("should suggest properties after a [, modifier name, and variable for a built-in modifier's first argument that takes an expression", () => {
+            const doc = TextDocument.create(
+                "fake-uri",
+                "",
+                0,
+                ":: Passage\n[ mod var1."
+            );
+            const position = Position.create(1, 11);
+            const index = new Index();
+            index.setPassages("fake-uri", [
+                buildPassage({
+                    label: "I'm a passage!",
+                    scope: Range.create(0, 0, 2, 0),
+                }),
+            ]);
+            index.setReferences("fake-uri", [
+                {
+                    contents: "var1",
+                    locations: [
+                        Location.create("fake-uri", Range.create(1, 2, 3, 4)),
+                    ],
+                    kind: OChapbookSymbolKind.Variable,
+                },
+                {
+                    contents: "nope.prop",
+                    locations: [
+                        Location.create("fake-uri", Range.create(5, 6, 7, 8)),
+                    ],
+                    kind: OChapbookSymbolKind.PropertySet,
+                },
+                {
+                    contents: "var1.otherprop",
+                    locations: [
+                        Location.create(
+                            "fake-uri",
+                            Range.create(9, 10, 11, 12)
+                        ),
+                    ],
+                    kind: OChapbookSymbolKind.Property,
+                },
+            ]);
+            const modifier = buildModifierInfo({ name: "mod", match: /^mod/i });
+            modifier.completions = ["mod"];
+            modifier.firstArgument = {
+                required: ArgumentRequirement.optional,
+                type: ValueType.expression,
+            };
+            const mockFunction = ImportMock.mockFunction(
+                modifiersModule,
+                "all"
+            ).returns([modifier]);
+            const parser = uut.getChapbookParser(undefined);
+
+            const results = parser?.generateCompletions(doc, position, index);
+            mockFunction.restore();
+
+            expect(results?.items.length).to.equal(1);
+            expect(results?.items[0]?.label).to.eql("otherprop");
+        });
+
         it("should suggest passages after a [ and modifier name for a built-in modifier's first argument that takes a passage", () => {
             const doc = TextDocument.create(
                 "fake-uri",
@@ -636,6 +756,55 @@ describe("Chapbook Completions", () => {
             expect(results?.items[0].label).to.eql("var1");
             expect(results?.itemDefaults?.editRange).to.eql(
                 Range.create(1, 11, 1, 13)
+            );
+        });
+
+        it("should suggest properties after a { and variable. with no other contents in the insert", () => {
+            const doc = TextDocument.create(
+                "fake-uri",
+                "",
+                0,
+                ":: Passage\nLet's try {var1.o"
+            );
+            const position = Position.create(1, 17);
+            const index = new Index();
+            index.setPassages("fake-uri", [
+                buildPassage({
+                    label: "passage",
+                    scope: Range.create(0, 0, 2, 0),
+                }),
+            ]);
+            index.setReferences("fake-uri", [
+                {
+                    contents: "var1",
+                    locations: [
+                        Location.create("fake-uri", Range.create(1, 2, 3, 4)),
+                    ],
+                    kind: OChapbookSymbolKind.Variable,
+                },
+                {
+                    contents: "var1.otherprop",
+                    locations: [
+                        Location.create(
+                            "fake-uri",
+                            Range.create(9, 10, 11, 12)
+                        ),
+                    ],
+                    kind: OChapbookSymbolKind.Property,
+                },
+            ]);
+            const mockFunction = ImportMock.mockFunction(
+                insertsModule,
+                "all"
+            ).returns([]);
+            const parser = uut.getChapbookParser(undefined);
+
+            const results = parser?.generateCompletions(doc, position, index);
+            mockFunction.restore();
+
+            expect(results?.items[0].label).to.eql("otherprop");
+            expect(results?.items[0].textEdit).to.eql(
+                TextEdit.replace(Range.create(1, 16, 1, 17), "otherprop")
             );
         });
 
@@ -1473,6 +1642,62 @@ describe("Chapbook Completions", () => {
 
             expect(results?.items.length).to.equal(1);
             expect(results?.items[0]?.label).to.eql("var1");
+        });
+
+        it("should suggest properties after a { and a , and a :, and a variable for a built-in insert's first argument that takes an expression", () => {
+            const doc = TextDocument.create(
+                "fake-uri",
+                "",
+                0,
+                ":: Passage\nLet's try {test insert: var1.}"
+            );
+            const position = Position.create(1, 29);
+            const index = new Index();
+            index.setPassages("fake-uri", [
+                buildPassage({
+                    label: "I'm a passage!",
+                    scope: Range.create(0, 0, 2, 0),
+                }),
+            ]);
+            index.setReferences("fake-uri", [
+                {
+                    contents: "var1",
+                    locations: [
+                        Location.create("fake-uri", Range.create(1, 2, 3, 4)),
+                    ],
+                    kind: OChapbookSymbolKind.Variable,
+                },
+                {
+                    contents: "var1.otherprop",
+                    locations: [
+                        Location.create(
+                            "fake-uri",
+                            Range.create(9, 10, 11, 12)
+                        ),
+                    ],
+                    kind: OChapbookSymbolKind.Property,
+                },
+            ]);
+            const insert = buildInsertInfo({
+                name: "test insert",
+                match: /^test\s+insert/i,
+            });
+            insert.completions = ["test insert"];
+            insert.firstArgument = {
+                required: ArgumentRequirement.optional,
+                type: ValueType.expression,
+            };
+            const mockFunction = ImportMock.mockFunction(
+                insertsModule,
+                "all"
+            ).returns([insert]);
+            const parser = uut.getChapbookParser(undefined);
+
+            const results = parser?.generateCompletions(doc, position, index);
+            mockFunction.restore();
+
+            expect(results?.items.length).to.equal(1);
+            expect(results?.items[0]?.label).to.eql("otherprop");
         });
 
         it("should suggest passages after a { and a , and a : for a built-in insert's first argument that takes a passage", () => {

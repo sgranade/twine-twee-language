@@ -55,7 +55,7 @@ describe("Chapbook Parsing", () => {
         });
     });
 
-    it("should parse a variable set in a vars section even when only parsing passage names", () => {
+    it("should parse a variable and property set in a vars section even when only parsing passage names", () => {
         const header = ":: Passage\n";
         const passage = "var1.prop: var2\n--\nThis is {var3}\n";
         const callbacks = new MockCallbacks();
@@ -72,13 +72,18 @@ describe("Chapbook Parsing", () => {
         const parser = uut.getChapbookParser(undefined);
 
         parser?.parsePassageText(passage, header.length, state);
-        const result = callbacks.references[0];
+        const result = callbacks.references;
 
-        expect(callbacks.references.length).to.equal(1);
-        expect(result).to.eql({
+        expect(callbacks.references.length).to.equal(2);
+        expect(result[0]).to.eql({
             contents: "var1",
             location: Location.create("fake-uri", Range.create(1, 0, 1, 4)),
             kind: OChapbookSymbolKind.VariableSet,
+        });
+        expect(result[1]).to.eql({
+            contents: "var1.prop",
+            location: Location.create("fake-uri", Range.create(1, 5, 1, 9)),
+            kind: OChapbookSymbolKind.PropertySet,
         });
     });
 
@@ -127,7 +132,7 @@ describe("Chapbook Parsing", () => {
             });
         });
 
-        it("should capture a reference for a variable name but not its referenced property", () => {
+        it("should capture references for a variable name and its property", () => {
             const header = ":: Passage\n";
             const passage = "\n var1.prop: 17\n--\n";
             const callbacks = new MockCallbacks();
@@ -149,6 +154,14 @@ describe("Chapbook Parsing", () => {
                         Range.create(2, 1, 2, 5)
                     ),
                     kind: OChapbookSymbolKind.VariableSet,
+                },
+                {
+                    contents: "var1.prop",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(2, 6, 2, 10)
+                    ),
+                    kind: OChapbookSymbolKind.PropertySet,
                 },
             ]);
         });
@@ -209,6 +222,34 @@ describe("Chapbook Parsing", () => {
                 char: 1,
                 length: 4,
                 tokenType: ETokenType.variable,
+                tokenModifiers: [ETokenModifier.modification],
+            });
+        });
+
+        it("should set semantic token for a variable name and its property", () => {
+            const header = ":: Passage\n";
+            const passage = "\n var1.prop: 17\n--\n";
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            const parser = uut.getChapbookParser(undefined);
+
+            parser?.parsePassageText(passage, header.length, state);
+            const result = callbacks.tokens;
+            expect(result[0]).to.eql({
+                line: 2,
+                char: 1,
+                length: 4,
+                tokenType: ETokenType.variable,
+                tokenModifiers: [ETokenModifier.modification],
+            });
+            expect(result[1]).to.eql({
+                line: 2,
+                char: 6,
+                length: 4,
+                tokenType: ETokenType.property,
                 tokenModifiers: [ETokenModifier.modification],
             });
         });
@@ -728,7 +769,7 @@ describe("Chapbook Parsing", () => {
 
                 it("should create a variable reference for a first arg that's an expression and contains a variable", () => {
                     const header = ":: Passage\n";
-                    const passage = "[mock mod tempy]\nContent\n";
+                    const passage = "[mock mod tempy + other.prop]\nContent\n";
                     const callbacks = new MockCallbacks();
                     const modifier = buildModifierInfo({
                         match: /^mock\s+mod/,
@@ -749,16 +790,32 @@ describe("Chapbook Parsing", () => {
 
                     parser?.parsePassageText(passage, header.length, state);
                     mockFunction.restore();
-                    const result = callbacks.references[1];
+                    const result = callbacks.references;
 
-                    expect(callbacks.references.length).to.equal(2);
-                    expect(result).to.eql({
+                    expect(callbacks.references.length).to.equal(4);
+                    expect(result[1]).to.eql({
                         contents: "tempy",
                         location: Location.create(
                             "fake-uri",
                             Range.create(1, 10, 1, 15)
                         ),
                         kind: OChapbookSymbolKind.Variable,
+                    });
+                    expect(result[2]).to.eql({
+                        contents: "other",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(1, 18, 1, 23)
+                        ),
+                        kind: OChapbookSymbolKind.Variable,
+                    });
+                    expect(result[3]).to.eql({
+                        contents: "other.prop",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(1, 24, 1, 28)
+                        ),
+                        kind: OChapbookSymbolKind.Property,
                     });
                 });
 
@@ -965,9 +1022,9 @@ describe("Chapbook Parsing", () => {
                     });
                 });
 
-                it("should create a variable reference for a non-string first arg that's a urlOrPassage", () => {
+                it("should create variable and property references for a non-string first arg that's a urlOrPassage", () => {
                     const header = ":: Passage\n";
-                    const passage = "[mock-mod  arg]\nContent\n";
+                    const passage = "[mock-mod  arg.prop]\nContent\n";
                     const callbacks = new MockCallbacks();
                     const modifier = buildModifierInfo({
                         match: /^mock-mod/,
@@ -988,16 +1045,24 @@ describe("Chapbook Parsing", () => {
 
                     parser?.parsePassageText(passage, header.length, state);
                     mockFunction.restore();
-                    const result = callbacks.references[1];
+                    const result = callbacks.references;
 
-                    expect(callbacks.references.length).to.equal(2);
-                    expect(result).to.eql({
+                    expect(callbacks.references.length).to.equal(3);
+                    expect(result[1]).to.eql({
                         contents: "arg",
                         location: Location.create(
                             "fake-uri",
                             Range.create(1, 11, 1, 14)
                         ),
                         kind: OChapbookSymbolKind.Variable,
+                    });
+                    expect(result[2]).to.eql({
+                        contents: "arg.prop",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(1, 15, 1, 19)
+                        ),
+                        kind: OChapbookSymbolKind.Property,
                     });
                 });
 
@@ -1754,7 +1819,7 @@ describe("Chapbook Parsing", () => {
                     const header = ":: Passage\n";
                     const passage =
                         "Some content.\n" +
-                        "A variable insert: { var.prop  }.\n";
+                        "A variable insert: { var1.prop  }.\n";
                     const callbacks = new MockCallbacks();
                     const state = buildParsingState({
                         content: header + passage,
@@ -1763,17 +1828,27 @@ describe("Chapbook Parsing", () => {
                     const parser = uut.getChapbookParser(undefined);
 
                     parser?.parsePassageText(passage, header.length, state);
-                    const [result] = callbacks.references;
+                    const result = callbacks.references;
 
-                    expect(callbacks.references.length).to.equal(1);
-                    expect(result).to.eql({
-                        contents: "var",
-                        location: Location.create(
-                            "fake-uri",
-                            Range.create(2, 21, 2, 24)
-                        ),
-                        kind: OChapbookSymbolKind.Variable,
-                    });
+                    expect(callbacks.references.length).to.equal(2);
+                    expect(result).to.eql([
+                        {
+                            contents: "var1",
+                            location: Location.create(
+                                "fake-uri",
+                                Range.create(2, 21, 2, 25)
+                            ),
+                            kind: OChapbookSymbolKind.Variable,
+                        },
+                        {
+                            contents: "var1.prop",
+                            location: Location.create(
+                                "fake-uri",
+                                Range.create(2, 26, 2, 30)
+                            ),
+                            kind: OChapbookSymbolKind.Property,
+                        },
+                    ]);
                 });
 
                 it("should capture a reference for a known insert", () => {
@@ -1905,7 +1980,7 @@ describe("Chapbook Parsing", () => {
 
                 it("should create a variable reference for a first arg that's an expression and contains a variable", () => {
                     const header = ":: Passage\n";
-                    const passage = "Insert: {mock insert:  tempy}";
+                    const passage = "Insert: {mock insert:  tempy.prop}";
                     const callbacks = new MockCallbacks();
                     const insert = buildInsertInfo({
                         match: /^mock insert/,
@@ -1924,16 +1999,24 @@ describe("Chapbook Parsing", () => {
 
                     parser?.parsePassageText(passage, header.length, state);
                     mockFunction.restore();
-                    const result = callbacks.references[0];
+                    const result = callbacks.references;
 
-                    expect(callbacks.references.length).to.equal(2);
-                    expect(result).to.eql({
+                    expect(callbacks.references.length).to.equal(3);
+                    expect(result[0]).to.eql({
                         contents: "tempy",
                         location: Location.create(
                             "fake-uri",
                             Range.create(1, 23, 1, 28)
                         ),
                         kind: OChapbookSymbolKind.Variable,
+                    });
+                    expect(result[1]).to.eql({
+                        contents: "tempy.prop",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(1, 29, 1, 33)
+                        ),
+                        kind: OChapbookSymbolKind.Property,
                     });
                 });
 
@@ -2128,7 +2211,7 @@ describe("Chapbook Parsing", () => {
 
                 it("should create a variable reference for a non-string first arg that's a urlOrPassage", () => {
                     const header = ":: Passage\n";
-                    const passage = "Insert: {mock insert:  arg}";
+                    const passage = "Insert: {mock insert:  arg.prop}";
                     const callbacks = new MockCallbacks();
                     const insert = buildInsertInfo({
                         match: /^mock insert/,
@@ -2146,16 +2229,24 @@ describe("Chapbook Parsing", () => {
 
                     parser?.parsePassageText(passage, header.length, state);
                     mockFunction.restore();
-                    const [result] = callbacks.references;
+                    const result = callbacks.references;
 
-                    expect(callbacks.references.length).to.equal(2);
-                    expect(result).to.eql({
+                    expect(callbacks.references.length).to.equal(3);
+                    expect(result[0]).to.eql({
                         contents: "arg",
                         location: Location.create(
                             "fake-uri",
                             Range.create(1, 23, 1, 26)
                         ),
                         kind: OChapbookSymbolKind.Variable,
+                    });
+                    expect(result[1]).to.eql({
+                        contents: "arg.prop",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(1, 27, 1, 31)
+                        ),
+                        kind: OChapbookSymbolKind.Property,
                     });
                 });
 
@@ -2193,7 +2284,7 @@ describe("Chapbook Parsing", () => {
                 it("should create a variable reference for a property that's a variable", () => {
                     const header = ":: Passage\n";
                     const passage =
-                        "Insert: {mock insert:  'arg', prop1: var }";
+                        "Insert: {mock insert:  'arg', prop1: var1.prop }";
                     const callbacks = new MockCallbacks();
                     const insert = buildInsertInfo({
                         match: /^mock insert/,
@@ -2216,16 +2307,24 @@ describe("Chapbook Parsing", () => {
 
                     parser?.parsePassageText(passage, header.length, state);
                     mockFunction.restore();
-                    const [result] = callbacks.references;
+                    const result = callbacks.references;
 
-                    expect(callbacks.references.length).to.equal(2);
-                    expect(result).to.eql({
-                        contents: "var",
+                    expect(callbacks.references.length).to.equal(3);
+                    expect(result[0]).to.eql({
+                        contents: "var1",
                         location: Location.create(
                             "fake-uri",
-                            Range.create(1, 37, 1, 40)
+                            Range.create(1, 37, 1, 41)
                         ),
                         kind: OChapbookSymbolKind.Variable,
+                    });
+                    expect(result[1]).to.eql({
+                        contents: "var1.prop",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(1, 42, 1, 46)
+                        ),
+                        kind: OChapbookSymbolKind.Property,
                     });
                 });
 

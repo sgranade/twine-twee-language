@@ -221,6 +221,35 @@ describe("JS Parser", () => {
         });
     });
 
+    it("should set a semantic token for a property of a property", () => {
+        const expression = " var1.prop1.prop2";
+        const offset = 12;
+        const state = buildParsingState({
+            uri: "fake-uri",
+            content: "fake content",
+            callbacks: new MockCallbacks(),
+        });
+        const storyState: StoryFormatParsingState = {
+            passageTokens: {},
+        };
+
+        uut.tokenizeJSExpression(expression, offset, state, storyState);
+        const result = storyState.passageTokens;
+
+        expect(result[18]).to.eql({
+            text: "prop1",
+            at: 18,
+            type: ETokenType.property,
+            modifiers: [],
+        });
+        expect(result[24]).to.eql({
+            text: "prop2",
+            at: 24,
+            type: ETokenType.property,
+            modifiers: [],
+        });
+    });
+
     it("should set a semantic token for a computed property", () => {
         const expression = " var1[prop]";
         const offset = 12;
@@ -240,6 +269,29 @@ describe("JS Parser", () => {
             text: "prop",
             at: 18,
             type: ETokenType.variable,
+            modifiers: [],
+        });
+    });
+
+    it("should set a semantic token for a member function", () => {
+        const expression = " var1.func()";
+        const offset = 12;
+        const state = buildParsingState({
+            uri: "fake-uri",
+            content: "fake content",
+            callbacks: new MockCallbacks(),
+        });
+        const storyState: StoryFormatParsingState = {
+            passageTokens: {},
+        };
+
+        uut.tokenizeJSExpression(expression, offset, state, storyState);
+        const result = storyState.passageTokens;
+
+        expect(result[18]).to.eql({
+            text: "func",
+            at: 18,
+            type: ETokenType.function,
             modifiers: [],
         });
     });
@@ -304,12 +356,13 @@ describe("JS Parser", () => {
             storyState
         );
 
-        expect(result).to.eql([
+        expect(result[0]).to.eql([
             {
                 contents: "var1",
                 location: Location.create("fake-uri", Range.create(1, 2, 1, 6)),
             },
         ]);
+        expect(result[1]).to.be.empty;
     });
 
     it("should return apparent variables in complex statements", () => {
@@ -332,7 +385,7 @@ describe("JS Parser", () => {
             storyState
         );
 
-        expect(result).to.eql([
+        expect(result[0]).to.eql([
             {
                 contents: "var1",
                 location: Location.create("fake-uri", Range.create(1, 2, 1, 6)),
@@ -343,6 +396,87 @@ describe("JS Parser", () => {
                     "fake-uri",
                     Range.create(1, 25, 1, 29)
                 ),
+            },
+        ]);
+        expect(result[1]).to.be.empty; // Because the properties can't be traced back to a root variable
+    });
+
+    it("should return apparent properties that trace back to a root variable", () => {
+        const expression =
+            " var1.rootprop1.rootprop2 = {prop1: val1, prop2: 'val2'}";
+        const offset = 12;
+        const state = buildParsingState({
+            uri: "fake-uri",
+            content:
+                "0123456789\n1 var1.rootprop1.rootprop2 = {prop1: val1, prop2: 'val2'}",
+            callbacks: new MockCallbacks(),
+        });
+        const storyState: StoryFormatParsingState = {
+            passageTokens: {},
+        };
+
+        const result = uut.tokenizeJSExpression(
+            expression,
+            offset,
+            state,
+            storyState
+        );
+
+        expect(result[1]).to.eql([
+            {
+                contents: "rootprop1",
+                location: Location.create(
+                    "fake-uri",
+                    Range.create(1, 7, 1, 16)
+                ),
+                scope: "var1",
+            },
+            {
+                contents: "rootprop2",
+                location: Location.create(
+                    "fake-uri",
+                    Range.create(1, 17, 1, 26)
+                ),
+                scope: "var1.rootprop1",
+            },
+        ]);
+    });
+
+    it("should return apparent properties that trace back to a root variable even in fragments", () => {
+        const expression = " var1.rootprop1.rootprop2";
+        const offset = 12;
+        const state = buildParsingState({
+            uri: "fake-uri",
+            content: "0123456789\n1 var1.rootprop1.rootprop2",
+            callbacks: new MockCallbacks(),
+        });
+        const storyState: StoryFormatParsingState = {
+            passageTokens: {},
+        };
+
+        const result = uut.tokenizeJSExpression(
+            expression,
+            offset,
+            state,
+            storyState
+        );
+
+        expect(result[1]).to.eql([
+            {
+                contents: "rootprop1",
+                location: Location.create(
+                    "fake-uri",
+                    Range.create(1, 7, 1, 16)
+                ),
+                scope: "var1",
+            },
+            {
+                contents: "rootprop2",
+                location: Location.create(
+                    "fake-uri",
+                    Range.create(1, 17, 1, 26)
+                ),
+                scope: "var1.rootprop1",
             },
         ]);
     });
@@ -366,7 +500,7 @@ describe("JS Parser", () => {
             storyState
         );
 
-        expect(result).to.eql([
+        expect(result[0]).to.eql([
             {
                 contents: "var1",
                 location: Location.create("fake-uri", Range.create(1, 2, 1, 6)),
@@ -374,7 +508,7 @@ describe("JS Parser", () => {
         ]);
     });
 
-    it("should not return an called function as a variable", () => {
+    it("should not return a called function as a variable", () => {
         const expression = " var1 = funcme();";
         const offset = 12;
         const state = buildParsingState({
@@ -393,11 +527,46 @@ describe("JS Parser", () => {
             storyState
         );
 
-        expect(result).to.eql([
+        expect(result[0]).to.eql([
             {
                 contents: "var1",
                 location: Location.create("fake-uri", Range.create(1, 2, 1, 6)),
             },
         ]);
+    });
+
+    it("should not return a member function called on a variables as a property", () => {
+        const expression = " var1 = var2.funcme();";
+        const offset = 12;
+        const state = buildParsingState({
+            uri: "fake-uri",
+            content: "0123456789\n1 var1 = var2.funcme();",
+            callbacks: new MockCallbacks(),
+        });
+        const storyState: StoryFormatParsingState = {
+            passageTokens: {},
+        };
+
+        const result = uut.tokenizeJSExpression(
+            expression,
+            offset,
+            state,
+            storyState
+        );
+
+        expect(result[0]).to.eql([
+            {
+                contents: "var1",
+                location: Location.create("fake-uri", Range.create(1, 2, 1, 6)),
+            },
+            {
+                contents: "var2",
+                location: Location.create(
+                    "fake-uri",
+                    Range.create(1, 9, 1, 13)
+                ),
+            },
+        ]);
+        expect(result[1]).to.be.empty;
     });
 });

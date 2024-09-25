@@ -5,11 +5,12 @@ import {
     Position,
     Range,
     CompletionItem,
+    TextEdit,
 } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { ProjectIndex } from "../../project-index";
-import { removeAndCountPadding, skipSpaces } from "../../utilities";
+import { removeAndCountPadding } from "../../utilities";
 import {
     divideChapbookPassage,
     findStartOfModifierOrInsert,
@@ -21,35 +22,84 @@ import { all as allModifiers } from "./modifiers";
 import { ArgumentRequirement, InsertProperty, ValueType } from "./types";
 
 /**
- * Generate completions for all variables.
+ * Generate completions for variables and properties.
+ * @param text Text from the start of the context to the point where completions are to be generated.
  * @param index Project index.
  * @returns Completions list.
  */
-function generateVariableCompletions(
+function generateVariableAndPropertyCompletions(
+    document: TextDocument,
+    text: string,
+    offset: number,
     index: ProjectIndex
 ): CompletionList | null {
-    const variableCompletions: string[] = [];
+    const completions: string[] = [];
+
+    // If there's a period and then variable characters at the end of the string, assume we're being
+    // asked to generate properties. Only get ones that match the full context (like var1.prop)
+    const m = /(\w+\.(\w+\.)*)(\w*)$/.exec(text);
+    const context = m === null ? undefined : m[1];
+    const range =
+        m === null
+            ? undefined
+            : Range.create(
+                  document.positionAt(offset + text.length - m[3].length),
+                  document.positionAt(offset + text.length)
+              );
     for (const uri of index.getIndexedUris()) {
-        variableCompletions.push(
-            ...(index
-                .getReferences(uri, OChapbookSymbolKind.Variable)
-                ?.map((x) => x.contents) || [])
+        if (context !== undefined) {
+            for (const ref of index.getReferences(
+                uri,
+                OChapbookSymbolKind.Property
+            ) || []) {
+                if (ref.contents.startsWith(context))
+                    completions.push(
+                        ref.contents.split(".").pop() || ref.contents
+                    );
+            }
+            for (const ref of index.getReferences(
+                uri,
+                OChapbookSymbolKind.PropertySet
+            ) || []) {
+                if (ref.contents.startsWith(context))
+                    completions.push(
+                        ref.contents.split(".").pop() || ref.contents
+                    );
+            }
+        } else {
+            completions.push(
+                ...(index
+                    .getReferences(uri, OChapbookSymbolKind.Variable)
+                    ?.map((x) => x.contents) || [])
+            );
+            completions.push(
+                ...(index
+                    .getReferences(uri, OChapbookSymbolKind.VariableSet)
+                    ?.map((x) => x.contents) || [])
+            );
+        }
+    }
+    if (range !== undefined) {
+        return CompletionList.create(
+            Array.from(new Set<string>(completions)).map((c) => {
+                return {
+                    label: c,
+                    kind: CompletionItemKind.Variable,
+                    textEdit: TextEdit.replace(range, c),
+                };
+            })
         );
-        variableCompletions.push(
-            ...(index
-                .getReferences(uri, OChapbookSymbolKind.VariableSet)
-                ?.map((x) => x.contents) || [])
+    } else {
+        return CompletionList.create(
+            Array.from(new Set<string>(completions)).map((c) => {
+                return {
+                    label: c,
+                    kind: CompletionItemKind.Variable,
+                    textEditText: c,
+                };
+            })
         );
     }
-    return CompletionList.create(
-        Array.from(new Set<string>(variableCompletions)).map((c) => {
-            return {
-                label: c,
-                kind: CompletionItemKind.Variable,
-                textEditText: c,
-            };
-        })
-    );
 }
 
 /**
@@ -131,7 +181,12 @@ function generateModifierCompletions(
                 index
             );
         } else if (modifier.firstArgument?.type === ValueType.expression) {
-            return generateVariableCompletions(index);
+            return generateVariableAndPropertyCompletions(
+                document,
+                text.slice(modifierContentStart, offset),
+                modifierContentStart,
+                index
+            );
         } else if (
             modifier.firstArgument?.required === ArgumentRequirement.required
         ) {
@@ -398,7 +453,7 @@ function generateInsertCompletions(
             });
         }
 
-        // If we have a one-word insert (so far), it could also be a variable, so add those completions in
+        // If we have a one-word insert (so far), it could also be a variable (or property), so add those completions in
         if (
             text[insertNameEnd] === "}" ||
             text[insertNameEnd] === "\r" ||
@@ -406,7 +461,12 @@ function generateInsertCompletions(
             text[insertNameEnd] === undefined
         ) {
             insertCompletions.push(
-                ...(generateVariableCompletions(index)?.items || [])
+                ...(generateVariableAndPropertyCompletions(
+                    document,
+                    text.slice(insertContentStart, offset),
+                    insertContentStart,
+                    index
+                )?.items || [])
             );
         }
 
@@ -489,7 +549,12 @@ function generateInsertCompletions(
                 index
             );
         } else if (insert.firstArgument?.type === ValueType.expression) {
-            return generateVariableCompletions(index);
+            return generateVariableAndPropertyCompletions(
+                document,
+                text.slice(insertSectionStart, offset),
+                insertSectionStart,
+                index
+            );
         }
     } else {
         // Property value
@@ -524,7 +589,12 @@ function generateInsertCompletions(
                         index
                     );
                 } else if (propInfo.type === ValueType.expression) {
-                    return generateVariableCompletions(index);
+                    return generateVariableAndPropertyCompletions(
+                        document,
+                        text.slice(insertSectionStart, offset),
+                        insertSectionStart,
+                        index
+                    );
                 }
             }
         }
@@ -557,7 +627,12 @@ export function generateCompletions(
 
     // If we're inside the vars section, suggest variables
     if (i < passageParts.contentIndex) {
-        return generateVariableCompletions(index);
+        return generateVariableAndPropertyCompletions(
+            document,
+            passageText.slice(0, i),
+            passageTextOffset,
+            index
+        );
     }
 
     // See if we're inside a modifier or insert
