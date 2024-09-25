@@ -210,7 +210,7 @@
 			}
 		},
 		"chapbook-2-insert-parameters": {
-			"match": "(\\w+*)\\s*:([^,]*)",
+			"match": "(\\w+)\\s*:\\s*({.*?}|\\[.*?\\]|'.*?'|\".*?\"|[^,]*)\\s*(?:,|$)",
 			"captures": {
 				"1": {
 					"name": "variable.other.property.twee3"
