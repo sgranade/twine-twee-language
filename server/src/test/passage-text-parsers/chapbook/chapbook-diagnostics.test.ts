@@ -50,7 +50,9 @@ describe("Chapbook Diagnostics", () => {
                 Diagnostic.create(
                     Range.create(1, 2, 3, 4),
                     "\"var1\" isn't set in any vars section. Make sure you've spelled it correctly.",
-                    DiagnosticSeverity.Warning
+                    DiagnosticSeverity.Warning,
+                    undefined,
+                    "Twine"
                 ),
             ]);
         });
@@ -168,7 +170,9 @@ describe("Chapbook Diagnostics", () => {
                 Diagnostic.create(
                     Range.create(5, 6, 7, 8),
                     "\"var1.prop\" isn't set in any vars section. Make sure you've spelled it correctly.",
-                    DiagnosticSeverity.Warning
+                    DiagnosticSeverity.Warning,
+                    undefined,
+                    "Twine"
                 ),
             ]);
         });
@@ -261,7 +265,9 @@ describe("Chapbook Diagnostics", () => {
                 Diagnostic.create(
                     Range.create(1, 2, 3, 4),
                     'Insert "custom insert" not recognized',
-                    DiagnosticSeverity.Warning
+                    DiagnosticSeverity.Warning,
+                    undefined,
+                    "Twine"
                 ),
             ]);
         });
@@ -582,7 +588,9 @@ describe("Chapbook Diagnostics", () => {
                 Diagnostic.create(
                     Range.create(1, 2, 3, 4),
                     'Modifier "mod-me" not recognized',
-                    DiagnosticSeverity.Warning
+                    DiagnosticSeverity.Warning,
+                    undefined,
+                    "Twine"
                 ),
             ]);
         });

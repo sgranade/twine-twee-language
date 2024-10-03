@@ -54,7 +54,7 @@ function validatePassages(
                     `Passage "${passage.name.contents}" was defined elsewhere`,
                     DiagnosticSeverity.Warning,
                     undefined,
-                    undefined,
+                    "Twine",
                     [
                         DiagnosticRelatedInformation.create(
                             otherPassage.name.location,

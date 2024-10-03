@@ -84,7 +84,9 @@ function generateCustomInsertDiagnostics(
                     Diagnostic.create(
                         loc.range,
                         `Insert "${insertRef.contents}" not recognized`,
-                        DiagnosticSeverity.Warning
+                        DiagnosticSeverity.Warning,
+                        undefined,
+                        "Twine"
                     )
                 )
             );
@@ -158,7 +160,9 @@ function generateCustomModifierDiagnostics(
                     Diagnostic.create(
                         loc.range,
                         `Modifier "${modRef.contents}" not recognized`,
-                        DiagnosticSeverity.Warning
+                        DiagnosticSeverity.Warning,
+                        undefined,
+                        "Twine"
                     )
                 )
             );
@@ -217,7 +221,9 @@ export function generateDiagnostics(
                     Diagnostic.create(
                         loc.range,
                         message,
-                        DiagnosticSeverity.Warning
+                        DiagnosticSeverity.Warning,
+                        undefined,
+                        "Twine"
                     )
                 )
             );
@@ -234,7 +240,9 @@ export function generateDiagnostics(
                     Diagnostic.create(
                         loc.range,
                         message,
-                        DiagnosticSeverity.Warning
+                        DiagnosticSeverity.Warning,
+                        undefined,
+                        "Twine"
                     )
                 )
             );

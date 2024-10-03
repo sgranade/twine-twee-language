@@ -72,7 +72,9 @@ export function updateProjectIndex(
                     Diagnostic.create(
                         range,
                         "This replaces an existing StoryTitle. Is that intentional?",
-                        DiagnosticSeverity.Warning
+                        DiagnosticSeverity.Warning,
+                        undefined,
+                        "Twine"
                     )
                 );
             } else {
@@ -85,7 +87,9 @@ export function updateProjectIndex(
                     Diagnostic.create(
                         range,
                         "This replaces existing StoryData. Is that intentional?",
-                        DiagnosticSeverity.Warning
+                        DiagnosticSeverity.Warning,
+                        undefined,
+                        "Twine"
                     )
                 );
             } else {
