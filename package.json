@@ -69,6 +69,17 @@
 					".twee"
 				],
 				"configuration": "./syntaxes/twee3.language-configuration.json"
+			},
+			{
+				"id": "twee3-sugarcube-2",
+				"aliases": [
+					"Twee3-SugarCube-2"
+				],
+				"extensions": [
+					".tw",
+					".twee"
+				],
+				"configuration": "./syntaxes/twee3.language-configuration.json"
 			}
 		],
 		"grammars": [
@@ -87,6 +98,18 @@
 				"language": "twee3-chapbook-2",
 				"scopeName": "source.twee3.chapbook-2",
 				"path": "./syntaxes/twee3.chapbook-2.tmLanguage.json",
+				"embeddedLanguages": {
+					"source.json.twee3": "json",
+					"source.yaml.twee3": "yaml",
+					"source.js.twee3": "javascript",
+					"source.css.twee3": "css",
+					"source.html.twee3": "html"
+				}
+			},
+			{
+				"language": "twee3-sugarcube-2",
+				"scopeName": "source.twee3.sugarcube-2",
+				"path": "./syntaxes/twee3.sugarcube-2.tmLanguage.json",
 				"embeddedLanguages": {
 					"source.json.twee3": "json",
 					"source.yaml.twee3": "yaml",
