@@ -165,9 +165,15 @@ namespace Heartbeat {
             // Right now we don't cache the results so as not to have to
             // potentially hold every file in a project in memory.
             for (const uri of tweeFiles) {
-                // The moment we have a story format, we can stop looking.
-                if (projectIndex.getStoryData()?.storyFormat !== undefined)
+                // The moment we have a story format, we can notify clients and stop looking.
+                const storyFormat = projectIndex.getStoryData()?.storyFormat;
+                if (storyFormat !== undefined) {
+                    connection.sendNotification(
+                        CustomMessages.UpdatedStoryFormat,
+                        storyFormat
+                    );
                     break;
+                }
 
                 const doc = await fetchTweeFile(uri);
                 if (doc !== undefined) {
