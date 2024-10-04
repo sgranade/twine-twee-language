@@ -55,7 +55,6 @@ import {
     generateSymbols,
 } from "./structure";
 import { semanticTokensLegend } from "./tokens";
-import { positionInRange } from "./utilities";
 import { generateDiagnostics } from "./validator";
 
 const connection: Connection = createConnection(ProposedFeatures.all);

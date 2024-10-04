@@ -14,6 +14,7 @@ import { ProjectIndex } from "../project-index";
 import { DiagnosticsOptions } from "../server-options";
 import { TokenModifier, TokenType } from "../tokens";
 import { getChapbookParser } from "./chapbook";
+import { getSugarCubeParser } from "./sugarcube";
 
 /**
  * Story-format-specific parsers that parse passage text.
@@ -117,8 +118,12 @@ export interface StoryFormatParser {
 export function getStoryFormatParser(
     format: StoryFormat | undefined
 ): StoryFormatParser | undefined {
-    if (format?.format.toLowerCase() === "chapbook") {
-        return getChapbookParser(format.formatVersion);
+    const formatName = format?.format.toLowerCase();
+    if (formatName === "chapbook") {
+        return getChapbookParser(format?.formatVersion);
+    }
+    if (formatName === "sugarcube") {
+        return getSugarCubeParser(format?.formatVersion);
     }
     return undefined;
 }

@@ -21,7 +21,6 @@ import * as insertsModule from "../../../passage-text-parsers/chapbook/inserts";
 import * as modifiersModule from "../../../passage-text-parsers/chapbook/modifiers";
 
 import * as uut from "../../../passage-text-parsers/chapbook";
-import { type } from "os";
 
 describe("Chapbook Parsing", () => {
     it("should parse engine extension calls even when only parsing passage names", () => {
