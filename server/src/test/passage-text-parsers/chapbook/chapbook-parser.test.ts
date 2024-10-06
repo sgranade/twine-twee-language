@@ -22,7 +22,7 @@ import * as modifiersModule from "../../../passage-text-parsers/chapbook/modifie
 
 import * as uut from "../../../passage-text-parsers/chapbook";
 
-describe("Chapbook Parsing", () => {
+describe("Chapbook Parser", () => {
     it("should parse engine extension calls even when only parsing passage names", () => {
         const header = ":: Passage\n";
         const passage =

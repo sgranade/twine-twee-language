@@ -845,325 +845,344 @@ describe("Twine Parser", () => {
 
                 expect(receivedContents).to.eql(["Passage to be parsed"]);
             });
+        });
 
-            describe("links", () => {
-                it("should produce no semantic tokens for an empty [[]] link", () => {
-                    const header = ":: Passage\n";
-                    const passage =
-                        "We shall introduce: a link!\n" + "Here it is: [[]]\n";
-                    const callbacks = new MockCallbacks();
-                    const state = buildParsingState({
-                        content: header + passage,
-                        callbacks: callbacks,
-                    });
-                    const passageState = { passageTokens: {} };
-
-                    uut.parseLinks(passage, header.length, state, passageState);
-
-                    expect(passageState.passageTokens).to.be.empty;
+        describe("Links", () => {
+            it("should produce no semantic tokens for an empty [[]] link", () => {
+                const header = ":: Passage\n";
+                const passage =
+                    "We shall introduce: a link!\n" + "Here it is: [[]]\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
                 });
+                const passageState = { passageTokens: {} };
 
-                it("should set semantic tokens for a [[target]] link", () => {
-                    const header = ":: Passage\n";
-                    const passage =
-                        "We shall introduce: a link!\n" +
-                        "Here it is: [[ target passage ]]\n";
-                    const callbacks = new MockCallbacks();
-                    const state = buildParsingState({
-                        content: header + passage,
-                        callbacks: callbacks,
-                    });
-                    const passageState = { passageTokens: {} };
+                uut.parseLinks(passage, header.length, state, passageState);
 
-                    uut.parseLinks(passage, 2, state, passageState);
-                    const result = passageState.passageTokens;
+                expect(passageState.passageTokens).to.be.empty;
+            });
 
-                    expect(result).to.eql({
-                        45: {
-                            text: "target passage",
-                            at: 45,
-                            type: ETokenType.class,
-                            modifiers: [],
-                        },
-                    });
+            it("should set semantic tokens for a [[target]] link", () => {
+                const header = ":: Passage\n";
+                const passage =
+                    "We shall introduce: a link!\n" +
+                    "Here it is: [[ target passage ]]\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
                 });
+                const passageState = { passageTokens: {} };
 
-                it("should capture the passage reference for a [[target]] link", () => {
-                    const header = ":: Passage\n";
-                    const passage =
-                        "We shall introduce: a link!\n" +
-                        "Here it is: [[ target passage ]]\n";
-                    const callbacks = new MockCallbacks();
-                    const state = buildParsingState({
-                        uri: "fake-uri",
-                        content: header + passage,
-                        callbacks: callbacks,
-                    });
-                    const passageState = { passageTokens: {} };
+                uut.parseLinks(passage, 2, state, passageState);
+                const result = passageState.passageTokens;
 
-                    uut.parseLinks(passage, header.length, state, passageState);
-                    const result = callbacks.references;
-
-                    expect(result).to.eql([
-                        {
-                            contents: "target passage",
-                            location: Location.create(
-                                "fake-uri",
-                                Range.create(2, 15, 2, 29)
-                            ),
-                            kind: TwineSymbolKind.Passage,
-                        },
-                    ]);
-                });
-
-                it("should set semantic tokens for a [[display|target]] link", () => {
-                    const header = ":: Passage\n";
-                    const passage =
-                        "We shall introduce: a link!\n" +
-                        "Here it is: [[display w a string | target passage]]\n";
-                    const callbacks = new MockCallbacks();
-                    const state = buildParsingState({
-                        content: header + passage,
-                        callbacks: callbacks,
-                    });
-                    const passageState = { passageTokens: {} };
-
-                    uut.parseLinks(passage, 2, state, passageState);
-                    const result = passageState.passageTokens;
-
-                    expect(result).to.eql({
-                        44: {
-                            text: "display w a string",
-                            at: 44,
-                            type: ETokenType.string,
-                            modifiers: [],
-                        },
-                        63: {
-                            text: "|",
-                            at: 63,
-                            type: ETokenType.keyword,
-                            modifiers: [],
-                        },
-                        65: {
-                            text: "target passage",
-                            at: 65,
-                            type: ETokenType.class,
-                            modifiers: [],
-                        },
-                    });
-                });
-
-                it("should capture the passage reference for a [[display|target]] link", () => {
-                    const header = ":: Passage\n";
-                    const passage =
-                        "We shall introduce: a link!\n" +
-                        "Here it is: [[display w a string | target passage ]]\n";
-                    const callbacks = new MockCallbacks();
-                    const state = buildParsingState({
-                        uri: "fake-uri",
-                        content: header + passage,
-                        callbacks: callbacks,
-                    });
-                    const passageState = { passageTokens: {} };
-
-                    uut.parseLinks(passage, header.length, state, passageState);
-                    const result = callbacks.references;
-
-                    expect(result).to.eql([
-                        {
-                            contents: "target passage",
-                            location: Location.create(
-                                "fake-uri",
-                                Range.create(2, 35, 2, 49)
-                            ),
-                            kind: TwineSymbolKind.Passage,
-                        },
-                    ]);
-                });
-
-                it("should set semantic tokens for a [[display->target]] link", () => {
-                    const header = ":: Passage\n";
-                    const passage =
-                        "We shall introduce: a link!\n" +
-                        "Here it is: [[display w a string -> target passage]]\n";
-                    const callbacks = new MockCallbacks();
-                    const state = buildParsingState({
-                        content: header + passage,
-                        callbacks: callbacks,
-                    });
-                    const passageState = { passageTokens: {} };
-
-                    uut.parseLinks(passage, 2, state, passageState);
-                    const result = passageState.passageTokens;
-
-                    expect(result).to.eql({
-                        44: {
-                            text: "display w a string",
-                            at: 44,
-                            type: ETokenType.string,
-                            modifiers: [],
-                        },
-                        63: {
-                            text: "->",
-                            at: 63,
-                            type: ETokenType.keyword,
-                            modifiers: [],
-                        },
-                        66: {
-                            text: "target passage",
-                            at: 66,
-                            type: ETokenType.class,
-                            modifiers: [],
-                        },
-                    });
-                });
-
-                it("should capture the passage reference for a [[display->target]] link", () => {
-                    const header = ":: Passage\n";
-                    const passage =
-                        "We shall introduce: a link!\n" +
-                        "Here it is: [[display w a string -> target passage ]]\n";
-                    const callbacks = new MockCallbacks();
-                    const state = buildParsingState({
-                        uri: "fake-uri",
-                        content: header + passage,
-                        callbacks: callbacks,
-                    });
-                    const passageState = { passageTokens: {} };
-
-                    uut.parseLinks(passage, header.length, state, passageState);
-                    const result = callbacks.references;
-
-                    expect(result).to.eql([
-                        {
-                            contents: "target passage",
-                            location: Location.create(
-                                "fake-uri",
-                                Range.create(2, 36, 2, 50)
-                            ),
-                            kind: TwineSymbolKind.Passage,
-                        },
-                    ]);
-                });
-
-                it("should set semantic tokens for a [[target<-display]] link", () => {
-                    const header = ":: Passage\n";
-                    const passage =
-                        "We shall introduce: a link!\n" +
-                        "Here it is: [[ target passage <- display w a string ]]\n";
-                    const callbacks = new MockCallbacks();
-                    const state = buildParsingState({
-                        content: header + passage,
-                        callbacks: callbacks,
-                    });
-                    const passageState = { passageTokens: {} };
-
-                    uut.parseLinks(passage, 2, state, passageState);
-                    const result = passageState.passageTokens;
-
-                    expect(result).to.eql({
-                        45: {
-                            text: "target passage",
-                            at: 45,
-                            type: ETokenType.class,
-                            modifiers: [],
-                        },
-                        60: {
-                            text: "<-",
-                            at: 60,
-                            type: ETokenType.keyword,
-                            modifiers: [],
-                        },
-                        63: {
-                            text: "display w a string",
-                            at: 63,
-                            type: ETokenType.string,
-                            modifiers: [],
-                        },
-                    });
-                });
-
-                it("should capture the passage reference for a [[target<-display]] link", () => {
-                    const header = ":: Passage\n";
-                    const passage =
-                        "We shall introduce: a link!\n" +
-                        "Here it is: [[ target passage <- display w a string ]]\n";
-                    const callbacks = new MockCallbacks();
-                    const state = buildParsingState({
-                        uri: "fake-uri",
-                        content: header + passage,
-                        callbacks: callbacks,
-                    });
-                    const passageState = { passageTokens: {} };
-
-                    uut.parseLinks(passage, header.length, state, passageState);
-                    const result = callbacks.references;
-
-                    expect(result).to.eql([
-                        {
-                            contents: "target passage",
-                            location: Location.create(
-                                "fake-uri",
-                                Range.create(2, 15, 2, 29)
-                            ),
-                            kind: TwineSymbolKind.Passage,
-                        },
-                    ]);
+                expect(result).to.eql({
+                    45: {
+                        text: "target passage",
+                        at: 45,
+                        type: ETokenType.class,
+                        modifiers: [],
+                    },
                 });
             });
 
-            describe("html", () => {
-                it("should set an embedded document for an HTML style tag", () => {
-                    const header = ":: Passage\n";
-                    const passage =
-                        "Some content.\n" +
-                        "More content<style>\n" +
-                        "  html {\n" +
-                        "    margin: 1px;\n" +
-                        "  }\n" +
-                        "</style> And final content";
-                    const callbacks = new MockCallbacks();
-                    const state = buildParsingState({
-                        content: header + passage,
-                        callbacks: callbacks,
-                    });
+            it("should capture the passage reference for a [[target]] link", () => {
+                const header = ":: Passage\n";
+                const passage =
+                    "We shall introduce: a link!\n" +
+                    "Here it is: [[ target passage ]]\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    uri: "fake-uri",
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const passageState = { passageTokens: {} };
 
-                    uut.parseHtml(passage, header.length, state);
-                    const [result] = callbacks.embeddedDocuments;
+                uut.parseLinks(passage, header.length, state, passageState);
+                const result = callbacks.references;
 
-                    expect(result.document.getText()).to.eql(
-                        "\n  html {\n    margin: 1px;\n  }\n"
-                    );
-                    expect(result.document.languageId).to.eql("css");
-                    expect(result.range).to.eql(Range.create(2, 19, 6, 0));
+                expect(result).to.eql([
+                    {
+                        contents: "target passage",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(2, 15, 2, 29)
+                        ),
+                        kind: TwineSymbolKind.Passage,
+                    },
+                ]);
+            });
+
+            it("should not capture a passage reference for a [[target]] link that's a URL", () => {
+                const header = ":: Passage\n";
+                const passage =
+                    "We shall introduce: a URL link!\n" +
+                    "Here it is: [[ https://herewe.go/ ]]\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    uri: "fake-uri",
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const passageState = { passageTokens: {} };
+
+                uut.parseLinks(passage, header.length, state, passageState);
+                const result = callbacks.references;
+
+                expect(result).to.be.empty;
+            });
+
+            it("should set semantic tokens for a [[display|target]] link", () => {
+                const header = ":: Passage\n";
+                const passage =
+                    "We shall introduce: a link!\n" +
+                    "Here it is: [[display w a string | target passage]]\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const passageState = { passageTokens: {} };
+
+                uut.parseLinks(passage, 2, state, passageState);
+                const result = passageState.passageTokens;
+
+                expect(result).to.eql({
+                    44: {
+                        text: "display w a string",
+                        at: 44,
+                        type: ETokenType.string,
+                        modifiers: [],
+                    },
+                    63: {
+                        text: "|",
+                        at: 63,
+                        type: ETokenType.keyword,
+                        modifiers: [],
+                    },
+                    65: {
+                        text: "target passage",
+                        at: 65,
+                        type: ETokenType.class,
+                        modifiers: [],
+                    },
+                });
+            });
+
+            it("should capture the passage reference for a [[display|target]] link", () => {
+                const header = ":: Passage\n";
+                const passage =
+                    "We shall introduce: a link!\n" +
+                    "Here it is: [[display w a string | target passage ]]\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    uri: "fake-uri",
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const passageState = { passageTokens: {} };
+
+                uut.parseLinks(passage, header.length, state, passageState);
+                const result = callbacks.references;
+
+                expect(result).to.eql([
+                    {
+                        contents: "target passage",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(2, 35, 2, 49)
+                        ),
+                        kind: TwineSymbolKind.Passage,
+                    },
+                ]);
+            });
+
+            it("should set semantic tokens for a [[display->target]] link", () => {
+                const header = ":: Passage\n";
+                const passage =
+                    "We shall introduce: a link!\n" +
+                    "Here it is: [[display w a string -> target passage]]\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const passageState = { passageTokens: {} };
+
+                uut.parseLinks(passage, 2, state, passageState);
+                const result = passageState.passageTokens;
+
+                expect(result).to.eql({
+                    44: {
+                        text: "display w a string",
+                        at: 44,
+                        type: ETokenType.string,
+                        modifiers: [],
+                    },
+                    63: {
+                        text: "->",
+                        at: 63,
+                        type: ETokenType.keyword,
+                        modifiers: [],
+                    },
+                    66: {
+                        text: "target passage",
+                        at: 66,
+                        type: ETokenType.class,
+                        modifiers: [],
+                    },
+                });
+            });
+
+            it("should capture the passage reference for a [[display->target]] link", () => {
+                const header = ":: Passage\n";
+                const passage =
+                    "We shall introduce: a link!\n" +
+                    "Here it is: [[display w a string -> target passage ]]\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    uri: "fake-uri",
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const passageState = { passageTokens: {} };
+
+                uut.parseLinks(passage, header.length, state, passageState);
+                const result = callbacks.references;
+
+                expect(result).to.eql([
+                    {
+                        contents: "target passage",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(2, 36, 2, 50)
+                        ),
+                        kind: TwineSymbolKind.Passage,
+                    },
+                ]);
+            });
+
+            it("should set semantic tokens for a [[target<-display]] link", () => {
+                const header = ":: Passage\n";
+                const passage =
+                    "We shall introduce: a link!\n" +
+                    "Here it is: [[ target passage <- display w a string ]]\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const passageState = { passageTokens: {} };
+
+                uut.parseLinks(passage, 2, state, passageState);
+                const result = passageState.passageTokens;
+
+                expect(result).to.eql({
+                    45: {
+                        text: "target passage",
+                        at: 45,
+                        type: ETokenType.class,
+                        modifiers: [],
+                    },
+                    60: {
+                        text: "<-",
+                        at: 60,
+                        type: ETokenType.keyword,
+                        modifiers: [],
+                    },
+                    63: {
+                        text: "display w a string",
+                        at: 63,
+                        type: ETokenType.string,
+                        modifiers: [],
+                    },
+                });
+            });
+
+            it("should capture the passage reference for a [[target<-display]] link", () => {
+                const header = ":: Passage\n";
+                const passage =
+                    "We shall introduce: a link!\n" +
+                    "Here it is: [[ target passage <- display w a string ]]\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    uri: "fake-uri",
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const passageState = { passageTokens: {} };
+
+                uut.parseLinks(passage, header.length, state, passageState);
+                const result = callbacks.references;
+
+                expect(result).to.eql([
+                    {
+                        contents: "target passage",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(2, 15, 2, 29)
+                        ),
+                        kind: TwineSymbolKind.Passage,
+                    },
+                ]);
+            });
+        });
+
+        describe("Html", () => {
+            it("should set an embedded document for an HTML style tag", () => {
+                const header = ":: Passage\n";
+                const passage =
+                    "Some content.\n" +
+                    "More content<style>\n" +
+                    "  html {\n" +
+                    "    margin: 1px;\n" +
+                    "  }\n" +
+                    "</style> And final content";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
                 });
 
-                it("should replace the HTML style section with blanks in the subsection", () => {
-                    const header = ":: Passage\n";
-                    const passage =
-                        "Some content.\n" +
-                        "More content<style>\n" +
-                        "  html {\n" +
-                        "    margin: 1px;\n" +
-                        "  }\n" +
-                        "</style> And final content";
-                    const callbacks = new MockCallbacks();
-                    const state = buildParsingState({
-                        content: header + passage,
-                        callbacks: callbacks,
-                    });
+                uut.parseHtml(passage, header.length, state);
+                const [result] = callbacks.embeddedDocuments;
 
-                    const result = uut.parseHtml(passage, header.length, state);
+                expect(result.document.getText()).to.eql(
+                    "\n  html {\n    margin: 1px;\n  }\n"
+                );
+                expect(result.document.languageId).to.eql("css");
+                expect(result.range).to.eql(Range.create(2, 19, 6, 0));
+            });
 
-                    expect(result).to.eql(
-                        "Some content.\n" +
-                            "More content        " +
-                            "         " +
-                            "                 " +
-                            "    " +
-                            "         And final content"
-                    );
+            it("should replace the HTML style section with blanks in the subsection", () => {
+                const header = ":: Passage\n";
+                const passage =
+                    "Some content.\n" +
+                    "More content<style>\n" +
+                    "  html {\n" +
+                    "    margin: 1px;\n" +
+                    "  }\n" +
+                    "</style> And final content";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
                 });
+
+                const result = uut.parseHtml(passage, header.length, state);
+
+                expect(result).to.eql(
+                    "Some content.\n" +
+                        "More content        " +
+                        "         " +
+                        "                 " +
+                        "    " +
+                        "         And final content"
+                );
             });
         });
     });

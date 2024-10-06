@@ -2,7 +2,7 @@ import { Symbol, TwineSymbolKind } from "../../project-index";
 import { versionCompare } from "../../utilities";
 
 /**
- * Whether an Chapbook function (modifier or insert)'s argument is required.
+ * Whether a Chapbook function (modifier or insert)'s argument is required.
  */
 export enum ArgumentRequirement {
     required,
@@ -186,6 +186,7 @@ export const OChapbookSymbolKind = {
 };
 export type ChapbookSymbolKind =
     (typeof OChapbookSymbolKind)[keyof typeof OChapbookSymbolKind];
+
 /**
  * A Chapbook symbol, which corresponds to a modifier, insert, or variable.
  */

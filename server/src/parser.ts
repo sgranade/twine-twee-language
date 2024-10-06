@@ -302,7 +302,7 @@ export function parseLinks(
     storyFormatParsingState: StoryFormatParsingState
 ): string {
     for (const m of subsection.matchAll(/\[\[(.*?)\]\]/g)) {
-        // Get rid of the link from the subsection text so it doesn't get re-parsed when we look for inserts
+        // Get rid of the link from the subsection text so it doesn't get re-parsed when we look for other content
         subsection =
             subsection.slice(0, m.index) +
             " ".repeat(m[0].length) +
@@ -348,12 +348,14 @@ export function parseLinks(
 
         let indexDelta;
         [target, targetIndex] = skipSpaces(target, targetIndex);
-        parsePassageReference(
-            target,
-            subsectionIndex + linksIndex + targetIndex,
-            state,
-            storyFormatParsingState
-        );
+        // Only capture target as a passage reference if it's not a URL
+        if (!/^https?:\/\//.test(target))
+            parsePassageReference(
+                target,
+                subsectionIndex + linksIndex + targetIndex,
+                state,
+                storyFormatParsingState
+            );
 
         if (dividerIndex !== -1) {
             capturePreTokenFor(
