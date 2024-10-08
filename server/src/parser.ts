@@ -280,7 +280,112 @@ export function parsePassageReference(
 }
 
 /**
- * Parse Twine links.
+ * A parsed Twine link, of the form [[target]], [[display|target]],
+ * [[display->target]], or [[target->display]]
+ */
+export interface TwineLink {
+    /**
+     * String containing the target text.
+     */
+    target: string;
+    /**
+     * Index of the target text in the document.
+     */
+    targetIndex: number;
+    /**
+     * Optional display section
+     */
+    displaySection?: {
+        /**
+         * The divider character(s) (`|`, `->`, or `<-`), if present.
+         */
+        divider: string;
+        /**
+         * Index of the divider in the document.
+         */
+        dividerIndex: number;
+        /**
+         * String containing the text to be displayed, if present.
+         */
+        display: string;
+        /**
+         * Index of the display text in the document.
+         */
+        displayIndex: number;
+    };
+}
+
+/**
+ * Parse the internal text of a Twine link.
+ *
+ * This is a separate function since SugarCube extends the usual [[link]] syntax
+ * to include [[link][setter]] and similar permutations, where [setter] sets
+ * a variable as a side effect, and we want to be able to use the same link
+ * parsing code across story formats.
+ *
+ * @param linkText Text containing the link's internals without the [[ ]]
+ * @param linkIndex Index in the document where the link text begins (zero-based).
+ */
+export function parseLink(linkText: string, linkIndex: number): TwineLink {
+    let display = linkText; // The section that will be displayed
+    let displayIndex = 0; // Relative to the start of linkText
+    let target = display;
+    let targetIndex = displayIndex;
+    let dividerIndex: number;
+    let divider = "";
+
+    // [[display|target]] format
+    dividerIndex = display.indexOf("|");
+    if (dividerIndex !== -1) {
+        display = target.substring(0, dividerIndex);
+        targetIndex = dividerIndex + 1;
+        target = target.substring(targetIndex);
+        divider = "|";
+    } else {
+        // [[display->target]] format
+        dividerIndex = display.indexOf("->");
+
+        if (dividerIndex !== -1) {
+            display = target.substring(0, dividerIndex);
+            targetIndex = dividerIndex + 2;
+            target = target.substring(targetIndex);
+            divider = "->";
+        } else {
+            // [[target<-display]] format
+            dividerIndex = display.indexOf("<-");
+
+            if (dividerIndex !== -1) {
+                target = display.substring(0, dividerIndex);
+                displayIndex = dividerIndex + 2;
+                display = display.substring(displayIndex);
+                divider = "<-";
+            }
+            // Otherwise [[target]] format
+        }
+    }
+
+    let indexDelta;
+    [target, targetIndex] = skipSpaces(target, targetIndex);
+    const ret: TwineLink = {
+        target: target,
+        targetIndex: linkIndex + targetIndex,
+    };
+    if (dividerIndex !== -1) {
+        [display, indexDelta] = removeAndCountPadding(display);
+        displayIndex += indexDelta;
+        ret.displaySection = {
+            divider: divider,
+            dividerIndex: linkIndex + dividerIndex,
+            display: display,
+            displayIndex: linkIndex + displayIndex,
+        };
+    }
+
+    return ret;
+}
+
+/**
+ * Find and parse Twine links.
  *
  * Story formats are responsible for calling this, but since this format is shared among
  * those formats, it's part of the main parsing code.
@@ -295,7 +400,7 @@ export function parsePassageReference(
  * @param storyFormatParsingState Story-format-specific parsing state.
  * @returns Updated subsection with the link sections blanked out.
  */
-export function parseLinks(
+export function findAndParseLinks(
     subsection: string,
     subsectionIndex: number,
     state: ParsingState,
@@ -308,68 +413,28 @@ export function parseLinks(
             " ".repeat(m[0].length) +
             subsection.slice(m.index + m[0].length);
 
-        const linksIndex = m.index + 2; // + 2 for the opening braces
-        let display = m[1];
-        let displayIndex = 0; // Relative to the start of m[1]
-        let target = display;
-        let targetIndex = displayIndex;
-        let dividerIndex: number;
-        let divider = "";
-
-        // [[display|target]] format
-        dividerIndex = display.indexOf("|");
-        if (dividerIndex !== -1) {
-            display = target.substring(0, dividerIndex);
-            targetIndex = dividerIndex + 1;
-            target = target.substring(targetIndex);
-            divider = "|";
-        } else {
-            // [[display->target]] format
-            dividerIndex = display.indexOf("->");
-
-            if (dividerIndex !== -1) {
-                display = target.substring(0, dividerIndex);
-                targetIndex = dividerIndex + 2;
-                target = target.substring(targetIndex);
-                divider = "->";
-            } else {
-                // [[target<-display]] format
-                dividerIndex = display.indexOf("<-");
-
-                if (dividerIndex !== -1) {
-                    target = display.substring(0, dividerIndex);
-                    displayIndex = dividerIndex + 2;
-                    display = display.substring(displayIndex);
-                    divider = "<-";
-                }
-                // Otherwise [[target]] format
-            }
-        }
-
-        let indexDelta;
-        [target, targetIndex] = skipSpaces(target, targetIndex);
+        // Parse the link's contents. (The + 2 in the match is for the opening braces)
+        const link = parseLink(m[1], subsectionIndex + m.index + 2);
         // Only capture target as a passage reference if it's not a URL
-        if (!/^https?:\/\//.test(target))
+        if (!/^https?:\/\//.test(link.target))
             parsePassageReference(
-                target,
-                subsectionIndex + linksIndex + targetIndex,
+                link.target,
+                link.targetIndex,
                 state,
                 storyFormatParsingState
             );
 
-        if (dividerIndex !== -1) {
+        if (link.displaySection !== undefined) {
             capturePreTokenFor(
-                divider,
-                subsectionIndex + linksIndex + dividerIndex,
+                link.displaySection.divider,
+                link.displaySection.dividerIndex,
                 ETokenType.keyword,
                 [],
                 storyFormatParsingState
             );
-            [display, indexDelta] = removeAndCountPadding(display);
-            displayIndex += indexDelta;
             capturePreTokenFor(
-                display,
-                subsectionIndex + linksIndex + displayIndex,
+                link.displaySection.display,
+                link.displaySection.displayIndex,
                 ETokenType.string,
                 [],
                 storyFormatParsingState

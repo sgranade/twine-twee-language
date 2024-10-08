@@ -15,7 +15,7 @@ import {
     logWarningFor,
     logErrorFor,
     logSemanticTokenFor,
-    parseLinks,
+    findAndParseLinks,
     parsePassageReference,
     createSymbolFor,
     createLocationFor,
@@ -1628,7 +1628,7 @@ function parseTextSubsection(
         // Parse Twine links first
         // The function replaces the link text with blank spaces so, if any include
         // curly braces, they don't get parsed as inserts.
-        subsection = parseLinks(
+        subsection = findAndParseLinks(
             subsection,
             subsectionIndex,
             state,

@@ -190,7 +190,6 @@ export type ChapbookSymbolKind =
 /**
  * A Chapbook symbol, which corresponds to a modifier, insert, or variable.
  */
-
 export interface ChapbookSymbol extends Symbol, ChapbookFunctionInfo {}
 export namespace ChapbookSymbol {
     /**

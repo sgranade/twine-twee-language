@@ -859,7 +859,12 @@ describe("Twine Parser", () => {
                 });
                 const passageState = { passageTokens: {} };
 
-                uut.parseLinks(passage, header.length, state, passageState);
+                uut.findAndParseLinks(
+                    passage,
+                    header.length,
+                    state,
+                    passageState
+                );
 
                 expect(passageState.passageTokens).to.be.empty;
             });
@@ -876,7 +881,7 @@ describe("Twine Parser", () => {
                 });
                 const passageState = { passageTokens: {} };
 
-                uut.parseLinks(passage, 2, state, passageState);
+                uut.findAndParseLinks(passage, 2, state, passageState);
                 const result = passageState.passageTokens;
 
                 expect(result).to.eql({
@@ -902,7 +907,12 @@ describe("Twine Parser", () => {
                 });
                 const passageState = { passageTokens: {} };
 
-                uut.parseLinks(passage, header.length, state, passageState);
+                uut.findAndParseLinks(
+                    passage,
+                    header.length,
+                    state,
+                    passageState
+                );
                 const result = callbacks.references;
 
                 expect(result).to.eql([
@@ -930,7 +940,12 @@ describe("Twine Parser", () => {
                 });
                 const passageState = { passageTokens: {} };
 
-                uut.parseLinks(passage, header.length, state, passageState);
+                uut.findAndParseLinks(
+                    passage,
+                    header.length,
+                    state,
+                    passageState
+                );
                 const result = callbacks.references;
 
                 expect(result).to.be.empty;
@@ -948,7 +963,7 @@ describe("Twine Parser", () => {
                 });
                 const passageState = { passageTokens: {} };
 
-                uut.parseLinks(passage, 2, state, passageState);
+                uut.findAndParseLinks(passage, 2, state, passageState);
                 const result = passageState.passageTokens;
 
                 expect(result).to.eql({
@@ -986,7 +1001,12 @@ describe("Twine Parser", () => {
                 });
                 const passageState = { passageTokens: {} };
 
-                uut.parseLinks(passage, header.length, state, passageState);
+                uut.findAndParseLinks(
+                    passage,
+                    header.length,
+                    state,
+                    passageState
+                );
                 const result = callbacks.references;
 
                 expect(result).to.eql([
@@ -1013,7 +1033,7 @@ describe("Twine Parser", () => {
                 });
                 const passageState = { passageTokens: {} };
 
-                uut.parseLinks(passage, 2, state, passageState);
+                uut.findAndParseLinks(passage, 2, state, passageState);
                 const result = passageState.passageTokens;
 
                 expect(result).to.eql({
@@ -1051,7 +1071,12 @@ describe("Twine Parser", () => {
                 });
                 const passageState = { passageTokens: {} };
 
-                uut.parseLinks(passage, header.length, state, passageState);
+                uut.findAndParseLinks(
+                    passage,
+                    header.length,
+                    state,
+                    passageState
+                );
                 const result = callbacks.references;
 
                 expect(result).to.eql([
@@ -1078,7 +1103,7 @@ describe("Twine Parser", () => {
                 });
                 const passageState = { passageTokens: {} };
 
-                uut.parseLinks(passage, 2, state, passageState);
+                uut.findAndParseLinks(passage, 2, state, passageState);
                 const result = passageState.passageTokens;
 
                 expect(result).to.eql({
@@ -1116,7 +1141,12 @@ describe("Twine Parser", () => {
                 });
                 const passageState = { passageTokens: {} };
 
-                uut.parseLinks(passage, header.length, state, passageState);
+                uut.findAndParseLinks(
+                    passage,
+                    header.length,
+                    state,
+                    passageState
+                );
                 const result = callbacks.references;
 
                 expect(result).to.eql([

@@ -1,10 +1,18 @@
 import { Diagnostic, DiagnosticSeverity } from "vscode-languageserver";
 
-import { StoryFormatParsingState } from "..";
+import { capturePreTokenFor, StoryFormatParsingState } from "..";
 import { EmbeddedDocument } from "../../embedded-languages";
 import { tokenizeJSExpression } from "../../js-parser";
-import { ParsingState, logSemanticTokenFor, ParseLevel } from "../../parser";
+import {
+    ParsingState,
+    logSemanticTokenFor,
+    ParseLevel,
+    createSymbolFor,
+} from "../../parser";
 import { versionCompare } from "../../utilities";
+import { sc2Patterns } from "./sc2/sc2-patterns";
+import { OSugarCubeSymbolKind, SugarCubeSymbolKind } from "./types";
+import { ETokenType, TokenType } from "../../tokens";
 
 /**
  * Passage tags that correspond to a media passage.
@@ -15,6 +23,139 @@ const mediaPassageTags = new Set([
     "Twine.video",
     "Twine.vtt",
 ]);
+
+/**
+ * Regex to match bare SugarCube 2 variables.
+ * Supported syntax:
+ *   $variable
+ *   $variable.property
+ *   $variable[numericIndex]
+ *   $variable["property"]
+ *   $variable['property']
+ *   $variable[$indexOrPropertyVariable]
+ * In any of the above, the `$` sigil (for global variables) can be
+ * replaced by `_` (for temporary variables).
+ */
+const bareVariableRegex = new RegExp(
+    [
+        `(?<variable>${sc2Patterns.variableWithSigil})`,
+        `(?:`,
+        [
+            `(?:\\.(?<property>${sc2Patterns.identifier}))`,
+            `(?:\\[(?<index>\\d+)\\])`,
+            `(?:\\[(?<str>("|')(?:\\\\.|(?!\\\\|\\5).)+\\5)\\])`,
+            `(?:\\[(?<refvar>${sc2Patterns.variableWithSigil})\\])`,
+        ].join("|"),
+        `)?`,
+    ].join(""),
+    "g"
+);
+
+/**
+ * Parse bare variables.
+ *
+ * @param passageText Passage text to parse.
+ * @param textIndex Index of the text in the document (zero-based).
+ * @param state Parsing state.
+ * @param sugarcubeState SugarCube-specific parsing state.
+ */
+function parseBareVariables(
+    passageText: string,
+    textIndex: number,
+    state: ParsingState,
+    sugarcubeState: StoryFormatParsingState
+): void {
+    bareVariableRegex.lastIndex = 0;
+    for (const m of passageText.matchAll(bareVariableRegex)) {
+        if (m.groups === undefined) continue;
+        const { variable, property, index, str, refvar } = m.groups;
+        const mIndex = m.index + textIndex;
+        let pIndex = mIndex + variable.length + 1; // Index to the .property or [index]; the +1 skips `.` or `[`
+        // Store a reference to the variable
+        state.callbacks.onSymbolReference(
+            createSymbolFor(
+                variable.slice(1),
+                mIndex + 1,
+                OSugarCubeSymbolKind.Variable,
+                state.textDocument
+            )
+        );
+        // Create a variable semantic token
+        capturePreTokenFor(
+            variable,
+            mIndex,
+            ETokenType.variable,
+            [],
+            sugarcubeState
+        );
+
+        // A property, numeric index, string accessor, or index variable all start at the same location
+        // but with different types
+        let symbol: string | undefined;
+        let kind: SugarCubeSymbolKind | undefined;
+        let tokenType: TokenType | undefined;
+        if (property !== undefined) {
+            symbol = property;
+            kind = OSugarCubeSymbolKind.Property;
+            tokenType = ETokenType.property;
+        } else if (index !== undefined) {
+            symbol = index;
+            tokenType = ETokenType.number;
+        } else if (str !== undefined) {
+            symbol = str;
+            tokenType = ETokenType.string;
+        } else if (refvar !== undefined) {
+            symbol = refvar;
+            kind = OSugarCubeSymbolKind.Variable;
+            tokenType = ETokenType.variable;
+        }
+
+        if (symbol !== undefined) {
+            if (tokenType !== undefined)
+                capturePreTokenFor(
+                    symbol,
+                    pIndex,
+                    tokenType,
+                    [],
+                    sugarcubeState
+                );
+
+            if (kind !== undefined) {
+                // Need to discard the sigil for variables
+                if (kind === OSugarCubeSymbolKind.Variable) {
+                    symbol = symbol.slice(1);
+                    pIndex++;
+                }
+                state.callbacks.onSymbolReference(
+                    createSymbolFor(symbol, pIndex, kind, state.textDocument)
+                );
+            }
+        }
+    }
+}
+
+const noWikiRegex = new RegExp(sc2Patterns.noWikiBlock, "gi");
+
+/**
+ * Remove nowiki text from a subsection.
+ *
+ * (Strictly speaking, we also remove inline code markup, too.)
+ *
+ * Examples: `"""remove"""`, `<nowiki>remove</nowiki>`, `{{{remove}}}`
+ *
+ * @param subsection Subsection to remove nowiki text from.
+ * @returns The subsection with nowiki text blanked out.
+ */
+function removeNoWikiText(subsection: string): string {
+    noWikiRegex.lastIndex = 0;
+    for (const m of subsection.matchAll(noWikiRegex)) {
+        subsection =
+            subsection.slice(0, m.index) +
+            " ".repeat(m[0].length) +
+            subsection.slice(m.index + m[0].length);
+    }
+    return subsection;
+}
 
 /**
  * Check for special passages and whether the special passage doesn't require additional processing.
@@ -205,6 +346,14 @@ export function parsePassageText(
 
     // Check for special passages, and stop processing if the special passage processing is done
     if (checkForSpecialPassages(state)) return;
+
+    // This parsing order matches that of the SC2 Wikifier Parser (`parserlib.js`)
+
+    // TODO parse macros
+
+    passageText = removeNoWikiText(passageText);
+
+    parseBareVariables(passageText, textIndex, state, sugarcubeState);
 
     // Submit semantic tokens in document order
     // (taking advantage of object own key enumeration order)
