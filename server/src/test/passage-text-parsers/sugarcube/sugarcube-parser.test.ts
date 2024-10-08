@@ -782,7 +782,6 @@ describe("SugarCube Parser", () => {
             parser?.parsePassageText(passage, header.length, state);
             const results = callbacks.tokens;
 
-            expect(results.length).to.equal(1);
             expect(results).to.eql([
                 {
                     line: 2,

@@ -4,15 +4,17 @@ import { capturePreTokenFor, StoryFormatParsingState } from "..";
 import { EmbeddedDocument } from "../../embedded-languages";
 import { tokenizeJSExpression } from "../../js-parser";
 import {
-    ParsingState,
-    logSemanticTokenFor,
     ParseLevel,
+    ParsingState,
     createSymbolFor,
+    logSemanticTokenFor,
+    parsePassageReference,
 } from "../../parser";
+import { ETokenType, TokenType } from "../../tokens";
 import { versionCompare } from "../../utilities";
+import { parseSquareBracketedMarkup } from "./sc2/sc2-lexer-parser";
 import { sc2Patterns } from "./sc2/sc2-patterns";
 import { OSugarCubeSymbolKind, SugarCubeSymbolKind } from "./types";
-import { ETokenType, TokenType } from "../../tokens";
 
 /**
  * Passage tags that correspond to a media passage.
@@ -132,6 +134,71 @@ function parseBareVariables(
             }
         }
     }
+}
+
+/**
+ * Parse Twine links.
+ *
+ * @param passageText Passage text to parse.
+ * @param textIndex Index of the text in the document (zero-based).
+ * @param state Parsing state.
+ * @param sugarcubeState SugarCube-specific parsing state.
+ * @returns The passage text with Twine links removed.
+ */
+function parseTwineLinks(
+    passageText: string,
+    textIndex: number,
+    state: ParsingState,
+    sugarcubeState: StoryFormatParsingState
+): string {
+    // Twine links in SugarCube can include TwineScript, which can have all
+    // kinds of array reference shenanigans, so we can't do a simple regex
+    // search. Instead, iterate over all possible link-opening sigils
+    for (const m of passageText.matchAll(/\[\[[^]/g)) {
+        const markupData = parseSquareBracketedMarkup(passageText, m.index);
+        if (
+            markupData.error === undefined &&
+            markupData.isLink &&
+            markupData.link !== undefined
+        ) {
+            parsePassageReference(
+                markupData.link.text,
+                markupData.link.at + textIndex,
+                state,
+                sugarcubeState
+            );
+
+            if (markupData.text !== undefined) {
+                capturePreTokenFor(
+                    markupData.text.text,
+                    markupData.text.at + textIndex,
+                    ETokenType.string,
+                    [],
+                    sugarcubeState
+                );
+            }
+            if (markupData.delim !== undefined) {
+                capturePreTokenFor(
+                    markupData.delim.text,
+                    markupData.delim.at + textIndex,
+                    ETokenType.keyword,
+                    [],
+                    sugarcubeState
+                );
+            }
+            if (markupData.setter !== undefined) {
+                // TODO parse TwineScript expression
+            }
+
+            // Blank out the link so any variables in it aren't re-parsed
+            passageText =
+                passageText.slice(0, m.index) +
+                " ".repeat(markupData.endPosition - m.index) +
+                passageText.slice(markupData.endPosition);
+        }
+    }
+
+    return passageText;
 }
 
 const noWikiRegex = new RegExp(sc2Patterns.noWikiBlock, "gi");
@@ -352,6 +419,13 @@ export function parsePassageText(
     // TODO parse macros
 
     passageText = removeNoWikiText(passageText);
+
+    passageText = parseTwineLinks(
+        passageText,
+        textIndex,
+        state,
+        sugarcubeState
+    );
 
     parseBareVariables(passageText, textIndex, state, sugarcubeState);
 
