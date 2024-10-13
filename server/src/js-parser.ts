@@ -1,8 +1,9 @@
 import * as acorn from "acorn";
 import * as acornLoose from "acorn-loose";
 import * as acornWalk from "acorn-walk";
+import { TextDocument } from "vscode-languageserver-textdocument";
 
-import { createLocationFor, ParsingState } from "./parser";
+import { createLocationFor } from "./parser";
 import {
     StoryFormatParsingState,
     capturePreTokenFor,
@@ -256,15 +257,15 @@ export function parseJSExpression(expression: string): acorn.Node | undefined {
  *
  * @param expression Expression to parse.
  * @param offset Offset into the document where the expression occurs.
- * @param state Parsing state.
- * @param passageState Passage state object that will collect tokens.
+ * @param document Document containing the expression.
+ * @param storyFormatState Story format parsing state that will collect semantic tokens.
  * @returns Two-tuple with separate lists of variable and property labels found in parsing.
  */
 export function tokenizeJSExpression(
     expression: string,
     offset: number,
-    state: ParsingState,
-    passageState: StoryFormatParsingState
+    document: TextDocument,
+    storyFormatState: StoryFormatParsingState
 ): [Label[], JSPropertyLabel[]] {
     const vars: Label[] = [];
     const props: JSPropertyLabel[] = [];
@@ -283,7 +284,7 @@ export function tokenizeJSExpression(
                     location: createLocationFor(
                         token.text,
                         offset + token.at,
-                        state.textDocument
+                        document
                     ),
                 });
             } else if (
@@ -295,7 +296,7 @@ export function tokenizeJSExpression(
                     location: createLocationFor(
                         token.text,
                         offset + token.at,
-                        state.textDocument
+                        document
                     ),
                     scope: token.scope,
                 });
@@ -305,7 +306,7 @@ export function tokenizeJSExpression(
                 offset + token.at,
                 token.type,
                 token.modifiers,
-                passageState
+                storyFormatState
             );
         }
     }

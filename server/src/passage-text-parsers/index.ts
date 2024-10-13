@@ -167,17 +167,17 @@ export interface StoryFormatParsingState {
  * @param at Index where the text occurs in the document (zero-based).
  * @param type Token type.
  * @param modifiers Token modifiers.
- * @param chapbookState Parsing state.
+ * @param storyFormatState Story format parsing state.
  */
 export function capturePreTokenFor(
     text: string,
     at: number,
     type: TokenType,
     modifiers: TokenModifier[],
-    state: StoryFormatParsingState
+    storyFormatState: StoryFormatParsingState
 ): void {
     if (text.length)
-        state.passageTokens[at] = {
+        storyFormatState.passageTokens[at] = {
             text,
             at,
             type,

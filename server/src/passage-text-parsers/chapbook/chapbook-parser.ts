@@ -1524,7 +1524,7 @@ function parseInsertOrVariable(
             tokenizeJSExpression(
                 invocation,
                 insertIndex + invocationIndex,
-                state,
+                state.textDocument,
                 chapbookState
             ),
             state
@@ -1557,7 +1557,7 @@ function parseInsertOrVariable(
             tokenizeJSExpression(
                 insertTokens.firstArgument.text,
                 insertTokens.firstArgument.at,
-                state,
+                state.textDocument,
                 chapbookState
             ),
             state
@@ -1572,7 +1572,7 @@ function parseInsertOrVariable(
             tokenizeJSExpression(
                 propValueToken.text,
                 propValueToken.at,
-                state,
+                state.textDocument,
                 chapbookState
             ),
             state
@@ -1605,7 +1605,12 @@ function parseTextSubsection(
         // We'll tokenize the contents, but not capture variable and
         // property references, as they mostly won't be set in Chapbook
         // vars sections and thus would cause a lot of spurious warnings
-        tokenizeJSExpression(subsection, subsectionIndex, state, chapbookState);
+        tokenizeJSExpression(
+            subsection,
+            subsectionIndex,
+            state.textDocument,
+            chapbookState
+        );
     } else if (chapbookState.modifierKind === ModifierKind.Css) {
         state.callbacks.onEmbeddedDocument(
             EmbeddedDocument.create(
@@ -1829,7 +1834,7 @@ function parseModifier(
                     tokenizeJSExpression(
                         modifierTokens.firstArgument.text,
                         modifierTokens.firstArgument.at,
-                        state,
+                        state.textDocument,
                         chapbookState
                     ),
                     state
@@ -2085,7 +2090,7 @@ function parseVarsSection(
                         sectionIndex +
                             conditionMatchIndex +
                             conditionMatch[0].indexOf(conditionMatch[3]),
-                        state,
+                        state.textDocument,
                         chapbookState
                     ),
                     state
@@ -2141,7 +2146,7 @@ function parseVarsSection(
             tokenizeJSExpression(
                 name,
                 sectionIndex + nameIndex,
-                state,
+                state.textDocument,
                 chapbookState
             ),
             state,
@@ -2169,7 +2174,7 @@ function parseVarsSection(
             tokenizeJSExpression(
                 value,
                 sectionIndex + valueIndex,
-                state,
+                state.textDocument,
                 chapbookState
             ),
             state

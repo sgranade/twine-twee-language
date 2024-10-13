@@ -308,7 +308,12 @@ function checkPassageTags(
     if (tagNames.includes("script")) {
         // We'll tokenize the contents, but not capture variable and
         // property references
-        tokenizeJSExpression(passageText, textIndex, state, sugarcubeState);
+        tokenizeJSExpression(
+            passageText,
+            textIndex,
+            state.textDocument,
+            sugarcubeState
+        );
         isHtmlPassage = false;
     } else if (tagNames.includes("stylesheet")) {
         state.callbacks.onEmbeddedDocument(

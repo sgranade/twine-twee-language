@@ -20,7 +20,12 @@ describe("JS Parser", () => {
             passageTokens: {},
         };
 
-        uut.tokenizeJSExpression(expression, offset, state, storyState);
+        uut.tokenizeJSExpression(
+            expression,
+            offset,
+            state.textDocument,
+            storyState
+        );
         const result = storyState.passageTokens;
 
         expect(result).to.eql({
@@ -45,7 +50,12 @@ describe("JS Parser", () => {
             passageTokens: {},
         };
 
-        uut.tokenizeJSExpression(expression, offset, state, storyState);
+        uut.tokenizeJSExpression(
+            expression,
+            offset,
+            state.textDocument,
+            storyState
+        );
         const result = storyState.passageTokens;
 
         expect(result).to.eql({
@@ -70,7 +80,12 @@ describe("JS Parser", () => {
             passageTokens: {},
         };
 
-        uut.tokenizeJSExpression(expression, offset, state, storyState);
+        uut.tokenizeJSExpression(
+            expression,
+            offset,
+            state.textDocument,
+            storyState
+        );
         const result = storyState.passageTokens;
 
         expect(result).to.eql({
@@ -95,7 +110,12 @@ describe("JS Parser", () => {
             passageTokens: {},
         };
 
-        uut.tokenizeJSExpression(expression, offset, state, storyState);
+        uut.tokenizeJSExpression(
+            expression,
+            offset,
+            state.textDocument,
+            storyState
+        );
         const result = storyState.passageTokens;
 
         expect(result[17]).to.eql({
@@ -118,7 +138,12 @@ describe("JS Parser", () => {
             passageTokens: {},
         };
 
-        uut.tokenizeJSExpression(expression, offset, state, storyState);
+        uut.tokenizeJSExpression(
+            expression,
+            offset,
+            state.textDocument,
+            storyState
+        );
         const result = storyState.passageTokens;
 
         expect(result[15]).to.eql({
@@ -141,7 +166,12 @@ describe("JS Parser", () => {
             passageTokens: {},
         };
 
-        uut.tokenizeJSExpression(expression, offset, state, storyState);
+        uut.tokenizeJSExpression(
+            expression,
+            offset,
+            state.textDocument,
+            storyState
+        );
         const result = storyState.passageTokens;
 
         expect(result[17]).to.eql({
@@ -164,7 +194,12 @@ describe("JS Parser", () => {
             passageTokens: {},
         };
 
-        uut.tokenizeJSExpression(expression, offset, state, storyState);
+        uut.tokenizeJSExpression(
+            expression,
+            offset,
+            state.textDocument,
+            storyState
+        );
         const result = storyState.passageTokens;
 
         expect(result[13]).to.eql({
@@ -187,7 +222,12 @@ describe("JS Parser", () => {
             passageTokens: {},
         };
 
-        uut.tokenizeJSExpression(expression, offset, state, storyState);
+        uut.tokenizeJSExpression(
+            expression,
+            offset,
+            state.textDocument,
+            storyState
+        );
         const result = storyState.passageTokens;
 
         expect(result[13]).to.eql({
@@ -210,7 +250,12 @@ describe("JS Parser", () => {
             passageTokens: {},
         };
 
-        uut.tokenizeJSExpression(expression, offset, state, storyState);
+        uut.tokenizeJSExpression(
+            expression,
+            offset,
+            state.textDocument,
+            storyState
+        );
         const result = storyState.passageTokens;
 
         expect(result[18]).to.eql({
@@ -233,7 +278,12 @@ describe("JS Parser", () => {
             passageTokens: {},
         };
 
-        uut.tokenizeJSExpression(expression, offset, state, storyState);
+        uut.tokenizeJSExpression(
+            expression,
+            offset,
+            state.textDocument,
+            storyState
+        );
         const result = storyState.passageTokens;
 
         expect(result[18]).to.eql({
@@ -262,7 +312,12 @@ describe("JS Parser", () => {
             passageTokens: {},
         };
 
-        uut.tokenizeJSExpression(expression, offset, state, storyState);
+        uut.tokenizeJSExpression(
+            expression,
+            offset,
+            state.textDocument,
+            storyState
+        );
         const result = storyState.passageTokens;
 
         expect(result[18]).to.eql({
@@ -285,7 +340,12 @@ describe("JS Parser", () => {
             passageTokens: {},
         };
 
-        uut.tokenizeJSExpression(expression, offset, state, storyState);
+        uut.tokenizeJSExpression(
+            expression,
+            offset,
+            state.textDocument,
+            storyState
+        );
         const result = storyState.passageTokens;
 
         expect(result[18]).to.eql({
@@ -308,7 +368,12 @@ describe("JS Parser", () => {
             passageTokens: {},
         };
 
-        uut.tokenizeJSExpression(expression, offset, state, storyState);
+        uut.tokenizeJSExpression(
+            expression,
+            offset,
+            state.textDocument,
+            storyState
+        );
         const result = storyState.passageTokens;
 
         expect(result[14]).to.eql({
@@ -352,7 +417,7 @@ describe("JS Parser", () => {
         const result = uut.tokenizeJSExpression(
             expression,
             offset,
-            state,
+            state.textDocument,
             storyState
         );
 
@@ -381,7 +446,7 @@ describe("JS Parser", () => {
         const result = uut.tokenizeJSExpression(
             expression,
             offset,
-            state,
+            state.textDocument,
             storyState
         );
 
@@ -418,7 +483,7 @@ describe("JS Parser", () => {
         const result = uut.tokenizeJSExpression(
             expression,
             offset,
-            state,
+            state.textDocument,
             storyState
         );
 
@@ -457,7 +522,7 @@ describe("JS Parser", () => {
         const result = uut.tokenizeJSExpression(
             expression,
             offset,
-            state,
+            state.textDocument,
             storyState
         );
 
@@ -496,7 +561,7 @@ describe("JS Parser", () => {
         const result = uut.tokenizeJSExpression(
             expression,
             offset,
-            state,
+            state.textDocument,
             storyState
         );
 
@@ -523,7 +588,7 @@ describe("JS Parser", () => {
         const result = uut.tokenizeJSExpression(
             expression,
             offset,
-            state,
+            state.textDocument,
             storyState
         );
 
@@ -550,7 +615,7 @@ describe("JS Parser", () => {
         const result = uut.tokenizeJSExpression(
             expression,
             offset,
-            state,
+            state.textDocument,
             storyState
         );
 
