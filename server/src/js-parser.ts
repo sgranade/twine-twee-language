@@ -38,6 +38,16 @@ export interface JSPropertyLabel extends Label {
      */
     scope?: string;
 }
+export namespace JSPropertyLabel {
+    /**
+     * Type guard for JSPropertyLabel.
+     */
+    export function is(val: any): val is JSPropertyLabel {
+        if (typeof val !== "object" || Array.isArray(val) || val === null)
+            return false;
+        return (val as JSPropertyLabel).scope !== undefined;
+    }
+}
 
 let currentExpression: string = "";
 let unprocessedTokens: Record<number, astUnprocessedToken> = {};

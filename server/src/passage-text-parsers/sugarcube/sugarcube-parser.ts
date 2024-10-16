@@ -2,7 +2,7 @@ import { Diagnostic, DiagnosticSeverity } from "vscode-languageserver";
 
 import { capturePreTokenFor, StoryFormatParsingState } from "..";
 import { EmbeddedDocument } from "../../embedded-languages";
-import { tokenizeJSExpression } from "../../js-parser";
+import { JSPropertyLabel, tokenizeJSExpression } from "../../js-parser";
 import {
     ParseLevel,
     ParsingState,
@@ -10,11 +10,13 @@ import {
     logSemanticTokenFor,
     parsePassageReference,
 } from "../../parser";
+import { Label } from "../../project-index";
 import { ETokenType, TokenType } from "../../tokens";
 import { versionCompare } from "../../utilities";
+import { OSugarCubeSymbolKind, SugarCubeSymbolKind } from "./types";
 import { parseSquareBracketedMarkup } from "./sc2/sc2-lexer-parser";
 import { sc2Patterns } from "./sc2/sc2-patterns";
-import { OSugarCubeSymbolKind, SugarCubeSymbolKind } from "./types";
+import { tokenizeTwineScriptExpression } from "./sc2/sc2-twinescript";
 
 /**
  * Passage tags that correspond to a media passage.
@@ -25,6 +27,38 @@ const mediaPassageTags = new Set([
     "Twine.video",
     "Twine.vtt",
 ]);
+
+/**
+ * Create symbol references for parsed variables and properties.
+ *
+ * @param varsAndProps Tuple with separate lists of variables and properties.
+ * @param state Parsing state.
+ * @param isSet True if the variables and properties are being set (assigned to).
+ */
+function createVariableAndPropertyReferences(
+    varsAndProps: [Label[], JSPropertyLabel[]],
+    state: ParsingState,
+    isSet: boolean = false
+): void {
+    for (const v of varsAndProps[0]) {
+        state.callbacks.onSymbolReference({
+            contents: v.contents,
+            location: v.location,
+            kind: OSugarCubeSymbolKind.Variable,
+        });
+    }
+    for (const p of varsAndProps[1]) {
+        // If there's a scope, add it to the name, b/c we save properties in their
+        // full object context (ex: `var.prop.subprop`).
+        const contents =
+            p.scope !== undefined ? `${p.scope}.${p.contents}` : p.contents;
+        state.callbacks.onSymbolReference({
+            contents: contents,
+            location: p.location,
+            kind: OSugarCubeSymbolKind.Property,
+        });
+    }
+}
 
 /**
  * Regex to match bare SugarCube 2 variables.
@@ -187,7 +221,15 @@ function parseTwineLinks(
                 );
             }
             if (markupData.setter !== undefined) {
-                // TODO parse TwineScript expression
+                createVariableAndPropertyReferences(
+                    tokenizeTwineScriptExpression(
+                        markupData.setter.text,
+                        markupData.setter.at + textIndex,
+                        state.textDocument,
+                        sugarcubeState
+                    ),
+                    state
+                );
             }
 
             // Blank out the link so any variables in it aren't re-parsed

@@ -14,7 +14,7 @@ describe("SugarCube TwineScript", () => {
 
             const result = uut.desugar("First $permanent then _temp");
 
-            expect(result.desugared).to.eql("First  permanent then  temp");
+            expect(result.desugared).to.eql("First Ppermanent then Ttemp");
             expect(result.positionMapping).to.eql([
                 {
                     originalStart: 6,
@@ -36,7 +36,7 @@ describe("SugarCube TwineScript", () => {
 
             const result = uut.desugar("$var to 17");
 
-            expect(result.desugared).to.eql(" var = 17");
+            expect(result.desugared).to.eql("Pvar = 17");
             expect(result.positionMapping).to.eql([
                 {
                     originalStart: 0,
@@ -195,9 +195,9 @@ describe("SugarCube TwineScript", () => {
             const result = storyState.passageTokens;
 
             expect(result).to.eql({
-                14: {
-                    text: "varbl",
-                    at: 14,
+                13: {
+                    text: "$varbl",
+                    at: 13,
                     type: ETokenType.variable,
                     modifiers: [],
                 },
@@ -238,10 +238,10 @@ describe("SugarCube TwineScript", () => {
 
             expect(result[0]).to.eql([
                 {
-                    contents: "varbl",
+                    contents: "$varbl",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(1, 1, 1, 6)
+                        Range.create(1, 0, 1, 6)
                     ),
                 },
             ]);
@@ -275,7 +275,7 @@ describe("SugarCube TwineScript", () => {
                         "fake-uri",
                         Range.create(1, 7, 1, 16)
                     ),
-                    scope: "varbl",
+                    scope: "$varbl",
                 },
                 {
                     contents: "rootprop2",
@@ -283,7 +283,7 @@ describe("SugarCube TwineScript", () => {
                         "fake-uri",
                         Range.create(1, 17, 1, 26)
                     ),
-                    scope: "varbl.rootprop1",
+                    scope: "$varbl.rootprop1",
                 },
             ]);
         });
@@ -468,9 +468,9 @@ describe("SugarCube TwineScript", () => {
             const result = storyState.passageTokens;
 
             expect(result).to.eql({
-                15: {
-                    text: "varbl",
-                    at: 15,
+                14: {
+                    text: "_varbl",
+                    at: 14,
                     type: ETokenType.variable,
                     modifiers: [],
                 },
@@ -529,9 +529,9 @@ describe("SugarCube TwineScript", () => {
                     type: ETokenType.operator,
                     modifiers: [],
                 },
-                18: {
-                    text: "varbl",
-                    at: 18,
+                17: {
+                    text: "$varbl",
+                    at: 17,
                     type: ETokenType.variable,
                     modifiers: [],
                 },
@@ -547,9 +547,9 @@ describe("SugarCube TwineScript", () => {
                     type: ETokenType.operator,
                     modifiers: [],
                 },
-                32: {
-                    text: "var1",
-                    at: 32,
+                31: {
+                    text: "_var1",
+                    at: 31,
                     type: ETokenType.variable,
                     modifiers: [],
                 },
@@ -565,9 +565,9 @@ describe("SugarCube TwineScript", () => {
                     type: ETokenType.operator,
                     modifiers: [],
                 },
-                46: {
-                    text: "var2",
-                    at: 46,
+                45: {
+                    text: "$var2",
+                    at: 45,
                     type: ETokenType.variable,
                     modifiers: [],
                 },

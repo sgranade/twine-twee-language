@@ -795,7 +795,7 @@ describe("SugarCube Parser", () => {
                     char: 32,
                     length: 6,
                     tokenType: ETokenType.variable,
-                    tokenModifiers: [ETokenModifier.modification],
+                    tokenModifiers: [],
                 },
                 {
                     line: 2,
@@ -838,6 +838,14 @@ describe("SugarCube Parser", () => {
                         Range.create(2, 15, 2, 29)
                     ),
                     kind: TwineSymbolKind.Passage,
+                },
+                {
+                    contents: "$tempy",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(2, 32, 2, 38)
+                    ),
+                    kind: OSugarCubeSymbolKind.Variable,
                 },
             ]);
         });
@@ -884,7 +892,7 @@ describe("SugarCube Parser", () => {
                     char: 51,
                     length: 6,
                     tokenType: ETokenType.variable,
-                    tokenModifiers: [ETokenModifier.modification],
+                    tokenModifiers: [],
                 },
                 {
                     line: 2,
@@ -927,6 +935,14 @@ describe("SugarCube Parser", () => {
                         Range.create(2, 35, 2, 49)
                     ),
                     kind: TwineSymbolKind.Passage,
+                },
+                {
+                    contents: "$tempy",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(2, 52, 2, 58)
+                    ),
+                    kind: OSugarCubeSymbolKind.Variable,
                 },
             ]);
         });
@@ -973,7 +989,7 @@ describe("SugarCube Parser", () => {
                     char: 52,
                     length: 6,
                     tokenType: ETokenType.variable,
-                    tokenModifiers: [ETokenModifier.modification],
+                    tokenModifiers: [],
                 },
                 {
                     line: 2,
@@ -984,7 +1000,7 @@ describe("SugarCube Parser", () => {
                 },
                 {
                     line: 2,
-                    char: 61,
+                    char: 62,
                     length: 1,
                     tokenType: ETokenType.number,
                     tokenModifiers: [],
@@ -1016,6 +1032,14 @@ describe("SugarCube Parser", () => {
                         Range.create(2, 36, 2, 50)
                     ),
                     kind: TwineSymbolKind.Passage,
+                },
+                {
+                    contents: "$tempy",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(2, 53, 2, 59)
+                    ),
+                    kind: OSugarCubeSymbolKind.Variable,
                 },
             ]);
         });
@@ -1062,7 +1086,7 @@ describe("SugarCube Parser", () => {
                     char: 54,
                     length: 6,
                     tokenType: ETokenType.variable,
-                    tokenModifiers: [ETokenModifier.modification],
+                    tokenModifiers: [],
                 },
                 {
                     line: 2,
@@ -1105,6 +1129,14 @@ describe("SugarCube Parser", () => {
                         Range.create(2, 15, 2, 29)
                     ),
                     kind: TwineSymbolKind.Passage,
+                },
+                {
+                    contents: "$tempy",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(2, 54, 2, 60)
+                    ),
+                    kind: OSugarCubeSymbolKind.Variable,
                 },
             ]);
         });

@@ -11,10 +11,12 @@ import { capturePreTokenFor, StoryFormatParsingState } from "../..";
  * Adapted from SugarCube's `scripting.js`
  */
 const desugarMap: { [key: string]: string } = {
+    // We replace variable sigils with a letter so that later tokenizing works
+    // properly
     // Story $variable sigil-prefix.
-    $: " ",
+    $: "P",
     // Temporary _variable sigil-prefix.
-    _: " ",
+    _: "T",
     // Assignment operator.
     to: "=",
     // Equality operators.
@@ -68,7 +70,8 @@ interface DesugarResult {
  * Replace TwineScript syntactic sugar with its Javascript equivalents.
  *
  * Note that `def` and `ndef` aren't properly translated to
- * `"undefined" !== typeof` and `"undefined" === typeof`
+ * `"undefined" !== typeof` and `"undefined" === typeof`, variable
+ * sigil `$` is replaced by `P` and `_` is replaced by `T`.
  *
  * @param str TwineScript string to desugar.
  * @returns The desugared string and mapping of old to new positions.
@@ -195,6 +198,7 @@ export function tokenizeTwineScriptExpression(
     );
 
     // Adjust variable and property locations and (if needed) text
+    const seenUnsugaredVars: Record<string, string> = {};
     for (const v of [...vars, ...props]) {
         const desugaredOffset = desugaredDocument.offsetAt(
             v.location.range.start
@@ -205,7 +209,25 @@ export function tokenizeTwineScriptExpression(
             positionMapping
         );
 
-        if (sugaredText !== undefined) v.contents = sugaredText;
+        // Variable sigils need to replace the first part of the existing string
+        if (sugaredText === "$" || sugaredText === "_") {
+            // Save the unsugared variable name and its replacement in seenVars
+            const unsugaredVar = v.contents;
+            v.contents = sugaredText + v.contents.slice(1);
+            seenUnsugaredVars[unsugaredVar] = v.contents;
+        } else if (sugaredText !== undefined) {
+            v.contents = sugaredText;
+        }
+
+        // If we have a property, we need to replace the desugared variable
+        // with its sugared value
+        if (JSPropertyLabel.is(v) && v.scope !== undefined) {
+            const rootVar = v.scope.split(".")[0];
+            const sugaredVar = seenUnsugaredVars[rootVar];
+            if (sugaredVar !== undefined) {
+                v.scope = v.scope.replace(rootVar, sugaredVar);
+            }
+        }
 
         v.location = createLocationFor(
             v.contents,
@@ -221,7 +243,10 @@ export function tokenizeTwineScriptExpression(
             positionMapping
         );
 
-        if (sugaredText !== undefined) t.text = sugaredText;
+        // Variable sigils need to replace the first part of the existing string
+        if (sugaredText === "$" || sugaredText === "_") {
+            t.text = sugaredText + t.text.slice(1);
+        } else if (sugaredText !== undefined) t.text = sugaredText;
 
         capturePreTokenFor(
             t.text,
