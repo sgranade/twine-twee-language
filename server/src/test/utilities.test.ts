@@ -127,6 +127,16 @@ describe("Utilities", () => {
         });
     });
 
+    describe("erase matches", () => {
+        it("should erase all matches", () => {
+            // No arrange
+
+            const result = uut.eraseMatches("this is a test", /t/g);
+
+            expect(result).to.equal(" his is a  es ");
+        });
+    });
+
     describe("remove padding", () => {
         it("should return the string without padding on the left and right", () => {
             // No arrange

@@ -6,13 +6,19 @@ import { JSPropertyLabel, tokenizeJSExpression } from "../../js-parser";
 import {
     ParseLevel,
     ParsingState,
+    createRangeFor,
     createSymbolFor,
     logSemanticTokenFor,
     parsePassageReference,
 } from "../../parser";
 import { Label } from "../../project-index";
-import { ETokenType, TokenType } from "../../tokens";
-import { versionCompare } from "../../utilities";
+import { ETokenModifier, ETokenType, TokenType } from "../../tokens";
+import {
+    createDiagnosticFor,
+    eraseMatches,
+    versionCompare,
+} from "../../utilities";
+import { all as allMacros, MacroParent } from "./macros";
 import { OSugarCubeSymbolKind, SugarCubeSymbolKind } from "./types";
 import { parseSquareBracketedMarkup } from "./sc2/sc2-lexer-parser";
 import { sc2Patterns } from "./sc2/sc2-patterns";
@@ -33,12 +39,10 @@ const mediaPassageTags = new Set([
  *
  * @param varsAndProps Tuple with separate lists of variables and properties.
  * @param state Parsing state.
- * @param isSet True if the variables and properties are being set (assigned to).
  */
 function createVariableAndPropertyReferences(
     varsAndProps: [Label[], JSPropertyLabel[]],
-    state: ParsingState,
-    isSet: boolean = false
+    state: ParsingState
 ): void {
     for (const v of varsAndProps[0]) {
         state.callbacks.onSymbolReference({
@@ -257,13 +261,260 @@ const noWikiRegex = new RegExp(sc2Patterns.noWikiBlock, "gi");
  */
 function removeNoWikiText(subsection: string): string {
     noWikiRegex.lastIndex = 0;
-    for (const m of subsection.matchAll(noWikiRegex)) {
-        subsection =
-            subsection.slice(0, m.index) +
+    return eraseMatches(subsection, noWikiRegex);
+}
+
+const macroRegex = new RegExp(sc2Patterns.fullMacro, "gm");
+const scriptStyleBlockRegex = new RegExp(sc2Patterns.scriptStyleBlock, "gm");
+
+interface macroLocationInfo {
+    name: string;
+    fullText: string;
+    at: number;
+    id: number; // To disambiguate macros with the same name
+}
+
+/**
+ * Parse SugarCube macros.
+ *
+ * @param passageText Passage text to parse.
+ * @param textIndex Index of the text in the document (zero-based).
+ * @param state Parsing state.
+ * @param sugarcubeState SugarCube-specific parsing state.
+ * @returns The passage text with macros removed.
+ */
+function parseMacros(
+    passageText: string,
+    textIndex: number,
+    state: ParsingState,
+    sugarcubeState: StoryFormatParsingState
+): string {
+    const builtInMacros = allMacros();
+
+    // Remove all script/style tag blocks
+    scriptStyleBlockRegex.lastIndex = 0;
+    const cleanedPassageText = eraseMatches(passageText, scriptStyleBlockRegex);
+
+    let macroId = 0;
+    const unclosedMacros: macroLocationInfo[] = [];
+    const macroChildCount: Record<number, Record<string, number>> = {}; // Map of parent macro ID to child name + count
+    macroRegex.lastIndex = 0;
+    for (const m of cleanedPassageText.matchAll(macroRegex)) {
+        const macroIndex = m.index + 2; // Index of the start of the macro (inside the <<)
+
+        // macroName: name of the macro
+        // macroBody: the body of the macro (e.g. its arguments)
+        // macroEnd: "end" or "/" at the start of the macro (e.g. <</if>>)
+        // macroSelfClose: "/" at the end of the macro
+        const { macroName, macroBody, macroEnd, macroSelfClose } = m.groups as {
+            [key: string]: string;
+        };
+
+        let isOpenMacro = true, // whether the macro is an opening one (i.e. not a close or self-closing one)
+            endVariant = false, // whether it's one that starts with "end"
+            name = macroName,
+            isSelfClosedMacro = false;
+
+        // TODO
+        // Handle e.g. "<<endif>>" alternate ending macros
+        // n.b. we need to do special handling because some macros may start with the letters "end"
+        // and not be literally ending a container macro
+
+        const macroInfo = builtInMacros[name];
+
+        if (macroEnd === "/" || endVariant) isOpenMacro = false; // Note if we know this is a closing macro
+
+        // Capture a reference to the macro
+        if (isOpenMacro || isSelfClosedMacro) {
+            state.callbacks.onSymbolReference(
+                createSymbolFor(
+                    name,
+                    textIndex + macroIndex,
+                    macroInfo !== undefined
+                        ? OSugarCubeSymbolKind.BuiltInMacro
+                        : OSugarCubeSymbolKind.CustomMacro,
+                    state.textDocument
+                )
+            );
+        }
+
+        // Capture semantic tokens
+        const deprecated =
+            state.storyFormat?.formatVersion !== undefined &&
+            macroInfo?.deprecated !== undefined &&
+            versionCompare(
+                state.storyFormat.formatVersion,
+                macroInfo.deprecated
+            ) <= 0;
+        capturePreTokenFor(
+            (macroEnd || "") + macroName,
+            textIndex + macroIndex,
+            ETokenType.function,
+            deprecated ? [ETokenModifier.deprecated] : [],
+            sugarcubeState
+        );
+
+        if (macroInfo !== undefined) {
+            // Check for macros that have been removed or aren't yet available
+            const storyFormatVersion = state.storyFormat?.formatVersion;
+            if (
+                storyFormatVersion !== undefined &&
+                (isOpenMacro || isSelfClosedMacro)
+            ) {
+                if (
+                    macroInfo.since !== undefined &&
+                    versionCompare(storyFormatVersion, macroInfo.since) <= 0
+                ) {
+                    state.callbacks.onParseError(
+                        createDiagnosticFor(
+                            DiagnosticSeverity.Error,
+                            state.textDocument,
+                            m[0],
+                            m.index + textIndex,
+                            `\`${macroInfo.name}\` isn't available until SugarCube version ${macroInfo.since} but your StoryFormat version is ${storyFormatVersion}`
+                        )
+                    );
+                } else if (
+                    macroInfo.removed !== undefined &&
+                    versionCompare(storyFormatVersion, macroInfo.removed) >= 0
+                ) {
+                    state.callbacks.onParseError(
+                        createDiagnosticFor(
+                            DiagnosticSeverity.Error,
+                            state.textDocument,
+                            m[0],
+                            m.index + textIndex,
+                            `\`${macroInfo.name}\` was removed in SugarCube version ${macroInfo.removed} and your StoryFormat version is ${storyFormatVersion}`
+                        )
+                    );
+                }
+            }
+
+            // Handle open/close macros
+            if (macroInfo.container) {
+                if (isOpenMacro) {
+                    unclosedMacros.push({
+                        name: macroInfo.name,
+                        at: m.index,
+                        fullText: m[0],
+                        id: macroId,
+                    });
+                } else {
+                    let openingMacroFound = false;
+                    for (let i = unclosedMacros.length - 1; i >= 0; --i) {
+                        if (unclosedMacros[i].name === macroInfo.name) {
+                            delete macroChildCount[unclosedMacros[i].id];
+                            openingMacroFound = true;
+                            unclosedMacros.splice(i, 1);
+                            break;
+                        }
+                    }
+                    if (!openingMacroFound) {
+                        state.callbacks.onParseError(
+                            createDiagnosticFor(
+                                DiagnosticSeverity.Error,
+                                state.textDocument,
+                                m[0],
+                                m.index + textIndex,
+                                `Opening macro <<${macroInfo.name}>> not found`
+                            )
+                        );
+                    }
+                }
+            } else if (!isOpenMacro) {
+                // If a macro isn't a container, it can't have a closing macro
+                state.callbacks.onParseError(
+                    createDiagnosticFor(
+                        DiagnosticSeverity.Error,
+                        state.textDocument,
+                        m[0],
+                        m.index + textIndex,
+                        `<<${macroInfo.name}>> macro isn't a container and so doesn't have a closing macro`
+                    )
+                );
+            }
+
+            // Handle child macros
+            if (macroInfo.parents) {
+                // Make sure we're within our parent
+                const parentNames = macroInfo.parents.map((p) =>
+                    MacroParent.is(p) ? p.name : p
+                );
+                const parentMacroInfo = unclosedMacros
+                    .reverse()
+                    .find((info) => parentNames.includes(info.name));
+                if (parentMacroInfo !== undefined) {
+                    // Record the number of times the child has appeared if there's a limit
+                    const macroParent = macroInfo.parents.find(
+                        (p) =>
+                            MacroParent.is(p) && p.name === parentMacroInfo.name
+                    );
+                    if (MacroParent.is(macroParent)) {
+                        if (macroChildCount[parentMacroInfo.id] === undefined) {
+                            macroChildCount[parentMacroInfo.id] = {};
+                        }
+                        macroChildCount[parentMacroInfo.id][macroInfo.name] =
+                            (macroChildCount[parentMacroInfo.id][
+                                macroInfo.name
+                            ] || 0) + 1;
+                        // Make sure we don't have too many of the same kind of child macro
+                        if (
+                            macroChildCount[parentMacroInfo.id][
+                                macroInfo.name
+                            ] > macroParent.max
+                        ) {
+                            state.callbacks.onParseError(
+                                createDiagnosticFor(
+                                    DiagnosticSeverity.Error,
+                                    state.textDocument,
+                                    m[0],
+                                    m.index + textIndex,
+                                    `Child macro <<${macroName}>> can be used at most ${macroParent.max} time${macroParent.max > 1 ? "s" : ""}`
+                                )
+                            );
+                        }
+                    }
+                } else {
+                    let errorMessage = `Must be inside <<${parentNames[0]}>> macro`;
+                    if (parentNames.length > 1) {
+                        errorMessage =
+                            "Must be inside one of the following macros: " +
+                            parentNames.map((name) => `<<${name}>>`).join(", ");
+                    }
+                    state.callbacks.onParseError(
+                        createDiagnosticFor(
+                            DiagnosticSeverity.Error,
+                            state.textDocument,
+                            m[0],
+                            m.index + textIndex,
+                            errorMessage
+                        )
+                    );
+                }
+            }
+        }
+
+        // Erase the macro from the string so we don't double parse its contents
+        passageText =
+            passageText.slice(0, m.index) +
             " ".repeat(m[0].length) +
-            subsection.slice(m.index + m[0].length);
+            passageText.slice(m.index + m[0].length);
     }
-    return subsection;
+
+    // If we have any lingering open tags, they're missing their close tags
+    for (const openTag of unclosedMacros) {
+        state.callbacks.onParseError(
+            createDiagnosticFor(
+                DiagnosticSeverity.Error,
+                state.textDocument,
+                openTag.fullText,
+                openTag.at + textIndex,
+                `Closing macro <</${openTag.name}>> not found`
+            )
+        );
+    }
+
+    return passageText;
 }
 
 /**
@@ -461,11 +712,11 @@ export function parsePassageText(
     // Check for special passages, and stop processing if the special passage processing is done
     if (checkForSpecialPassages(state)) return;
 
-    // This parsing order matches that of the SC2 Wikifier Parser (`parserlib.js`)
-
-    // TODO parse macros
+    // This parsing order mostly matches that of the SC2 Wikifier Parser (`parserlib.js`)
 
     passageText = removeNoWikiText(passageText);
+
+    passageText = parseMacros(passageText, textIndex, state, sugarcubeState);
 
     passageText = parseTwineLinks(
         passageText,

@@ -1,12 +1,15 @@
 import "mocha";
 import { expect } from "chai";
+import { ImportMock } from "ts-mock-imports";
 import { DiagnosticSeverity, Location, Range } from "vscode-languageserver";
 
 import { TwineSymbolKind } from "../../../project-index";
 import { ETokenModifier, ETokenType } from "../../../tokens";
 import { OSugarCubeSymbolKind } from "../../../passage-text-parsers/sugarcube/types";
 import { MockCallbacks, buildParsingState, buildPassage } from "../../builders";
+import { buildMacroInfo } from "./macros/macro-builders";
 
+import * as macrosModule from "../../../passage-text-parsers/sugarcube/macros";
 import * as uut from "../../../passage-text-parsers/sugarcube";
 
 describe("SugarCube Parser", () => {
@@ -1142,7 +1145,222 @@ describe("SugarCube Parser", () => {
         });
     });
 
-    describe("macros", () => {});
+    describe("macros", () => {
+        it("should produce semantic tokens for a simple macro", () => {
+            const header = ":: Passage\n";
+            const passage = "Some content.\n" + "A macro: <<testy>>.\n";
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            const parser = uut.getSugarCubeParser(undefined);
+
+            parser?.parsePassageText(passage, header.length, state);
+            const [functionToken] = callbacks.tokens;
+
+            expect(callbacks.tokens.length).to.equal(1);
+            expect(functionToken).to.eql({
+                line: 2,
+                char: 11,
+                length: 5,
+                tokenType: ETokenType.function,
+                tokenModifiers: [],
+            });
+        });
+
+        it("should indicate deprecation in a simple macro's semantic token when applicable", () => {
+            const header = ":: Passage\n";
+            const passage = "Some content.\n" + "A macro: <<testy>>.\n";
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            state.storyFormat = {
+                format: "SugarCube",
+                formatVersion: "2.1",
+            };
+            const parser = uut.getSugarCubeParser("2.1");
+            const macro = buildMacroInfo({ name: "testy" });
+            macro.deprecated = "2.1";
+            const mockFunction = ImportMock.mockFunction(
+                macrosModule,
+                "all"
+            ).returns({ testy: macro });
+
+            parser?.parsePassageText(passage, header.length, state);
+            mockFunction.restore();
+            const [functionToken] = callbacks.tokens;
+
+            expect(callbacks.tokens.length).to.equal(1);
+            expect(functionToken).to.eql({
+                line: 2,
+                char: 11,
+                length: 5,
+                tokenType: ETokenType.function,
+                tokenModifiers: [ETokenModifier.deprecated],
+            });
+        });
+
+        it("should capture a reference for a known macro", () => {
+            const header = ":: Passage\n";
+            const passage = "Macro: <<testy>>";
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                uri: "fake-uri",
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            const parser = uut.getSugarCubeParser(undefined);
+            const macro = buildMacroInfo({
+                name: "testy",
+            });
+            const mockFunction = ImportMock.mockFunction(
+                macrosModule,
+                "all"
+            ).returns({ testy: macro });
+
+            parser?.parsePassageText(passage, header.length, state);
+            mockFunction.restore();
+            const result = callbacks.references[0];
+
+            expect(callbacks.references.length).to.equal(1);
+            expect(result).to.eql({
+                contents: "testy",
+                location: Location.create(
+                    "fake-uri",
+                    Range.create(1, 9, 1, 14)
+                ),
+                kind: OSugarCubeSymbolKind.BuiltInMacro,
+            });
+        });
+
+        it("should not capture a macro reference inside a {{{no-wiki block}}}", () => {
+            const header = ":: Passage\n";
+            const passage = "Macro: {{{<<testy>>}}}";
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                uri: "fake-uri",
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            const parser = uut.getSugarCubeParser(undefined);
+            const macro = buildMacroInfo({
+                name: "testy",
+            });
+            const mockFunction = ImportMock.mockFunction(
+                macrosModule,
+                "all"
+            ).returns({ testy: macro });
+
+            parser?.parsePassageText(passage, header.length, state);
+            mockFunction.restore();
+            const result = callbacks.references;
+
+            expect(result).to.be.empty;
+        });
+
+        it('should not capture a macro reference inside a """no-wiki block"""', () => {
+            const header = ":: Passage\n";
+            const passage = 'Macro: """<<testy>>"""';
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                uri: "fake-uri",
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            const parser = uut.getSugarCubeParser(undefined);
+            const macro = buildMacroInfo({
+                name: "testy",
+            });
+            const mockFunction = ImportMock.mockFunction(
+                macrosModule,
+                "all"
+            ).returns({ testy: macro });
+
+            parser?.parsePassageText(passage, header.length, state);
+            mockFunction.restore();
+            const result = callbacks.references;
+
+            expect(result).to.be.empty;
+        });
+
+        it("should not capture a macro reference inside a <nowiki></nowiki> block", () => {
+            const header = ":: Passage\n";
+            const passage = "Macro: <nowiki><<testy>></nowiki>";
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                uri: "fake-uri",
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            const parser = uut.getSugarCubeParser(undefined);
+            const macro = buildMacroInfo({
+                name: "testy",
+            });
+            const mockFunction = ImportMock.mockFunction(
+                macrosModule,
+                "all"
+            ).returns({ testy: macro });
+
+            parser?.parsePassageText(passage, header.length, state);
+            mockFunction.restore();
+            const result = callbacks.references;
+
+            expect(result).to.be.empty;
+        });
+
+        it("should not capture a macro reference inside a <script></script> block", () => {
+            const header = ":: Passage\n";
+            const passage = "Macro: <script><<testy>></script>";
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                uri: "fake-uri",
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            const parser = uut.getSugarCubeParser(undefined);
+            const macro = buildMacroInfo({
+                name: "testy",
+            });
+            const mockFunction = ImportMock.mockFunction(
+                macrosModule,
+                "all"
+            ).returns({ testy: macro });
+
+            parser?.parsePassageText(passage, header.length, state);
+            mockFunction.restore();
+            const result = callbacks.references;
+
+            expect(result).to.be.empty;
+        });
+
+        it("should not capture a macro reference inside a <style></style> block", () => {
+            const header = ":: Passage\n";
+            const passage = "Macro: <style><<testy>></style>";
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                uri: "fake-uri",
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            const parser = uut.getSugarCubeParser(undefined);
+            const macro = buildMacroInfo({
+                name: "testy",
+            });
+            const mockFunction = ImportMock.mockFunction(
+                macrosModule,
+                "all"
+            ).returns({ testy: macro });
+
+            parser?.parsePassageText(passage, header.length, state);
+            mockFunction.restore();
+            const result = callbacks.references;
+
+            expect(result).to.be.empty;
+        });
+    });
 
     describe("errors", () => {
         describe("special passages", () => {
@@ -1437,6 +1655,230 @@ describe("SugarCube Parser", () => {
                     "bookmark is deprecated as of SugarCube version 2.37.0"
                 );
                 expect(result.range).to.eql(Range.create(0, 12, 0, 23));
+            });
+        });
+
+        describe("macros", () => {
+            it("should error on a macro when the story format's version is earlier than when the macro was added to SugarCube", () => {
+                const header = ":: Passage\n";
+                const passage = "Let's go: <<testy>>\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                state.storyFormat = {
+                    format: "SugarCube",
+                    formatVersion: "2.1",
+                };
+                const parser = uut.getSugarCubeParser("2.1");
+                const macro = buildMacroInfo({
+                    name: "testy",
+                });
+                macro.since = "2.1.1";
+                const mockFunction = ImportMock.mockFunction(
+                    macrosModule,
+                    "all"
+                ).returns({ testy: macro });
+
+                parser?.parsePassageText(passage, header.length, state);
+                mockFunction.restore();
+                const [result] = callbacks.errors;
+
+                expect(callbacks.errors.length).to.equal(1);
+                expect(result.severity).to.eql(DiagnosticSeverity.Error);
+                expect(result.message).to.include(
+                    "`testy` isn't available until SugarCube version 2.1.1 but your StoryFormat version is 2.1"
+                );
+                expect(result.range).to.eql(Range.create(1, 10, 1, 19));
+            });
+
+            it("should error on a macro when the story format's version is later than when the macro was removed from SugarCube", () => {
+                const header = ":: Passage\n";
+                const passage = "Let's go: <<testy>>\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                state.storyFormat = {
+                    format: "SugarCube",
+                    formatVersion: "2.1",
+                };
+                const parser = uut.getSugarCubeParser("2.1");
+                const macro = buildMacroInfo({
+                    name: "testy",
+                });
+                macro.removed = "2.1";
+                const mockFunction = ImportMock.mockFunction(
+                    macrosModule,
+                    "all"
+                ).returns({ testy: macro });
+
+                parser?.parsePassageText(passage, header.length, state);
+                mockFunction.restore();
+                const [result] = callbacks.errors;
+
+                expect(callbacks.errors.length).to.equal(1);
+                expect(result.severity).to.eql(DiagnosticSeverity.Error);
+                expect(result.message).to.include(
+                    "`testy` was removed in SugarCube version 2.1 and your StoryFormat version is 2.1"
+                );
+                expect(result.range).to.eql(Range.create(1, 10, 1, 19));
+            });
+
+            it("should error on a closing macro that isn't a container", () => {
+                const header = ":: Passage\n";
+                const passage = "Let's go: <</testy>>\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const parser = uut.getSugarCubeParser(undefined);
+                const macro = buildMacroInfo({
+                    name: "testy",
+                    container: false,
+                });
+                const mockFunction = ImportMock.mockFunction(
+                    macrosModule,
+                    "all"
+                ).returns({ testy: macro });
+
+                parser?.parsePassageText(passage, header.length, state);
+                mockFunction.restore();
+                const [result] = callbacks.errors;
+
+                expect(callbacks.errors.length).to.equal(1);
+                expect(result.severity).to.eql(DiagnosticSeverity.Error);
+                expect(result.message).to.include(
+                    "<<testy>> macro isn't a container and so doesn't have a closing macro"
+                );
+                expect(result.range).to.eql(Range.create(1, 10, 1, 20));
+            });
+
+            it("should error on a container macro that's missing its closing macro", () => {
+                const header = ":: Passage\n";
+                const passage = "Let's go: <<testy>>\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const parser = uut.getSugarCubeParser(undefined);
+                const macro = buildMacroInfo({
+                    name: "testy",
+                    container: true,
+                });
+                const mockFunction = ImportMock.mockFunction(
+                    macrosModule,
+                    "all"
+                ).returns({ testy: macro });
+
+                parser?.parsePassageText(passage, header.length, state);
+                mockFunction.restore();
+                const [result] = callbacks.errors;
+
+                expect(callbacks.errors.length).to.equal(1);
+                expect(result.severity).to.eql(DiagnosticSeverity.Error);
+                expect(result.message).to.include(
+                    "Closing macro <</testy>> not found"
+                );
+                expect(result.range).to.eql(Range.create(1, 10, 1, 19));
+            });
+
+            it("should error on a container macro that's missing its opening macro", () => {
+                const header = ":: Passage\n";
+                const passage = "Let's go: <</testy>>\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const parser = uut.getSugarCubeParser(undefined);
+                const macro = buildMacroInfo({
+                    name: "testy",
+                    container: true,
+                });
+                const mockFunction = ImportMock.mockFunction(
+                    macrosModule,
+                    "all"
+                ).returns({ testy: macro });
+
+                parser?.parsePassageText(passage, header.length, state);
+                mockFunction.restore();
+                const [result] = callbacks.errors;
+
+                expect(callbacks.errors.length).to.equal(1);
+                expect(result.severity).to.eql(DiagnosticSeverity.Error);
+                expect(result.message).to.include(
+                    "Opening macro <<testy>> not found"
+                );
+                expect(result.range).to.eql(Range.create(1, 10, 1, 20));
+            });
+
+            it("should error on a child macro that isn't contained in its required parent", () => {
+                const header = ":: Passage\n";
+                const passage =
+                    "Let's go: <<a>>\n<<b>>\n<<b>>\n<</a>>\n<<b>>\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const parser = uut.getSugarCubeParser(undefined);
+                const macroA = buildMacroInfo({
+                    name: "a",
+                    container: true,
+                });
+                const macroB = buildMacroInfo({ name: "b" });
+                macroB.parents = [{ name: "a", max: 2 }];
+                const mockFunction = ImportMock.mockFunction(
+                    macrosModule,
+                    "all"
+                ).returns({ a: macroA, b: macroB });
+
+                parser?.parsePassageText(passage, header.length, state);
+                mockFunction.restore();
+                const [result] = callbacks.errors;
+
+                expect(callbacks.errors.length).to.equal(1);
+                expect(result.severity).to.eql(DiagnosticSeverity.Error);
+                expect(result.message).to.include("Must be inside <<a>> macro");
+                expect(result.range).to.eql(Range.create(5, 0, 5, 5));
+            });
+
+            it("should error on a container macro that has too many children", () => {
+                const header = ":: Passage\n";
+                const passage =
+                    "Let's go: <<a>>\n<<b>>\n<<b>>\n<<b>>\n<</a>>\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const parser = uut.getSugarCubeParser(undefined);
+                const macroA = buildMacroInfo({
+                    name: "a",
+                    container: true,
+                });
+                const macroB = buildMacroInfo({ name: "b" });
+                macroB.parents = [{ name: "a", max: 2 }];
+                const mockFunction = ImportMock.mockFunction(
+                    macrosModule,
+                    "all"
+                ).returns({ a: macroA, b: macroB });
+
+                parser?.parsePassageText(passage, header.length, state);
+                mockFunction.restore();
+                const [result] = callbacks.errors;
+
+                expect(callbacks.errors.length).to.equal(1);
+                expect(result.severity).to.eql(DiagnosticSeverity.Error);
+                expect(result.message).to.include(
+                    "Child macro <<b>> can be used at most 2 times"
+                );
+                expect(result.range).to.eql(Range.create(4, 0, 4, 5));
             });
         });
     });

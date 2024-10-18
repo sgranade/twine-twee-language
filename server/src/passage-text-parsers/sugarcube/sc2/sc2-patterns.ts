@@ -25,7 +25,7 @@ export namespace sc2Patterns {
         .join("|");
     /**
      * Blocks in which no wiki markup will be done.
-     * This is mainly important to keep us from interpolating variables.
+     * This is mainly important to keep us from interpolating variables or parsing macros.
      */
     export const noWikiBlock = [
         ["\\{\\{\\{", "\\}\\}\\}"],
@@ -34,4 +34,44 @@ export namespace sc2Patterns {
     ]
         .map(([open, close]) => `(?:${open}(?:.|\r?\n)*?${close})`)
         .join("|");
+    /**
+     * JS scripts or CSS style blocks.
+     * This is also mainly important to keep us from interpolating variables or parsing macros.
+     */
+    export const scriptStyleBlock = [
+        ["<script>", "</script>"],
+        ["<style>", "</style>"],
+    ]
+        .map(([open, close]) => `(?:${open}(?:.|\r?\n)*?${close})`)
+        .join("|");
+    /**
+     * Body of a macro (i.e. its arguments). Taken from SugarCube 2 `parserlib.js`
+     */
+    const macroBody = [
+        `(?<macroBody>(?:`,
+        `(?:/\\*[^*]*\\*+(?:[^/*][^*]*\\*+)*/)|`,
+        `(?://.*\\n)|`,
+        `(?:\`(?:\\\\.|[^\`\\\\])*?\`)|`,
+        `(?:"(?:\\\\.|[^"\\\\\\n])*?")|`,
+        `(?:'(?:\\\\.|[^'\\\\\\n])*?')|`,
+        `(?:\\[(?:[<>]?[Ii][Mm][Gg])?\\[[^\\r\\n]*?\\]\\]+)|[^>]|`,
+        `(?:>(?!>))`,
+        `)*?)`,
+    ].join("");
+    /**
+     * Self-close portion of a macro (e.g. <<testy/>>)
+     */
+    const macroSelfClose = `(?<macroSelfClose>/)`;
+    /**
+     * Prefix that indicates a closing macro (e.g. <</testy>> or <<endtesty>>).
+     */
+    const macroEnd = `(?<macroEnd>/|end)`;
+    /**
+     * A macro name.
+     */
+    const macroNamePattern = `[A-Za-z][\\w-]*|[=-]`;
+    /**
+     * Pattern for a full macro. Taken from twee3-language-tools, `macros.ts`
+     */
+    export const fullMacro = `<<${macroEnd}?(?<macroName>${macroNamePattern})(?:\\s*)${macroBody}${macroSelfClose}?>>`;
 }
