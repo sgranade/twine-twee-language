@@ -73,5 +73,5 @@ export namespace sc2Patterns {
     /**
      * Pattern for a full macro. Taken from twee3-language-tools, `macros.ts`
      */
-    export const fullMacro = `<<${macroEnd}?(?<macroName>${macroNamePattern})(?:\\s*)${macroBody}${macroSelfClose}?>>`;
+    export const fullMacro = `<<${macroEnd}?(?<macroName>${macroNamePattern})(?<preMacroBodySpace>\\s*)${macroBody}${macroSelfClose}?>>`;
 }

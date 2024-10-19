@@ -1360,6 +1360,118 @@ describe("SugarCube Parser", () => {
 
             expect(result).to.be.empty;
         });
+
+        describe("macro arguments", () => {
+            it("should produce semantic tokens for argument values", () => {
+                const header = ":: Passage\n";
+                const passage = "Let's go: <<a 'string' $var1 to true>>\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const parser = uut.getSugarCubeParser(undefined);
+
+                parser?.parsePassageText(passage, header.length, state);
+                const result = callbacks.tokens;
+
+                expect(result).to.eql([
+                    {
+                        line: 1,
+                        char: 12,
+                        length: 1,
+                        tokenType: ETokenType.function,
+                        tokenModifiers: [],
+                    },
+                    {
+                        line: 1,
+                        char: 14,
+                        length: 8,
+                        tokenType: ETokenType.string,
+                        tokenModifiers: [],
+                    },
+                    {
+                        line: 1,
+                        char: 23,
+                        length: 5,
+                        tokenType: ETokenType.variable,
+                        tokenModifiers: [],
+                    },
+                    {
+                        line: 1,
+                        char: 29,
+                        length: 2,
+                        tokenType: ETokenType.operator,
+                        tokenModifiers: [],
+                    },
+                    {
+                        line: 1,
+                        char: 32,
+                        length: 4,
+                        tokenType: ETokenType.keyword,
+                        tokenModifiers: [],
+                    },
+                ]);
+            });
+
+            it("should capture variable references for argument values", () => {
+                const header = ":: Passage\n";
+                const passage = "Let's go: <<a $var1 to _var2>>\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const parser = uut.getSugarCubeParser(undefined);
+
+                parser?.parsePassageText(passage, header.length, state);
+                const results = callbacks.references;
+
+                expect(results.length).to.equal(3);
+                expect(results.slice(1)).to.eql([
+                    {
+                        contents: "$var1",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(1, 14, 1, 19)
+                        ),
+                        kind: OSugarCubeSymbolKind.Variable,
+                    },
+                    {
+                        contents: "_var2",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(1, 23, 1, 28)
+                        ),
+                        kind: OSugarCubeSymbolKind.Variable,
+                    },
+                ]);
+            });
+
+            it("should capture passage references for argument values", () => {
+                const header = ":: Passage\n";
+                const passage = "Let's go: <<a [[Passage Name]]>>\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const parser = uut.getSugarCubeParser(undefined);
+
+                parser?.parsePassageText(passage, header.length, state);
+                const results = callbacks.references;
+
+                expect(results.length).to.equal(2);
+                expect(results[1]).to.eql({
+                    contents: "Passage Name",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(1, 16, 1, 28)
+                    ),
+                    kind: TwineSymbolKind.Passage,
+                });
+            });
+        });
     });
 
     describe("errors", () => {
@@ -1909,6 +2021,50 @@ describe("SugarCube Parser", () => {
                     "Child macro <<b>> can be used at most 2 times"
                 );
                 expect(result.range).to.eql(Range.create(4, 0, 4, 5));
+            });
+
+            describe("macro arguments", () => {
+                it("should raise an error on a malformed string", () => {
+                    const header = ":: Passage\n";
+                    const passage = "Let's go: <<a 'unterminated>>\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getSugarCubeParser(undefined);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    const [result] = callbacks.errors;
+
+                    expect(callbacks.errors.length).to.equal(1);
+                    expect(result.severity).to.eql(DiagnosticSeverity.Error);
+                    expect(result.message).to.include(
+                        "Unable to parse macro argument: unterminated single quoted string"
+                    );
+                    expect(result.range).to.eql(Range.create(1, 14, 1, 27));
+                });
+
+                it("should raise an error on a passage link that includes a setter", () => {
+                    const header = ":: Passage\n";
+                    const passage = "Let's go: <<a [[Passage][$var1 to 7]]>>\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getSugarCubeParser(undefined);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    const [result] = callbacks.errors;
+
+                    expect(callbacks.errors.length).to.equal(1);
+                    expect(result.severity).to.eql(DiagnosticSeverity.Error);
+                    expect(result.message).to.include(
+                        "Links in macro arguments can't have a setter"
+                    );
+                    expect(result.range).to.eql(Range.create(1, 24, 1, 36));
+                });
             });
         });
     });

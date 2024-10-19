@@ -1,9 +1,10 @@
 /**
- * Adapted from SugarCube's `lexer.js` and `wikifer.js`, as well
- * as Twee3-Language-Tools's `arguments.ts`
+ * Adapted from SugarCube's `lexer.js`, `parserlib.js`, and `wikifer.js`,
+ * as well as Twee3-Language-Tools's `arguments.ts`
  */
 
 import { skipSpaces } from "../../../utilities";
+import { Token } from "../../types";
 
 type LexerState<T> = (lexer: Lexer<T>) => null | LexerState<T>;
 interface LexerEntry<T> {
@@ -191,13 +192,61 @@ class Lexer<T> {
     }
 }
 
-interface MarkupDataComponent {
-    text: string;
-    at: number;
+interface ArgumentToken extends Token {
+    type: MacroParse.Item;
+    /**
+     * Any additional information, like the error message from a parsing error.
+     */
+    message?: string;
 }
 
-interface MarkupData {
-    error?: string;
+/**
+ * Lexes arguments to a SugarCube macro.
+ *
+ * All token positions are relative to sourceIndex.
+ *
+ * Adapted from `parseMacroArgs()` in `parserlib.js` from SugarCube by way of
+ * `arguments.ts` from Twee3-Language-Tools.
+ *
+ * @param source Raw string of arguments passed to a macro.
+ * @param sourceIndex Index into the larger document where source occurs (zero-based).
+ * @returns Array of argument tokens.
+ */
+export function tokenizeMacroArguments(
+    source: string,
+    sourceIndex: number
+): ArgumentToken[] {
+    const tokens: ArgumentToken[] = [];
+
+    const lexer = new Lexer(source, MacroParse.lexSpace);
+    for (const item of lexer.run()) {
+        const arg = item.text;
+        const token: ArgumentToken = {
+            text: item.text,
+            at: item.start + sourceIndex,
+            type: item.type,
+        };
+
+        if (item.type === MacroParse.Item.Error) {
+            token.message = `Unable to parse macro argument: ${(item as LexerError<MacroParse.Item>).message}`;
+        }
+
+        tokens.push(token);
+
+        // If we encounter an error, throw up our hands
+        if (token.type === MacroParse.Item.Error) {
+            break;
+        }
+    }
+
+    return tokens;
+}
+
+/**
+ * Markup data about Twine links.
+ */
+export interface LinkMarkupData {
+    error?: { text: string; at: number; message: string };
     isImage: boolean;
     isLink: boolean;
     align?: "left" | "right";
@@ -206,31 +255,39 @@ interface MarkupData {
     /**
      * Link destination
      */
-    link?: MarkupDataComponent;
+    link?: Token;
     /**
      * The TwineScript setter expression
      */
-    setter?: MarkupDataComponent;
+    setter?: Token;
     /**
      * Image source (for image bracket expressions)
      */
-    source?: MarkupDataComponent;
+    source?: Token;
     /**
      * Link or image alt text
      */
-    text?: MarkupDataComponent;
+    text?: Token;
     /**
      * Delimiter (`|`, `<-`, or `->`)
      */
-    delim?: MarkupDataComponent;
+    delim?: Token;
 }
 
-// Parse function. Adapted from `parseSquareBracketedMarkup` in `wikifier.js` from SugarCube
-// by way of `arguments.ts` from Twee3-Language-Tools
+/**
+ * Parse square bracket markup.
+ *
+ * Adapted from `parseSquareBracketedMarkup()` in `wikifier.js` from SugarCube by way of
+ * `arguments.ts` from Twee3-Language-Tools.
+ *
+ * @param source Source text containing the square bracket.
+ * @param matchStart Starting index of the square bracket in the source.
+ * @returns
+ */
 export function parseSquareBracketedMarkup(
     source: string,
     matchStart: number
-): MarkupData {
+): LinkMarkupData {
     // Initialize the lexer.
     const lexer = new Lexer(source, SquareBracketParsing.lexLeftMeta);
 
@@ -238,7 +295,7 @@ export function parseSquareBracketedMarkup(
     lexer.start = lexer.pos = matchStart;
 
     // Lex the raw argument string.
-    const markup: Partial<MarkupData> = {
+    const markup: Partial<LinkMarkupData> = {
         isImage: false,
         isLink: false,
     };
@@ -246,7 +303,11 @@ export function parseSquareBracketedMarkup(
     const last = items[items.length - 1];
 
     if (last && last.type === SquareBracketParsing.Item.Error) {
-        markup.error = (last as LexerError<SquareBracketParsing.Item>).message;
+        markup.error = {
+            text: last.text,
+            at: last.start,
+            message: (last as LexerError<SquareBracketParsing.Item>).message,
+        };
     } else {
         items.forEach((item) => {
             const [text, at] = skipSpaces(item.text, item.start);
@@ -295,7 +356,167 @@ export function parseSquareBracketedMarkup(
     }
 
     markup.endPosition = lexer.pos;
-    return markup as MarkupData;
+    return markup as LinkMarkupData;
+}
+
+// Adapted from `parseArgs` in `parserlib.js` from SugarCube
+// by way of `arguments.ts` from Twee3-Language-Tools
+export namespace MacroParse {
+    export enum Item {
+        Error,
+        Bareword,
+        Expression,
+        String,
+        SquareBracket,
+    }
+
+    // Lexing functions.
+    function slurpQuote(lexer: Lexer<Item>, endQuote: string): EOFT | number {
+        for (;;) {
+            let next = lexer.next();
+            if (next === "\\") {
+                const ch = lexer.next();
+
+                if (ch !== EOF && ch !== "\n") {
+                    continue;
+                }
+            } else if (next === EOF) {
+                return EOF;
+            } else if (next === "\n" && endQuote !== "`") {
+                // This is special-cased for ` because it might have newlines inside it.
+                return EOF;
+            } else if (next === endQuote) {
+                break;
+            }
+        }
+
+        return lexer.pos;
+    }
+
+    export function lexSpace(lexer: Lexer<Item>): LexerState<Item> | null {
+        const offset = lexer.source.slice(lexer.pos).search(/\S/);
+
+        if (offset === EOF) {
+            // no non-whitespace characters, so bail
+            return null;
+        } else if (offset !== 0) {
+            lexer.pos += offset;
+            lexer.ignore();
+        }
+
+        // determine what the next state is
+        switch (lexer.next()) {
+            case "`":
+                return lexExpression;
+            case '"':
+                return lexDoubleQuote;
+            case "'":
+                return lexSingleQuote;
+            case "[":
+                return lexSquareBracket;
+            default:
+                return lexBareword;
+        }
+    }
+
+    function lexExpression(lexer: Lexer<Item>): LexerState<Item> | null {
+        if (slurpQuote(lexer, "`") === EOF) {
+            return lexer.error(Item.Error, "unterminated backquote expression");
+        }
+
+        lexer.emit(Item.Expression);
+        return lexSpace;
+    }
+
+    function lexDoubleQuote(lexer: Lexer<Item>): LexerState<Item> | null {
+        if (slurpQuote(lexer, '"') === EOF) {
+            return lexer.error(Item.Error, "unterminated double quoted string");
+        }
+
+        lexer.emit(Item.String);
+        return lexSpace;
+    }
+
+    function lexSingleQuote(lexer: Lexer<Item>): LexerState<Item> | null {
+        if (slurpQuote(lexer, "'") === EOF) {
+            return lexer.error(Item.Error, "unterminated single quoted string");
+        }
+
+        lexer.emit(Item.String);
+        return lexSpace;
+    }
+
+    function lexSquareBracket(lexer: Lexer<Item>): LexerState<Item> | null {
+        const imgMeta = "<>IiMmGg";
+        let what;
+
+        if (lexer.accept(imgMeta)) {
+            what = "image";
+            lexer.acceptRun(imgMeta);
+        } else {
+            what = "link";
+        }
+
+        if (!lexer.accept("[")) {
+            return lexer.error(Item.Error, `malformed ${what} markup`);
+        }
+
+        lexer.depth = 2; // account for both initial left square brackets
+
+        loop: for (;;) {
+            /* eslint-disable indent */
+            switch (lexer.next()) {
+                case "\\": {
+                    const ch = lexer.next();
+
+                    if (ch !== EOF && ch !== "\n") {
+                        break;
+                    }
+                }
+                /* falls through */
+                case EOF:
+                case "\n":
+                    return lexer.error(
+                        Item.Error,
+                        `unterminated ${what} markup`
+                    );
+
+                case "[":
+                    ++lexer.depth;
+                    break;
+
+                case "]":
+                    --lexer.depth;
+
+                    if (lexer.depth < 0) {
+                        return lexer.error(
+                            Item.Error,
+                            "unexpected right square bracket ']'"
+                        );
+                    }
+
+                    if (lexer.depth === 1) {
+                        if (lexer.next() === "]") {
+                            --lexer.depth;
+                            break loop;
+                        }
+                        lexer.backup();
+                    }
+                    break;
+            }
+            /* eslint-enable indent */
+        }
+
+        lexer.emit(Item.SquareBracket);
+        return lexSpace;
+    }
+
+    function lexBareword(lexer: Lexer<Item>): LexerState<Item> | null {
+        const offset = lexer.source.slice(lexer.pos).search(/s/);
+        lexer.pos = offset === EOF ? lexer.source.length : lexer.pos + offset;
+        lexer.emit(Item.Bareword);
+        return offset === EOF ? null : lexSpace;
+    }
 }
 
 // Adapted from `parseSquareBracketedMarkup` in `wikifier.js` from SugarCube

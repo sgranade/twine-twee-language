@@ -7,19 +7,22 @@ import {
     ParseLevel,
     ParsingState,
     createSymbolFor,
+    logErrorFor,
     logSemanticTokenFor,
+    logWarningFor,
     parsePassageReference,
 } from "../../parser";
 import { Label } from "../../project-index";
 import { ETokenModifier, ETokenType, TokenType } from "../../semantic-tokens";
-import {
-    createDiagnosticFor,
-    eraseMatches,
-    versionCompare,
-} from "../../utilities";
-import { all as allMacros, MacroParent } from "./macros";
+import { eraseMatches, versionCompare } from "../../utilities";
+import { all as allMacros, MacroInfo, MacroParent } from "./macros";
 import { OSugarCubeSymbolKind, SugarCubeSymbolKind } from "./types";
-import { parseSquareBracketedMarkup } from "./sc2/sc2-lexer-parser";
+import {
+    LinkMarkupData,
+    MacroParse,
+    parseSquareBracketedMarkup,
+    tokenizeMacroArguments,
+} from "./sc2/sc2-lexer-parser";
 import { sc2Patterns } from "./sc2/sc2-patterns";
 import { tokenizeTwineScriptExpression } from "./sc2/sc2-twinescript";
 
@@ -174,7 +177,74 @@ function parseBareVariables(
 }
 
 /**
- * Parse Twine links.
+ * Parse a Twine link.
+ *
+ * @param text Text to parse.
+ * @param linkIndex Index in text where the link begins (zero-based).
+ * @param textIndex Index of the text in the document (zero-based).
+ * @param state Parsing state.
+ * @param sugarcubeState SugarCube-specific parsing state.
+ * @returns The markup data about the link.
+ */
+function parseTwineLink(
+    text: string,
+    linkIndex: number,
+    textIndex: number,
+    state: ParsingState,
+    sugarcubeState: StoryFormatParsingState
+): LinkMarkupData {
+    const markupData = parseSquareBracketedMarkup(text, linkIndex);
+    const error = markupData.error;
+    if (
+        error === undefined &&
+        markupData.isLink &&
+        markupData.link !== undefined
+    ) {
+        parsePassageReference(
+            markupData.link.text,
+            markupData.link.at + textIndex,
+            state,
+            sugarcubeState
+        );
+
+        if (markupData.text !== undefined) {
+            capturePreSemanticTokenFor(
+                markupData.text.text,
+                markupData.text.at + textIndex,
+                ETokenType.string,
+                [],
+                sugarcubeState
+            );
+        }
+        if (markupData.delim !== undefined) {
+            capturePreSemanticTokenFor(
+                markupData.delim.text,
+                markupData.delim.at + textIndex,
+                ETokenType.keyword,
+                [],
+                sugarcubeState
+            );
+        }
+        if (markupData.setter !== undefined) {
+            createVariableAndPropertyReferences(
+                tokenizeTwineScriptExpression(
+                    markupData.setter.text,
+                    markupData.setter.at + textIndex,
+                    state.textDocument,
+                    sugarcubeState
+                ),
+                state
+            );
+        }
+    } else if (error !== undefined) {
+        logErrorFor(error.text, error.at, error.message, state);
+    }
+
+    return markupData;
+}
+
+/**
+ * Parse Twine links and remove them from the text.
  *
  * @param passageText Passage text to parse.
  * @param textIndex Index of the text in the document (zero-based).
@@ -182,7 +252,7 @@ function parseBareVariables(
  * @param sugarcubeState SugarCube-specific parsing state.
  * @returns The passage text with Twine links removed.
  */
-function parseTwineLinks(
+function parseAndRemoveTwineLinks(
     passageText: string,
     textIndex: number,
     state: ParsingState,
@@ -192,49 +262,18 @@ function parseTwineLinks(
     // kinds of array reference shenanigans, so we can't do a simple regex
     // search. Instead, iterate over all possible link-opening sigils
     for (const m of passageText.matchAll(/\[\[[^]/g)) {
-        const markupData = parseSquareBracketedMarkup(passageText, m.index);
+        const markupData = parseTwineLink(
+            passageText,
+            m.index,
+            textIndex,
+            state,
+            sugarcubeState
+        );
         if (
             markupData.error === undefined &&
             markupData.isLink &&
             markupData.link !== undefined
         ) {
-            parsePassageReference(
-                markupData.link.text,
-                markupData.link.at + textIndex,
-                state,
-                sugarcubeState
-            );
-
-            if (markupData.text !== undefined) {
-                capturePreSemanticTokenFor(
-                    markupData.text.text,
-                    markupData.text.at + textIndex,
-                    ETokenType.string,
-                    [],
-                    sugarcubeState
-                );
-            }
-            if (markupData.delim !== undefined) {
-                capturePreSemanticTokenFor(
-                    markupData.delim.text,
-                    markupData.delim.at + textIndex,
-                    ETokenType.keyword,
-                    [],
-                    sugarcubeState
-                );
-            }
-            if (markupData.setter !== undefined) {
-                createVariableAndPropertyReferences(
-                    tokenizeTwineScriptExpression(
-                        markupData.setter.text,
-                        markupData.setter.at + textIndex,
-                        state.textDocument,
-                        sugarcubeState
-                    ),
-                    state
-                );
-            }
-
             // Blank out the link so any variables in it aren't re-parsed
             passageText =
                 passageText.slice(0, m.index) +
@@ -274,6 +313,82 @@ interface macroLocationInfo {
 }
 
 /**
+ * Parse the arguments to a macro.
+ *
+ * @param args Unparsed arguments.
+ * @param argsIndex Index of the unparsed arguments in the larger document (zero-based).
+ * @param macroInfo Information about the macro the arguments belong to, if known.
+ * @param state Parsing state.
+ * @param sugarcubeState SugarCube-specific parsing state.
+ */
+function parseMacroArgs(
+    args: string | undefined,
+    argsIndex: number,
+    macroInfo: MacroInfo | undefined,
+    state: ParsingState,
+    sugarcubeState: StoryFormatParsingState
+): void {
+    const argumentTokens =
+        args !== undefined ? tokenizeMacroArguments(args, argsIndex) : [];
+    for (const arg of argumentTokens) {
+        if (arg.type === MacroParse.Item.Error) {
+            logErrorFor(
+                arg.text,
+                arg.at,
+                arg.message || "Unknown macro argument parsing error",
+                state
+            );
+        } else if (arg.type === MacroParse.Item.Bareword) {
+            createVariableAndPropertyReferences(
+                tokenizeTwineScriptExpression(
+                    arg.text,
+                    arg.at,
+                    state.textDocument,
+                    sugarcubeState
+                ),
+                state
+            );
+        } else if (arg.type === MacroParse.Item.Expression) {
+            // TwineScript code inside backticks
+            createVariableAndPropertyReferences(
+                tokenizeTwineScriptExpression(
+                    arg.text.slice(1, -1),
+                    arg.at + 1,
+                    state.textDocument,
+                    sugarcubeState
+                ),
+                state
+            );
+        } else if (arg.type === MacroParse.Item.String) {
+            capturePreSemanticTokenFor(
+                arg.text,
+                arg.at,
+                ETokenType.string,
+                [],
+                sugarcubeState
+            );
+        } else if (arg.type === MacroParse.Item.SquareBracket) {
+            const markup = parseTwineLink(
+                arg.text,
+                0,
+                arg.at,
+                state,
+                sugarcubeState
+            );
+            // No setters allowed
+            if (markup.setter !== undefined) {
+                logErrorFor(
+                    `[${markup.setter.text}]`,
+                    arg.at + markup.setter.at - 1,
+                    "Links in macro arguments can't have a setter",
+                    state
+                );
+            }
+        }
+    }
+}
+
+/**
  * Parse SugarCube macros.
  *
  * @param passageText Passage text to parse.
@@ -288,7 +403,7 @@ function parseMacros(
     state: ParsingState,
     sugarcubeState: StoryFormatParsingState
 ): string {
-    const builtInMacros = allMacros();
+    const knownMacros = allMacros();
 
     // Remove all script/style tag blocks
     scriptStyleBlockRegex.lastIndex = 0;
@@ -305,21 +420,52 @@ function parseMacros(
         // macroBody: the body of the macro (e.g. its arguments)
         // macroEnd: "end" or "/" at the start of the macro (e.g. <</if>>)
         // macroSelfClose: "/" at the end of the macro
-        const { macroName, macroBody, macroEnd, macroSelfClose } = m.groups as {
+        const {
+            macroName,
+            preMacroBodySpace,
+            macroBody,
+            macroEnd,
+            macroSelfClose,
+        } = m.groups as {
             [key: string]: string;
         };
+
+        const macroBodyIndex =
+            macroIndex +
+            (macroEnd || "").length +
+            macroName.length +
+            preMacroBodySpace.length;
 
         let isOpenMacro = true, // whether the macro is an opening one (i.e. not a close or self-closing one)
             endVariant = false, // whether it's one that starts with "end"
             name = macroName,
             isSelfClosedMacro = false;
 
-        // TODO
         // Handle e.g. "<<endif>>" alternate ending macros
         // n.b. we need to do special handling because some macros may start with the letters "end"
         // and not be literally ending a container macro
+        if (macroEnd === "end") {
+            const defInList = knownMacros[macroName]; // Macro definition for the name without "end" (if known)
+            const endAddedName = macroEnd + macroName; // e.g. "endif"
+            if (defInList) {
+                // if it's a container, mark this macro as being an endVariant and mention that it's deprecated
+                if (defInList.container) {
+                    endVariant = true;
+                    logWarningFor(
+                        m[0],
+                        m.index + textIndex,
+                        `<<end${macroName}>> is deprecated; use <</${macroName}>> instead`,
+                        state
+                    );
+                } else if (knownMacros[endAddedName] === undefined) {
+                    name = endAddedName; // double check there's no known macro with "end" at the start
+                }
+            } else {
+                name = endAddedName;
+            }
+        }
 
-        const macroInfo = builtInMacros[name];
+        const macroInfo = knownMacros[name];
 
         if (macroEnd === "/" || endVariant) isOpenMacro = false; // Note if we know this is a closing macro
 
@@ -337,7 +483,7 @@ function parseMacros(
             );
         }
 
-        // Capture semantic tokens
+        // Capture semantic tokens for the macro itself
         const deprecated =
             state.storyFormat?.formatVersion !== undefined &&
             macroInfo?.deprecated !== undefined &&
@@ -362,29 +508,23 @@ function parseMacros(
             ) {
                 if (
                     macroInfo.since !== undefined &&
-                    versionCompare(storyFormatVersion, macroInfo.since) <= 0
+                    versionCompare(storyFormatVersion, macroInfo.since) < 0
                 ) {
-                    state.callbacks.onParseError(
-                        createDiagnosticFor(
-                            DiagnosticSeverity.Error,
-                            state.textDocument,
-                            m[0],
-                            m.index + textIndex,
-                            `\`${macroInfo.name}\` isn't available until SugarCube version ${macroInfo.since} but your StoryFormat version is ${storyFormatVersion}`
-                        )
+                    logErrorFor(
+                        m[0],
+                        m.index + textIndex,
+                        `\`${macroInfo.name}\` isn't available until SugarCube version ${macroInfo.since} but your StoryFormat version is ${storyFormatVersion}`,
+                        state
                     );
                 } else if (
                     macroInfo.removed !== undefined &&
                     versionCompare(storyFormatVersion, macroInfo.removed) >= 0
                 ) {
-                    state.callbacks.onParseError(
-                        createDiagnosticFor(
-                            DiagnosticSeverity.Error,
-                            state.textDocument,
-                            m[0],
-                            m.index + textIndex,
-                            `\`${macroInfo.name}\` was removed in SugarCube version ${macroInfo.removed} and your StoryFormat version is ${storyFormatVersion}`
-                        )
+                    logErrorFor(
+                        m[0],
+                        m.index + textIndex,
+                        `\`${macroInfo.name}\` was removed in SugarCube version ${macroInfo.removed} and your StoryFormat version is ${storyFormatVersion}`,
+                        state
                     );
                 }
             }
@@ -409,27 +549,21 @@ function parseMacros(
                         }
                     }
                     if (!openingMacroFound) {
-                        state.callbacks.onParseError(
-                            createDiagnosticFor(
-                                DiagnosticSeverity.Error,
-                                state.textDocument,
-                                m[0],
-                                m.index + textIndex,
-                                `Opening macro <<${macroInfo.name}>> not found`
-                            )
+                        logErrorFor(
+                            m[0],
+                            m.index + textIndex,
+                            `Opening macro <<${macroInfo.name}>> not found`,
+                            state
                         );
                     }
                 }
             } else if (!isOpenMacro) {
                 // If a macro isn't a container, it can't have a closing macro
-                state.callbacks.onParseError(
-                    createDiagnosticFor(
-                        DiagnosticSeverity.Error,
-                        state.textDocument,
-                        m[0],
-                        m.index + textIndex,
-                        `<<${macroInfo.name}>> macro isn't a container and so doesn't have a closing macro`
-                    )
+                logErrorFor(
+                    m[0],
+                    m.index + textIndex,
+                    `<<${macroInfo.name}>> macro isn't a container and so doesn't have a closing macro`,
+                    state
                 );
             }
 
@@ -462,14 +596,11 @@ function parseMacros(
                                 macroInfo.name
                             ] > macroParent.max
                         ) {
-                            state.callbacks.onParseError(
-                                createDiagnosticFor(
-                                    DiagnosticSeverity.Error,
-                                    state.textDocument,
-                                    m[0],
-                                    m.index + textIndex,
-                                    `Child macro <<${macroName}>> can be used at most ${macroParent.max} time${macroParent.max > 1 ? "s" : ""}`
-                                )
+                            logErrorFor(
+                                m[0],
+                                m.index + textIndex,
+                                `Child macro <<${macroName}>> can be used at most ${macroParent.max} time${macroParent.max > 1 ? "s" : ""}`,
+                                state
                             );
                         }
                     }
@@ -480,18 +611,20 @@ function parseMacros(
                             "Must be inside one of the following macros: " +
                             parentNames.map((name) => `<<${name}>>`).join(", ");
                     }
-                    state.callbacks.onParseError(
-                        createDiagnosticFor(
-                            DiagnosticSeverity.Error,
-                            state.textDocument,
-                            m[0],
-                            m.index + textIndex,
-                            errorMessage
-                        )
-                    );
+                    logErrorFor(m[0], m.index + textIndex, errorMessage, state);
                 }
             }
         }
+
+        // Handle arguments, if any. (We call this even if there are no
+        // arguments b/c the macro may expect arguments)
+        parseMacroArgs(
+            macroBody,
+            macroBodyIndex + textIndex,
+            macroInfo,
+            state,
+            sugarcubeState
+        );
 
         // Erase the macro from the string so we don't double parse its contents
         passageText =
@@ -502,14 +635,11 @@ function parseMacros(
 
     // If we have any lingering open tags, they're missing their close tags
     for (const openTag of unclosedMacros) {
-        state.callbacks.onParseError(
-            createDiagnosticFor(
-                DiagnosticSeverity.Error,
-                state.textDocument,
-                openTag.fullText,
-                openTag.at + textIndex,
-                `Closing macro <</${openTag.name}>> not found`
-            )
+        logErrorFor(
+            openTag.fullText,
+            openTag.at + textIndex,
+            `Closing macro <</${openTag.name}>> not found`,
+            state
         );
     }
 
@@ -717,7 +847,7 @@ export function parsePassageText(
 
     passageText = parseMacros(passageText, textIndex, state, sugarcubeState);
 
-    passageText = parseTwineLinks(
+    passageText = parseAndRemoveTwineLinks(
         passageText,
         textIndex,
         state,
