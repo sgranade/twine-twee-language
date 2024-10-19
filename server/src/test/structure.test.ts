@@ -12,7 +12,7 @@ import { Index } from "../project-index";
 import { buildPassage } from "./builders";
 
 import * as uut from "../structure";
-import { SemanticToken } from "../tokens";
+import { SemanticToken } from "../semantic-tokens";
 
 describe("Structure", () => {
     describe("Symbols", () => {

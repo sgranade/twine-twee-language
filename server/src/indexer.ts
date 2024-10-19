@@ -10,8 +10,8 @@ import {
     Symbol,
 } from "./project-index";
 import { ParseLevel, ParserCallbacks, parse } from "./parser";
+import { SemanticToken } from "./semantic-tokens";
 import { DiagnosticsOptions } from "./server-options";
-import { SemanticToken } from "./tokens";
 
 /**
  * Captures information about the current state of indexing

@@ -1,9 +1,8 @@
+import { SemanticTokensLegend } from "vscode-languageserver";
+
 /**
  * Available semantic token types
  */
-
-import { SemanticTokensLegend } from "vscode-languageserver";
-
 export const ETokenType = {
     class: 0,
     property: 1,

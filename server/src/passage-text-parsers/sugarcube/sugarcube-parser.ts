@@ -1,18 +1,17 @@
 import { Diagnostic, DiagnosticSeverity } from "vscode-languageserver";
 
-import { capturePreTokenFor, StoryFormatParsingState } from "..";
+import { capturePreSemanticTokenFor, StoryFormatParsingState } from "..";
 import { EmbeddedDocument } from "../../embedded-languages";
 import { JSPropertyLabel, tokenizeJSExpression } from "../../js-parser";
 import {
     ParseLevel,
     ParsingState,
-    createRangeFor,
     createSymbolFor,
     logSemanticTokenFor,
     parsePassageReference,
 } from "../../parser";
 import { Label } from "../../project-index";
-import { ETokenModifier, ETokenType, TokenType } from "../../tokens";
+import { ETokenModifier, ETokenType, TokenType } from "../../semantic-tokens";
 import {
     createDiagnosticFor,
     eraseMatches,
@@ -121,7 +120,7 @@ function parseBareVariables(
             )
         );
         // Create a variable semantic token
-        capturePreTokenFor(
+        capturePreSemanticTokenFor(
             variable,
             mIndex,
             ETokenType.variable,
@@ -152,7 +151,7 @@ function parseBareVariables(
 
         if (symbol !== undefined) {
             if (tokenType !== undefined)
-                capturePreTokenFor(
+                capturePreSemanticTokenFor(
                     symbol,
                     pIndex,
                     tokenType,
@@ -207,7 +206,7 @@ function parseTwineLinks(
             );
 
             if (markupData.text !== undefined) {
-                capturePreTokenFor(
+                capturePreSemanticTokenFor(
                     markupData.text.text,
                     markupData.text.at + textIndex,
                     ETokenType.string,
@@ -216,7 +215,7 @@ function parseTwineLinks(
                 );
             }
             if (markupData.delim !== undefined) {
-                capturePreTokenFor(
+                capturePreSemanticTokenFor(
                     markupData.delim.text,
                     markupData.delim.at + textIndex,
                     ETokenType.keyword,
@@ -346,7 +345,7 @@ function parseMacros(
                 state.storyFormat.formatVersion,
                 macroInfo.deprecated
             ) <= 0;
-        capturePreTokenFor(
+        capturePreSemanticTokenFor(
             (macroEnd || "") + macroName,
             textIndex + macroIndex,
             ETokenType.function,

@@ -12,7 +12,7 @@ import { StoryFormat } from "../client-server";
 import { ParsingState } from "../parser";
 import { ProjectIndex } from "../project-index";
 import { DiagnosticsOptions } from "../server-options";
-import { TokenModifier, TokenType } from "../tokens";
+import { TokenModifier, TokenType } from "../semantic-tokens";
 import { getChapbookParser } from "./chapbook";
 import { getSugarCubeParser } from "./sugarcube";
 
@@ -131,7 +131,7 @@ export function getStoryFormatParser(
 /**
  * Raw contents for a semantic token.
  */
-export interface PreToken {
+interface PreSemanticToken {
     /**
      * Token text.
      */
@@ -157,7 +157,7 @@ export interface StoryFormatParsingState {
     /**
      * Information for semantic tokens generated in a text subsection.
      */
-    passageTokens: Record<number, PreToken>;
+    passageTokens: Record<number, PreSemanticToken>;
 }
 
 /**
@@ -169,7 +169,7 @@ export interface StoryFormatParsingState {
  * @param modifiers Token modifiers.
  * @param storyFormatState Story format parsing state.
  */
-export function capturePreTokenFor(
+export function capturePreSemanticTokenFor(
     text: string,
     at: number,
     type: TokenType,

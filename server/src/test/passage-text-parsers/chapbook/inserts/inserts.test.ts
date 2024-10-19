@@ -2,11 +2,11 @@ import "mocha";
 import { expect } from "chai";
 import { DiagnosticSeverity, Location, Range } from "vscode-languageserver";
 
-import { ETokenType } from "../../../../tokens";
+import { ETokenType } from "../../../../semantic-tokens";
 import { MockCallbacks, buildParsingState } from "../../../builders";
 import { ChapbookParsingState } from "../../../../passage-text-parsers/chapbook/chapbook-parser";
 import { buildInsertTokens } from "./insert-builders";
-import { Token } from "../../../../passage-text-parsers/chapbook/inserts";
+import { Token } from "../../../../passage-text-parsers/types";
 import * as uutEmbedPassage from "../../../../passage-text-parsers/chapbook/inserts/embed-passage";
 import * as uutLink from "../../../../passage-text-parsers/chapbook/inserts/link";
 import * as uutRevealLink from "../../../../passage-text-parsers/chapbook/inserts/reveal-link";

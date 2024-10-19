@@ -6,10 +6,10 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 import { createLocationFor } from "./parser";
 import {
     StoryFormatParsingState,
-    capturePreTokenFor,
+    capturePreSemanticTokenFor,
 } from "./passage-text-parsers";
 import { Label } from "./project-index";
-import { ETokenType, TokenModifier, TokenType } from "./tokens";
+import { ETokenType, TokenModifier, TokenType } from "./semantic-tokens";
 
 /**
  * Conversion from Javascript typeof string to semantic token type.
@@ -311,7 +311,7 @@ export function tokenizeJSExpression(
                     scope: token.scope,
                 });
             }
-            capturePreTokenFor(
+            capturePreSemanticTokenFor(
                 token.text,
                 offset + token.at,
                 token.type,

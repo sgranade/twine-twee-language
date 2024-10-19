@@ -8,7 +8,7 @@ import { buildModifierInfo } from "./modifiers/modifier-builders";
 import { MockCallbacks, buildParsingState } from "../../builders";
 import { ParseLevel } from "../../../parser";
 import { TwineSymbolKind } from "../../../project-index";
-import { ETokenModifier, ETokenType } from "../../../tokens";
+import { ETokenModifier, ETokenType } from "../../../semantic-tokens";
 import {
     ChapbookSymbol,
     OChapbookSymbolKind,

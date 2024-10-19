@@ -3,7 +3,7 @@ import * as acornWalk from "acorn-walk";
 import { Diagnostic, DiagnosticSeverity } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
-import { StoryFormatParsingState, capturePreTokenFor } from "..";
+import { StoryFormatParsingState, capturePreSemanticTokenFor } from "..";
 import { EmbeddedDocument } from "../../embedded-languages";
 import {
     JSPropertyLabel,
@@ -23,7 +23,8 @@ import {
     ParseLevel,
 } from "../../parser";
 import { Label, ProjectIndex } from "../../project-index";
-import { ETokenType, ETokenModifier } from "../../tokens";
+import { ETokenType, ETokenModifier } from "../../semantic-tokens";
+import { Token } from "../types";
 import {
     skipSpaces,
     extractToMatchingDelimiter,
@@ -32,12 +33,7 @@ import {
     hasOwnProperty,
     createDiagnosticFor,
 } from "../../utilities";
-import {
-    InsertTokens,
-    ModifierTokens,
-    Token,
-    all as allInserts,
-} from "./inserts";
+import { InsertTokens, ModifierTokens, all as allInserts } from "./inserts";
 import { all as allModifiers } from "./modifiers";
 import {
     ArgumentRequirement,
@@ -1306,7 +1302,7 @@ function parseInsertContents(
         state.storyFormat?.formatVersion !== undefined &&
         insert?.deprecated !== undefined &&
         versionCompare(state.storyFormat.formatVersion, insert.deprecated) <= 0;
-    capturePreTokenFor(
+    capturePreSemanticTokenFor(
         tokens.name.text,
         tokens.name.at,
         ETokenType.function,
@@ -1317,7 +1313,7 @@ function parseInsertContents(
         string,
         [Token, Token],
     ][]) {
-        capturePreTokenFor(
+        capturePreSemanticTokenFor(
             propName,
             propNameToken.at,
             ETokenType.property,
@@ -1511,7 +1507,7 @@ function parseInsertOrVariable(
     if (m !== null) {
         const invocation = m[2];
         const invocationIndex = m[1].length;
-        capturePreTokenFor(
+        capturePreSemanticTokenFor(
             invocation,
             insertIndex + invocationIndex,
             ETokenType.variable,
@@ -1622,7 +1618,7 @@ function parseTextSubsection(
             )
         );
     } else if (chapbookState.modifierKind === ModifierKind.Note) {
-        capturePreTokenFor(
+        capturePreSemanticTokenFor(
             subsection,
             subsectionIndex,
             ETokenType.comment,
@@ -1804,7 +1800,7 @@ function parseModifier(
                 state.storyFormat.formatVersion,
                 modifier.deprecated
             ) <= 0;
-        capturePreTokenFor(
+        capturePreSemanticTokenFor(
             modifierTokens.name.text,
             modifierTokens.name.at,
             chapbookState.modifierKind == ModifierKind.Note
@@ -1841,7 +1837,7 @@ function parseModifier(
                 );
             } else {
                 // Tokenize
-                capturePreTokenFor(
+                capturePreSemanticTokenFor(
                     modifierTokens.firstArgument.text,
                     modifierTokens.firstArgument.at,
                     ETokenType.parameter,
@@ -1871,7 +1867,7 @@ function parseModifier(
         );
 
         // Tokenize the entire thing as a function
-        capturePreTokenFor(
+        capturePreSemanticTokenFor(
             modifierText,
             modifierIndex,
             ETokenType.function,
@@ -2155,7 +2151,7 @@ function parseVarsSection(
         // Capture tokens for variables and properties
         const varsAndProps = name.split(".");
         for (let i = 0, ndx = nameIndex; i < varsAndProps.length; ++i) {
-            capturePreTokenFor(
+            capturePreSemanticTokenFor(
                 varsAndProps[i],
                 sectionIndex + ndx,
                 i == 0 ? ETokenType.variable : ETokenType.property,

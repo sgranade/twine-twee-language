@@ -9,7 +9,7 @@ import { MockCallbacks, buildParsingState } from "./builders";
 import * as ptpModule from "../passage-text-parsers";
 import * as uut from "../parser";
 import { StoryFormat } from "../client-server";
-import { ETokenType } from "../tokens";
+import { ETokenType } from "../semantic-tokens";
 import { TwineSymbolKind } from "../project-index";
 
 function buildStoryData({

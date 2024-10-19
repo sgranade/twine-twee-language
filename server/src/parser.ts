@@ -27,7 +27,22 @@ import {
     openMetaCharPattern,
     tagPattern,
 } from "./language";
-import { ETokenType, SemanticToken, TokenModifier, TokenType } from "./tokens";
+import {
+    StoryFormatParser,
+    StoryFormatParsingState,
+    capturePreSemanticTokenFor,
+    getStoryFormatParser,
+} from "./passage-text-parsers";
+import {
+    ETokenType,
+    SemanticToken,
+    TokenModifier,
+    TokenType,
+} from "./semantic-tokens";
+import {
+    DiagnosticsOptions,
+    defaultDiagnosticsOptions,
+} from "./server-options";
 import {
     createDiagnosticFor,
     nextLineIndex,
@@ -35,16 +50,6 @@ import {
     removeAndCountPadding,
     skipSpaces,
 } from "./utilities";
-import {
-    StoryFormatParser,
-    StoryFormatParsingState,
-    capturePreTokenFor,
-    getStoryFormatParser,
-} from "./passage-text-parsers";
-import {
-    DiagnosticsOptions,
-    defaultDiagnosticsOptions,
-} from "./server-options";
 
 /**
  * At what level of detail to parse a Twee document.
@@ -264,7 +269,7 @@ export function parsePassageReference(
     state: ParsingState,
     storyFormatParsingState: StoryFormatParsingState
 ): void {
-    capturePreTokenFor(
+    capturePreSemanticTokenFor(
         passage,
         at,
         ETokenType.class,
@@ -425,14 +430,14 @@ export function findAndParseLinks(
             );
 
         if (link.displaySection !== undefined) {
-            capturePreTokenFor(
+            capturePreSemanticTokenFor(
                 link.displaySection.divider,
                 link.displaySection.dividerIndex,
                 ETokenType.keyword,
                 [],
                 storyFormatParsingState
             );
-            capturePreTokenFor(
+            capturePreSemanticTokenFor(
                 link.displaySection.display,
                 link.displaySection.displayIndex,
                 ETokenType.string,

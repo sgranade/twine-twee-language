@@ -4,7 +4,7 @@ import { Location, Range } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { StoryFormatParsingState } from "../../../../passage-text-parsers";
-import { ETokenModifier, ETokenType } from "../../../../tokens";
+import { ETokenModifier, ETokenType } from "../../../../semantic-tokens";
 import * as uut from "../../../../passage-text-parsers/sugarcube/sc2/sc2-twinescript";
 
 describe("SugarCube TwineScript", () => {

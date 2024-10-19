@@ -7,7 +7,7 @@ import { buildPassage } from "./builders";
 
 import { EmbeddedDocument } from "../embedded-languages";
 import * as uut from "../project-index";
-import { SemanticToken } from "../tokens";
+import { SemanticToken } from "../semantic-tokens";
 
 describe("Project Index", () => {
     describe("Story Title", () => {

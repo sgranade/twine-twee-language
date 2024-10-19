@@ -3,7 +3,7 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 import { JSPropertyLabel, tokenizeJSExpression } from "../../../js-parser";
 import { createLocationFor } from "../../../parser";
 import { Label } from "../../../project-index";
-import { capturePreTokenFor, StoryFormatParsingState } from "../..";
+import { capturePreSemanticTokenFor, StoryFormatParsingState } from "../..";
 
 /**
  * Mapping of TwineScript sugaring to replacements.
@@ -248,7 +248,7 @@ export function tokenizeTwineScriptExpression(
             t.text = sugaredText + t.text.slice(1);
         } else if (sugaredText !== undefined) t.text = sugaredText;
 
-        capturePreTokenFor(
+        capturePreSemanticTokenFor(
             t.text,
             offset + sugaredPosition,
             t.type,

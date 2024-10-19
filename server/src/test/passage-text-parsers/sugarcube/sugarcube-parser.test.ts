@@ -4,7 +4,7 @@ import { ImportMock } from "ts-mock-imports";
 import { DiagnosticSeverity, Location, Range } from "vscode-languageserver";
 
 import { TwineSymbolKind } from "../../../project-index";
-import { ETokenModifier, ETokenType } from "../../../tokens";
+import { ETokenModifier, ETokenType } from "../../../semantic-tokens";
 import { OSugarCubeSymbolKind } from "../../../passage-text-parsers/sugarcube/types";
 import { MockCallbacks, buildParsingState, buildPassage } from "../../builders";
 import { buildMacroInfo } from "./macros/macro-builders";
@@ -1785,6 +1785,36 @@ describe("SugarCube Parser", () => {
                     "Closing macro <</testy>> not found"
                 );
                 expect(result.range).to.eql(Range.create(1, 10, 1, 19));
+            });
+
+            it("should warn on a container macro whose closing macro uses the alternate 'end' format", () => {
+                const header = ":: Passage\n";
+                const passage = "Let's go: <<testy>><<endtesty>>\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const parser = uut.getSugarCubeParser(undefined);
+                const macro = buildMacroInfo({
+                    name: "testy",
+                    container: true,
+                });
+                const mockFunction = ImportMock.mockFunction(
+                    macrosModule,
+                    "all"
+                ).returns({ testy: macro });
+
+                parser?.parsePassageText(passage, header.length, state);
+                mockFunction.restore();
+                const [result] = callbacks.errors;
+
+                expect(callbacks.errors.length).to.equal(1);
+                expect(result.severity).to.eql(DiagnosticSeverity.Warning);
+                expect(result.message).to.include(
+                    "<<endtesty>> is deprecated; use <</testy>> instead"
+                );
+                expect(result.range).to.eql(Range.create(1, 19, 1, 31));
             });
 
             it("should error on a container macro that's missing its opening macro", () => {

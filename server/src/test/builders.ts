@@ -5,7 +5,7 @@ import { EmbeddedDocument } from "../embedded-languages";
 import { Passage, StoryData, Symbol } from "../project-index";
 import { ParseLevel, ParserCallbacks, ParsingState } from "../parser";
 import { defaultDiagnosticsOptions } from "../server-options";
-import { SemanticToken } from "../tokens";
+import { SemanticToken } from "../semantic-tokens";
 
 export function buildPassage({
     label = "Passage",

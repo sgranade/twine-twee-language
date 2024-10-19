@@ -3,7 +3,7 @@ import "mocha";
 import { Location, Range } from "vscode-languageserver";
 
 import { buildParsingState, MockCallbacks } from "./builders";
-import { ETokenType } from "../tokens";
+import { ETokenType } from "../semantic-tokens";
 import { StoryFormatParsingState } from "../passage-text-parsers";
 import * as uut from "../js-parser";
 
