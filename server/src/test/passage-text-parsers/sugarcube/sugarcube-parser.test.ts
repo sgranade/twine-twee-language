@@ -193,10 +193,10 @@ describe("SugarCube Parser", () => {
 
             expect(result).to.eql([
                 {
-                    contents: "bareVariable",
+                    contents: "$bareVariable",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(2, 11, 2, 23)
+                        Range.create(2, 10, 2, 23)
                     ),
                     kind: OSugarCubeSymbolKind.Variable,
                 },
@@ -220,15 +220,15 @@ describe("SugarCube Parser", () => {
             expect(callbacks.references.length).to.equal(2);
             expect(result).to.eql([
                 {
-                    contents: "bareVariable",
+                    contents: "$bareVariable",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(2, 11, 2, 23)
+                        Range.create(2, 10, 2, 23)
                     ),
                     kind: OSugarCubeSymbolKind.Variable,
                 },
                 {
-                    contents: "prop",
+                    contents: "$bareVariable.prop",
                     location: Location.create(
                         "fake-uri",
                         Range.create(2, 24, 2, 28)
@@ -241,7 +241,7 @@ describe("SugarCube Parser", () => {
         it("should capture a variable reference for a bare variable and a variable used in bracket property access", () => {
             const header = ":: Passage\n";
             const passage =
-                "Some content.\n" + "This is a $bareVariable[$otherVar].\n";
+                "Some content.\n" + "This is a $bareVariable[_otherVar].\n";
             const callbacks = new MockCallbacks();
             const state = buildParsingState({
                 content: header + passage,
@@ -255,18 +255,18 @@ describe("SugarCube Parser", () => {
             expect(callbacks.references.length).to.equal(2);
             expect(result).to.eql([
                 {
-                    contents: "bareVariable",
+                    contents: "$bareVariable",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(2, 11, 2, 23)
+                        Range.create(2, 10, 2, 23)
                     ),
                     kind: OSugarCubeSymbolKind.Variable,
                 },
                 {
-                    contents: "otherVar",
+                    contents: "_otherVar",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(2, 25, 2, 33)
+                        Range.create(2, 24, 2, 33)
                     ),
                     kind: OSugarCubeSymbolKind.Variable,
                 },
@@ -1444,6 +1444,31 @@ describe("SugarCube Parser", () => {
                             Range.create(1, 23, 1, 28)
                         ),
                         kind: OSugarCubeSymbolKind.Variable,
+                    },
+                ]);
+            });
+
+            it("should not capture variable references for bare words that don't start with $ or _", () => {
+                const header = ":: Passage\n";
+                const passage = "Let's go: <<a var1>>\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const parser = uut.getSugarCubeParser(undefined);
+
+                parser?.parsePassageText(passage, header.length, state);
+                const results = callbacks.references;
+
+                expect(results).to.eql([
+                    {
+                        contents: "a",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(1, 12, 1, 13)
+                        ),
+                        kind: OSugarCubeSymbolKind.CustomMacro,
                     },
                 ]);
             });

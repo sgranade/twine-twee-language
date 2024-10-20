@@ -75,20 +75,21 @@ function createVariableAndPropertyReferences(
  *   $variable["property"]
  *   $variable['property']
  *   $variable[$indexOrPropertyVariable]
+ *   as well as chained properties and array accessors
  * In any of the above, the `$` sigil (for global variables) can be
  * replaced by `_` (for temporary variables).
  */
 const bareVariableRegex = new RegExp(
     [
-        `(?<variable>${sc2Patterns.variableWithSigil})`,
+        `(?:${sc2Patterns.variableWithSigil})`, // variable
         `(?:`,
         [
-            `(?:\\.(?<property>${sc2Patterns.identifier}))`,
-            `(?:\\[(?<index>\\d+)\\])`,
-            `(?:\\[(?<str>("|')(?:\\\\.|(?!\\\\|\\5).)+\\5)\\])`,
-            `(?:\\[(?<refvar>${sc2Patterns.variableWithSigil})\\])`,
+            `(?:\\.(?:${sc2Patterns.identifier}))`, // property
+            `(?:\\[(?:\\d+)\\])`, // numeric accessor
+            `(?:\\[(?:("|')(?:\\\\.|(?!\\\\|\\1).)+\\1)\\])`, // string accessor
+            `(?:\\[(?:${sc2Patterns.variableWithSigil})\\])`, // variable accessor
         ].join("|"),
-        `)?`,
+        `)*`,
     ].join(""),
     "g"
 );
@@ -109,70 +110,15 @@ function parseBareVariables(
 ): void {
     bareVariableRegex.lastIndex = 0;
     for (const m of passageText.matchAll(bareVariableRegex)) {
-        if (m.groups === undefined) continue;
-        const { variable, property, index, str, refvar } = m.groups;
-        const mIndex = m.index + textIndex;
-        let pIndex = mIndex + variable.length + 1; // Index to the .property or [index]; the +1 skips `.` or `[`
-        // Store a reference to the variable
-        state.callbacks.onSymbolReference(
-            createSymbolFor(
-                variable.slice(1),
-                mIndex + 1,
-                OSugarCubeSymbolKind.Variable,
-                state.textDocument
-            )
+        createVariableAndPropertyReferences(
+            tokenizeTwineScriptExpression(
+                m[0],
+                m.index + textIndex,
+                state.textDocument,
+                sugarcubeState
+            ),
+            state
         );
-        // Create a variable semantic token
-        capturePreSemanticTokenFor(
-            variable,
-            mIndex,
-            ETokenType.variable,
-            [],
-            sugarcubeState
-        );
-
-        // A property, numeric index, string accessor, or index variable all start at the same location
-        // but with different types
-        let symbol: string | undefined;
-        let kind: SugarCubeSymbolKind | undefined;
-        let tokenType: TokenType | undefined;
-        if (property !== undefined) {
-            symbol = property;
-            kind = OSugarCubeSymbolKind.Property;
-            tokenType = ETokenType.property;
-        } else if (index !== undefined) {
-            symbol = index;
-            tokenType = ETokenType.number;
-        } else if (str !== undefined) {
-            symbol = str;
-            tokenType = ETokenType.string;
-        } else if (refvar !== undefined) {
-            symbol = refvar;
-            kind = OSugarCubeSymbolKind.Variable;
-            tokenType = ETokenType.variable;
-        }
-
-        if (symbol !== undefined) {
-            if (tokenType !== undefined)
-                capturePreSemanticTokenFor(
-                    symbol,
-                    pIndex,
-                    tokenType,
-                    [],
-                    sugarcubeState
-                );
-
-            if (kind !== undefined) {
-                // Need to discard the sigil for variables
-                if (kind === OSugarCubeSymbolKind.Variable) {
-                    symbol = symbol.slice(1);
-                    pIndex++;
-                }
-                state.callbacks.onSymbolReference(
-                    createSymbolFor(symbol, pIndex, kind, state.textDocument)
-                );
-            }
-        }
     }
 }
 
