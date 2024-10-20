@@ -380,6 +380,7 @@ export namespace MacroParse {
                 if (ch !== EOF && ch !== "\n") {
                     continue;
                 }
+                return EOF;
             } else if (next === EOF) {
                 return EOF;
             } else if (next === "\n" && endQuote !== "`") {
@@ -512,7 +513,7 @@ export namespace MacroParse {
     }
 
     function lexBareword(lexer: Lexer<Item>): LexerState<Item> | null {
-        const offset = lexer.source.slice(lexer.pos).search(/s/);
+        const offset = lexer.source.slice(lexer.pos).search(/\s/);
         lexer.pos = offset === EOF ? lexer.source.length : lexer.pos + offset;
         lexer.emit(Item.Bareword);
         return offset === EOF ? null : lexSpace;
