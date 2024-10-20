@@ -14,9 +14,9 @@ const desugarMap: { [key: string]: string } = {
     // We replace variable sigils with a letter so that later tokenizing works
     // properly
     // Story $variable sigil-prefix.
-    $: "P",
+    $: "X",
     // Temporary _variable sigil-prefix.
-    _: "T",
+    _: "X",
     // Assignment operator.
     to: "=",
     // Equality operators.
@@ -190,11 +190,26 @@ export function tokenizeTwineScriptExpression(
         desugared
     );
 
-    const [vars, props] = tokenizeJSExpression(
+    let [vars, props] = tokenizeJSExpression(
         desugared,
         0, // offset of 0 since the desugared expression starts at the start of the doc
         desugaredDocument,
         desugaredStoryFormatState
+    );
+
+    // Discard any variables that don't start with "$" or "_" and properties whose scope
+    // doesn't start with the same
+    // (We use the desugared values, which means we can have false positives, but oh well!)
+    vars = vars.filter(
+        (v) =>
+            v.contents.startsWith(desugarMap["$"]) ||
+            v.contents.startsWith(desugarMap["_"])
+    );
+    props = props.filter(
+        (p) =>
+            p.scope &&
+            (p.scope.startsWith(desugarMap["$"]) ||
+                p.scope.startsWith(desugarMap["_"]))
     );
 
     // Adjust variable and property locations and (if needed) text

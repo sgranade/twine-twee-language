@@ -14,7 +14,7 @@ describe("SugarCube TwineScript", () => {
 
             const result = uut.desugar("First $permanent then _temp");
 
-            expect(result.desugared).to.eql("First Ppermanent then Ttemp");
+            expect(result.desugared).to.eql("First Xpermanent then Xtemp");
             expect(result.positionMapping).to.eql([
                 {
                     originalStart: 6,
@@ -36,7 +36,7 @@ describe("SugarCube TwineScript", () => {
 
             const result = uut.desugar("$var to 17");
 
-            expect(result.desugared).to.eql("Pvar = 17");
+            expect(result.desugared).to.eql("Xvar = 17");
             expect(result.positionMapping).to.eql([
                 {
                     originalStart: 0,
