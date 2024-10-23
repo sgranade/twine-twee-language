@@ -29,7 +29,7 @@ export function getReferencesToSymbolAt(
             : OChapbookSymbolKind.Variable;
     const locations: Location[] = [];
     for (const uri of index.getIndexedUris()) {
-        for (const otherRef of index.getReferences(uri, otherKind) || []) {
+        for (const otherRef of index.getReferences(uri, otherKind) ?? []) {
             if (otherRef.contents === ref.contents)
                 locations.push(...otherRef.locations);
         }

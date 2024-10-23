@@ -284,7 +284,7 @@ export class Index implements ProjectIndex {
     _setPerKind<T extends Kind>(toAdd: T[]): RepositoryPerKind<T> {
         const repo: RepositoryPerKind<T> = {};
         for (const item of toAdd) {
-            const list = repo[item.kind] || [];
+            const list = repo[item.kind] ?? [];
             list.push(item);
             repo[item.kind] = list;
         }
@@ -359,7 +359,7 @@ export class Index implements ProjectIndex {
         }
 
         for (const defsPerKind of Object.values(this._definitions)) {
-            const defs = defsPerKind[kind] || [];
+            const defs = defsPerKind[kind] ?? [];
             const match = defs.find((d) => d.contents === name);
             if (match !== undefined) {
                 return match.location;
@@ -382,7 +382,7 @@ export class Index implements ProjectIndex {
         }
 
         // Check our other defintions
-        const definitionsPerKind = this._definitions[uri] || {};
+        const definitionsPerKind = this._definitions[uri] ?? {};
         for (const defs of Object.values(definitionsPerKind)) {
             const match = defs.find((def) =>
                 positionInRange(position, def.location.range)
@@ -396,7 +396,7 @@ export class Index implements ProjectIndex {
     }
     getReferencesAt(uri: string, position: Position): References | undefined {
         // Do we have a reference at the position?
-        const referencesPerKind = this._references[uri] || {};
+        const referencesPerKind = this._references[uri] ?? {};
         for (const localReferences of Object.values(referencesPerKind)) {
             for (const ref of localReferences) {
                 const match = ref.locations.find((loc) =>
@@ -493,7 +493,7 @@ export class Index implements ProjectIndex {
         return matches;
     }
     getPassageAt(uri: string, position: Position): Passage | undefined {
-        for (const passage of this._passages[uri] || []) {
+        for (const passage of this._passages[uri] ?? []) {
             if (positionInRange(position, passage.scope)) {
                 return passage;
             }

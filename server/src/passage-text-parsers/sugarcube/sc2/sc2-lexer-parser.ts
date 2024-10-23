@@ -96,7 +96,7 @@ class Lexer<T> {
      * @param num Number of characters to back up by. If undefined, backs up by one.
      */
     backup(num?: number) {
-        this.pos -= num || 1;
+        this.pos -= num ?? 1;
     }
 
     /**
@@ -105,7 +105,7 @@ class Lexer<T> {
      * @param num Number of characters to go forward. if undefined, goes forward by one.
      */
     forward(num?: number) {
-        this.pos += num || 1;
+        this.pos += num ?? 1;
     }
 
     /**

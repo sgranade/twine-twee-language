@@ -541,7 +541,7 @@ function parseHeaderMetadata(
     );
     const jsonDocument = parseJSON(subDocument.document);
 
-    for (const kid of jsonDocument.root?.children || []) {
+    for (const kid of jsonDocument.root?.children ?? []) {
         if (kid.type === "property") {
             if (kid.valueNode?.type === "string") {
                 if (kid.keyNode.value === "position") {
@@ -693,8 +693,8 @@ function parsePassageHeader(
             location: location,
         },
         scope: Range.create(location.range.start, location.range.end),
-        isScript: tagNames?.includes("script") || false,
-        isStylesheet: tagNames?.includes("stylesheet") || false,
+        isScript: tagNames?.includes("script") ?? false,
+        isStylesheet: tagNames?.includes("stylesheet") ?? false,
         tags: tags,
         metadata: metadata,
     };
@@ -751,7 +751,7 @@ function parseStoryDataPassage(
     const storyFormat: StoryFormat = {
         format: "",
     };
-    for (const kid of jsonDocument.root?.children || []) {
+    for (const kid of jsonDocument.root?.children ?? []) {
         if (kid.type === "property") {
             if (kid.valueNode?.type === "string") {
                 if (kid.keyNode.value === "ifid") {
@@ -961,7 +961,7 @@ export function parse(
     const state: ParsingState = {
         textDocument: textDocument,
         parseLevel: parseLevel,
-        diagnosticsOptions: diagnosticsOptions || defaultDiagnosticsOptions,
+        diagnosticsOptions: diagnosticsOptions ?? defaultDiagnosticsOptions,
         storyFormatParser: undefined, // No story format parser to begin with
         callbacks: callbacks,
     };

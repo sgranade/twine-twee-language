@@ -27,7 +27,7 @@ function validatePassages(
     const documentPassages = index.getPassages(document.uri);
     const passageNames = index.getPassageNames();
 
-    for (const passage of documentPassages || []) {
+    for (const passage of documentPassages ?? []) {
         if (
             passageNames.indexOf(passage.name.contents) !=
             passageNames.lastIndexOf(passage.name.contents)
@@ -86,7 +86,7 @@ function validatePassageReferences(
 
     if (diagnosticsOptions.warnings.unknownPassage) {
         const references =
-            index.getReferences(document.uri, TwineSymbolKind.Passage) || [];
+            index.getReferences(document.uri, TwineSymbolKind.Passage) ?? [];
         const names = index.getPassageNames();
         for (const ref of references) {
             if (!names.includes(ref.contents)) {
@@ -151,7 +151,7 @@ export async function generateDiagnostics(
     diagnostics.push(
         ...(getStoryFormatParser(
             index.getStoryData()?.storyFormat
-        )?.generateDiagnostics(document, index, diagnosticsOptions) || [])
+        )?.generateDiagnostics(document, index, diagnosticsOptions) ?? [])
     );
 
     return diagnostics;

@@ -194,7 +194,7 @@ export function getChapbookDefinitions(
                 .getDefinitions(uri, kind)
                 ?.filter<ChapbookSymbol>((x): x is ChapbookSymbol =>
                     ChapbookSymbol.is(x)
-                ) || [])
+                ) ?? [])
         );
     }
     return customSymbols;
@@ -400,7 +400,7 @@ export function findEndOfPartialModifier(
     // Look for the end bracket or end of line
     const pattern = /]|\r?\n/gm;
     pattern.lastIndex = startOffset;
-    const m = pattern.exec(text) || undefined;
+    const m = pattern.exec(text) ?? undefined;
     return m?.index;
 }
 
@@ -1252,7 +1252,7 @@ export function validateInsertContents(
                 );
         }
     }
-    const unseenProperties = Object.keys(insert.requiredProps || {}).filter(
+    const unseenProperties = Object.keys(insert.requiredProps ?? {}).filter(
         (k) => !seenProperties.has(k)
     );
     if (unseenProperties.length > 0) {
@@ -1350,7 +1350,7 @@ function parseInsertContents(
         tokens.props
     ) as [string, [Token, Token]][]) {
         let propInfo: string | InsertProperty | null | undefined =
-            insert.requiredProps[propName] || insert.optionalProps[propName];
+            insert.requiredProps[propName] ?? insert.optionalProps[propName];
 
         if (InsertProperty.is(propInfo)) {
             parseFunctionArgument(
@@ -1724,7 +1724,7 @@ export function tokenizeModifier(
     modifierIndex: number,
     modifierInfo: ChapbookFunctionInfo | undefined
 ): ModifierTokens | undefined {
-    const match = modifierInfo?.match.exec(modifierText) || undefined;
+    const match = modifierInfo?.match.exec(modifierText) ?? undefined;
     if (match !== undefined) {
         const modifierName = match[0];
         modifierIndex += match.index;
@@ -2262,7 +2262,7 @@ export function parsePassageText(
     // Generate an embedded HTML document for the entire passage
     state.callbacks.onEmbeddedDocument(
         EmbeddedDocument.create(
-            (state.currentPassage?.name.contents || "placeholder").replace(
+            (state.currentPassage?.name.contents ?? "placeholder").replace(
                 " ",
                 "-"
             ),

@@ -147,7 +147,7 @@ describe("Completions", () => {
                 const ifidItem = completions?.items.find((item) =>
                     item.insertText?.includes("ifid")
                 );
-                const result = ifidItem?.insertText?.slice(-39, -3) || "nope";
+                const result = ifidItem?.insertText?.slice(-39, -3) ?? "nope";
 
                 // Slice the result to pull the end IFID out
                 expect(uuid.validate(result)).to.be.true;
@@ -189,10 +189,10 @@ describe("Completions", () => {
 
                 // Slice the result to remove the quote marks
                 expect(
-                    uuid.validate(result?.items[0].label.slice(1, -1) || "nope")
+                    uuid.validate(result?.items[0].label.slice(1, -1) ?? "nope")
                 ).to.be.true;
                 expect(
-                    uuid.version(result?.items[0].label.slice(1, -1) || "nope")
+                    uuid.version(result?.items[0].label.slice(1, -1) ?? "nope")
                 ).to.equal(4);
             });
 

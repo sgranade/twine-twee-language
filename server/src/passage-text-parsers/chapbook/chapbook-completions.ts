@@ -51,31 +51,31 @@ function generateVariableAndPropertyCompletions(
             for (const ref of index.getReferences(
                 uri,
                 OChapbookSymbolKind.Property
-            ) || []) {
+            ) ?? []) {
                 if (ref.contents.startsWith(context))
                     completions.push(
-                        ref.contents.split(".").pop() || ref.contents
+                        ref.contents.split(".").pop() ?? ref.contents
                     );
             }
             for (const ref of index.getReferences(
                 uri,
                 OChapbookSymbolKind.PropertySet
-            ) || []) {
+            ) ?? []) {
                 if (ref.contents.startsWith(context))
                     completions.push(
-                        ref.contents.split(".").pop() || ref.contents
+                        ref.contents.split(".").pop() ?? ref.contents
                     );
             }
         } else {
             completions.push(
                 ...(index
                     .getReferences(uri, OChapbookSymbolKind.Variable)
-                    ?.map((x) => x.contents) || [])
+                    ?.map((x) => x.contents) ?? [])
             );
             completions.push(
                 ...(index
                     .getReferences(uri, OChapbookSymbolKind.VariableSet)
-                    ?.map((x) => x.contents) || [])
+                    ?.map((x) => x.contents) ?? [])
             );
         }
     }
@@ -161,7 +161,7 @@ function generateModifierCompletions(
     const modifier = modifiers.find((modifier) =>
         modifier.match.test(modifierText)
     );
-    const modifierMatch = modifier?.match.exec(modifierText) || undefined;
+    const modifierMatch = modifier?.match.exec(modifierText) ?? undefined;
 
     if (modifier !== undefined && modifierMatch !== undefined) {
         // If we found a modifier, then the first text matches and we should create
@@ -190,8 +190,8 @@ function generateModifierCompletions(
         } else if (
             modifier.firstArgument?.required === ArgumentRequirement.required
         ) {
-            const label = modifier.name || modifier.match.source;
-            const textEditText = `${label} ${placeholderWithTabStop(modifier.firstArgument.placeholder || "arg", 1)}`;
+            const label = modifier.name ?? modifier.match.source;
+            const textEditText = `${label} ${placeholderWithTabStop(modifier.firstArgument.placeholder ?? "arg", 1)}`;
             const completionList = CompletionList.create([
                 {
                     label: label,
@@ -414,7 +414,7 @@ function generateInsertCompletions(
         let placeholderCount = 1;
         const insertCompletions: CompletionItem[] = [];
         for (const insert of inserts) {
-            for (const label of insert.completions || []) {
+            for (const label of insert.completions ?? []) {
                 let textEditText = label;
                 if (
                     colonMissing &&
@@ -430,7 +430,7 @@ function generateInsertCompletions(
                 // If there's no comma, put in placeholders for any required properties
                 if (commaMissing) {
                     for (const [name, info] of Object.entries(
-                        insert.requiredProps || {}
+                        insert.requiredProps ?? {}
                     )) {
                         textEditText += `, ${name}: ${insertPropertyPlaceholder(info, placeholderCount++)}`;
                     }
@@ -466,7 +466,7 @@ function generateInsertCompletions(
                     text.slice(insertContentStart, offset),
                     insertContentStart,
                     index
-                )?.items || [])
+                )?.items ?? [])
             );
         }
 
@@ -508,10 +508,10 @@ function generateInsertCompletions(
         if (text[insertSectionEnd] === ":") insertSectionEnd++;
 
         const propCompletions = insertPropertiesToCompletionItems(
-            insert.requiredProps || {}
+            insert.requiredProps ?? {}
         );
         propCompletions.push(
-            ...insertPropertiesToCompletionItems(insert.optionalProps || {})
+            ...insertPropertiesToCompletionItems(insert.optionalProps ?? {})
         );
         const completionList = CompletionList.create(propCompletions);
         completionList.itemDefaults = {

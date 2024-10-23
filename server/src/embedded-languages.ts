@@ -105,7 +105,7 @@ export async function doComplete(
         offset - parentDocument.offsetAt(embeddedDocument.range.start);
     const service = getLanguageService(embeddedDocument.document.languageId);
     return (
-        (await service?.doComplete(embeddedDocument, embeddedOffset)) || null
+        (await service?.doComplete(embeddedDocument, embeddedOffset)) ?? null
     );
 }
 
@@ -138,7 +138,7 @@ export async function doValidation(
     embeddedDocument: EmbeddedDocument
 ): Promise<Diagnostic[]> {
     const service = getLanguageService(embeddedDocument.document.languageId);
-    return service?.doValidation(embeddedDocument) || [];
+    return service?.doValidation(embeddedDocument) ?? [];
 }
 
 /**

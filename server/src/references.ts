@@ -25,5 +25,5 @@ export function getReferencesToSymbolAt(
     if (indexReferences === undefined && formatReferences === undefined)
         return undefined;
 
-    return [...(indexReferences?.locations || []), ...(formatReferences || [])];
+    return [...(indexReferences?.locations ?? []), ...(formatReferences ?? [])];
 }

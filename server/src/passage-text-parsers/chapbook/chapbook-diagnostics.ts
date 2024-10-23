@@ -40,7 +40,7 @@ function generateCustomInsertDiagnostics(
     for (const insertRef of index.getReferences(
         document.uri,
         OChapbookSymbolKind.CustomInsert
-    ) || []) {
+    ) ?? []) {
         const insert = customInserts.find((i) =>
             i.match.test(insertRef.contents)
         );
@@ -120,7 +120,7 @@ function generateCustomModifierDiagnostics(
     for (const modRef of index.getReferences(
         document.uri,
         OChapbookSymbolKind.CustomModifier
-    ) || []) {
+    ) ?? []) {
         const modifier = customModifiers.find((i) =>
             i.match.test(modRef.contents)
         );
@@ -194,7 +194,7 @@ export function generateDiagnostics(
         propSetNamesWithDuplicates.push(
             ...(index
                 .getReferences(uri, OChapbookSymbolKind.PropertySet)
-                ?.map((ref) => ref.contents) || [])
+                ?.map((ref) => ref.contents) ?? [])
         );
     }
     const propSetNames = new Set(propSetNamesWithDuplicates);
@@ -205,7 +205,7 @@ export function generateDiagnostics(
         varNamesWithDuplicates.push(
             ...(index
                 .getReferences(uri, OChapbookSymbolKind.VariableSet)
-                ?.map((ref) => ref.contents) || [])
+                ?.map((ref) => ref.contents) ?? [])
         );
     }
     const varSetNames = new Set(varNamesWithDuplicates);
@@ -213,7 +213,7 @@ export function generateDiagnostics(
     for (const varRef of index.getReferences(
         document.uri,
         OChapbookSymbolKind.Variable
-    ) || []) {
+    ) ?? []) {
         if (!varSetNames.has(varRef.contents)) {
             const message = `"${varRef.contents}" isn't set in any vars section. Make sure you've spelled it correctly.`;
             diagnostics.push(
@@ -232,7 +232,7 @@ export function generateDiagnostics(
     for (const propRef of index.getReferences(
         document.uri,
         OChapbookSymbolKind.Property
-    ) || []) {
+    ) ?? []) {
         if (!propSetNames.has(propRef.contents)) {
             const message = `"${propRef.contents}" isn't set in any vars section. Make sure you've spelled it correctly.`;
             diagnostics.push(

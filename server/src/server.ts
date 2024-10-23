@@ -330,7 +330,7 @@ documents.onDidChangeContent(async (change) => {
 documents.onDidClose;
 
 connection.onDidChangeWatchedFiles((_change) => {
-    for (const change of _change.changes || []) {
+    for (const change of _change.changes ?? []) {
         if (change.type === FileChangeType.Deleted) {
             projectIndex.removeDocument(change.uri);
         }
