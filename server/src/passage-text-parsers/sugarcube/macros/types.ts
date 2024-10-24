@@ -1,3 +1,5 @@
+import { Parameters } from "../sc2/t3lt-parameters";
+
 /**
  * Macros that are parents of another macro.
  */
@@ -39,11 +41,14 @@ export interface MacroInfo {
      * What kind of arguments the macro takes. If boolean true, then it
      * takes arguments but we won't validate them. If boolean false,
      * then it doesn't accept arguments. If an array, it's the format of
-     * the arguments as per the twee3-language-tools syntax
-     * (https://github.com/cyrusfirheir/twee3-language-tools/blob/master/docs/parameters.md)
-     * with the addition of "expression" to indicate that it takes a TwineScript expression.
+     * the arguments as per the [twee3-language-tools (T3LT) syntax]
+     * (https://github.com/cyrusfirheir/twee3-language-tools/blob/master/docs/parameters.md).
      */
     arguments: boolean | string[];
+    /**
+     * Macro arguments parsed into T3LT parameters.
+     */
+    parsedArguments?: Parameters;
     /**
      * Macro that is a parent of this macro.
      */

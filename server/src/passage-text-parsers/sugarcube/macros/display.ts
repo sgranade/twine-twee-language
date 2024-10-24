@@ -2,7 +2,7 @@ import { MacroInfo } from "./types";
 
 export const equalsMacro: MacroInfo = {
     name: "=",
-    arguments: ["expression"],
+    arguments: true,
     syntax: "<<= expression>>",
     description:
         "Outputs a string representation of the result of the given expression. This macro is an alias for `<<print>>`.",
@@ -11,7 +11,7 @@ export const equalsMacro: MacroInfo = {
 
 export const minusMacro: MacroInfo = {
     name: "-",
-    arguments: ["expression"],
+    arguments: true,
     syntax: "<<- expression>>",
     description:
         "Outputs a string representation of the result of the given expression. This macro is functionally identical to `<<print>>`, save that it also encodes HTML special characters in the output.",
@@ -49,7 +49,7 @@ export const nobrMacro: MacroInfo = {
 
 export const printMacro: MacroInfo = {
     name: "print",
-    arguments: ["expression"],
+    arguments: true,
     syntax: "<<print expression>>",
     description:
         "Outputs a string representation of the result of the given expression.",

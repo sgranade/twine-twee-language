@@ -2,7 +2,7 @@ import { Diagnostic, DiagnosticSeverity } from "vscode-languageserver";
 
 import { capturePreSemanticTokenFor, StoryFormatParsingState } from "..";
 import { EmbeddedDocument } from "../../embedded-languages";
-import { JSPropertyLabel, tokenizeJSExpression } from "../../js-parser";
+import { tokenizeJSExpression } from "../../js-parser";
 import {
     ParseLevel,
     ParsingState,
@@ -10,17 +10,15 @@ import {
     logErrorFor,
     logSemanticTokenFor,
     logWarningFor,
-    parsePassageReference,
 } from "../../parser";
-import { Label } from "../../project-index";
-import { ETokenModifier, ETokenType, TokenType } from "../../semantic-tokens";
+import { ETokenModifier, ETokenType } from "../../semantic-tokens";
 import { eraseMatches, versionCompare } from "../../utilities";
 import { all as allMacros, MacroInfo, MacroParent } from "./macros";
-import { OSugarCubeSymbolKind, SugarCubeSymbolKind } from "./types";
+import { createVariableAndPropertyReferences } from "./sugarcube-utils";
+import { OSugarCubeSymbolKind } from "./types";
 import {
-    LinkMarkupData,
     MacroParse,
-    parseSquareBracketedMarkup,
+    parseSugarCubeTwineLink,
     tokenizeMacroArguments,
 } from "./sc2/sc2-lexer-parser";
 import { sc2Patterns } from "./sc2/sc2-patterns";
@@ -35,36 +33,6 @@ const mediaPassageTags = new Set([
     "Twine.video",
     "Twine.vtt",
 ]);
-
-/**
- * Create symbol references for parsed variables and properties.
- *
- * @param varsAndProps Tuple with separate lists of variables and properties.
- * @param state Parsing state.
- */
-function createVariableAndPropertyReferences(
-    varsAndProps: [Label[], JSPropertyLabel[]],
-    state: ParsingState
-): void {
-    for (const v of varsAndProps[0]) {
-        state.callbacks.onSymbolReference({
-            contents: v.contents,
-            location: v.location,
-            kind: OSugarCubeSymbolKind.Variable,
-        });
-    }
-    for (const p of varsAndProps[1]) {
-        // If there's a scope, add it to the name, b/c we save properties in their
-        // full object context (ex: `var.prop.subprop`).
-        const contents =
-            p.scope !== undefined ? `${p.scope}.${p.contents}` : p.contents;
-        state.callbacks.onSymbolReference({
-            contents: contents,
-            location: p.location,
-            kind: OSugarCubeSymbolKind.Property,
-        });
-    }
-}
 
 /**
  * Regex to match bare SugarCube 2 variables.
@@ -123,73 +91,6 @@ function parseBareVariables(
 }
 
 /**
- * Parse a Twine link.
- *
- * @param text Text to parse.
- * @param linkIndex Index in text where the link begins (zero-based).
- * @param textIndex Index of the text in the document (zero-based).
- * @param state Parsing state.
- * @param sugarcubeState SugarCube-specific parsing state.
- * @returns The markup data about the link.
- */
-function parseTwineLink(
-    text: string,
-    linkIndex: number,
-    textIndex: number,
-    state: ParsingState,
-    sugarcubeState: StoryFormatParsingState
-): LinkMarkupData {
-    const markupData = parseSquareBracketedMarkup(text, linkIndex);
-    const error = markupData.error;
-    if (
-        error === undefined &&
-        markupData.isLink &&
-        markupData.link !== undefined
-    ) {
-        parsePassageReference(
-            markupData.link.text,
-            markupData.link.at + textIndex,
-            state,
-            sugarcubeState
-        );
-
-        if (markupData.text !== undefined) {
-            capturePreSemanticTokenFor(
-                markupData.text.text,
-                markupData.text.at + textIndex,
-                ETokenType.string,
-                [],
-                sugarcubeState
-            );
-        }
-        if (markupData.delim !== undefined) {
-            capturePreSemanticTokenFor(
-                markupData.delim.text,
-                markupData.delim.at + textIndex,
-                ETokenType.keyword,
-                [],
-                sugarcubeState
-            );
-        }
-        if (markupData.setter !== undefined) {
-            createVariableAndPropertyReferences(
-                tokenizeTwineScriptExpression(
-                    markupData.setter.text,
-                    markupData.setter.at + textIndex,
-                    state.textDocument,
-                    sugarcubeState
-                ),
-                state
-            );
-        }
-    } else if (error !== undefined) {
-        logErrorFor(error.text, error.at, error.message, state);
-    }
-
-    return markupData;
-}
-
-/**
  * Parse Twine links and remove them from the text.
  *
  * @param passageText Passage text to parse.
@@ -208,7 +109,7 @@ function parseAndRemoveTwineLinks(
     // kinds of array reference shenanigans, so we can't do a simple regex
     // search. Instead, iterate over all possible link-opening sigils
     for (const m of passageText.matchAll(/\[\[[^]/g)) {
-        const markupData = parseTwineLink(
+        const markupData = parseSugarCubeTwineLink(
             passageText,
             m.index,
             textIndex,
@@ -259,6 +160,12 @@ interface macroLocationInfo {
 }
 
 /**
+ * Whether a bit of text starts with a variable sigil ($, _) or
+ * is a settings or setup variable.
+ */
+const startIsVarRegexp = /^(\$|_|(set(tings|up))[.[])/;
+
+/**
  * Parse the arguments to a macro.
  *
  * @param args Unparsed arguments.
@@ -281,19 +188,31 @@ function parseMacroArgs(
             logErrorFor(
                 arg.text,
                 arg.at,
-                arg.message || "Unknown macro argument parsing error",
+                arg.message ?? "Unknown macro argument parsing error",
                 state
             );
         } else if (arg.type === MacroParse.Item.Bareword) {
-            createVariableAndPropertyReferences(
-                tokenizeTwineScriptExpression(
-                    arg.text,
-                    arg.at,
-                    state.textDocument,
-                    sugarcubeState
-                ),
-                state
+            let [vars, props] = tokenizeTwineScriptExpression(
+                arg.text,
+                arg.at,
+                state.textDocument,
+                sugarcubeState
             );
+
+            // Discard any variables that don't start with `$` or `_` (or `settings` or `setup`) and properties whose
+            // scope doesn't start with the same. If it's not a variable, also get rid of the associated semantic token
+            vars = vars.filter((v) => {
+                const isVar = startIsVarRegexp.test(v.contents);
+                if (!isVar) {
+                    delete sugarcubeState.passageTokens[arg.at];
+                }
+                return isVar;
+            });
+            props = props.filter(
+                (p) => p.scope && startIsVarRegexp.test(p.scope)
+            );
+
+            createVariableAndPropertyReferences([vars, props], state);
         } else if (arg.type === MacroParse.Item.Expression) {
             // TwineScript code inside backticks
             createVariableAndPropertyReferences(
@@ -314,7 +233,7 @@ function parseMacroArgs(
                 sugarcubeState
             );
         } else if (arg.type === MacroParse.Item.SquareBracket) {
-            const markup = parseTwineLink(
+            const markup = parseSugarCubeTwineLink(
                 arg.text,
                 0,
                 arg.at,
@@ -378,7 +297,7 @@ function parseMacros(
 
         const macroBodyIndex =
             macroIndex +
-            (macroEnd || "").length +
+            (macroEnd ?? "").length +
             macroName.length +
             preMacroBodySpace.length;
 
@@ -438,7 +357,7 @@ function parseMacros(
                 macroInfo.deprecated
             ) <= 0;
         capturePreSemanticTokenFor(
-            (macroEnd || "") + macroName,
+            (macroEnd ?? "") + macroName,
             textIndex + macroIndex,
             ETokenType.function,
             deprecated ? [ETokenModifier.deprecated] : [],
@@ -535,7 +454,7 @@ function parseMacros(
                         macroChildCount[parentMacroInfo.id][macroInfo.name] =
                             (macroChildCount[parentMacroInfo.id][
                                 macroInfo.name
-                            ] || 0) + 1;
+                            ] ?? 0) + 1;
                         // Make sure we don't have too many of the same kind of child macro
                         if (
                             macroChildCount[parentMacroInfo.id][
@@ -670,7 +589,7 @@ function checkPassageTags(
 ): void {
     let isHtmlPassage = true;
 
-    const tags = state.currentPassage?.tags || [];
+    const tags = state.currentPassage?.tags ?? [];
     const tagNames = tags.map((t) => t.contents);
     const mediaTags = tags.filter((x) => mediaPassageTags.has(x.contents));
     if (tagNames.includes("script")) {
@@ -748,7 +667,7 @@ function checkPassageTags(
     if (isHtmlPassage)
         state.callbacks.onEmbeddedDocument(
             EmbeddedDocument.create(
-                (state.currentPassage?.name.contents || "placeholder").replace(
+                (state.currentPassage?.name.contents ?? "placeholder").replace(
                     " ",
                     "-"
                 ),

@@ -1,3 +1,4 @@
+import { parseMacroParameters } from "../sc2/t3lt-parameters";
 import {
     audioMacro,
     cacheaudioMacro,

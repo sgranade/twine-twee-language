@@ -45,7 +45,7 @@ export const optionMacro: MacroInfo = {
 
 export const optionsfromMacro: MacroInfo = {
     name: "optionsfrom",
-    arguments: ["expression"],
+    arguments: true,
     parents: ["cycle", "listbox"],
     syntax: "<<optionsfrom collection>>",
     description:

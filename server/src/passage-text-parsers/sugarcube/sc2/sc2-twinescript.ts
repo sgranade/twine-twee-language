@@ -197,21 +197,6 @@ export function tokenizeTwineScriptExpression(
         desugaredStoryFormatState
     );
 
-    // Discard any variables that don't start with "$" or "_" and properties whose scope
-    // doesn't start with the same
-    // (We use the desugared values, which means we can have false positives, but oh well!)
-    vars = vars.filter(
-        (v) =>
-            v.contents.startsWith(desugarMap["$"]) ||
-            v.contents.startsWith(desugarMap["_"])
-    );
-    props = props.filter(
-        (p) =>
-            p.scope &&
-            (p.scope.startsWith(desugarMap["$"]) ||
-                p.scope.startsWith(desugarMap["_"]))
-    );
-
     // Adjust variable and property locations and (if needed) text
     const seenUnsugaredVars: Record<string, string> = {};
     for (const v of [...vars, ...props]) {

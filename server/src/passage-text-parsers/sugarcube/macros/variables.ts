@@ -12,7 +12,7 @@ export const captureMacro: MacroInfo = {
 
 export const setMacro: MacroInfo = {
     name: "set",
-    arguments: ["expression"],
+    arguments: true,
     syntax: "<<set expression>>",
     description:
         "Sets story `$variables` and temporary `_variables` based on the given expression.",

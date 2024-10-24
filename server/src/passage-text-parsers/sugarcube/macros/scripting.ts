@@ -2,7 +2,7 @@ import { MacroInfo } from "./types";
 
 export const runMacro: MacroInfo = {
     name: "run",
-    arguments: ["expression"],
+    arguments: true,
     syntax: "<<run expression>>",
     description:
         "Runs given expression.\n\n*Functionally identical to `<<set>>`. Intended to be mnemonically better for uses where the expression is arbitrary code, rather than variables to set—i.e., `<<run>>` to run code, `<<set>>` to set variables.*",

@@ -3,8 +3,93 @@
  * as well as Twee3-Language-Tools's `arguments.ts`
  */
 
+import {
+    logErrorFor,
+    parsePassageReference,
+    ParsingState,
+} from "../../../parser";
+import { ETokenType } from "../../../semantic-tokens";
 import { skipSpaces } from "../../../utilities";
+import { capturePreSemanticTokenFor, StoryFormatParsingState } from "../..";
 import { Token } from "../../types";
+import { createVariableAndPropertyReferences } from "../sugarcube-utils";
+import { tokenizeTwineScriptExpression } from "./sc2-twinescript";
+
+/**
+ * Utility functions for the LSP to capture tokens as we parse.
+ */
+
+/**
+ * Parse an SC2 Twine link.
+ *
+ * @param text Text to parse.
+ * @param linkIndex Index in text where the link begins (zero-based).
+ * @param textIndex Index of the text in the document (zero-based).
+ * @param state Parsing state.
+ * @param sugarcubeState SugarCube-specific parsing state.
+ * @returns The markup data about the link.
+ */
+export function parseSugarCubeTwineLink(
+    text: string,
+    linkIndex: number,
+    textIndex: number,
+    state: ParsingState,
+    sugarcubeState: StoryFormatParsingState
+): LinkMarkupData {
+    const markupData = parseSquareBracketedMarkup(text, linkIndex);
+    const error = markupData.error;
+    if (
+        error === undefined &&
+        markupData.isLink &&
+        markupData.link !== undefined
+    ) {
+        parsePassageReference(
+            markupData.link.text,
+            markupData.link.at + textIndex,
+            state,
+            sugarcubeState
+        );
+
+        if (markupData.text !== undefined) {
+            capturePreSemanticTokenFor(
+                markupData.text.text,
+                markupData.text.at + textIndex,
+                ETokenType.string,
+                [],
+                sugarcubeState
+            );
+        }
+        if (markupData.delim !== undefined) {
+            capturePreSemanticTokenFor(
+                markupData.delim.text,
+                markupData.delim.at + textIndex,
+                ETokenType.keyword,
+                [],
+                sugarcubeState
+            );
+        }
+        if (markupData.setter !== undefined) {
+            createVariableAndPropertyReferences(
+                tokenizeTwineScriptExpression(
+                    markupData.setter.text,
+                    markupData.setter.at + textIndex,
+                    state.textDocument,
+                    sugarcubeState
+                ),
+                state
+            );
+        }
+    } else if (error !== undefined) {
+        logErrorFor(error.text, error.at, error.message, state);
+    }
+
+    return markupData;
+}
+
+/**
+ * Adapted from SugarCube's `lexer.js`, `parserlib.js`, and `wikifer.js`,
+ * as well as Twee3-Language-Tools's `arguments.ts`
+ */
 
 type LexerState<T> = (lexer: Lexer<T>) => null | LexerState<T>;
 interface LexerEntry<T> {
@@ -192,7 +277,7 @@ class Lexer<T> {
     }
 }
 
-interface ArgumentToken extends Token {
+export interface ArgumentToken extends Token {
     type: MacroParse.Item;
     /**
      * Any additional information, like the error message from a parsing error.
