@@ -231,10 +231,11 @@ connection.onInitialize((params: InitializeParams) => {
                 // TODO create a resolve provider
                 resolveProvider: false,
             },
-            diagnosticProvider: {
-                interFileDependencies: true,
-                workspaceDiagnostics: false,
-            },
+            // Right now we don't support pull diagnostics b/c as of VS Code 1.94.2 (2024/10/09) it's flaky
+            // diagnosticProvider: {
+            //     interFileDependencies: true,
+            //     workspaceDiagnostics: false,
+            // },
             documentSymbolProvider: true,
             foldingRangeProvider: true,
             hoverProvider: true,
@@ -270,21 +271,22 @@ connection.onInitialized(async () => {
 });
 
 // Diagnostics -- pull interface
-connection.languages.diagnostics.on(async (params) => {
-    const document = documents.get(params.textDocument.uri);
-    if (document !== undefined) {
-        return {
-            kind: DocumentDiagnosticReportKind.Full,
-            items: await validateTextDocument(document),
-        } satisfies DocumentDiagnosticReport;
-    } else {
-        // We don't know the document.
-        return {
-            kind: DocumentDiagnosticReportKind.Full,
-            items: [],
-        } satisfies DocumentDiagnosticReport;
-    }
-});
+// Right now we don't support pull diagnostics b/c as of VS Code 1.94.2 (2024/10/09) it's flaky
+// connection.languages.diagnostics.on(async (params) => {
+//     const document = documents.get(params.textDocument.uri);
+//     if (document !== undefined) {
+//         return {
+//             kind: DocumentDiagnosticReportKind.Full,
+//             items: await validateTextDocument(document),
+//         } satisfies DocumentDiagnosticReport;
+//     } else {
+//         // We don't know the document.
+//         return {
+//             kind: DocumentDiagnosticReportKind.Full,
+//             items: [],
+//         } satisfies DocumentDiagnosticReport;
+//     }
+// });
 
 connection.onCompletion(
     async (
@@ -458,6 +460,9 @@ async function processChangedDocument(
 
     // Request a refresh of semantic tokens since we've potentially changed them
     connection.languages.semanticTokens.refresh();
+
+    // Generate diagnostics
+    await validateTextDocument(document);
 }
 
 /**
@@ -478,11 +483,8 @@ async function processAllOpenDocuments() {
  * Validate a document and get any diagnostics arising from that validation.
  *
  * @param textDocument Document to validate.
- * @returns Diagnostics for the given document.
  */
-async function validateTextDocument(
-    textDocument: TextDocument
-): Promise<Diagnostic[]> {
+async function validateTextDocument(textDocument: TextDocument) {
     const diagnosticsOptions = (await getSettings())["twee-3"];
 
     const diagnostics = await generateDiagnostics(
@@ -491,7 +493,7 @@ async function validateTextDocument(
         diagnosticsOptions
     );
 
-    return diagnostics;
+    connection.sendDiagnostics({ uri: textDocument.uri, diagnostics });
 }
 
 // Make the text document manager listen on the connection
