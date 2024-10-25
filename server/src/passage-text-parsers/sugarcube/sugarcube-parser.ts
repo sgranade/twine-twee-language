@@ -485,7 +485,7 @@ function parseMacros(
                         name: macroInfo.name,
                         at: m.index,
                         fullText: m[0],
-                        id: macroId,
+                        id: macroId++,
                     });
                 } else {
                     let openingMacroFound = false;
@@ -522,9 +522,13 @@ function parseMacros(
                 const parentNames = macroInfo.parents.map((p) =>
                     MacroParent.is(p) ? p.name : p
                 );
-                const parentMacroInfo = unclosedMacros
-                    .reverse()
-                    .find((info) => parentNames.includes(info.name));
+                let parentMacroInfo: macroLocationInfo | undefined;
+                for (let i = unclosedMacros.length - 1; i >= 0; --i) {
+                    if (parentNames.includes(unclosedMacros[i].name)) {
+                        parentMacroInfo = unclosedMacros[i];
+                        break;
+                    }
+                }
                 if (parentMacroInfo !== undefined) {
                     // Record the number of times the child has appeared if there's a limit
                     const macroParent = macroInfo.parents.find(

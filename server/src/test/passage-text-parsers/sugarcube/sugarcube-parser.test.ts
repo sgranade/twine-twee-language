@@ -2052,6 +2052,35 @@ describe("SugarCube Parser", () => {
                 expect(result.range).to.eql(Range.create(4, 0, 4, 5));
             });
 
+            it("should not error on a nested container macro that has just enough children", () => {
+                const header = ":: Passage\n";
+                const passage =
+                    "Let's go: <<a>>\n<<b>>\n<<a>>\n<<b>>\n<</a>>\n<</a>>\n" +
+                    "<<a>>\n<<a>>\n<<b>>\n<</a>>\n<<b>>\n<</a>>\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const parser = uut.getSugarCubeParser(undefined);
+                const macroA = buildMacroInfo({
+                    name: "a",
+                    container: true,
+                });
+                const macroB = buildMacroInfo({ name: "b" });
+                macroB.parents = [{ name: "a", max: 1 }];
+                const mockFunction = ImportMock.mockFunction(
+                    macrosModule,
+                    "all"
+                ).returns({ a: macroA, b: macroB });
+
+                parser?.parsePassageText(passage, header.length, state);
+                mockFunction.restore();
+                const result = callbacks.errors;
+
+                expect(result).to.be.empty;
+            });
+
             describe("macro arguments", () => {
                 it("should raise an error on a malformed string", () => {
                     const header = ":: Passage\n";
