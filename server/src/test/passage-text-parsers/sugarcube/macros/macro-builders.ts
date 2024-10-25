@@ -1,7 +1,5 @@
 import { MacroInfo } from "../../../../passage-text-parsers/sugarcube/macros";
 
-export interface macroBuild {}
-
 export function buildMacroInfo({
     name = "mockmacro",
     container = false,

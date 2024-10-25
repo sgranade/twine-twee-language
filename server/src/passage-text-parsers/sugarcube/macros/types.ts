@@ -38,8 +38,9 @@ export interface MacroInfo {
      */
     container?: boolean;
     /**
-     * What kind of arguments the macro takes. If boolean true, then it
-     * takes arguments but we won't validate them. If boolean false,
+     * What kind of arguments the macro takes. If undefined, we don't validate
+     * any arguments one way or the other. If boolean true, then it
+     * requires arguments but we won't validate them. If boolean false,
      * then it doesn't accept arguments. If an array, it's the format of
      * the arguments as per the [twee3-language-tools (T3LT) syntax]
      * (https://github.com/cyrusfirheir/twee3-language-tools/blob/master/docs/parameters.md).

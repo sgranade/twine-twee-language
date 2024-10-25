@@ -106,7 +106,7 @@ enum ArgType {
     // These are from String
     String,
 }
-type Arg =
+export type Arg =
     | LinkArgument
     | ImageArgument
     | VariableArgument
@@ -218,7 +218,7 @@ const varTestRegexp: RegExp = /^[$_][$A-Z_a-z][$0-9A-Z_a-z]*/;
  * @param sugarcubeState SugarCube-specific parsing state.
  * @returns The macro arg, or undefined if the argument token couldn't be converted.
  */
-function macroArgumentTokenToArg(
+export function macroArgumentTokenToArg(
     token: ArgumentToken,
     state: ParsingState,
     sugarCubeState: StoryFormatParsingState
@@ -722,8 +722,9 @@ export class Parameters {
     /**
      * Checks the given arguments for their matching to a chosen variant.
      * @param args The parsed arguments for type validation
+     * (SRG: changed to take just the array of parsed args)
      */
-    validate(args: ParsedArguments): ChosenVariantInformation {
+    validate(args: Arg[]): ChosenVariantInformation {
         // We track the current most likely variant based on type and somewhat on
         // argument count. This certainly isn't the most accurate implementation but it
         // should work well enough for now.
@@ -843,10 +844,9 @@ class Variant {
     private static ValidateLimit: number = 2000;
     /**
      * Checks if the arguments are valid based on this variant.
+     * (SRG: changed to take just the array of parsed args)
      */
-    validate(parsedArguments: ParsedArguments): ValidateInformation {
-        // Shorthand
-        const args = parsedArguments.arguments;
+    validate(args: Arg[]): ValidateInformation {
         let iterations: number = 0;
 
         enum Status {

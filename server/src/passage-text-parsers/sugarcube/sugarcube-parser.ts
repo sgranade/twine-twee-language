@@ -23,6 +23,23 @@ import {
 } from "./sc2/sc2-lexer-parser";
 import { sc2Patterns } from "./sc2/sc2-patterns";
 import { tokenizeTwineScriptExpression } from "./sc2/sc2-twinescript";
+import {
+    Arg,
+    macroArgumentTokenToArg,
+    parseMacroParameters,
+} from "./sc2/t3lt-parameters";
+
+/**
+ * Parse all macro arguments.
+ */
+Object.values(allMacros()).map((macro) => {
+    if (Array.isArray(macro.arguments)) {
+        const parsedArguments = parseMacroParameters(macro.arguments, {}); // TODO add enums!
+        if (!(parsedArguments instanceof Error)) {
+            macro.parsedArguments = parsedArguments;
+        }
+    }
+});
 
 /**
  * Passage tags that correspond to a media passage.
@@ -175,6 +192,8 @@ const startIsVarRegexp = /^(\$|_|(set(tings|up))[.[])/;
  * @param sugarcubeState SugarCube-specific parsing state.
  */
 function parseMacroArgs(
+    macroName: string,
+    macroNameIndex: number,
     args: string | undefined,
     argsIndex: number,
     macroInfo: MacroInfo | undefined,
@@ -183,6 +202,10 @@ function parseMacroArgs(
 ): void {
     const argumentTokens =
         args !== undefined ? tokenizeMacroArguments(args, argsIndex) : [];
+
+    // Are we not going to parse the arguments via macroArgumentTokenToArg()?
+    const wontParseArguments = !Array.isArray(macroInfo?.arguments);
+
     for (const arg of argumentTokens) {
         if (arg.type === MacroParse.Item.Error) {
             logErrorFor(
@@ -232,20 +255,81 @@ function parseMacroArgs(
                 [],
                 sugarcubeState
             );
-        } else if (arg.type === MacroParse.Item.SquareBracket) {
-            const markup = parseSugarCubeTwineLink(
-                arg.text,
-                0,
-                arg.at,
-                state,
-                sugarcubeState
+        } else if (
+            arg.type === MacroParse.Item.SquareBracket &&
+            wontParseArguments
+        ) {
+            // If the macro arguments won't later be parsed to be compared to the
+            // macro's possible parameters, then we parse the square bracket items
+            // to capture their semantic tokens and passage references.
+            parseSugarCubeTwineLink(arg.text, 0, arg.at, state, sugarcubeState);
+        }
+    }
+
+    // From here on out, we need macro arguments to do anything about it
+    if (macroInfo?.arguments === undefined) {
+        return;
+    }
+
+    if (macroInfo.arguments === true) {
+        if (args === undefined || !args.trim()) {
+            logWarningFor(
+                macroName,
+                macroNameIndex,
+                "Expected arguments",
+                state
             );
-            // No setters allowed
-            if (markup.setter !== undefined) {
+        }
+    } else if (macroInfo.arguments === false) {
+        if (args !== undefined && args.trim()) {
+            logWarningFor(args, argsIndex, "Expected no arguments", state);
+        }
+    } else if (macroInfo.parsedArguments !== undefined) {
+        // We got arguments definitions we can validate against
+        const t3ltArgsAndErrors = argumentTokens.map((t) =>
+            macroArgumentTokenToArg(t, state, sugarcubeState)
+        );
+
+        // Map argument indices to token indices
+        const t3ltArgs: Arg[] = [];
+        const argToToken: Record<number, number> = {};
+        let argCount = 0;
+        for (const [ndx, arg] of t3ltArgsAndErrors.entries()) {
+            if (arg !== undefined) {
+                argToToken[argCount++] = ndx;
+                t3ltArgs.push(arg);
+            }
+        }
+
+        // Validate arguments and log errors
+        const validationInfo = macroInfo.parsedArguments.validate(t3ltArgs);
+        for (const error of validationInfo.info.errors) {
+            const errorToken = argumentTokens[argToToken[error.index] ?? 0];
+            if (errorToken === undefined) {
+                logErrorFor(args ?? "", argsIndex, error.error.message, state);
+            } else {
                 logErrorFor(
-                    `[${markup.setter.text}]`,
-                    arg.at + markup.setter.at - 1,
-                    "Links in macro arguments can't have a setter",
+                    errorToken.text,
+                    errorToken.at,
+                    error.error.message,
+                    state
+                );
+            }
+        }
+        for (const warning of validationInfo.info.warnings) {
+            const warningToken = argumentTokens[argToToken[warning.index] ?? 0];
+            if (warningToken === undefined) {
+                logErrorFor(
+                    args ?? "",
+                    argsIndex,
+                    warning.warning.message,
+                    state
+                );
+            } else {
+                logErrorFor(
+                    warningToken.text,
+                    warningToken.at,
+                    warning.warning.message,
                     state
                 );
             }
@@ -483,13 +567,24 @@ function parseMacros(
 
         // Handle arguments, if any. (We call this even if there are no
         // arguments b/c the macro may expect arguments)
-        parseMacroArgs(
-            macroBody,
-            macroBodyIndex + textIndex,
-            macroInfo,
-            state,
-            sugarcubeState
-        );
+        if (isOpenMacro) {
+            parseMacroArgs(
+                (macroEnd ?? "") + macroName,
+                macroIndex + textIndex,
+                macroBody,
+                macroBodyIndex + textIndex,
+                macroInfo,
+                state,
+                sugarcubeState
+            );
+        } else if (macroBody.trim()) {
+            logWarningFor(
+                macroBody,
+                macroBodyIndex + textIndex,
+                "Closing macros don't take arguments",
+                state
+            );
+        }
 
         // Erase the macro from the string so we don't double parse its contents
         passageText =

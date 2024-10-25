@@ -11,6 +11,10 @@ import { buildMacroInfo } from "./macros/macro-builders";
 
 import * as macrosModule from "../../../passage-text-parsers/sugarcube/macros";
 import * as uut from "../../../passage-text-parsers/sugarcube";
+import {
+    Parameters,
+    parseMacroParameters,
+} from "../../../passage-text-parsers/sugarcube/sc2/t3lt-parameters";
 
 describe("SugarCube Parser", () => {
     it("should create an embedded html document for the passage", () => {
@@ -2070,25 +2074,165 @@ describe("SugarCube Parser", () => {
                     expect(result.range).to.eql(Range.create(1, 14, 1, 27));
                 });
 
-                it("should raise an error on a passage link that includes a setter", () => {
+                it("should raise a warning for no arguments to a macro that expects them", () => {
                     const header = ":: Passage\n";
-                    const passage = "Let's go: <<a [[Passage][$var1 to 7]]>>\n";
+                    const passage = "Let's go: <<a>>\n";
                     const callbacks = new MockCallbacks();
                     const state = buildParsingState({
                         content: header + passage,
                         callbacks: callbacks,
                     });
                     const parser = uut.getSugarCubeParser(undefined);
+                    const macro = buildMacroInfo({ name: "a" });
+                    macro.arguments = true;
+                    const mockFunction = ImportMock.mockFunction(
+                        macrosModule,
+                        "all"
+                    ).returns({ a: macro });
 
                     parser?.parsePassageText(passage, header.length, state);
+                    mockFunction.restore();
+                    const [result] = callbacks.errors;
+
+                    expect(callbacks.errors.length).to.equal(1);
+                    expect(result.severity).to.eql(DiagnosticSeverity.Warning);
+                    expect(result.message).to.include("Expected arguments");
+                    expect(result.range).to.eql(Range.create(1, 12, 1, 13));
+                });
+
+                it("should raise a warning for arguments to a macro that doesn't take them", () => {
+                    const header = ":: Passage\n";
+                    const passage = "Let's go: <<a testy whoops = 7>>\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getSugarCubeParser(undefined);
+                    const macro = buildMacroInfo({ name: "a" });
+                    macro.arguments = false;
+                    const mockFunction = ImportMock.mockFunction(
+                        macrosModule,
+                        "all"
+                    ).returns({ a: macro });
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    mockFunction.restore();
+                    const [result] = callbacks.errors;
+
+                    expect(callbacks.errors.length).to.equal(1);
+                    expect(result.severity).to.eql(DiagnosticSeverity.Warning);
+                    expect(result.message).to.include("Expected no arguments");
+                    expect(result.range).to.eql(Range.create(1, 14, 1, 30));
+                });
+
+                it("should raise an error for a non-boolean argument to a macro that takes a boolean", () => {
+                    const header = ":: Passage\n";
+                    const passage = "Let's go: <<a 1>>\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getSugarCubeParser(undefined);
+                    const macro = buildMacroInfo({ name: "a" });
+                    macro.arguments = ["boolean"];
+                    const parsedArguments = parseMacroParameters(
+                        macro.arguments,
+                        {}
+                    );
+                    macro.parsedArguments =
+                        parsedArguments instanceof Parameters
+                            ? parsedArguments
+                            : undefined;
+                    const mockFunction = ImportMock.mockFunction(
+                        macrosModule,
+                        "all"
+                    ).returns({ a: macro });
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    mockFunction.restore();
                     const [result] = callbacks.errors;
 
                     expect(callbacks.errors.length).to.equal(1);
                     expect(result.severity).to.eql(DiagnosticSeverity.Error);
                     expect(result.message).to.include(
-                        "Links in macro arguments can't have a setter"
+                        "Argument is not a boolean"
                     );
-                    expect(result.range).to.eql(Range.create(1, 24, 1, 36));
+                    expect(result.range).to.eql(Range.create(1, 14, 1, 15));
+                });
+
+                it("should not raise an error for a closing tag of a container macro that takes an argument", () => {
+                    const header = ":: Passage\n";
+                    const passage = "Let's go: <<a 1>><</a>>\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getSugarCubeParser(undefined);
+                    const macro = buildMacroInfo({
+                        name: "a",
+                        container: true,
+                    });
+                    macro.arguments = ["number"];
+                    const parsedArguments = parseMacroParameters(
+                        macro.arguments,
+                        {}
+                    );
+                    macro.parsedArguments =
+                        parsedArguments instanceof Parameters
+                            ? parsedArguments
+                            : undefined;
+                    const mockFunction = ImportMock.mockFunction(
+                        macrosModule,
+                        "all"
+                    ).returns({ a: macro });
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    mockFunction.restore();
+                    const result = callbacks.errors;
+
+                    expect(result).to.be.empty;
+                });
+
+                it("should raise a warning for a closing macro with any arguments", () => {
+                    const header = ":: Passage\n";
+                    const passage = "Let's go: <<a 1>><</a flooby>>\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getSugarCubeParser(undefined);
+                    const macro = buildMacroInfo({
+                        name: "a",
+                        container: true,
+                    });
+                    macro.arguments = ["number"];
+                    const parsedArguments = parseMacroParameters(
+                        macro.arguments,
+                        {}
+                    );
+                    macro.parsedArguments =
+                        parsedArguments instanceof Parameters
+                            ? parsedArguments
+                            : undefined;
+                    const mockFunction = ImportMock.mockFunction(
+                        macrosModule,
+                        "all"
+                    ).returns({ a: macro });
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    mockFunction.restore();
+                    const [result] = callbacks.errors;
+
+                    expect(callbacks.errors.length).to.equal(1);
+                    expect(result.severity).to.eql(DiagnosticSeverity.Warning);
+                    expect(result.message).to.include(
+                        "Closing macros don't take arguments"
+                    );
+                    expect(result.range).to.eql(Range.create(1, 22, 1, 28));
                 });
             });
         });
