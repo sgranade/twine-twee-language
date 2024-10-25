@@ -3,10 +3,7 @@ import {
     Connection,
     DefinitionParams,
     Definition,
-    Diagnostic,
     DidChangeConfigurationNotification,
-    DocumentDiagnosticReport,
-    DocumentDiagnosticReportKind,
     DocumentSymbol,
     DocumentSymbolParams,
     FileChangeType,
@@ -112,8 +109,8 @@ namespace Heartbeat {
                 workspaceReindexRequested = false;
             }
         } finally {
-            running = false;
             lastTime = Date.now();
+            running = false;
         }
     }
 
@@ -153,17 +150,17 @@ namespace Heartbeat {
         }
 
         try {
-            const tweeFiles =
-                await connection.sendRequest(FindTweeFilesRequest);
+            const tweeFileUris = new Set(
+                await connection.sendRequest(FindTweeFilesRequest)
+            );
 
-            // We'll loop through the files twice, once to find a StoryData
-            // value, and then a second time to parse passages, since
-            // the story format can change how even passage-name-only
-            // parsing occurs.
+            // We'll loop through the files three times: once to find a StoryData value, a second time
+            // to parse passages (since the story format can change how parsing occurs), and a
+            // third time to validate (since validation depends on the results of parsing all docs).
 
             // Right now we don't cache the results so as not to have to
             // potentially hold every file in a project in memory.
-            for (const uri of tweeFiles) {
+            for (const uri of tweeFileUris) {
                 // The moment we have a story format, we can notify clients and stop looking.
                 const storyFormat = projectIndex.getStoryData()?.storyFormat;
                 if (storyFormat !== undefined) {
@@ -180,14 +177,42 @@ namespace Heartbeat {
                 }
             }
 
-            for (const uri of tweeFiles) {
+            const diagnosticsOptions = (await getSettings())["twee-3"];
+
+            for (const uri of tweeFileUris) {
                 const doc = await fetchTweeFile(uri);
                 if (doc !== undefined) {
-                    await processChangedDocument(doc, ParseLevel.PassageNames);
+                    await parseTextDocument(
+                        doc,
+                        ParseLevel.Full,
+                        diagnosticsOptions
+                    );
                 }
             }
 
-            await processAllOpenDocuments();
+            for (const uri of tweeFileUris) {
+                const doc = await fetchTweeFile(uri);
+                if (doc !== undefined) {
+                    await validateTextDocument(doc, diagnosticsOptions);
+                }
+            }
+
+            // Re-process any open documents that we didn't handle above.
+            // This could happen if the open document doesn't have an expected extension
+            // (like a `.txt` file that the user has selected as being a Twine file).
+            const unprocessedOpenDocuments = documents
+                .all()
+                .filter((d) => !tweeFileUris.has(d.uri));
+            for (const doc of unprocessedOpenDocuments) {
+                await parseTextDocument(
+                    doc,
+                    ParseLevel.Full,
+                    diagnosticsOptions
+                );
+            }
+            for (const doc of unprocessedOpenDocuments) {
+                await validateTextDocument(doc, diagnosticsOptions);
+            }
         } catch (err) {
             connection.console.error(`Client couldn't find Twee files: ${err}`);
         }
@@ -326,7 +351,8 @@ connection.onDidChangeConfiguration(async (change) => {
 });
 
 documents.onDidChangeContent(async (change) => {
-    await processChangedDocument(change.document, ParseLevel.Full);
+    await parseTextDocument(change.document, ParseLevel.Full, undefined);
+    await validateTextDocument(change.document, undefined);
 });
 
 documents.onDidClose;
@@ -429,21 +455,27 @@ async function getSettings(): Promise<ServerSettings> {
 }
 
 /**
- * Process a document whose content has changed.
+ * Parse a document.
+ *
+ * This does not update the diagnostics.
  *
  * @param document Document to process.
  * @param parseLevel What level of parsing to do.
  */
-async function processChangedDocument(
+async function parseTextDocument(
     document: TextDocument,
-    parseLevel: ParseLevel
+    parseLevel: ParseLevel,
+    diagnosticsOptions: DiagnosticsOptions | undefined
 ) {
-    // We'll only get the diagnostic options if we're parsing passage
-    // contents, since otherwise we're just collecting passage names
-    let diagnosticsOptions = defaultDiagnosticsOptions;
-    if (parseLevel === ParseLevel.Full) {
-        const settings = await getSettings();
-        diagnosticsOptions = settings["twee-3"];
+    if (diagnosticsOptions === undefined) {
+        // We'll only get the diagnostic options if we're parsing passage
+        // contents, since otherwise we're just collecting passage names
+        if (parseLevel === ParseLevel.Full) {
+            const settings = await getSettings();
+            diagnosticsOptions = settings["twee-3"];
+        } else {
+            diagnosticsOptions = defaultDiagnosticsOptions;
+        }
     }
 
     // Keep track of the story format so, if it changes, we can notify listeners
@@ -460,9 +492,6 @@ async function processChangedDocument(
 
     // Request a refresh of semantic tokens since we've potentially changed them
     connection.languages.semanticTokens.refresh();
-
-    // Generate diagnostics
-    await validateTextDocument(document);
 }
 
 /**
@@ -472,9 +501,17 @@ async function processChangedDocument(
  * options) that could affect parsing.
  */
 async function processAllOpenDocuments() {
+    const settings = await getSettings();
+    const diagnosticsOptions = settings["twee-3"];
+
+    // Loop through twice since validation can depend on the result of parsing all docs
     for (const doc of documents.all()) {
-        await processChangedDocument(doc, ParseLevel.Full);
+        await parseTextDocument(doc, ParseLevel.Full, diagnosticsOptions);
     }
+    for (const doc of documents.all()) {
+        await validateTextDocument(doc, diagnosticsOptions);
+    }
+
     // Request that the client re-do diagnostics since we've re-processed
     connection.languages.diagnostics.refresh();
 }
@@ -483,9 +520,15 @@ async function processAllOpenDocuments() {
  * Validate a document and get any diagnostics arising from that validation.
  *
  * @param textDocument Document to validate.
+ * @param diagnosticsOptions Diagnostics options.
  */
-async function validateTextDocument(textDocument: TextDocument) {
-    const diagnosticsOptions = (await getSettings())["twee-3"];
+async function validateTextDocument(
+    textDocument: TextDocument,
+    diagnosticsOptions: DiagnosticsOptions | undefined
+) {
+    if (diagnosticsOptions === undefined) {
+        diagnosticsOptions = (await getSettings())["twee-3"];
+    }
 
     const diagnostics = await generateDiagnostics(
         textDocument,
