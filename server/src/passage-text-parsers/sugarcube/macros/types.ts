@@ -45,7 +45,7 @@ export interface MacroInfo {
      * the arguments as per the [twee3-language-tools (T3LT) syntax]
      * (https://github.com/cyrusfirheir/twee3-language-tools/blob/master/docs/parameters.md).
      */
-    arguments: boolean | string[];
+    arguments?: boolean | string[];
     /**
      * Macro arguments parsed into T3LT parameters.
      */

@@ -31,6 +31,8 @@ import {
 
 /**
  * Parse all macro arguments.
+ * (Effectively this parses only the built-in macros, as, when this file is loaded,
+ * the custom macros aren't available.)
  */
 Object.values(allMacros()).map((macro) => {
     if (Array.isArray(macro.arguments)) {
@@ -266,7 +268,7 @@ function parseMacroArgs(
         }
     }
 
-    // From here on out, we need macro arguments to do anything about it
+    // From here on out, we need defined macro arguments to do anything about it
     if (macroInfo?.arguments === undefined) {
         return;
     }

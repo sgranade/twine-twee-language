@@ -12,7 +12,7 @@ export const runMacro: MacroInfo = {
 export const scriptMacro: MacroInfo = {
     name: "script",
     container: true,
-    arguments: true,
+    arguments: undefined, // Since it's an optional argument
     syntax: "<<script [language]>>...<</script>>",
     description:
         "Silently executes its contents as either JavaScript or TwineScript code (default: JavaScript).",

@@ -1,4 +1,3 @@
-import { parseMacroParameters } from "../sc2/t3lt-parameters";
 import {
     audioMacro,
     cacheaudioMacro,
@@ -21,6 +20,11 @@ import {
     ifMacro,
     switchMacro,
 } from "./control";
+import {
+    getAllCustomMacros,
+    removeDocument as removeCustomMacroDocument,
+    setCustomMacros,
+} from "./custom";
 import {
     doMacro,
     equalsMacro,
@@ -146,10 +150,13 @@ const builtins: MacroInfo[] = [
 
 const macros = Object.fromEntries(builtins.map((el) => [el.name, el]));
 
+// Make custom macro cache functions available via this index file
+export { removeCustomMacroDocument, setCustomMacros };
+
 /**
  * Get all SugarCube macros.
  * @returns Macros.
  */
 export function all(): Record<string, MacroInfo> {
-    return macros;
+    return { ...macros, ...getAllCustomMacros() };
 }
