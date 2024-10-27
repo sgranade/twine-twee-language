@@ -4,24 +4,57 @@
 
 import * as YAML from "yaml";
 
-import { parseMacroParameters } from "../sc2/t3lt-parameters";
-import { MacroInfo, MacroParent } from "./types";
 import { hasOwnProperty } from "../../../utilities";
+import { EnumRecord, parseMacroParameters } from "../sc2/t3lt-parameters";
+import { MacroInfo, MacroParent } from "./types";
 
-// Mapping of document URLs to the macros they define
-const customMacroCache: Record<string, MacroInfo[]> = {};
+export interface MacrosAndEnums {
+    macros: MacroInfo[];
+    enums: EnumRecord;
+}
+
+// Mapping of document URIs to the macros and enums they define
+const customMacroAndEnumCache: Record<string, MacrosAndEnums> = {};
 
 /**
- * Set the custom macros defined by a document.
+ * Set the custom macros and enums defined by a document.
  *
- * @param uri URI to the document that has the custom macros.
- * @param macros Custom macros.
+ * @param uri URI to the document that has the custom macros and enums.
+ * @param macrosAndEnums Custom macros and enums.
  */
-export function setCustomMacros(uri: string, macros: MacroInfo[]) {
-    customMacroCache[uri] = [...macros];
-    for (const macro of customMacroCache[uri]) {
+export function setCustomMacrosAndEnums(
+    uri: string,
+    macrosAndEnums: MacrosAndEnums
+) {
+    let enumsChanged = false;
+
+    // See if any of the macro values have changed
+    const oldEnums = customMacroAndEnumCache[uri]?.enums ?? {};
+    if (
+        Object.keys(oldEnums).length !==
+        Object.keys(macrosAndEnums.enums).length
+    ) {
+        enumsChanged = true;
+    } else
+        for (const [oldName, oldValue] of Object.entries(oldEnums)) {
+            if (oldValue !== macrosAndEnums.enums[oldName]) {
+                enumsChanged = true;
+                break;
+            }
+        }
+
+    customMacroAndEnumCache[uri] = macrosAndEnums;
+
+    const allEnums = getAllCustomMacroEnums();
+    // If the macro enums have changed, re-parse all custom macros
+    for (const macro of enumsChanged
+        ? Object.values(getAllCustomMacros())
+        : customMacroAndEnumCache[uri].macros) {
         if (Array.isArray(macro.arguments)) {
-            const parsedArguments = parseMacroParameters(macro.arguments, {}); // TODO add enums!
+            const parsedArguments = parseMacroParameters(
+                macro.arguments,
+                allEnums
+            );
             if (!(parsedArguments instanceof Error)) {
                 macro.parsedArguments = parsedArguments;
             }
@@ -30,31 +63,33 @@ export function setCustomMacros(uri: string, macros: MacroInfo[]) {
 }
 
 /**
- * Get the custom macros defined by a document.
- *
- * @param uri Document URI.
- * @returns Custom macros from that document, or undefined if none.
- */
-export function getCustomMacros(uri: string): MacroInfo[] | undefined {
-    const macros = customMacroCache[uri];
-    if (macros !== undefined) {
-        return [...macros];
-    }
-}
-
-/**
  * Get all custom macros.
  *
  * @returns All custom macros as an object with the macros' names as the keys.
  */
-export function getAllCustomMacros(): Record<string, MacroInfo> {
+export function getAllCustomMacros(): Readonly<Record<string, MacroInfo>> {
     const m = [];
 
-    for (const macros of Object.values(customMacroCache)) {
-        m.push(...macros);
+    for (const macrosAndEnums of Object.values(customMacroAndEnumCache)) {
+        m.push(...macrosAndEnums.macros);
     }
 
     return Object.fromEntries(m.map((el) => [el.name, el]));
+}
+
+/**
+ * Get all custom macro enums.
+ *
+ * @returns All custom macro enums.
+ */
+export function getAllCustomMacroEnums(): Readonly<EnumRecord> {
+    let ret = {};
+
+    for (const macrosAndEnums of Object.values(customMacroAndEnumCache)) {
+        ret = { ...ret, ...macrosAndEnums.enums };
+    }
+
+    return ret;
 }
 
 /**
@@ -63,7 +98,7 @@ export function getAllCustomMacros(): Record<string, MacroInfo> {
  * @param uri Document URI to remove custom macros for.
  */
 export function removeDocument(uri: string) {
-    delete customMacroCache[uri];
+    delete customMacroAndEnumCache[uri];
 }
 
 /**
@@ -163,17 +198,25 @@ function t3ltMacrosToMacroInfos(t3ltMacros: any): MacroInfo[] {
     return macros;
 }
 
+interface TweeConfigFileConversionResults {
+    macrosAndEnums?: MacrosAndEnums;
+    errors: string[];
+}
+
 /**
- * Convert a T3LT JSON or YAML macro definition file into langauge-server-native MacroInfo objects.
+ * Convert a T3LT JSON or YAML macro definition file into langauge-server-native MacroInfo objects and enums.
  *
  * @param str Contents of a *.twee-config.yaml/json file.
  * @param isYaml True if the contents are from a YAML file; false if from a JSON file.
- * @returns Macros in the file, or Error if there was a parsing error.
+ * @returns Macros and enums in the file, and any parsing errors.
  */
-export function tweeConfigFileToMacro(
+export function tweeConfigFileToMacrosAndEnums(
     str: string,
     isYaml: boolean
-): MacroInfo[] | Error {
+): TweeConfigFileConversionResults {
+    const ret: TweeConfigFileConversionResults = {
+        errors: [],
+    };
     try {
         let output: any;
         if (isYaml) {
@@ -182,24 +225,74 @@ export function tweeConfigFileToMacro(
             output = JSON.parse(str);
         }
 
-        // Macro definitions are in a "sugarcube-2" key, followed by "macros"
         if (typeof output !== "object" || output["sugarcube-2"] === undefined) {
-            return new Error("No `sugarcube-2` key found");
+            ret.errors.push("No `sugarcube-2` key found");
+        } else {
+            const macrosAndEnums: MacrosAndEnums = { macros: [], enums: {} };
+
+            if (output["sugarcube-2"]) {
+                // Macro definitions are in a "sugarcube-2" key, followed by "macros"
+                const rawMacros = output["sugarcube-2"].macros;
+                if (rawMacros !== undefined) {
+                    macrosAndEnums.macros = t3ltMacrosToMacroInfos(rawMacros);
+                }
+
+                // Macro enum definitions are in a "sugarcube-2" key, followed by "enums"
+                const rawEnums = output["sugarcube-2"].enums;
+                if (rawEnums !== undefined) {
+                    if (typeof rawEnums !== "object") {
+                        ret.errors.push(
+                            "enums must be a mapping of string keys to string values"
+                        );
+                    } else {
+                        const badEnumNames: string[] = [];
+                        const nonStringEnumNames: string[] = [];
+                        const nonStringEnumVals: string[] = [];
+
+                        for (const [k, v] of Object.entries(rawEnums)) {
+                            if (typeof k !== "string") {
+                                nonStringEnumNames.push(`${k}`);
+                            } else if (!/^\w+$/.test(k)) {
+                                badEnumNames.push(k);
+                            } else if (typeof v !== "string") {
+                                nonStringEnumVals.push(k);
+                            } else {
+                                macrosAndEnums.enums[k] = v;
+                            }
+                        }
+
+                        if (
+                            badEnumNames.length ||
+                            nonStringEnumNames.length ||
+                            nonStringEnumVals.length
+                        ) {
+                            let msg = "The enums had the following errors:";
+                            if (badEnumNames.length) {
+                                msg += `\nEnums whose names have illegal characters: ${badEnumNames.join(", ")}`;
+                            }
+                            if (nonStringEnumNames.length) {
+                                msg += `\nEnums whose names aren't strings: ${nonStringEnumNames.join(", ")}`;
+                            }
+                            if (nonStringEnumVals.length) {
+                                msg += `\nEnums whose values aren't strings: ${nonStringEnumVals.join(", ")}`;
+                            }
+                            ret.errors.push(msg);
+                        }
+                    }
+                }
+            }
+
+            ret.macrosAndEnums = macrosAndEnums;
         }
-        if (
-            !output["sugarcube-2"] ||
-            output["sugarcube-2"]["macros"] === undefined
-        ) {
-            return [];
-        }
-        return t3ltMacrosToMacroInfos(output["sugarcube-2"].macros);
+
+        return ret;
     } catch (ex) {
-        if (ex instanceof Error) {
-            return ex;
+        if (ex instanceof Error || hasOwnProperty(ex, "message")) {
+            ret.errors.push(`${ex.message}`);
+        } else {
+            ret.errors.push("Unknown YAML parsing error");
         }
-        if (hasOwnProperty(ex, "message") && typeof ex.message === "string") {
-            return new Error(ex.message);
-        }
-        return new Error("Unknown YAML parsing error");
+
+        return ret;
     }
 }

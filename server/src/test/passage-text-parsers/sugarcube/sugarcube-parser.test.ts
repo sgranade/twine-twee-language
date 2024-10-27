@@ -1190,7 +1190,7 @@ describe("SugarCube Parser", () => {
             macro.deprecated = "2.1";
             const mockFunction = ImportMock.mockFunction(
                 macrosModule,
-                "all"
+                "allMacros"
             ).returns({ testy: macro });
 
             parser?.parsePassageText(passage, header.length, state);
@@ -1222,7 +1222,7 @@ describe("SugarCube Parser", () => {
             });
             const mockFunction = ImportMock.mockFunction(
                 macrosModule,
-                "all"
+                "allMacros"
             ).returns({ testy: macro });
 
             parser?.parsePassageText(passage, header.length, state);
@@ -1255,7 +1255,7 @@ describe("SugarCube Parser", () => {
             });
             const mockFunction = ImportMock.mockFunction(
                 macrosModule,
-                "all"
+                "allMacros"
             ).returns({ testy: macro });
 
             parser?.parsePassageText(passage, header.length, state);
@@ -1280,7 +1280,7 @@ describe("SugarCube Parser", () => {
             });
             const mockFunction = ImportMock.mockFunction(
                 macrosModule,
-                "all"
+                "allMacros"
             ).returns({ testy: macro });
 
             parser?.parsePassageText(passage, header.length, state);
@@ -1305,7 +1305,7 @@ describe("SugarCube Parser", () => {
             });
             const mockFunction = ImportMock.mockFunction(
                 macrosModule,
-                "all"
+                "allMacros"
             ).returns({ testy: macro });
 
             parser?.parsePassageText(passage, header.length, state);
@@ -1330,7 +1330,7 @@ describe("SugarCube Parser", () => {
             });
             const mockFunction = ImportMock.mockFunction(
                 macrosModule,
-                "all"
+                "allMacros"
             ).returns({ testy: macro });
 
             parser?.parsePassageText(passage, header.length, state);
@@ -1355,7 +1355,7 @@ describe("SugarCube Parser", () => {
             });
             const mockFunction = ImportMock.mockFunction(
                 macrosModule,
-                "all"
+                "allMacros"
             ).returns({ testy: macro });
 
             parser?.parsePassageText(passage, header.length, state);
@@ -1819,7 +1819,7 @@ describe("SugarCube Parser", () => {
                 macro.since = "2.1.1";
                 const mockFunction = ImportMock.mockFunction(
                     macrosModule,
-                    "all"
+                    "allMacros"
                 ).returns({ testy: macro });
 
                 parser?.parsePassageText(passage, header.length, state);
@@ -1853,7 +1853,7 @@ describe("SugarCube Parser", () => {
                 macro.removed = "2.1";
                 const mockFunction = ImportMock.mockFunction(
                     macrosModule,
-                    "all"
+                    "allMacros"
                 ).returns({ testy: macro });
 
                 parser?.parsePassageText(passage, header.length, state);
@@ -1883,7 +1883,7 @@ describe("SugarCube Parser", () => {
                 });
                 const mockFunction = ImportMock.mockFunction(
                     macrosModule,
-                    "all"
+                    "allMacros"
                 ).returns({ testy: macro });
 
                 parser?.parsePassageText(passage, header.length, state);
@@ -1913,7 +1913,7 @@ describe("SugarCube Parser", () => {
                 });
                 const mockFunction = ImportMock.mockFunction(
                     macrosModule,
-                    "all"
+                    "allMacros"
                 ).returns({ testy: macro });
 
                 parser?.parsePassageText(passage, header.length, state);
@@ -1943,7 +1943,7 @@ describe("SugarCube Parser", () => {
                 });
                 const mockFunction = ImportMock.mockFunction(
                     macrosModule,
-                    "all"
+                    "allMacros"
                 ).returns({ testy: macro });
 
                 parser?.parsePassageText(passage, header.length, state);
@@ -1973,7 +1973,7 @@ describe("SugarCube Parser", () => {
                 });
                 const mockFunction = ImportMock.mockFunction(
                     macrosModule,
-                    "all"
+                    "allMacros"
                 ).returns({ testy: macro });
 
                 parser?.parsePassageText(passage, header.length, state);
@@ -2006,7 +2006,7 @@ describe("SugarCube Parser", () => {
                 macroB.parents = [{ name: "a", max: 2 }];
                 const mockFunction = ImportMock.mockFunction(
                     macrosModule,
-                    "all"
+                    "allMacros"
                 ).returns({ a: macroA, b: macroB });
 
                 parser?.parsePassageText(passage, header.length, state);
@@ -2037,7 +2037,7 @@ describe("SugarCube Parser", () => {
                 macroB.parents = [{ name: "a", max: 2 }];
                 const mockFunction = ImportMock.mockFunction(
                     macrosModule,
-                    "all"
+                    "allMacros"
                 ).returns({ a: macroA, b: macroB });
 
                 parser?.parsePassageText(passage, header.length, state);
@@ -2071,7 +2071,7 @@ describe("SugarCube Parser", () => {
                 macroB.parents = [{ name: "a", max: 1 }];
                 const mockFunction = ImportMock.mockFunction(
                     macrosModule,
-                    "all"
+                    "allMacros"
                 ).returns({ a: macroA, b: macroB });
 
                 parser?.parsePassageText(passage, header.length, state);
@@ -2116,7 +2116,7 @@ describe("SugarCube Parser", () => {
                     macro.arguments = true;
                     const mockFunction = ImportMock.mockFunction(
                         macrosModule,
-                        "all"
+                        "allMacros"
                     ).returns({ a: macro });
 
                     parser?.parsePassageText(passage, header.length, state);
@@ -2142,7 +2142,7 @@ describe("SugarCube Parser", () => {
                     macro.arguments = false;
                     const mockFunction = ImportMock.mockFunction(
                         macrosModule,
-                        "all"
+                        "allMacros"
                     ).returns({ a: macro });
 
                     parser?.parsePassageText(passage, header.length, state);
@@ -2176,7 +2176,7 @@ describe("SugarCube Parser", () => {
                             : undefined;
                     const mockFunction = ImportMock.mockFunction(
                         macrosModule,
-                        "all"
+                        "allMacros"
                     ).returns({ a: macro });
 
                     parser?.parsePassageText(passage, header.length, state);
@@ -2215,7 +2215,7 @@ describe("SugarCube Parser", () => {
                             : undefined;
                     const mockFunction = ImportMock.mockFunction(
                         macrosModule,
-                        "all"
+                        "allMacros"
                     ).returns({ a: macro });
 
                     parser?.parsePassageText(passage, header.length, state);
@@ -2249,7 +2249,7 @@ describe("SugarCube Parser", () => {
                             : undefined;
                     const mockFunction = ImportMock.mockFunction(
                         macrosModule,
-                        "all"
+                        "allMacros"
                     ).returns({ a: macro });
 
                     parser?.parsePassageText(passage, header.length, state);

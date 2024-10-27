@@ -13,7 +13,7 @@ import {
 } from "../../parser";
 import { ETokenModifier, ETokenType } from "../../semantic-tokens";
 import { eraseMatches, versionCompare } from "../../utilities";
-import { all as allMacros, MacroInfo, MacroParent } from "./macros";
+import { allMacros, MacroInfo, MacroParent } from "./macros";
 import { createVariableAndPropertyReferences } from "./sugarcube-utils";
 import { OSugarCubeSymbolKind } from "./types";
 import {
@@ -36,7 +36,7 @@ import {
  */
 Object.values(allMacros()).map((macro) => {
     if (Array.isArray(macro.arguments)) {
-        const parsedArguments = parseMacroParameters(macro.arguments, {}); // TODO add enums!
+        const parsedArguments = parseMacroParameters(macro.arguments, {}); // Ignore enums since they only apply to custom macros
         if (!(parsedArguments instanceof Error)) {
             macro.parsedArguments = parsedArguments;
         }

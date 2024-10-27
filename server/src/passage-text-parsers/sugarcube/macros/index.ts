@@ -1,3 +1,4 @@
+import { EnumRecord } from "../sc2/t3lt-parameters";
 import {
     audioMacro,
     cacheaudioMacro,
@@ -21,10 +22,11 @@ import {
     switchMacro,
 } from "./control";
 import {
+    getAllCustomMacroEnums,
     getAllCustomMacros,
     removeDocument as removeCustomMacroDocument,
-    setCustomMacros,
-    tweeConfigFileToMacro,
+    setCustomMacrosAndEnums,
+    tweeConfigFileToMacrosAndEnums,
 } from "./custom";
 import {
     doMacro,
@@ -152,12 +154,26 @@ const builtins: MacroInfo[] = [
 const macros = Object.fromEntries(builtins.map((el) => [el.name, el]));
 
 // Make custom macro cache functions available via this index file
-export { removeCustomMacroDocument, setCustomMacros, tweeConfigFileToMacro };
+export {
+    removeCustomMacroDocument,
+    setCustomMacrosAndEnums,
+    tweeConfigFileToMacrosAndEnums,
+};
 
 /**
  * Get all SugarCube macros.
  * @returns Macros.
  */
-export function all(): Record<string, MacroInfo> {
+export function allMacros(): Readonly<Record<string, MacroInfo>> {
     return { ...macros, ...getAllCustomMacros() };
+}
+
+/**
+ * Get all SugarCube macro enums.
+ *
+ * These only apply to custom macros.
+ * @returns Enums.
+ */
+export function allMacroEnums(): Readonly<EnumRecord> {
+    return getAllCustomMacroEnums();
 }

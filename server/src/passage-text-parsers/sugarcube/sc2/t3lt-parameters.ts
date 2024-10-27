@@ -28,7 +28,7 @@ interface Evaluatable<T, B> {
  * A record mapping macro enum names ("colors") to enumerated values separated by
  * pipes ('"red"|"green"|"blue"|"pink"').
  */
-type EnumRecord = Record<string, string>;
+export type EnumRecord = Record<string, string>;
 
 /**
  * Parse enums that will be replaced in macro definitions. See `macros.md` in T3LT.
@@ -610,7 +610,7 @@ interface ArgumentInfo {
  */
 export function parseMacroParameters(
     parameters: string[],
-    enums: EnumRecord
+    enums: Readonly<EnumRecord>
 ): Parameters | Error {
     try {
         parameters = parameters.map((parameter: string) => {

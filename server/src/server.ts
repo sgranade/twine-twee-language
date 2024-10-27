@@ -56,8 +56,8 @@ import {
 import { semanticTokensLegend } from "./semantic-tokens";
 import { generateDiagnostics } from "./validator";
 import {
-    setCustomMacros,
-    tweeConfigFileToMacro,
+    setCustomMacrosAndEnums,
+    tweeConfigFileToMacrosAndEnums,
 } from "./passage-text-parsers/sugarcube/macros";
 
 const connection: Connection = createConnection(ProposedFeatures.all);
@@ -554,14 +554,18 @@ async function parseT3LTMacroFile(uri: string) {
     const doc = await fetchFile(uri, isYaml ? "yaml" : "json");
     if (doc !== undefined) {
         const diagnostics: Diagnostic[] = [];
-        const macros = tweeConfigFileToMacro(doc.getText(), isYaml);
-        if (!(macros instanceof Error)) {
-            setCustomMacros(uri, macros);
-        } else {
+        const parsedResults = tweeConfigFileToMacrosAndEnums(
+            doc.getText(),
+            isYaml
+        );
+        if (parsedResults.macrosAndEnums !== undefined) {
+            setCustomMacrosAndEnums(uri, parsedResults.macrosAndEnums);
+        }
+        if (parsedResults.errors) {
             diagnostics.push(
                 Diagnostic.create(
                     Range.create(0, 0, 1, 0),
-                    `Problems with the configuration file: ${macros}`
+                    `Problems with the configuration file: ${parsedResults.errors.join("\n")}`
                 )
             );
         }

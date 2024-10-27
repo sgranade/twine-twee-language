@@ -7,11 +7,12 @@ import {
 } from "../../../../passage-text-parsers/sugarcube/sc2/t3lt-parameters";
 
 import * as uut from "../../../../passage-text-parsers/sugarcube/macros";
+import { MacrosAndEnums } from "../../../../passage-text-parsers/sugarcube/macros/custom";
 import { buildMacroInfo } from "./macro-builders";
 
 describe("SugarCube Macros", () => {
     describe("argument parsing", () => {
-        Object.values(uut.all())
+        Object.values(uut.allMacros())
             .filter((macro) => Array.isArray(macro.arguments))
             .forEach((macro) => {
                 it(`should successfully parse ${macro.name} arguments`, () => {
@@ -25,7 +26,7 @@ describe("SugarCube Macros", () => {
             });
     });
 
-    describe("custom macros", () => {
+    describe("custom macros and enums", () => {
         describe("add/delete", () => {
             it("should make available custom macros from all documents in the all() function", () => {
                 const firstMacro = buildMacroInfo({ name: "first" });
@@ -34,20 +35,46 @@ describe("SugarCube Macros", () => {
                     container: true,
                 });
 
-                uut.setCustomMacros("uri-1", [firstMacro]);
-                uut.setCustomMacros("uri-2", [secondMacro]);
-                const result = uut.all();
+                uut.setCustomMacrosAndEnums("uri-1", {
+                    macros: [firstMacro],
+                    enums: {},
+                });
+                uut.setCustomMacrosAndEnums("uri-2", {
+                    macros: [secondMacro],
+                    enums: {},
+                });
+                const result = uut.allMacros();
 
                 expect(result["first"]).to.eql(firstMacro);
                 expect(result["second"]).to.eql(secondMacro);
+            });
+
+            it("should make available custom macro enums from all documents in the all() function", () => {
+                // No arrange
+
+                uut.setCustomMacrosAndEnums("uri-1", {
+                    macros: [],
+                    enums: { one: "un" },
+                });
+                uut.setCustomMacrosAndEnums("uri-2", {
+                    macros: [],
+                    enums: { two: "deux" },
+                });
+                const result = uut.allMacroEnums();
+
+                expect(result["one"]).to.eql("un");
+                expect(result["two"]).to.eql("deux");
             });
 
             it("should parse a custom macro's argument", () => {
                 const macro = buildMacroInfo({ name: "first" });
                 macro.arguments = ["text"];
 
-                uut.setCustomMacros("uri-1", [macro]);
-                const result = uut.all()["first"];
+                uut.setCustomMacrosAndEnums("uri-1", {
+                    macros: [macro],
+                    enums: {},
+                });
+                const result = uut.allMacros()["first"];
 
                 expect(result.parsedArguments).is.instanceOf(Parameters);
             });
@@ -56,10 +83,35 @@ describe("SugarCube Macros", () => {
                 const macro = buildMacroInfo({ name: "first" });
                 macro.arguments = ["this-is-not-a-thing"];
 
-                uut.setCustomMacros("uri-1", [macro]);
-                const result = uut.all()["first"];
+                uut.setCustomMacrosAndEnums("uri-1", {
+                    macros: [macro],
+                    enums: {},
+                });
+                const result = uut.allMacros()["first"];
 
                 expect(result.parsedArguments).to.be.undefined;
+            });
+
+            it("should parse all custom macro arguments if enums change", () => {
+                const firstMacro = buildMacroInfo({ name: "first" });
+                firstMacro.arguments = undefined; // Start with no arguments
+                const secondMacro = buildMacroInfo({
+                    name: "second",
+                    container: true,
+                });
+                uut.setCustomMacrosAndEnums("uri-1", {
+                    macros: [firstMacro],
+                    enums: {},
+                });
+
+                firstMacro.arguments = ["text"];
+                uut.setCustomMacrosAndEnums("uri-2", {
+                    macros: [secondMacro],
+                    enums: { one: '"un"|"uno"' },
+                });
+                const result = uut.allMacros()["first"];
+
+                expect(result.parsedArguments).is.instanceOf(Parameters);
             });
 
             it("should delete custom macros from a document when requested", () => {
@@ -69,10 +121,16 @@ describe("SugarCube Macros", () => {
                     container: true,
                 });
 
-                uut.setCustomMacros("uri-1", [firstMacro]);
-                uut.setCustomMacros("uri-2", [secondMacro]);
+                uut.setCustomMacrosAndEnums("uri-1", {
+                    macros: [firstMacro],
+                    enums: {},
+                });
+                uut.setCustomMacrosAndEnums("uri-2", {
+                    macros: [secondMacro],
+                    enums: {},
+                });
                 uut.removeCustomMacroDocument("uri-1");
-                const result = uut.all();
+                const result = uut.allMacros();
 
                 expect(result["first"]).to.be.undefined;
                 expect(result["second"]).to.eql(secondMacro);
@@ -87,23 +145,24 @@ nope:
     ctp:
       name: ctp`.trimStart();
 
-                const result = uut.tweeConfigFileToMacro(yaml, true);
+                const result = uut.tweeConfigFileToMacrosAndEnums(yaml, true);
 
-                expect(result).to.be.an.instanceof(Error);
-                expect((result as Error).message).to.include(
+                expect(result.macrosAndEnums).to.be.undefined;
+                expect(result.errors.length).to.equal(1);
+                expect(result.errors[0]).to.include(
                     "No `sugarcube-2` key found"
                 );
             });
 
-            it("should return an empty array if there are no macros", () => {
+            it("should return an empty macro array if there are no macros", () => {
                 const yaml = `
 sugarcube-2:
 `.trimStart();
 
-                const result = uut.tweeConfigFileToMacro(yaml, true);
+                const result = uut.tweeConfigFileToMacrosAndEnums(yaml, true);
 
-                expect(Array.isArray(result)).to.be.true;
-                expect(result).to.be.empty;
+                expect(result.macrosAndEnums?.macros).to.be.empty;
+                expect(result.errors).to.be.empty;
             });
 
             it("should capture a macro's name even if it differs from the object name", () => {
@@ -114,7 +173,8 @@ sugarcube-2:
       name: othername
 `.trimStart();
 
-                const result = uut.tweeConfigFileToMacro(yaml, true);
+                const result = uut.tweeConfigFileToMacrosAndEnums(yaml, true)
+                    .macrosAndEnums?.macros;
 
                 expect(result).to.eql([
                     {
@@ -132,7 +192,8 @@ sugarcube-2:
         Oh hi there!
 `.trimStart();
 
-                const result = uut.tweeConfigFileToMacro(yaml, true);
+                const result = uut.tweeConfigFileToMacrosAndEnums(yaml, true)
+                    .macrosAndEnums?.macros;
 
                 expect(result).to.eql([
                     {
@@ -150,7 +211,8 @@ sugarcube-2:
       container: true
 `.trimStart();
 
-                const result = uut.tweeConfigFileToMacro(yaml, true);
+                const result = uut.tweeConfigFileToMacrosAndEnums(yaml, true)
+                    .macrosAndEnums?.macros;
 
                 expect(result).to.eql([
                     {
@@ -168,7 +230,8 @@ sugarcube-2:
       deprecated: true
 `.trimStart();
 
-                const result = uut.tweeConfigFileToMacro(yaml, true);
+                const result = uut.tweeConfigFileToMacrosAndEnums(yaml, true)
+                    .macrosAndEnums?.macros;
 
                 expect(result).to.eql([
                     {
@@ -188,7 +251,8 @@ sugarcube-2:
         - passageNoSetter
 `.trimStart();
 
-                const result = uut.tweeConfigFileToMacro(yaml, true);
+                const result = uut.tweeConfigFileToMacrosAndEnums(yaml, true)
+                    .macrosAndEnums?.macros;
 
                 expect(result).to.eql([
                     {
@@ -209,7 +273,8 @@ sugarcube-2:
     childmacro: {}
 `.trimStart();
 
-                const result = uut.tweeConfigFileToMacro(yaml, true);
+                const result = uut.tweeConfigFileToMacrosAndEnums(yaml, true)
+                    .macrosAndEnums?.macros;
 
                 expect(result).to.eql([
                     {
@@ -237,7 +302,8 @@ sugarcube-2:
     otherchild: {}
 `.trimStart();
 
-                const result = uut.tweeConfigFileToMacro(yaml, true);
+                const result = uut.tweeConfigFileToMacrosAndEnums(yaml, true)
+                    .macrosAndEnums?.macros;
 
                 expect(result).to.eql([
                     {
@@ -254,6 +320,126 @@ sugarcube-2:
                     },
                 ]);
             });
+
+            it("should return an empty enum object if there are no enums", () => {
+                const yaml = `
+sugarcube-2:
+`.trimStart();
+
+                const result = uut.tweeConfigFileToMacrosAndEnums(yaml, true);
+
+                expect(result.macrosAndEnums?.enums).to.be.empty;
+                expect(result.errors).to.be.empty;
+            });
+
+            it("should capture an enum name and value", () => {
+                const yaml = `
+sugarcube-2:
+  enums:
+    first: '"one"|"un"|"uno"'
+    second: '"two"|"deux"|"dos"'
+`.trimStart();
+
+                const result = uut.tweeConfigFileToMacrosAndEnums(yaml, true)
+                    .macrosAndEnums?.enums;
+
+                expect(result).to.eql({
+                    first: '"one"|"un"|"uno"',
+                    second: '"two"|"deux"|"dos"',
+                });
+            });
+
+            it("should ignore illegal enum names", () => {
+                const yaml = `
+sugarcube-2:
+  enums:
+    first: '"one"|"un"|"uno"'
+    second%: '"two"|"deux"|"dos"'
+`.trimStart();
+
+                const result = uut.tweeConfigFileToMacrosAndEnums(yaml, true)
+                    .macrosAndEnums?.enums;
+
+                expect(result).to.eql({
+                    first: '"one"|"un"|"uno"',
+                });
+            });
+
+            it("should ignore non-string enum values", () => {
+                const yaml = `
+sugarcube-2:
+  enums:
+    first: '"one"|"un"|"uno"'
+    two: 17
+`.trimStart();
+
+                const result = uut.tweeConfigFileToMacrosAndEnums(yaml, true)
+                    .macrosAndEnums?.enums;
+
+                expect(result).to.eql({
+                    first: '"one"|"un"|"uno"',
+                });
+            });
+
+            it("should report illegal enum names", () => {
+                const yaml = `
+sugarcube-2:
+  enums:
+    first: '"one"|"un"|"uno"'
+    second%: '"two"|"deux"|"dos"'
+    th'ird: '"two"|"deux"|"dos"'
+`.trimStart();
+
+                const result = uut.tweeConfigFileToMacrosAndEnums(
+                    yaml,
+                    true
+                ).errors;
+
+                expect(result[0]).to.include([
+                    "names have illegal characters: second%, th'ird",
+                ]);
+            });
+
+            it("should report non-string enum values", () => {
+                const yaml = `
+sugarcube-2:
+  enums:
+    first: '"one"|"un"|"uno"'
+    two: 17
+    three:
+      - arr
+`.trimStart();
+
+                const result = uut.tweeConfigFileToMacrosAndEnums(
+                    yaml,
+                    true
+                ).errors;
+
+                expect(result[0]).to.include([
+                    "values aren't strings: two, three",
+                ]);
+            });
+
+            it("should report all enum errors that are found", () => {
+                const yaml = `
+sugarcube-2:
+  enums:
+    first: '"one"|"un"|"uno"'
+    second%: '"two"|"deux"|"dos"'
+    three:
+      - arr
+`.trimStart();
+
+                const result = uut.tweeConfigFileToMacrosAndEnums(
+                    yaml,
+                    true
+                ).errors;
+
+                expect(result[0]).to.include([
+                    "names have illegal characters: second%",
+                ]);
+                expect(result[0]).to.include(["values aren't strings: three"]);
+            });
         });
 
         describe("json conversion", () => {
@@ -268,10 +454,11 @@ sugarcube-2:
                     }
                   }`;
 
-                const result = uut.tweeConfigFileToMacro(json, false);
+                const result = uut.tweeConfigFileToMacrosAndEnums(json, false);
 
-                expect(result).to.be.an.instanceof(Error);
-                expect((result as Error).message).to.include(
+                expect(result.macrosAndEnums).to.be.undefined;
+                expect(result.errors.length).to.equal(1);
+                expect(result.errors[0]).to.include(
                     "No `sugarcube-2` key found"
                 );
             });
@@ -282,9 +469,10 @@ sugarcube-2:
                   }
                 }`;
 
-                const result = uut.tweeConfigFileToMacro(json, false);
+                const result = uut.tweeConfigFileToMacrosAndEnums(json, true)
+                    .macrosAndEnums?.macros;
 
-                expect(Array.isArray(result)).to.be.true;
+                expect(result instanceof Error).to.be.false;
                 expect(result).to.be.empty;
             });
 
@@ -299,7 +487,8 @@ sugarcube-2:
                     }
                   }`;
 
-                const result = uut.tweeConfigFileToMacro(json, false);
+                const result = uut.tweeConfigFileToMacrosAndEnums(json, true)
+                    .macrosAndEnums?.macros;
 
                 expect(result).to.eql([
                     {
@@ -319,7 +508,8 @@ sugarcube-2:
                     }
                   }`;
 
-                const result = uut.tweeConfigFileToMacro(json, false);
+                const result = uut.tweeConfigFileToMacrosAndEnums(json, true)
+                    .macrosAndEnums?.macros;
 
                 expect(result).to.eql([
                     {
@@ -340,7 +530,8 @@ sugarcube-2:
                     }
                   }`;
 
-                const result = uut.tweeConfigFileToMacro(json, false);
+                const result = uut.tweeConfigFileToMacrosAndEnums(json, true)
+                    .macrosAndEnums?.macros;
 
                 expect(result).to.eql([
                     {
@@ -361,7 +552,8 @@ sugarcube-2:
                     }
                   }`;
 
-                const result = uut.tweeConfigFileToMacro(json, false);
+                const result = uut.tweeConfigFileToMacrosAndEnums(json, true)
+                    .macrosAndEnums?.macros;
 
                 expect(result).to.eql([
                     {
@@ -385,7 +577,8 @@ sugarcube-2:
                     }
                   }`;
 
-                const result = uut.tweeConfigFileToMacro(json, false);
+                const result = uut.tweeConfigFileToMacrosAndEnums(json, true)
+                    .macrosAndEnums?.macros;
 
                 expect(result).to.eql([
                     {
@@ -410,7 +603,8 @@ sugarcube-2:
                     }
                   }`;
 
-                const result = uut.tweeConfigFileToMacro(json, false);
+                const result = uut.tweeConfigFileToMacrosAndEnums(json, true)
+                    .macrosAndEnums?.macros;
 
                 expect(result).to.eql([
                     {
@@ -444,7 +638,8 @@ sugarcube-2:
                     }
                   }`;
 
-                const result = uut.tweeConfigFileToMacro(json, false);
+                const result = uut.tweeConfigFileToMacrosAndEnums(json, true)
+                    .macrosAndEnums?.macros;
 
                 expect(result).to.eql([
                     {
@@ -460,6 +655,75 @@ sugarcube-2:
                         parents: [{ name: "parentmacro", max: 7 }],
                     },
                 ]);
+            });
+
+            it("should return an empty enum object if there are no enums", () => {
+                const json = `{
+                  "sugarcube-2": {
+                    "enums": {
+                    }
+                  }
+                }`;
+
+                const result = uut.tweeConfigFileToMacrosAndEnums(json, true);
+
+                expect(result.macrosAndEnums?.enums).to.be.empty;
+                expect(result.errors).to.be.empty;
+            });
+
+            it("should capture an enum name and value", () => {
+                const json = `{
+                  "sugarcube-2": {
+                    "enums": {
+                      "first": '"one"|"un"|"uno"',
+                      "second": '"two"|"deux"|"dos"'
+                    }
+                  }
+                }`;
+
+                const result = uut.tweeConfigFileToMacrosAndEnums(json, true)
+                    .macrosAndEnums?.enums;
+
+                expect(result).to.eql({
+                    first: '"one"|"un"|"uno"',
+                    second: '"two"|"deux"|"dos"',
+                });
+            });
+
+            it("should ignore illegal enum names", () => {
+                const json = `{
+                  "sugarcube-2": {
+                    "enums": {
+                      "first": '"one"|"un"|"uno"',
+                      "second%": '"two"|"deux"|"dos"'
+                    }
+                  }
+                }`;
+
+                const result = uut.tweeConfigFileToMacrosAndEnums(json, true)
+                    .macrosAndEnums?.enums;
+
+                expect(result).to.eql({
+                    first: '"one"|"un"|"uno"',
+                });
+            });
+
+            it("should ignore non-string enum values", () => {
+                const json = `{
+                  "sugarcube-2": {
+                    "enums": {
+                      "first": '"one"|"un"|"uno"',
+                      "second": 17
+                    }
+                  }
+                }`;
+
+                const result = uut.tweeConfigFileToMacrosAndEnums(json, true)
+                    .macrosAndEnums?.enums;
+
+                expect(result).to.eql({
+                    first: '"one"|"un"|"uno"',
+                });
             });
         });
     });
