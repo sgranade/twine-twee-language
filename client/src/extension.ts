@@ -19,6 +19,7 @@ import {
 
 import {
     CustomMessages,
+    FindFilesRequest,
     FindTweeFilesRequest,
     ReadFileRequest,
     StoryFormat,
@@ -116,8 +117,10 @@ export function activate(context: ExtensionContext) {
     const clientOptions: LanguageClientOptions = {
         documentSelector: [{ scheme: "file", pattern: "**/*.{tw,twee}" }],
         synchronize: {
-            // TODO Notify the server about file changes to '.clientrc files contained in the workspace
-            fileEvents: workspace.createFileSystemWatcher("**/.clientrc"),
+            // Notify the server about file changes to SugarCube 2 macro definition files
+            fileEvents: workspace.createFileSystemWatcher(
+                "**/*.twee-config.{json,yaml,yml}"
+            ),
         },
     };
 
@@ -164,6 +167,11 @@ export function activate(context: ExtensionContext) {
         return (await workspace.findFiles(includeFiles(), excludeFiles())).map(
             (f) => f.toString()
         );
+    });
+    client.onRequest(FindFilesRequest, async (glob: string) => {
+        return (
+            await workspace.findFiles(glob, "**/{node_modules,.git}/**")
+        ).map((f) => f.toString());
     });
     client.onRequest(
         ReadFileRequest,

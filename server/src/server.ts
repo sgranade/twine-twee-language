@@ -3,6 +3,7 @@ import {
     Connection,
     DefinitionParams,
     Definition,
+    Diagnostic,
     DidChangeConfigurationNotification,
     DocumentSymbol,
     DocumentSymbolParams,
@@ -30,6 +31,7 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 
 import {
     CustomMessages,
+    FindFilesRequest,
     FindTweeFilesRequest,
     ReadFileRequest,
     StoryFormat,
@@ -53,6 +55,10 @@ import {
 } from "./structure";
 import { semanticTokensLegend } from "./semantic-tokens";
 import { generateDiagnostics } from "./validator";
+import {
+    setCustomMacros,
+    tweeConfigFileToMacro,
+} from "./passage-text-parsers/sugarcube/macros";
 
 const connection: Connection = createConnection(ProposedFeatures.all);
 
@@ -75,7 +81,8 @@ namespace Heartbeat {
     let heartbeatId: ReturnType<typeof setInterval> | undefined;
     let running = false;
 
-    let workspaceReindexRequested = false; // Whether a project re-index has been requested
+    let workspaceIndexRequested = false; // Whether a full project indexing has been requested
+    let sugarcubeMacroIndexRequested = false; // Whether we're to index custom SugarCube macro files
 
     /**
      * Start the heartbeat.
@@ -92,10 +99,17 @@ namespace Heartbeat {
     }
 
     /**
-     * Reindex the workspace.
+     * Index the Twee 3 files in the workspace.
      */
     export function indexWorkspace(): void {
-        workspaceReindexRequested = true;
+        workspaceIndexRequested = true;
+    }
+
+    /**
+     * Index the SugarCube custom macro files in the workspace.
+     */
+    export function indexSugarCubeMacros() {
+        sugarcubeMacroIndexRequested = true;
     }
 
     async function run() {
@@ -104,36 +118,18 @@ namespace Heartbeat {
         }
         try {
             running = true;
-            if (workspaceReindexRequested) {
+            // Only do one of the following things during a single heartbeat
+            if (workspaceIndexRequested) {
                 await indexAllTweeFiles();
-                workspaceReindexRequested = false;
+                workspaceIndexRequested = false;
+            } else if (sugarcubeMacroIndexRequested) {
+                await indexT3LTMacroFiles();
+                sugarcubeMacroIndexRequested = false;
             }
         } finally {
             lastTime = Date.now();
             running = false;
         }
-    }
-
-    /**
-     * Fetch a Twee file.
-     *
-     * @param uri URI of the document to fetch.
-     * @returns A text document containing the file's contents, or undefined if we weren't able to read it.
-     */
-    async function fetchTweeFile(
-        uri: string
-    ): Promise<TextDocument | undefined> {
-        try {
-            const content = await connection.sendRequest(ReadFileRequest, {
-                uri: uri,
-            });
-            return TextDocument.create(uri, "twee3", 1, content);
-        } catch (err) {
-            connection.console.error(`Client didn't read file ${uri}: ${err}`);
-            if (!(err instanceof ResponseError)) throw err;
-        }
-
-        return undefined;
     }
 
     /**
@@ -164,14 +160,11 @@ namespace Heartbeat {
                 // The moment we have a story format, we can notify clients and stop looking.
                 const storyFormat = projectIndex.getStoryData()?.storyFormat;
                 if (storyFormat !== undefined) {
-                    connection.sendNotification(
-                        CustomMessages.UpdatedStoryFormat,
-                        storyFormat
-                    );
+                    onStoryFormatChange(storyFormat);
                     break;
                 }
 
-                const doc = await fetchTweeFile(uri);
+                const doc = await fetchFile(uri);
                 if (doc !== undefined) {
                     updateProjectIndex(doc, ParseLevel.StoryData, projectIndex);
                 }
@@ -180,7 +173,7 @@ namespace Heartbeat {
             const diagnosticsOptions = (await getSettings())["twee-3"];
 
             for (const uri of tweeFileUris) {
-                const doc = await fetchTweeFile(uri);
+                const doc = await fetchFile(uri);
                 if (doc !== undefined) {
                     await parseTextDocument(
                         doc,
@@ -191,7 +184,7 @@ namespace Heartbeat {
             }
 
             for (const uri of tweeFileUris) {
-                const doc = await fetchTweeFile(uri);
+                const doc = await fetchFile(uri);
                 if (doc !== undefined) {
                     await validateTextDocument(doc, diagnosticsOptions);
                 }
@@ -212,6 +205,23 @@ namespace Heartbeat {
             }
             for (const doc of unprocessedOpenDocuments) {
                 await validateTextDocument(doc, diagnosticsOptions);
+            }
+        } catch (err) {
+            connection.console.error(`Client couldn't find Twee files: ${err}`);
+        }
+    }
+
+    /**
+     * Index all SC2 macro files in a workspace
+     */
+    async function indexT3LTMacroFiles() {
+        try {
+            const sc2MacroFileUris = await connection.sendRequest(
+                FindFilesRequest,
+                "**/*.twee-config.{json,yaml,yml}"
+            );
+            for (const uri of sc2MacroFileUris) {
+                await parseT3LTMacroFile(uri);
             }
         } catch (err) {
             connection.console.error(`Client couldn't find Twee files: ${err}`);
@@ -359,8 +369,13 @@ documents.onDidClose;
 
 connection.onDidChangeWatchedFiles((_change) => {
     for (const change of _change.changes ?? []) {
-        if (change.type === FileChangeType.Deleted) {
+        if (
+            change.type === FileChangeType.Deleted &&
+            /.tw(ee)?$/.test(change.uri)
+        ) {
             projectIndex.removeDocument(change.uri);
+        } else if (/\.twee-config\.(json|ya?ml)$/.test(change.uri)) {
+            parseT3LTMacroFile(change.uri);
         }
     }
 });
@@ -431,6 +446,30 @@ connection.onShutdown(() => {
 });
 
 /**
+ * Fetch a file from the client.
+ *
+ * @param uri URI of the document to fetch.
+ * @param [langId="twee3"] The language ID for the resulting text document.
+ * @returns A text document containing the file's contents, or undefined if we weren't able to read it.
+ */
+async function fetchFile(
+    uri: string,
+    langId: string = "twee3"
+): Promise<TextDocument | undefined> {
+    try {
+        const content = await connection.sendRequest(ReadFileRequest, {
+            uri: uri,
+        });
+        return TextDocument.create(uri, langId, 1, content);
+    } catch (err) {
+        connection.console.error(`Client didn't read file ${uri}: ${err}`);
+        if (!(err instanceof ResponseError)) throw err;
+    }
+
+    return undefined;
+}
+
+/**
  * Settings for the server. Synchronize with "configuration" in the main package.json.
  */
 interface ServerSettings {
@@ -483,15 +522,54 @@ async function parseTextDocument(
     updateProjectIndex(document, parseLevel, projectIndex, diagnosticsOptions);
     const newStoryFormat = projectIndex.getStoryData()?.storyFormat;
     if (newStoryFormat?.format !== storyFormat && newStoryFormat?.format) {
-        const e: StoryFormat = {
-            format: newStoryFormat.format,
-            formatVersion: newStoryFormat.formatVersion,
-        };
-        connection.sendNotification(CustomMessages.UpdatedStoryFormat, e);
+        onStoryFormatChange(newStoryFormat);
     }
 
     // Request a refresh of semantic tokens since we've potentially changed them
     connection.languages.semanticTokens.refresh();
+}
+
+/**
+ * Handle a changed story format.
+ *
+ * @param storyFormat New story format.
+ */
+function onStoryFormatChange(storyFormat: StoryFormat) {
+    connection.sendNotification(CustomMessages.UpdatedStoryFormat, storyFormat);
+    // If the story format is SugarCube 2, we need to look for macro definition files
+    if (storyFormat.format.toLowerCase() === "sugarcube") {
+        Heartbeat.indexSugarCubeMacros();
+    }
+}
+
+/**
+ * Parse a T3LT custom macro file.
+ *
+ * The macro file should be either a YAML or JSON file.
+ *
+ * @param uri URI to the macro file.
+ */
+async function parseT3LTMacroFile(uri: string) {
+    const isYaml = /\.ya?ml$/.test(uri);
+    const doc = await fetchFile(uri, isYaml ? "yaml" : "json");
+    if (doc !== undefined) {
+        const diagnostics: Diagnostic[] = [];
+        const macros = tweeConfigFileToMacro(doc.getText(), isYaml);
+        if (!(macros instanceof Error)) {
+            setCustomMacros(uri, macros);
+        } else {
+            diagnostics.push(
+                Diagnostic.create(
+                    Range.create(0, 0, 1, 0),
+                    `Problems with the configuration file: ${macros}`
+                )
+            );
+        }
+        connection.sendDiagnostics({
+            uri: uri,
+            diagnostics: diagnostics,
+        });
+    }
 }
 
 /**
