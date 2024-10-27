@@ -24,6 +24,7 @@ import {
     getAllCustomMacros,
     removeDocument as removeCustomMacroDocument,
     setCustomMacros,
+    tweeConfigFileToMacro,
 } from "./custom";
 import {
     doMacro,
@@ -151,7 +152,7 @@ const builtins: MacroInfo[] = [
 const macros = Object.fromEntries(builtins.map((el) => [el.name, el]));
 
 // Make custom macro cache functions available via this index file
-export { removeCustomMacroDocument, setCustomMacros };
+export { removeCustomMacroDocument, setCustomMacros, tweeConfigFileToMacro };
 
 /**
  * Get all SugarCube macros.
