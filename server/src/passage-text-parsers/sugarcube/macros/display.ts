@@ -76,7 +76,7 @@ export const silentMacro: MacroInfo = {
 };
 
 export const silentlyMacro: MacroInfo = {
-    name: "silent",
+    name: "silently",
     container: true,
     arguments: false,
     syntax: "<<silently>> … <</silently>>",

@@ -1,4 +1,5 @@
 import { StoryFormatParser } from "..";
+import { generateDiagnostics } from "./sugarcube-diagnostics";
 import { parsePassageText } from "./sugarcube-parser";
 
 /**
@@ -15,7 +16,7 @@ export function getSugarCubeParser(
         id: "sugarcube-any",
         parsePassageText: parsePassageText,
         generateCompletions: () => null,
-        generateDiagnostics: () => [],
+        generateDiagnostics: generateDiagnostics,
         generateHover: () => null,
         getDefinitionAt: () => undefined,
         getReferencesToSymbolAt: () => undefined,

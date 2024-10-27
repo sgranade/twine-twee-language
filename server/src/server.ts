@@ -223,6 +223,9 @@ namespace Heartbeat {
             for (const uri of sc2MacroFileUris) {
                 await parseT3LTMacroFile(uri);
             }
+
+            // Once we're done, we need to re-validate any open documents
+            await processAllOpenDocuments();
         } catch (err) {
             connection.console.error(`Client couldn't find Twee files: ${err}`);
         }
@@ -561,7 +564,7 @@ async function parseT3LTMacroFile(uri: string) {
         if (parsedResults.macrosAndEnums !== undefined) {
             setCustomMacrosAndEnums(uri, parsedResults.macrosAndEnums);
         }
-        if (parsedResults.errors) {
+        if (parsedResults.errors.length) {
             diagnostics.push(
                 Diagnostic.create(
                     Range.create(0, 0, 1, 0),
