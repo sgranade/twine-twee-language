@@ -29,7 +29,7 @@ function generateMacroDiagnostics(
 
     for (const macroRef of index.getReferences(
         document.uri,
-        OSugarCubeSymbolKind.CustomMacro
+        OSugarCubeSymbolKind.UnknownMacro
     ) ?? []) {
         if (macros[macroRef.contents] === undefined) {
             diagnostics.push(

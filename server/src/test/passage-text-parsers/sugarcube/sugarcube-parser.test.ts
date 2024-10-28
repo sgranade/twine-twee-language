@@ -1236,7 +1236,7 @@ describe("SugarCube Parser", () => {
                     "fake-uri",
                     Range.create(1, 9, 1, 14)
                 ),
-                kind: OSugarCubeSymbolKind.BuiltInMacro,
+                kind: OSugarCubeSymbolKind.KnownMacro,
             });
         });
 
@@ -1472,7 +1472,7 @@ describe("SugarCube Parser", () => {
                             "fake-uri",
                             Range.create(1, 12, 1, 13)
                         ),
-                        kind: OSugarCubeSymbolKind.CustomMacro,
+                        kind: OSugarCubeSymbolKind.UnknownMacro,
                     },
                 ]);
             });

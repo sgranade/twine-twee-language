@@ -427,8 +427,8 @@ function parseMacros(
                     name,
                     textIndex + macroIndex,
                     macroInfo !== undefined
-                        ? OSugarCubeSymbolKind.BuiltInMacro
-                        : OSugarCubeSymbolKind.CustomMacro,
+                        ? OSugarCubeSymbolKind.KnownMacro
+                        : OSugarCubeSymbolKind.UnknownMacro,
                     state.textDocument
                 )
             );

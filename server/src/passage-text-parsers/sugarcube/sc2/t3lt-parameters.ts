@@ -31,7 +31,7 @@ interface Evaluatable<T, B> {
 export type EnumRecord = Record<string, string>;
 
 /**
- * Parse enums that will be replaced in macro definitions. See `macros.md` in T3LT.
+ * Parse enums that will be replaced in macro definitions and parameters. See `macros.md` in T3LT.
  *
  * From `macros.ts` in T3LT.
  *
@@ -39,7 +39,7 @@ export type EnumRecord = Record<string, string>;
  * @param enums The record of enums.
  * @returns {string} The modified string
  */
-function parseEnums(baseString: string, enums: EnumRecord): string {
+export function parseEnums(baseString: string, enums: EnumRecord): string {
     // Two replaces is currently faster in js
     let result = baseString.replace(
         /(?<!\\)%([\w]+)%/g,
