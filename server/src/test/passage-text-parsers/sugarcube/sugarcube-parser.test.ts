@@ -1240,6 +1240,32 @@ describe("SugarCube Parser", () => {
             });
         });
 
+        // Added this test to make sure the <<script>> macro isn't mistaken for the <script> HTML tag
+        it("should capture a reference for the script macro", () => {
+            const header = ":: Passage\n";
+            const passage = "Macro: <<script>><</script>>";
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                uri: "fake-uri",
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            const parser = uut.getSugarCubeParser(undefined);
+
+            parser?.parsePassageText(passage, header.length, state);
+            const result = callbacks.references[0];
+
+            expect(callbacks.references.length).to.equal(1);
+            expect(result).to.eql({
+                contents: "script",
+                location: Location.create(
+                    "fake-uri",
+                    Range.create(1, 9, 1, 15)
+                ),
+                kind: OSugarCubeSymbolKind.KnownMacro,
+            });
+        });
+
         it("should not capture a macro reference inside a {{{no-wiki block}}}", () => {
             const header = ":: Passage\n";
             const passage = "Macro: {{{<<testy>>}}}";

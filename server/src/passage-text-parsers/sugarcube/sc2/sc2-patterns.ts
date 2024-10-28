@@ -39,7 +39,7 @@ export namespace sc2Patterns {
      * This is also mainly important to keep us from interpolating variables or parsing macros.
      */
     export const scriptStyleBlock = [
-        ["<script>", "</script>"],
+        ["(?!<<)<script>(?!>)", "(?!<<)</script>(?!>)"],
         ["<style>", "</style>"],
     ]
         .map(([open, close]) => `(?:${open}(?:.|\r?\n)*?${close})`)
