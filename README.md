@@ -1,12 +1,12 @@
-# Twine (Twee 3)
+# Twine (Twee 3) Language
 
-A VS Code plugin for [Twine] (specifically the [Twee3] format) and the [Chapbook] story format.
+A VS Code plugin for [Twine] (specifically the [Twee3] format) and the [Chapbook] and [SugarCube] story formats.
 
 ## Features
 
 ### Twee
 
--   Autocomplete (Twine links, `StoryData` contents, CSS stylesheets)
+-   Autocomplete (Twine links, `StoryData` contents, CSS stylesheets, HTML)
 -   Syntax highlighting
 -   Error highlighting
 -   Go to passage definition
@@ -14,15 +14,41 @@ A VS Code plugin for [Twine] (specifically the [Twee3] format) and the [Chapbook
 
 ### Chapbook
 
+-   Autocomplete
 -   Syntax highlighting
 -   Error highlighting
+-   Highlight variable references
 -   Support for inserts and modifiers
     -   Autocomplete (both names and arguments)
     -   Hover information
     -   Go to a custom inserts or modifier's definition
     -   Highlight references to a custom insert or modifier
 
-#### Custom Chapbook Inserts and Modifiers
+The insert and macro
+
+### Sugarcube
+
+-   Autocomplete
+-   Syntax highlighting
+-   Error highlighting
+-   Highlight variable references
+-   Support for macros
+    -   Autocomplete (names only)
+    -   Hover information
+    -   Highlight references to macros
+    -   Support for custom macros (uses the [T3LT custom macro format])
+
+## Installation
+
+[Install from the VSCode extension marketplace][marketplace].
+
+## Getting Started
+
+Open the folder with your game and the plugin will index all files that end in `.tw` or `.twee`.
+
+The plugin determines what story format to use based on the `format` property in your `StoryData` passage.
+
+## Custom Chapbook Inserts and Modifiers
 
 The plugin recognizes [custom inserts] and [modifiers][custom modifiers] defined through `engine.extend()` calls. You can add additional properties to your custom insert or modifier to add better autocomplete and hover support. All of them are optional.
 
@@ -153,19 +179,12 @@ As an example, here's how the `{ambient sound}` arguments are defined.
 }
 ```
 
-## Installation
-
-[Install from the VSCode extension marketplace][marketplace].
-
-## Getting Started
-
-Open the folder with your game and the plugin will index all files that end in `.tw` or `.twee`.
-
-The plugin determines what story format to use based on the `format` property in your `StoryData` passage.
-
 [Chapbook]: https://klembot.github.io/chapbook/
 [custom inserts]: https://klembot.github.io/chapbook/guide/advanced/adding-custom-inserts.html
 [custom modifiers]: https://klembot.github.io/chapbook/guide/advanced/adding-custom-modifiers.html
 [marketplace]: https://marketplace.visualstudio.com/
+[SugarCube]: https://www.motoslave.net/sugarcube/2/
 [Twee3]: https://github.com/iftechfoundation/twine-specs/blob/master/twee-3-specification.md
+[Twee 3 Language Tools]: https://github.com/cyrusfirheir/twee3-language-tools/
+[T3LT custom macro format]: https://github.com/cyrusfirheir/twee3-language-tools/?tab=readme-ov-file#custom-macro-definitions-for-sugarcube
 [Twine]: https://twinery.org/
