@@ -2,7 +2,6 @@ import { Location, Position } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { ProjectIndex } from "../../project-index";
-import { getChapbookDefinitions } from "./chapbook-parser";
 import { OChapbookSymbolKind } from "./types";
 
 export function getReferencesToSymbolAt(

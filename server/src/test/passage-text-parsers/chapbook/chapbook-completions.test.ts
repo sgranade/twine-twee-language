@@ -14,12 +14,12 @@ import {
     ArgumentRequirement,
     ValueType,
 } from "../../../passage-text-parsers/chapbook/types";
+import { buildInsertInfo } from "./inserts/insert-builders";
 import { buildModifierInfo } from "./modifiers/modifier-builders";
 import * as insertsModule from "../../../passage-text-parsers/chapbook/inserts";
 import * as modifiersModule from "../../../passage-text-parsers/chapbook/modifiers";
 
 import * as uut from "../../../passage-text-parsers/chapbook";
-import { buildInsertInfo } from "./inserts/insert-builders";
 
 describe("Chapbook Completions", () => {
     describe("Variables", () => {

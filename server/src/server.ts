@@ -265,7 +265,7 @@ connection.onInitialize((params: InitializeParams) => {
                 },
             },
             completionProvider: {
-                triggerCharacters: ["{", "[", "<", "'", '"'],
+                triggerCharacters: ["{", "[", "<", "'", '"', "$", "_"], // the last two are SugarCube variable sigils
                 // TODO create a resolve provider
                 resolveProvider: false,
             },

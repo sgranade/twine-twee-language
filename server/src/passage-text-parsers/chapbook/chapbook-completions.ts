@@ -23,7 +23,9 @@ import { ArgumentRequirement, InsertProperty, ValueType } from "./types";
 
 /**
  * Generate completions for variables and properties.
+ * @param document Document in which to generate the completions.
  * @param text Text from the start of the context to the point where completions are to be generated.
+ * @param offset Offset for the text in the document.
  * @param index Project index.
  * @returns Completions list.
  */
@@ -48,35 +50,29 @@ function generateVariableAndPropertyCompletions(
               );
     for (const uri of index.getIndexedUris()) {
         if (context !== undefined) {
-            for (const ref of index.getReferences(
-                uri,
-                OChapbookSymbolKind.Property
-            ) ?? []) {
-                if (ref.contents.startsWith(context))
-                    completions.push(
-                        ref.contents.split(".").pop() ?? ref.contents
-                    );
-            }
-            for (const ref of index.getReferences(
-                uri,
-                OChapbookSymbolKind.PropertySet
-            ) ?? []) {
-                if (ref.contents.startsWith(context))
-                    completions.push(
-                        ref.contents.split(".").pop() ?? ref.contents
-                    );
-            }
+            // Get all properties whose contents match the full context
+            const allPropRefs = [
+                ...(index.getReferences(uri, OChapbookSymbolKind.Property) ??
+                    []),
+                ...(index.getReferences(uri, OChapbookSymbolKind.PropertySet) ??
+                    []),
+            ];
+            completions.push(
+                ...(allPropRefs
+                    .filter((ref) => ref.contents.startsWith(context))
+                    .map(
+                        (ref) => ref.contents.split(".").pop() ?? ref.contents
+                    ) ?? [])
+            );
         } else {
-            completions.push(
-                ...(index
-                    .getReferences(uri, OChapbookSymbolKind.Variable)
-                    ?.map((x) => x.contents) ?? [])
-            );
-            completions.push(
-                ...(index
-                    .getReferences(uri, OChapbookSymbolKind.VariableSet)
-                    ?.map((x) => x.contents) ?? [])
-            );
+            // Get all variables
+            const allVarRefs = [
+                ...(index.getReferences(uri, OChapbookSymbolKind.Variable) ??
+                    []),
+                ...(index.getReferences(uri, OChapbookSymbolKind.VariableSet) ??
+                    []),
+            ];
+            completions.push(...allVarRefs.map((ref) => ref.contents));
         }
     }
     if (range !== undefined) {
@@ -84,7 +80,7 @@ function generateVariableAndPropertyCompletions(
             Array.from(new Set<string>(completions)).map((c) => {
                 return {
                     label: c,
-                    kind: CompletionItemKind.Variable,
+                    kind: CompletionItemKind.Property,
                     textEdit: TextEdit.replace(range, c),
                 };
             })
@@ -309,9 +305,9 @@ function insertPropertiesToCompletionItems(
  * Generate completions for passage names.
  *
  * @param document Document in which to generate the completions.
- * @param section Text of the insert section where completions will go.
- * @param start Offset where the insert section begins in the document.
- * @param end Offset where the insert section ends.
+ * @param section Text of the section where completions will go.
+ * @param start Offset where the section begins in the document.
+ * @param end Offset where the section ends.
  * @param index Project index.
  * @returns Completions list.
  */
