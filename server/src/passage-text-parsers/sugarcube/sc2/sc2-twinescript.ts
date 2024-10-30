@@ -45,7 +45,7 @@ const desugarMap: { [key: string]: string } = {
  */
 const desugarRegExp = new RegExp(
     [
-        "[$_](?=[A-Za-z$_])", // Variable sigils
+        "\\b[$_](?=[A-Za-z$_])", // Variable sigils
         "\\b(?:to|n?eq|is(?:not)?|gte?|lte?|and|or|not|n?def)\\b", // Word operators
     ].join("|"),
     "g"
@@ -71,7 +71,7 @@ interface DesugarResult {
  *
  * Note that `def` and `ndef` aren't properly translated to
  * `"undefined" !== typeof` and `"undefined" === typeof`, variable
- * sigil `$` is replaced by `P` and `_` is replaced by `T`.
+ * sigils `$` and `_` are replaced by `X`
  *
  * @param str TwineScript string to desugar.
  * @returns The desugared string and mapping of old to new positions.

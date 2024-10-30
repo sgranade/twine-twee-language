@@ -184,7 +184,7 @@ describe("SugarCube Parser", () => {
     describe("variables", () => {
         it("should capture a variable reference for a bare variable", () => {
             const header = ":: Passage\n";
-            const passage = "Some content.\n" + "This is a $bareVariable.\n";
+            const passage = "Some content.\n" + "This is a $bare_variable.\n";
             const callbacks = new MockCallbacks();
             const state = buildParsingState({
                 content: header + passage,
@@ -197,10 +197,10 @@ describe("SugarCube Parser", () => {
 
             expect(result).to.eql([
                 {
-                    contents: "$bareVariable",
+                    contents: "$bare_variable",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(2, 10, 2, 23)
+                        Range.create(2, 10, 2, 24)
                     ),
                     kind: OSugarCubeSymbolKind.Variable,
                 },
@@ -275,6 +275,22 @@ describe("SugarCube Parser", () => {
                     kind: OSugarCubeSymbolKind.Variable,
                 },
             ]);
+        });
+
+        it("should not capture a variable reference for text with underscores", () => {
+            const header = ":: Passage\n";
+            const passage = "Some content.\n" + "This is no_variable.\n";
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            const parser = uut.getSugarCubeParser(undefined);
+
+            parser?.parsePassageText(passage, header.length, state);
+            const result = callbacks.references;
+
+            expect(result).to.be.empty;
         });
 
         it("should not capture a variable reference for a bare variable inside nowiki quote markup", () => {
