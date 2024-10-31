@@ -2,6 +2,7 @@
 out
 node_modules
 client/server
+tsconfig.tsbuildinfo
 
 # Test and Coverage
 .vscode-test
