@@ -1,6 +1,6 @@
 {
 	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
-	"name": "Twee3-Sugarcube",
+	"name": "Twee3-SugarCube",
 	"scopeName": "source.twee3.sugarcube-2",
 	"patterns": [
 		{
@@ -87,7 +87,7 @@
 			}
 		},
 		"script-tag": {
-			"begin": "(?i)(<)(script)\\b(?=[^>]*(?:(?:type=('text/javascript'|\"text/javascript\")|lang=(javascript|'javascript'|\"javascript\")))?)(?![^/>]*/>\\s*$)",
+			"begin": "(?i)(?<!<)(<)(script)\\b(?=[^>]*(?:(?:type=('text/javascript'|\"text/javascript\")|lang=(javascript|'javascript'|\"javascript\")))?)(?![^/>]*/>\\s*$)",
 			"beginCaptures": {
 				"1": {
 					"name": "punctuation.definition.tag.begin.html"
@@ -96,7 +96,7 @@
 					"name": "entity.name.tag.html"
 				}
 			},
-			"end": "(?i)(</)(script)(>)",
+			"end": "(?i)(?<!<)(</)(script)(>)",
 			"endCaptures": {
 				"1": {
 					"name": "punctuation.definition.tag.begin.html"
@@ -130,7 +130,7 @@
 			]
 		},
 		"style-tag": {
-			"begin": "(?i)(<)(style)\\b(?=[^>]*(?:(?:type=('text/css'|\"text/css\")|lang=(css|'css'|\"css\")))?)(?![^/>]*/>\\s*$)",
+			"begin": "(?i)(?<!<)(<)(style)\\b(?=[^>]*(?:(?:type=('text/css'|\"text/css\")|lang=(css|'css'|\"css\")))?)(?![^/>]*/>\\s*$)",
 			"beginCaptures": {
 				"1": {
 					"name": "punctuation.definition.tag.begin.html"
@@ -139,7 +139,7 @@
 					"name": "entity.name.tag.html"
 				}
 			},
-			"end": "(?i)(</)(style)(>)",
+			"end": "(?i)(?<!<)(</)(style)(>)",
 			"endCaptures": {
 				"1": {
 					"name": "punctuation.definition.tag.begin.html"
@@ -173,7 +173,7 @@
 			]
 		},
 		"html": {
-			"begin": "(?i)(</?)([a-z][a-zA-Z0-9:-]*)",
+			"begin": "(?i)(?<!<)(</?)([a-z][a-zA-Z0-9:-]*)",
 			"beginCaptures": {
 				"1": {
 					"name": "punctuation.definition.tag.begin.html"

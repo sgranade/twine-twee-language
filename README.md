@@ -21,12 +21,13 @@ A VS Code plugin for [Twine] (specifically the [Twee3] format) and the [Chapbook
 -   Support for inserts and modifiers
     -   Autocomplete (both names and arguments)
     -   Hover information
-    -   Go to a custom inserts or modifier's definition
-    -   Highlight references to a custom insert or modifier
+    -   Argument validation
+    -   Support for custom inserts and modifiers (requires [extra information](#custom-chapbook-inserts-and-modifiers))
+        -   Find everywhere the custom insert/modifier is used
+        -   Go to the custom insert/modifier's definition
+        -   Argument validation
 
-The insert and macro
-
-### Sugarcube
+### SugarCube
 
 -   Autocomplete
 -   Syntax highlighting

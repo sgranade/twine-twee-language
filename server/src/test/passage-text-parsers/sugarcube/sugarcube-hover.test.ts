@@ -11,7 +11,7 @@ import * as macrosModule from "../../../passage-text-parsers/sugarcube/macros";
 
 import * as uut from "../../../passage-text-parsers/sugarcube";
 
-describe("Sugarcube Hover", () => {
+describe("SugarCube Hover", () => {
     it("should return a built-in macro's definition for a position inside a reference to that macro", () => {
         const doc = TextDocument.create("fake-uri", "", 0, "Placeholder");
         const index = new Index();

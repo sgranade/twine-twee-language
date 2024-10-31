@@ -11,7 +11,6 @@ import * as uut from "../../../passage-text-parsers/chapbook";
 
 describe("Chapbook References", () => {
     it("should return variable set locations from a position inside a variable reference", () => {
-        const doc = TextDocument.create("fake-uri", "", 0, "Placeholder");
         const index = new Index();
         index.setReferences("source-uri", [
             {
@@ -50,7 +49,7 @@ describe("Chapbook References", () => {
         const parser = uut.getChapbookParser(undefined);
 
         const result = parser?.getReferencesToSymbolAt(
-            doc,
+            "fake-uri",
             Position.create(2, 1),
             index,
             true
@@ -63,7 +62,6 @@ describe("Chapbook References", () => {
     });
 
     it("should return variable reference locations from a position inside a variable set", () => {
-        const doc = TextDocument.create("fake-uri", "", 0, "Placeholder");
         const index = new Index();
         index.setReferences("source-uri", [
             {
@@ -102,7 +100,7 @@ describe("Chapbook References", () => {
         const parser = uut.getChapbookParser(undefined);
 
         const result = parser?.getReferencesToSymbolAt(
-            doc,
+            "fake-uri",
             Position.create(14, 1),
             index,
             true

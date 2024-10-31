@@ -427,13 +427,8 @@ connection.onRenameRequest((params: RenameParams): WorkspaceEdit | null => {
 });
 
 connection.onReferences((params: ReferenceParams): Location[] | undefined => {
-    // TODO do I need the full document, or would the URI suffice?
-    const document = documents.get(params.textDocument.uri);
-    if (document === undefined) {
-        return undefined;
-    }
     return getReferencesToSymbolAt(
-        document,
+        params.textDocument.uri,
         params.position,
         projectIndex,
         params.context.includeDeclaration

@@ -44,7 +44,25 @@ async function _updateStoryFormatLanguage() {
             currentStoryFormatLanguage = testLanguage;
             return;
         }
+    } else if (!langs.includes(format)) {
+        // As a fallback, pick the most recent version of the story format
+        let provisionalFormat: undefined | string;
+        for (const lang of langs) {
+            if (lang.startsWith(format)) {
+                if (
+                    provisionalFormat === undefined ||
+                    lang[lang.length - 1] >
+                        provisionalFormat[provisionalFormat.length - 1]
+                ) {
+                    provisionalFormat = lang;
+                }
+            }
+        }
+        if (provisionalFormat !== undefined) {
+            format = provisionalFormat;
+        }
     }
+
     if (langs.includes(format)) {
         currentStoryFormatLanguage = format;
     } else {

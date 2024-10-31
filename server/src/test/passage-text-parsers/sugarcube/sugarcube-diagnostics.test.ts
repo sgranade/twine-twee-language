@@ -14,7 +14,7 @@ import { OSugarCubeSymbolKind } from "../../../passage-text-parsers/sugarcube/ty
 
 import * as uut from "../../../passage-text-parsers/sugarcube";
 
-describe("Sugarcube Diagnostics", () => {
+describe("SugarCube Diagnostics", () => {
     describe("macros", () => {
         it("should warn on an unrecognized macro", () => {
             const doc = TextDocument.create(

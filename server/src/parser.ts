@@ -323,15 +323,10 @@ export interface TwineLink {
 /**
  * Parse the internal text of a Twine link.
  *
- * This is a separate function since SugarCube extends the usual [[link]] syntax
- * to include [[link][setter]] and similar permutations, where [setter] sets
- * a variable as a side effect, and we want to be able to use the same link
- * parsing code across story formats.
- *
  * @param linkText Text containing the link's internals without the [[ ]]
  * @param linkIndex Index in the document where the link text begins (zero-based).
  */
-export function parseLink(linkText: string, linkIndex: number): TwineLink {
+function parseLink(linkText: string, linkIndex: number): TwineLink {
     let display = linkText; // The section that will be displayed
     let displayIndex = 0; // Relative to the start of linkText
     let target = display;

@@ -78,7 +78,7 @@
 					".tw",
 					".twee"
 				],
-				"configuration": "./syntaxes/twee3.language-configuration.json"
+				"configuration": "./syntaxes/twee3.sugarcube-2.language-configuration.json"
 			}
 		],
 		"grammars": [
@@ -124,7 +124,7 @@
 				"twineTweeLanguage.twee-3.warnings.unknownMacro": {
 					"type": "boolean",
 					"default": "true",
-					"description": "Warn about unrecognized macros (in Sugarcube) or inserts and modifiers (in Chapbook)."
+					"description": "Warn about unrecognized macros (in SugarCube) or inserts and modifiers (in Chapbook)."
 				},
 				"twineTweeLanguage.twee-3.warnings.unknownPassage": {
 					"type": "boolean",
