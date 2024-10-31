@@ -45,7 +45,7 @@ const desugarMap: { [key: string]: string } = {
  */
 const desugarRegExp = new RegExp(
     [
-        "\\b[$_](?=[A-Za-z$_])", // Variable sigils
+        "(?<!\\w)[$_](?=[A-Za-z$_])", // Variable sigils
         "\\b(?:to|n?eq|is(?:not)?|gte?|lte?|and|or|not|n?def)\\b", // Word operators
     ].join("|"),
     "g"

@@ -68,7 +68,7 @@ const mediaPassageTags = new Set([
  */
 const bareVariableRegex = new RegExp(
     [
-        `(?:\\b${sc2Patterns.variableWithSigil})`, // variable
+        `(?:(?<!\\w)${sc2Patterns.variableWithSigil})`, // variable
         `(?:`,
         [
             `(?:\\.(?:${sc2Patterns.identifier}))`, // property
