@@ -21,7 +21,7 @@ import {
     parseSugarCubeTwineLink,
     tokenizeMacroArguments,
 } from "./sc2/sc2-lexer-parser";
-import { sc2Patterns } from "./sc2/sc2-patterns";
+import * as SC2Patterns from "./sc2/sc2-patterns";
 import { tokenizeTwineScriptExpression } from "./sc2/sc2-twinescript";
 import {
     Arg,
@@ -68,13 +68,13 @@ const mediaPassageTags = new Set([
  */
 const bareVariableRegex = new RegExp(
     [
-        `(?:(?<!\\w)${sc2Patterns.variableWithSigil})`, // variable
+        `(?:(?<!\\w)${SC2Patterns.variableWithSigil})`, // variable
         `(?:`,
         [
-            `(?:\\.(?:${sc2Patterns.identifier}))`, // property
+            `(?:\\.(?:${SC2Patterns.identifier}))`, // property
             `(?:\\[(?:\\d+)\\])`, // numeric accessor
             `(?:\\[(?:("|')(?:\\\\.|(?!\\\\|\\1).)+\\1)\\])`, // string accessor
-            `(?:\\[(?:${sc2Patterns.variableWithSigil})\\])`, // variable accessor
+            `(?:\\[(?:${SC2Patterns.variableWithSigil})\\])`, // variable accessor
         ].join("|"),
         `)*`,
     ].join(""),
@@ -151,7 +151,7 @@ function parseAndRemoveTwineLinks(
     return passageText;
 }
 
-const noWikiRegex = new RegExp(sc2Patterns.noWikiBlock, "gi");
+const noWikiRegex = new RegExp(SC2Patterns.noWikiBlock, "gi");
 
 /**
  * Remove nowiki text from a subsection.
@@ -168,8 +168,8 @@ function removeNoWikiText(subsection: string): string {
     return eraseMatches(subsection, noWikiRegex);
 }
 
-const macroRegex = new RegExp(sc2Patterns.fullMacro, "gm");
-const scriptStyleBlockRegex = new RegExp(sc2Patterns.scriptStyleBlock, "gm");
+const macroRegex = new RegExp(SC2Patterns.fullMacro, "gm");
+const scriptStyleBlockRegex = new RegExp(SC2Patterns.scriptStyleBlock, "gm");
 
 interface macroLocationInfo {
     name: string;

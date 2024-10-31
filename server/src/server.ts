@@ -55,6 +55,7 @@ import {
 } from "./structure";
 import { semanticTokensLegend } from "./semantic-tokens";
 import { generateDiagnostics } from "./validator";
+import { getSugarCubeMacroInfo } from "./passage-text-parsers/sugarcube";
 import {
     setCustomMacrosAndEnums,
     tweeConfigFileToMacrosAndEnums,
@@ -226,6 +227,8 @@ namespace Heartbeat {
 
             // Once we're done, we need to re-validate any open documents
             await processAllOpenDocuments();
+
+            onSCMacroChanges();
         } catch (err) {
             connection.console.error(`Client couldn't find Twee files: ${err}`);
         }
@@ -379,6 +382,7 @@ connection.onDidChangeWatchedFiles((_change) => {
             projectIndex.removeDocument(change.uri);
         } else if (/\.twee-config\.(json|ya?ml)$/.test(change.uri)) {
             parseT3LTMacroFile(change.uri);
+            onSCMacroChanges();
         }
     }
 });
@@ -528,6 +532,16 @@ async function parseTextDocument(
 }
 
 /**
+ * Handle changes to the SugarCube macros.
+ */
+function onSCMacroChanges() {
+    connection.sendNotification(
+        CustomMessages.UpdatedSugarCubeMacroList,
+        getSugarCubeMacroInfo()
+    );
+}
+
+/**
  * Handle a changed story format.
  *
  * @param storyFormat New story format.
@@ -551,7 +565,6 @@ async function parseT3LTMacroFile(uri: string) {
     const isYaml = /\.ya?ml$/.test(uri);
     const doc = await fetchFile(uri, isYaml ? "yaml" : "json");
     if (doc !== undefined) {
-        const diagnostics: Diagnostic[] = [];
         const parsedResults = tweeConfigFileToMacrosAndEnums(
             doc.getText(),
             isYaml
@@ -560,17 +573,17 @@ async function parseT3LTMacroFile(uri: string) {
             setCustomMacrosAndEnums(uri, parsedResults.macrosAndEnums);
         }
         if (parsedResults.errors.length) {
-            diagnostics.push(
+            const diagnostics = [
                 Diagnostic.create(
                     Range.create(0, 0, 1, 0),
                     `Problems with the configuration file: ${parsedResults.errors.join("\n")}`
-                )
-            );
+                ),
+            ];
+            connection.sendDiagnostics({
+                uri: uri,
+                diagnostics: diagnostics,
+            });
         }
-        connection.sendDiagnostics({
-            uri: uri,
-            diagnostics: diagnostics,
-        });
     }
 }
 

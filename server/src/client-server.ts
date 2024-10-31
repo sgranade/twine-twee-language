@@ -2,15 +2,36 @@
 
 import { RequestType, RequestType0, URI } from "vscode-languageserver";
 
+/**
+ * Messages
+ */
+
 export enum CustomMessages {
     RequestReindex = "twee3/requestReindex",
     UpdatedStoryFormat = "twee3/storyformat",
+    UpdatedSugarCubeMacroList = "twee3/sugarcube/macrolist",
 }
 
+/**
+ * Story format information sent as part of the UpdatedStoryFormat message.
+ */
 export interface StoryFormat {
     format: string;
     formatVersion?: string;
 }
+
+/**
+ * SugarCube 2 macro info sent as part of the UpdatedSugarCubeMacroList message.
+ */
+export interface SC2MacroInfo {
+    name: string;
+    isContainer: boolean;
+    isChild: boolean;
+}
+
+/**
+ * Requests
+ */
 
 /**
  * Request from the server that the client find Twee files.
@@ -36,3 +57,49 @@ export const ReadFileRequest: RequestType<
     string,
     any
 > = new RequestType("fs/readFile");
+
+/**
+ * Helper functions
+ */
+
+// All of the following is adapted from SugarCube 2 `parserlib.js` and twee3-language-tools `macros.ts`
+// and is needed because the VS Code client needs to make onEnter rules specifically for macros.
+
+/**
+ * Body of a macro (i.e. its arguments). Taken from SugarCube 2 `parserlib.js`
+ */
+const macroBody = [
+    `(?<macroBody>(?:`,
+    `(?:/\\*[^*]*\\*+(?:[^/*][^*]*\\*+)*/)|`,
+    `(?://.*\\n)|`,
+    `(?:\`(?:\\\\.|[^\`\\\\])*?\`)|`,
+    `(?:"(?:\\\\.|[^"\\\\\\n])*?")|`,
+    `(?:'(?:\\\\.|[^'\\\\\\n])*?')|`,
+    `(?:\\[(?:[<>]?[Ii][Mm][Gg])?\\[[^\\r\\n]*?\\]\\]+)|[^>]|`,
+    `(?:>(?!>))`,
+    `)*?)`,
+].join("");
+/**
+ * Self-close portion of a macro (e.g. <<testy/>>)
+ */
+const macroSelfClose = `(?<macroSelfClose>/)`;
+/**
+ * Prefix that indicates a closing macro (e.g. <</testy>> or <<endtesty>>).
+ */
+const macroEnd = `(?<macroEnd>/|end)`;
+/**
+ * Create a regex pattern to find an opening SugarCube 2 container macro, like `<<silently>>`.
+ * @param name Container macro's name.
+ * @returns String containing the regex pattern.
+ */
+export function createSC2OpenContainerMacroPattern(name: string) {
+    return `<<(${name})(?:\\s+${macroBody})?>>`;
+}
+/**
+ * Create a regex pattern to find a closing SugarCube 2 container macro, like `<</silently>>`.
+ * @param name Container macro's name.
+ * @returns String containing the regex pattern.
+ */
+export function createSC2CloseContainerMacroPattern(name: string) {
+    return `(?:<<(${name})(?:\\s*)${macroBody}${macroSelfClose}>>)|(?:<<${macroEnd}(${name})>>)`;
+}

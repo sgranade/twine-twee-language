@@ -1,8 +1,25 @@
+import { SC2MacroInfo } from "../../client-server";
 import { StoryFormatParser } from "..";
 import { generateCompletions } from "./sugarcube-completions";
 import { generateDiagnostics } from "./sugarcube-diagnostics";
 import { generateHover } from "./sugarcube-hover";
 import { parsePassageText } from "./sugarcube-parser";
+import { allMacros } from "./macros";
+
+/**
+ * Get the names of all the known SugarCube 2 macros.
+ *
+ * @returns List of all macro names.
+ */
+export function getSugarCubeMacroInfo(): SC2MacroInfo[] {
+    return Object.values(allMacros()).map((info) => {
+        return {
+            name: info.name,
+            isContainer: !!info.container,
+            isChild: !!(info.parents && info.parents.length > 0),
+        };
+    });
+}
 
 /**
  * Get passage text parser for the SugarCube story format.
