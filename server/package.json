@@ -1,7 +1,7 @@
 {
-	"name": "twine-chapbook-lsp-server",
+	"name": "twine-twee-language",
 	"description": "Twine (Twee 3) language server in node.",
-	"version": "0.0.1",
+	"version": "0.1.0",
 	"author": "Stephen Granade",
 	"license": "MIT",
 	"engines": {

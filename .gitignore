@@ -11,3 +11,4 @@ coverage.lcov
 
 # Other
 TODO.md
+*.vsix

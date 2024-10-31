@@ -1,9 +1,9 @@
 {
-	"name": "twine-chapbook-lsp-client",
+	"name": "twine-twee-language",
 	"description": "Twine (Twee 3) language client",
 	"author": "Stephen Granade",
 	"license": "MIT",
-	"version": "0.0.1",
+	"version": "0.1.0",
 	"publisher": "Stephen Granade",
 	"repository": {
 		"type": "git",
