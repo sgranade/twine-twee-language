@@ -158,17 +158,20 @@ namespace Heartbeat {
             // Right now we don't cache the results so as not to have to
             // potentially hold every file in a project in memory.
             for (const uri of tweeFileUris) {
-                // The moment we have a story format, we can notify clients and stop looking.
-                const storyFormat = projectIndex.getStoryData()?.storyFormat;
-                if (storyFormat !== undefined) {
-                    onStoryFormatChange(storyFormat);
-                    break;
-                }
-
                 const doc = await fetchFile(uri);
                 if (doc !== undefined) {
                     updateProjectIndex(doc, ParseLevel.StoryData, projectIndex);
+                    // The moment we have a story format, we can stop looking
+                    if (
+                        projectIndex.getStoryData()?.storyFormat !== undefined
+                    ) {
+                        break;
+                    }
                 }
+            }
+            const storyFormat = projectIndex.getStoryData()?.storyFormat;
+            if (storyFormat !== undefined) {
+                onStoryFormatChange(storyFormat);
             }
 
             const diagnosticsOptions = (await getSettings())["twee-3"];
@@ -385,6 +388,11 @@ connection.onDidChangeWatchedFiles((_change) => {
             onSCMacroChanges();
         }
     }
+});
+
+documents.onDidOpen(async (change) => {
+    await parseTextDocument(change.document, ParseLevel.Full, undefined);
+    await validateTextDocument(change.document, undefined);
 });
 
 connection.onDocumentSymbol(
