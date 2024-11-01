@@ -9,13 +9,20 @@
 			"runtimeExecutable": "${execPath}",
 			"args": ["--extensionDevelopmentPath=${workspaceRoot}"],
 			"outFiles": [
-				"${workspaceRoot}/client/out/**/*.js",
-				"${workspaceRoot}/server/out/**/*.js"
+				"${workspaceRoot}/dist/**/*.js",
 			],
 			"autoAttachChildProcesses": true,
+			// This preLaunchTask doesn't use the full "watch" task because that one spawns
+			// two separate watch sub-tasks (tsc to find type errors + esbuild), and problem
+			// detection doesn't properly handle two separate sub-tasks, leaving the launch 
+			// task to decide that the pre-launch task is never ready for the launch task
+			// to kick off.
+			//
+			// Turns out that that's okay b/c VS Code will warn the user if there are type errors
+			// separately from this preLaunchTask.
 			"preLaunchTask": {
 				"type": "npm",
-				"script": "watch"
+				"script": "watch:esbuild"
 			}
 		}
 	]

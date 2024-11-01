@@ -200,7 +200,7 @@ const excludeFiles = (): string =>
 export function activate(context: ExtensionContext) {
     // The server is implemented in node
     const serverModule = context.asAbsolutePath(
-        path.join("server", "out", "server.js")
+        path.join("dist", "server", "src", "server.js")
     );
 
     // If the extension is launched in debug mode then the debug server options are used

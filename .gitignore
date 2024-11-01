@@ -1,5 +1,6 @@
 # Output and Node
 out
+dist
 node_modules
 client/server
 tsconfig.tsbuildinfo

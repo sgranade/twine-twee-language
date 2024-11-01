@@ -1,20 +1,21 @@
-.vscode/**
-**/*.ts
-**/*.map
-.gitignore
-**/tsconfig.json
-**/tsconfig.base.json
-contributing.md
-eslint.config.mjs
-coverage.lcov
-.travis.yml
-.mocharc
-.nyc_output/**
-client/node_modules/**
-!client/node_modules/vscode-jsonrpc/**
-!client/node_modules/vscode-languageclient/**
-!client/node_modules/vscode-languageserver-protocol/**
-!client/node_modules/vscode-languageserver-types/**
-!client/node_modules/{minimatch,brace-expansion,concat-map,balanced-match}/**
-!client/node_modules/{semver,lru-cache,yallist}/**
-TODO.md
+# Ignore everything
+*
+*/
+
+# And these directories if they appear in subdirectories
+.vscode
+node_modules
+
+# Except these files
+!CHANGELOG.md
+!LICENSE
+!package.json
+!package-lock.json
+!README.md
+# Note that the following are the actual extension files
+!dist/client/src/extension.js
+!dist/server/src/server.js
+
+# And these directories
+!syntaxes
+!syntaxes/**/*
