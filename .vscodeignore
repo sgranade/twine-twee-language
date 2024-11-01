@@ -15,6 +15,7 @@ node_modules
 # Note that the following are the actual extension files
 !dist/client/src/extension.js
 !dist/server/src/server.js
+!images/icon.png
 
 # And these directories
 !syntaxes
