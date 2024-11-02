@@ -1,9 +1,21 @@
 import { TextDocument } from "vscode-languageserver-textdocument";
 
-import { JSPropertyLabel, tokenizeJSExpression } from "../../../js-parser";
+import {
+    JSPropertyLabel,
+    parseJSExpressionStrict,
+    tokenizeJSExpression,
+    tokenizeParsedJSExpression,
+} from "../../../js-parser";
+import { ETokenType } from "../../../semantic-tokens";
 import { createLocationFor } from "../../../parser";
 import { Label } from "../../../project-index";
 import { capturePreSemanticTokenFor, StoryFormatParsingState } from "../..";
+
+/**
+ * Whether a bit of text starts with a variable sigil ($, _) or
+ * is a settings or setup variable, and thus is a SugarCube variable.
+ */
+export const startIsVarRegexp = /^(\$|_|(set(tings|up))[.[])/;
 
 /**
  * Mapping of TwineScript sugaring to replacements.
@@ -96,13 +108,13 @@ export function desugar(str: string): DesugarResult {
         let replacement = m[0];
         if (!foundString) {
             replacement = desugarMap[m[0]] || "";
-        result.positionMapping.push({
-            originalStart: m.index,
-            originalString: m[0],
-            newStart: m.index + runningDelta,
-            newEnd: m.index + runningDelta + replacement.length,
-        });
-        runningDelta += replacement.length - m[0].length;
+            result.positionMapping.push({
+                originalStart: m.index,
+                originalString: m[0],
+                newStart: m.index + runningDelta,
+                newEnd: m.index + runningDelta + replacement.length,
+            });
+            runningDelta += replacement.length - m[0].length;
         }
         result.desugared += str.slice(sliceStart, m.index) + replacement;
         sliceStart = m.index + m[0].length;
@@ -160,6 +172,43 @@ function getSugaredPositionAndNewText(
     }
 
     return ret;
+}
+
+/**
+ * See if an expression is valid TwineScript.
+ *
+ * @param expression Expression to test.
+ * @returns True if it's TwineScript; false otherwise.
+ */
+export function isTwineScript(expression: string): boolean {
+    // We'll claim it's TwineScript if it strictly parses as JavaScript
+    const { desugared, positionMapping } = desugar(expression);
+    try {
+        const ast = parseJSExpressionStrict(desugared);
+        // Make sure all variables are SugarCube variables, as barewords will look like
+        // variables to the JS parser
+        const tokens = tokenizeParsedJSExpression(expression, ast);
+        for (const token of Object.values(tokens)) {
+            if (token.type === ETokenType.variable) {
+                // Resugar the text (if needed) and test to see if it's an SC2 variable.
+                const { sugaredText } = getSugaredPositionAndNewText(
+                    token.at,
+                    positionMapping
+                );
+                if (sugaredText === "$" || sugaredText === "_") {
+                    token.text = sugaredText + token.text.slice(1);
+                } else if (sugaredText !== undefined) {
+                    token.text = sugaredText;
+                }
+                if (!startIsVarRegexp.test(token.text)) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    } catch {
+        return false;
+    }
 }
 
 /**

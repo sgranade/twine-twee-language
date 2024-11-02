@@ -13,7 +13,10 @@ import { skipSpaces } from "../../../utilities";
 import { capturePreSemanticTokenFor, StoryFormatParsingState } from "../..";
 import { Token } from "../../types";
 import { createVariableAndPropertyReferences } from "../sugarcube-utils";
-import { tokenizeTwineScriptExpression } from "./sc2-twinescript";
+import {
+    isTwineScript,
+    tokenizeTwineScriptExpression,
+} from "./sc2-twinescript";
 
 /**
  * Utility functions for the LSP to capture tokens as we parse.
@@ -43,13 +46,29 @@ export function parseSugarCubeTwineLink(
         markupData.isLink &&
         markupData.link !== undefined
     ) {
-        parsePassageReference(
-            markupData.link.text,
-            markupData.link.at + textIndex,
-            state,
-            sugarcubeState
-        );
-
+        // SC2 treats all link expressions as passage references unless and until it's
+        // not found, at which point it's treated as if it's TwineScript. We'll do a bit
+        // of tap-dancing to decide if the link refers to a passage or is TwineScript.
+        // If someone ever literally names a passage `"Go to" + $destinationVar`, boy won't
+        // we look foolish.
+        if (isTwineScript(markupData.link.text)) {
+            createVariableAndPropertyReferences(
+                tokenizeTwineScriptExpression(
+                    markupData.link.text,
+                    markupData.link.at + textIndex,
+                    state.textDocument,
+                    sugarcubeState
+                ),
+                state
+            );
+        } else {
+            parsePassageReference(
+                markupData.link.text,
+                markupData.link.at + textIndex,
+                state,
+                sugarcubeState
+            );
+        }
         if (markupData.text !== undefined) {
             capturePreSemanticTokenFor(
                 markupData.text.text,

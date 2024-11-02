@@ -22,7 +22,10 @@ import {
     tokenizeMacroArguments,
 } from "./sc2/sc2-lexer-parser";
 import * as SC2Patterns from "./sc2/sc2-patterns";
-import { tokenizeTwineScriptExpression } from "./sc2/sc2-twinescript";
+import {
+    startIsVarRegexp,
+    tokenizeTwineScriptExpression,
+} from "./sc2/sc2-twinescript";
 import {
     Arg,
     macroArgumentTokenToArg,
@@ -177,12 +180,6 @@ interface macroLocationInfo {
     at: number;
     id: number; // To disambiguate macros with the same name
 }
-
-/**
- * Whether a bit of text starts with a variable sigil ($, _) or
- * is a settings or setup variable.
- */
-const startIsVarRegexp = /^(\$|_|(set(tings|up))[.[])/;
 
 /**
  * Parse the arguments to a macro.

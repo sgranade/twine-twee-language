@@ -260,6 +260,25 @@ export function parseJSExpression(expression: string): acorn.Node | undefined {
 }
 
 /**
+ * Tokenize a parsed JavaScript expression.
+ *
+ * @param expression Original unparsed expression.
+ * @param ast Parsed expression.
+ * @returns Object whose keys are the token's location in the unparsed expression and whose values are unprocessed tokens.
+ */
+export function tokenizeParsedJSExpression(
+    expression: string,
+    ast: acorn.Node
+): Record<number, astUnprocessedToken> {
+    currentExpression = expression;
+    unprocessedTokens = {};
+
+    acornWalk.fullAncestor(ast, fullAncestorTokenizingCallback);
+
+    return { ...unprocessedTokens };
+}
+
+/**
  * Tokenize a JavaScript expression and find referenced variables and properties in it.
  *
  * Returned properties are only those for which the parser could trace their "ownership"
@@ -282,12 +301,9 @@ export function tokenizeJSExpression(
 
     const ast = parseJSExpression(expression);
     if (ast !== undefined) {
-        currentExpression = expression;
-        unprocessedTokens = {};
+        const tokens = tokenizeParsedJSExpression(expression, ast);
 
-        acornWalk.fullAncestor(ast, fullAncestorTokenizingCallback);
-
-        for (const token of Object.values(unprocessedTokens)) {
+        for (const token of Object.values(tokens)) {
             if (token.type === ETokenType.variable) {
                 vars.push({
                     contents: token.text,

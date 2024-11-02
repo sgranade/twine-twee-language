@@ -181,6 +181,40 @@ describe("SugarCube TwineScript", () => {
         });
     });
 
+    describe("is TwineScript", () => {
+        it("should return true for bare variables", () => {
+            // No arrange
+
+            const result = uut.isTwineScript("$bare_var");
+
+            expect(result).to.be.true;
+        });
+
+        it("should return false for bare words", () => {
+            // No arrange
+
+            const result = uut.isTwineScript("bareWord");
+
+            expect(result).to.be.false;
+        });
+
+        it("should return false for several bare words", () => {
+            // No arrange
+
+            const result = uut.isTwineScript("bare word number 2");
+
+            expect(result).to.be.false;
+        });
+
+        it("should return true for a complex TwineScript expression", () => {
+            // No arrange
+
+            const result = uut.isTwineScript('$var to (17 + 23) - "text"');
+
+            expect(result).to.be.true;
+        });
+    });
+
     describe("tokenize TwineScript", () => {
         it("should set semantic tokens for variable assignment", () => {
             const expression = "$varbl to 'testy'";

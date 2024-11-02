@@ -561,6 +561,46 @@ describe("SugarCube Parser", () => {
             });
         });
 
+        it("should set semantic tokens for a [[target]] link with TwineScript", () => {
+            const header = ":: Passage\n";
+            const passage =
+                "We shall introduce: a link!\n" +
+                'Here it is: [[ "go to" + $tempy ]]\n';
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            const parser = uut.getSugarCubeParser(undefined);
+
+            parser?.parsePassageText(passage, header.length, state);
+            const result = callbacks.tokens;
+
+            expect(result).to.eql([
+                {
+                    line: 2,
+                    char: 15,
+                    length: 7,
+                    tokenType: ETokenType.string,
+                    tokenModifiers: [],
+                },
+                {
+                    line: 2,
+                    char: 23,
+                    length: 1,
+                    tokenType: ETokenType.operator,
+                    tokenModifiers: [],
+                },
+                {
+                    line: 2,
+                    char: 25,
+                    length: 6,
+                    tokenType: ETokenType.variable,
+                    tokenModifiers: [],
+                },
+            ]);
+        });
+
         it("should capture the passage reference for a [[target]] link", () => {
             const header = ":: Passage\n";
             const passage =
@@ -585,6 +625,53 @@ describe("SugarCube Parser", () => {
                         Range.create(2, 15, 2, 29)
                     ),
                     kind: TwineSymbolKind.Passage,
+                },
+            ]);
+        });
+
+        it("should not capture a passage reference for a [[link]] with a function call", () => {
+            const header = ":: Passage\n";
+            const passage =
+                "We shall introduce: a link!\n" +
+                "Here it is: [[ previous() ]]\n";
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                uri: "fake-uri",
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            const parser = uut.getSugarCubeParser(undefined);
+
+            parser?.parsePassageText(passage, header.length, state);
+            const result = callbacks.references;
+
+            expect(result).to.be.empty;
+        });
+
+        it("should capture variable references for a [[link]] with TwineScript", () => {
+            const header = ":: Passage\n";
+            const passage =
+                "We shall introduce: a link!\n" +
+                'Here it is: [[ "go to" + $tempy ]]\n';
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                uri: "fake-uri",
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            const parser = uut.getSugarCubeParser(undefined);
+
+            parser?.parsePassageText(passage, header.length, state);
+            const result = callbacks.references;
+
+            expect(result).to.eql([
+                {
+                    contents: "$tempy",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(2, 25, 2, 31)
+                    ),
+                    kind: OSugarCubeSymbolKind.Variable,
                 },
             ]);
         });
@@ -656,6 +743,25 @@ describe("SugarCube Parser", () => {
             ]);
         });
 
+        it("should not capture a passage reference for a [[display|target]] link with a function call", () => {
+            const header = ":: Passage\n";
+            const passage =
+                "We shall introduce: a link!\n" +
+                "Here it is: [[display w a string | previous() ]]\n";
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                uri: "fake-uri",
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            const parser = uut.getSugarCubeParser(undefined);
+
+            parser?.parsePassageText(passage, header.length, state);
+            const result = callbacks.references;
+
+            expect(result).to.be.empty;
+        });
+
         it("should set semantic tokens for a [[display->target]] link", () => {
             const header = ":: Passage\n";
             const passage =
@@ -723,6 +829,25 @@ describe("SugarCube Parser", () => {
             ]);
         });
 
+        it("should not capture a passage reference for a [[display->target]] link with a function call", () => {
+            const header = ":: Passage\n";
+            const passage =
+                "We shall introduce: a link!\n" +
+                "Here it is: [[display w a string -> previous() ]]\n";
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                uri: "fake-uri",
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            const parser = uut.getSugarCubeParser(undefined);
+
+            parser?.parsePassageText(passage, header.length, state);
+            const result = callbacks.references;
+
+            expect(result).to.be.empty;
+        });
+
         it("should set semantic tokens for a [[target<-display]] link", () => {
             const header = ":: Passage\n";
             const passage =
@@ -788,6 +913,25 @@ describe("SugarCube Parser", () => {
                     kind: TwineSymbolKind.Passage,
                 },
             ]);
+        });
+
+        it("should not capture a passage reference for a [[target<-display]] link with a function", () => {
+            const header = ":: Passage\n";
+            const passage =
+                "We shall introduce: a link!\n" +
+                "Here it is: [[ previous() <- display w a string ]]\n";
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                uri: "fake-uri",
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            const parser = uut.getSugarCubeParser(undefined);
+
+            parser?.parsePassageText(passage, header.length, state);
+            const result = callbacks.references;
+
+            expect(result).to.be.empty;
         });
 
         it("should set semantic tokens for a [[target][setter]] link", () => {
@@ -867,6 +1011,34 @@ describe("SugarCube Parser", () => {
                     location: Location.create(
                         "fake-uri",
                         Range.create(2, 32, 2, 38)
+                    ),
+                    kind: OSugarCubeSymbolKind.Variable,
+                },
+            ]);
+        });
+
+        it("should not capture a passage reference for a [[target][setter]] link with a function", () => {
+            const header = ":: Passage\n";
+            const passage =
+                "We shall introduce: a link!\n" +
+                "Here it is: [[ previous() ][$tempy to 7]]\n";
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                uri: "fake-uri",
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            const parser = uut.getSugarCubeParser(undefined);
+
+            parser?.parsePassageText(passage, header.length, state);
+            const result = callbacks.references;
+
+            expect(result).to.eql([
+                {
+                    contents: "$tempy",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(2, 28, 2, 34)
                     ),
                     kind: OSugarCubeSymbolKind.Variable,
                 },
@@ -970,6 +1142,34 @@ describe("SugarCube Parser", () => {
             ]);
         });
 
+        it("should not capture a passage reference for a [[display|target][setter]] link with a function", () => {
+            const header = ":: Passage\n";
+            const passage =
+                "We shall introduce: a link!\n" +
+                "Here it is: [[display w a string | previous() ][$tempy to 7]]\n";
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                uri: "fake-uri",
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            const parser = uut.getSugarCubeParser(undefined);
+
+            parser?.parsePassageText(passage, header.length, state);
+            const result = callbacks.references;
+
+            expect(result).to.eql([
+                {
+                    contents: "$tempy",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(2, 48, 2, 54)
+                    ),
+                    kind: OSugarCubeSymbolKind.Variable,
+                },
+            ]);
+        });
+
         it("should set semantic tokens for a [[display->target][setter]] link", () => {
             const header = ":: Passage\n";
             const passage =
@@ -1067,6 +1267,34 @@ describe("SugarCube Parser", () => {
             ]);
         });
 
+        it("should not capture a passage reference for a [[display->target][setter]] link with a function", () => {
+            const header = ":: Passage\n";
+            const passage =
+                "We shall introduce: a link!\n" +
+                "Here it is: [[display w a string -> previous() ][$tempy to 7]]\n";
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                uri: "fake-uri",
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            const parser = uut.getSugarCubeParser(undefined);
+
+            parser?.parsePassageText(passage, header.length, state);
+            const result = callbacks.references;
+
+            expect(result).to.eql([
+                {
+                    contents: "$tempy",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(2, 49, 2, 55)
+                    ),
+                    kind: OSugarCubeSymbolKind.Variable,
+                },
+            ]);
+        });
+
         it("should set semantic tokens for a [[target<-display][setter]] link", () => {
             const header = ":: Passage\n";
             const passage =
@@ -1158,6 +1386,34 @@ describe("SugarCube Parser", () => {
                     location: Location.create(
                         "fake-uri",
                         Range.create(2, 54, 2, 60)
+                    ),
+                    kind: OSugarCubeSymbolKind.Variable,
+                },
+            ]);
+        });
+
+        it("should not capture a passage reference for a [[target<-display][setter]] link with a function", () => {
+            const header = ":: Passage\n";
+            const passage =
+                "We shall introduce: a link!\n" +
+                "Here it is: [[ previous() <- display w a string ][$tempy to 7]]\n";
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                uri: "fake-uri",
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            const parser = uut.getSugarCubeParser(undefined);
+
+            parser?.parsePassageText(passage, header.length, state);
+            const result = callbacks.references;
+
+            expect(result).to.eql([
+                {
+                    contents: "$tempy",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(2, 50, 2, 56)
                     ),
                     kind: OSugarCubeSymbolKind.Variable,
                 },
