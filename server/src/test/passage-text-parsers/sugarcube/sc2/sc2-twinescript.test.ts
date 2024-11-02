@@ -170,6 +170,15 @@ describe("SugarCube TwineScript", () => {
                 },
             ]);
         });
+
+        it("should not desugar anything in quote marks", () => {
+            // Arrange
+
+            const result = uut.desugar("1 \"to\" 2 'eq' 3");
+
+            expect(result.desugared).to.eql("1 \"to\" 2 'eq' 3");
+            expect(result.positionMapping).to.be.empty;
+        });
     });
 
     describe("tokenize TwineScript", () => {

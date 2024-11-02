@@ -47,6 +47,8 @@ const desugarRegExp = new RegExp(
     [
         "(?<!\\w)[$_](?=[A-Za-z$_])", // Variable sigils
         "\\b(?:to|n?eq|is(?:not)?|gte?|lte?|and|or|not|n?def)\\b", // Word operators
+        '(?:"(?:\\\\.|[^"\\\\])+")', // Double quoted string
+        "(?:'(?:\\\\.|[^'\\\\])+')", // Single quoted string
     ].join("|"),
     "g"
 );
@@ -88,8 +90,12 @@ export function desugar(str: string): DesugarResult {
     let runningDelta = 0;
     desugarRegExp.lastIndex = 0;
     for (const m of str.matchAll(desugarRegExp)) {
-        const replacement = desugarMap[m[0]] || "";
-        result.desugared += str.slice(sliceStart, m.index) + replacement;
+        const foundString =
+            (m[0].startsWith('"') && m[0].endsWith('"')) ||
+            (m[0].startsWith("'") && m[0].endsWith("'"));
+        let replacement = m[0];
+        if (!foundString) {
+            replacement = desugarMap[m[0]] || "";
         result.positionMapping.push({
             originalStart: m.index,
             originalString: m[0],
@@ -97,6 +103,8 @@ export function desugar(str: string): DesugarResult {
             newEnd: m.index + runningDelta + replacement.length,
         });
         runningDelta += replacement.length - m[0].length;
+        }
+        result.desugared += str.slice(sliceStart, m.index) + replacement;
         sliceStart = m.index + m[0].length;
     }
     result.desugared += str.slice(sliceStart);
