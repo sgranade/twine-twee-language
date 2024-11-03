@@ -7,7 +7,10 @@ import { TwineSymbolKind } from "../../../project-index";
 import { ETokenModifier, ETokenType } from "../../../semantic-tokens";
 import { OSugarCubeSymbolKind } from "../../../passage-text-parsers/sugarcube/types";
 import { MockCallbacks, buildParsingState, buildPassage } from "../../builders";
-import { buildMacroInfo } from "./macros/macro-builders";
+import {
+    buildMacroInfo,
+    buildMacroInfoWithArgs,
+} from "./macros/macro-builders";
 
 import * as macrosModule from "../../../passage-text-parsers/sugarcube/macros";
 import * as uut from "../../../passage-text-parsers/sugarcube";
@@ -1663,8 +1666,8 @@ describe("SugarCube Parser", () => {
             expect(result).to.be.empty;
         });
 
-        describe("macro arguments", () => {
-            it("should produce semantic tokens for argument values", () => {
+        describe("unknown macro arguments", () => {
+            it("should produce semantic tokens for argument values of unknown macros", () => {
                 const header = ":: Passage\n";
                 const passage = "Let's go: <<a 'string' $var1 to true>>\n";
                 const callbacks = new MockCallbacks();
@@ -1716,7 +1719,7 @@ describe("SugarCube Parser", () => {
                 ]);
             });
 
-            it("should capture variable references for argument values", () => {
+            it("should capture variable references for argument values of unknown macros", () => {
                 const header = ":: Passage\n";
                 const passage = "Let's go: <<a $var1 to _var2>>\n";
                 const callbacks = new MockCallbacks();
@@ -1750,7 +1753,7 @@ describe("SugarCube Parser", () => {
                 ]);
             });
 
-            it("should not capture variable references for bare words that don't start with $ or _", () => {
+            it("should not capture variable references for bare words that don't start with $ or _ for unknown macros", () => {
                 const header = ":: Passage\n";
                 const passage = "Let's go: <<a var1>>\n";
                 const callbacks = new MockCallbacks();
@@ -1775,7 +1778,7 @@ describe("SugarCube Parser", () => {
                 ]);
             });
 
-            it("should capture passage references for argument values", () => {
+            it("should capture passage references for argument values for unknown macros", () => {
                 const header = ":: Passage\n";
                 const passage = "Let's go: <<a [[Passage Name]]>>\n";
                 const callbacks = new MockCallbacks();
@@ -1797,6 +1800,252 @@ describe("SugarCube Parser", () => {
                     ),
                     kind: TwineSymbolKind.Passage,
                 });
+            });
+        });
+
+        describe("T3LT macro arguments", () => {
+            it("should produce semantic tokens for base argument types", () => {
+                const header = ":: Passage\n";
+                const passage = "Let's go: <<a true 1 bare 'cont' $testy>>\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const parser = uut.getSugarCubeParser(undefined);
+                const macro = buildMacroInfoWithArgs({
+                    name: "a",
+                    args: [
+                        "boolean &+ number &+ bareword &+ string &+ (bool | var)",
+                    ],
+                });
+                const mockFunction = ImportMock.mockFunction(
+                    macrosModule,
+                    "allMacros"
+                ).returns({ a: macro });
+
+                parser?.parsePassageText(passage, header.length, state);
+                mockFunction.restore();
+                const result = callbacks.tokens;
+
+                expect(result).to.eql([
+                    {
+                        line: 1,
+                        char: 12,
+                        length: 1,
+                        tokenType: ETokenType.function,
+                        tokenModifiers: [],
+                    },
+                    {
+                        line: 1,
+                        char: 14,
+                        length: 4,
+                        tokenType: ETokenType.keyword,
+                        tokenModifiers: [],
+                    },
+                    {
+                        line: 1,
+                        char: 19,
+                        length: 1,
+                        tokenType: ETokenType.number,
+                        tokenModifiers: [],
+                    },
+                    {
+                        line: 1,
+                        char: 26,
+                        length: 6,
+                        tokenType: ETokenType.string,
+                        tokenModifiers: [],
+                    },
+                    {
+                        line: 1,
+                        char: 33,
+                        length: 6,
+                        tokenType: ETokenType.variable,
+                        tokenModifiers: [],
+                    },
+                ]);
+            });
+
+            it("should capture variable references for var types", () => {
+                const header = ":: Passage\n";
+                const passage = "Let's go: <<a true 1 bare 'cont' $testy>>\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const parser = uut.getSugarCubeParser(undefined);
+                const macro = buildMacroInfoWithArgs({
+                    name: "a",
+                    args: [
+                        "boolean &+ number &+ bareword &+ (string |+ var | bool)",
+                    ],
+                });
+                const mockFunction = ImportMock.mockFunction(
+                    macrosModule,
+                    "allMacros"
+                ).returns({ a: macro });
+
+                parser?.parsePassageText(passage, header.length, state);
+                mockFunction.restore();
+                const results = callbacks.references;
+
+                expect(results.slice(1)).to.eql([
+                    {
+                        contents: "$testy",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(1, 33, 1, 39)
+                        ),
+                        kind: OSugarCubeSymbolKind.Variable,
+                    },
+                ]);
+            });
+
+            it("should capture references for link values", () => {
+                const header = ":: Passage\n";
+                const passage =
+                    "Let's go: <<a [[Passage Name<-Display text][$testy to 7]]>>\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const parser = uut.getSugarCubeParser(undefined);
+                const macro = buildMacroInfoWithArgs({
+                    name: "a",
+                    args: ["link"],
+                });
+                const mockFunction = ImportMock.mockFunction(
+                    macrosModule,
+                    "allMacros"
+                ).returns({ a: macro });
+
+                parser?.parsePassageText(passage, header.length, state);
+                mockFunction.restore();
+                const results = callbacks.references;
+
+                expect(results.slice(1)).to.eql([
+                    {
+                        contents: "Passage Name",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(1, 16, 1, 28)
+                        ),
+                        kind: TwineSymbolKind.Passage,
+                    },
+                    {
+                        contents: "$testy",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(1, 44, 1, 50)
+                        ),
+                        kind: OSugarCubeSymbolKind.Variable,
+                    },
+                ]);
+            });
+
+            it("should capture passage references for passage values that are strings", () => {
+                const header = ":: Passage\n";
+                const passage = "Let's go: <<a bare 'Passage Name'>>\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const parser = uut.getSugarCubeParser(undefined);
+                const macro = buildMacroInfoWithArgs({
+                    name: "a",
+                    args: ["bareword &+ passage"],
+                });
+                const mockFunction = ImportMock.mockFunction(
+                    macrosModule,
+                    "allMacros"
+                ).returns({ a: macro });
+
+                parser?.parsePassageText(passage, header.length, state);
+                mockFunction.restore();
+                const results = callbacks.references;
+
+                expect(results.slice(1)).to.eql([
+                    {
+                        contents: "Passage Name",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(1, 20, 1, 32)
+                        ),
+                        kind: TwineSymbolKind.Passage,
+                    },
+                ]);
+            });
+
+            it("should capture passage references for passage values that are bare words", () => {
+                const header = ":: Passage\n";
+                const passage = "Let's go: <<a bare Passage>>\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const parser = uut.getSugarCubeParser(undefined);
+                const macro = buildMacroInfoWithArgs({
+                    name: "a",
+                    args: ["bareword &+ passage"],
+                });
+                const mockFunction = ImportMock.mockFunction(
+                    macrosModule,
+                    "allMacros"
+                ).returns({ a: macro });
+
+                parser?.parsePassageText(passage, header.length, state);
+                mockFunction.restore();
+                const results = callbacks.references;
+
+                expect(results.slice(1)).to.eql([
+                    {
+                        contents: "Passage",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(1, 19, 1, 26)
+                        ),
+                        kind: TwineSymbolKind.Passage,
+                    },
+                ]);
+            });
+
+            it("should capture variable references for receiver values", () => {
+                const header = ":: Passage\n";
+                const passage = "Let's go: <<a bare '$testy'>>\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const parser = uut.getSugarCubeParser(undefined);
+                const macro = buildMacroInfoWithArgs({
+                    name: "a",
+                    args: ["bareword &+ receiver"],
+                });
+                const mockFunction = ImportMock.mockFunction(
+                    macrosModule,
+                    "allMacros"
+                ).returns({ a: macro });
+
+                parser?.parsePassageText(passage, header.length, state);
+                mockFunction.restore();
+                const results = callbacks.references;
+
+                expect(results.slice(1)).to.eql([
+                    {
+                        contents: "$testy",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(1, 20, 1, 26)
+                        ),
+                        kind: OSugarCubeSymbolKind.Variable,
+                    },
+                ]);
             });
         });
     });
@@ -2462,16 +2711,10 @@ describe("SugarCube Parser", () => {
                         callbacks: callbacks,
                     });
                     const parser = uut.getSugarCubeParser(undefined);
-                    const macro = buildMacroInfo({ name: "a" });
-                    macro.arguments = ["boolean"];
-                    const parsedArguments = parseMacroParameters(
-                        macro.arguments,
-                        {}
-                    );
-                    macro.parsedArguments =
-                        parsedArguments instanceof Parameters
-                            ? parsedArguments
-                            : undefined;
+                    const macro = buildMacroInfoWithArgs({
+                        name: "a",
+                        args: ["boolean"],
+                    });
                     const mockFunction = ImportMock.mockFunction(
                         macrosModule,
                         "allMacros"
@@ -2498,19 +2741,11 @@ describe("SugarCube Parser", () => {
                         callbacks: callbacks,
                     });
                     const parser = uut.getSugarCubeParser(undefined);
-                    const macro = buildMacroInfo({
+                    const macro = buildMacroInfoWithArgs({
                         name: "a",
                         container: true,
+                        args: ["number"],
                     });
-                    macro.arguments = ["number"];
-                    const parsedArguments = parseMacroParameters(
-                        macro.arguments,
-                        {}
-                    );
-                    macro.parsedArguments =
-                        parsedArguments instanceof Parameters
-                            ? parsedArguments
-                            : undefined;
                     const mockFunction = ImportMock.mockFunction(
                         macrosModule,
                         "allMacros"
@@ -2532,19 +2767,11 @@ describe("SugarCube Parser", () => {
                         callbacks: callbacks,
                     });
                     const parser = uut.getSugarCubeParser(undefined);
-                    const macro = buildMacroInfo({
+                    const macro = buildMacroInfoWithArgs({
                         name: "a",
                         container: true,
+                        args: ["number"],
                     });
-                    macro.arguments = ["number"];
-                    const parsedArguments = parseMacroParameters(
-                        macro.arguments,
-                        {}
-                    );
-                    macro.parsedArguments =
-                        parsedArguments instanceof Parameters
-                            ? parsedArguments
-                            : undefined;
                     const mockFunction = ImportMock.mockFunction(
                         macrosModule,
                         "allMacros"

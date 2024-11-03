@@ -10,6 +10,7 @@ import {
     logErrorFor,
     logSemanticTokenFor,
     logWarningFor,
+    parsePassageReference,
 } from "../../parser";
 import { ETokenModifier, ETokenType } from "../../semantic-tokens";
 import { eraseMatches, versionCompare } from "../../utilities";
@@ -27,8 +28,9 @@ import {
     tokenizeTwineScriptExpression,
 } from "./sc2/sc2-twinescript";
 import {
-    Arg,
-    macroArgumentTokenToArg,
+    Arg as T3LTArg,
+    ArgType as T3LTArgType,
+    macroArgumentTokenToT3LTArg,
     parseMacroParameters,
 } from "./sc2/t3lt-parameters";
 
@@ -202,8 +204,191 @@ function parseMacroArgs(
     const argumentTokens =
         args !== undefined ? tokenizeMacroArguments(args, argsIndex) : [];
 
-    // Are we not going to parse the arguments via macroArgumentTokenToArg()?
-    const wontParseArguments = !Array.isArray(macroInfo?.arguments);
+    // If we have macro arguments to parse against, do that first, as we'll use its
+    // parsing information to produce semantic tokens and references
+    if (macroInfo?.parsedArguments !== undefined) {
+        // We got arguments definitions we can validate against
+        const t3ltArgsAndErrors = argumentTokens.map((t) =>
+            macroArgumentTokenToT3LTArg(t, state, sugarcubeState)
+        );
+
+        // Since `macroArgumentTokenToArg()` can produce undefined values if
+        // a lexed token doesn't convert to a T3LT macro argument, we need
+        // to remove the undefined values and map T3LT macro argument indices
+        // to original lexed token indices.
+        const t3ltArgs: T3LTArg[] = [];
+        const argToToken: Record<number, number> = {};
+        let argCount = 0;
+        for (const [ndx, t3ltArg] of t3ltArgsAndErrors.entries()) {
+            if (t3ltArg !== undefined) {
+                argToToken[argCount++] = ndx;
+                t3ltArgs.push(t3ltArg);
+            }
+        }
+
+        // Validate arguments, capture references and semantic tokens, and log errors
+        const validationInfo = macroInfo.parsedArguments.validate(t3ltArgs);
+        for (const [argNdxStr, argType] of Object.entries(
+            validationInfo.info.argTypes
+        )) {
+            const argNdx = Number(argNdxStr);
+            const arg = t3ltArgs[argNdx];
+            const token = argumentTokens[argToToken[argNdx]];
+            // argType is one of either the T3LT macro ArgType enum values or
+            // the macro parameter types, all of which are defined in `t3lt-parameters.ts`
+            if (
+                argType === "null" ||
+                argType === "undefined" ||
+                argType === "true" ||
+                argType === "false" ||
+                argType === "NaN" ||
+                argType === "bool"
+            ) {
+                // keyword
+                capturePreSemanticTokenFor(
+                    token.text,
+                    token.at,
+                    ETokenType.keyword,
+                    [],
+                    sugarcubeState
+                );
+            } else if (argType === "number") {
+                // number
+                capturePreSemanticTokenFor(
+                    token.text,
+                    token.at,
+                    ETokenType.number,
+                    [],
+                    sugarcubeState
+                );
+            } else if (argType === "string") {
+                // string
+                capturePreSemanticTokenFor(
+                    token.text,
+                    token.at,
+                    ETokenType.string,
+                    [],
+                    sugarcubeState
+                );
+            } else if (argType === "var") {
+                // variable
+                state.callbacks.onSymbolReference(
+                    createSymbolFor(
+                        token.text,
+                        token.at,
+                        OSugarCubeSymbolKind.Variable,
+                        state.textDocument
+                    )
+                );
+                capturePreSemanticTokenFor(
+                    token.text,
+                    token.at,
+                    ETokenType.variable,
+                    [],
+                    sugarcubeState
+                );
+            } else if (argType === "link" || argType === "linkNoSetter") {
+                // Twine wiki link
+                // For simplicity, re-parse it using our utility function so we
+                // get all of the semantic tokens and references correct
+                parseSugarCubeTwineLink(
+                    token.text,
+                    2,
+                    token.at,
+                    state,
+                    sugarcubeState
+                );
+            } else if (argType === "receiver") {
+                // A "$var" in quotes or an expression/settingssetupaccess/variable
+                if (arg.type === T3LTArgType.String) {
+                    const varName = token.text.slice(1, -1);
+                    const varAt = token.at + 1;
+                    // variable
+                    state.callbacks.onSymbolReference(
+                        createSymbolFor(
+                            varName,
+                            varAt,
+                            OSugarCubeSymbolKind.Variable,
+                            state.textDocument
+                        )
+                    );
+                    capturePreSemanticTokenFor(
+                        varName,
+                        varAt,
+                        ETokenType.variable,
+                        [],
+                        sugarcubeState
+                    );
+                } else {
+                    createVariableAndPropertyReferences(
+                        tokenizeTwineScriptExpression(
+                            token.text,
+                            token.at,
+                            state.textDocument,
+                            sugarcubeState
+                        ),
+                        state
+                    );
+                }
+            } else if (argType === "passage") {
+                // A bareword, string (the passage name is in the string), NaN, or number (sure)
+                let passageName: string | undefined;
+                let passageAt = token.at;
+                if (arg.type === T3LTArgType.Bareword) {
+                    passageName = arg.value;
+                } else if (arg.type === T3LTArgType.String) {
+                    passageName = arg.text;
+                    passageAt++; // To skip the leading quote
+                } else if (arg.type === T3LTArgType.NaN) {
+                    passageName = String(NaN);
+                } else if (arg.type === T3LTArgType.Number) {
+                    passageName = String(arg.value);
+                }
+                if (passageName !== undefined) {
+                    passageName = passageName.replace(/\\/g, "");
+                    parsePassageReference(
+                        passageName,
+                        passageAt,
+                        state,
+                        sugarcubeState
+                    );
+                }
+            }
+        }
+        for (const error of validationInfo.info.errors) {
+            const errorToken = argumentTokens[argToToken[error.index] ?? 0];
+            if (errorToken === undefined) {
+                logErrorFor(args ?? "", argsIndex, error.error.message, state);
+            } else {
+                logErrorFor(
+                    errorToken.text,
+                    errorToken.at,
+                    error.error.message,
+                    state
+                );
+            }
+        }
+        for (const warning of validationInfo.info.warnings) {
+            const warningToken = argumentTokens[argToToken[warning.index] ?? 0];
+            if (warningToken === undefined) {
+                logErrorFor(
+                    args ?? "",
+                    argsIndex,
+                    warning.warning.message,
+                    state
+                );
+            } else {
+                logErrorFor(
+                    warningToken.text,
+                    warningToken.at,
+                    warning.warning.message,
+                    state
+                );
+            }
+        }
+
+        return;
+    }
 
     for (const arg of argumentTokens) {
         if (arg.type === MacroParse.Item.Error) {
@@ -254,10 +439,7 @@ function parseMacroArgs(
                 [],
                 sugarcubeState
             );
-        } else if (
-            arg.type === MacroParse.Item.SquareBracket &&
-            wontParseArguments
-        ) {
+        } else if (arg.type === MacroParse.Item.SquareBracket) {
             // If the macro arguments won't later be parsed to be compared to the
             // macro's possible parameters, then we parse the square bracket items
             // to capture their semantic tokens and passage references.
@@ -265,12 +447,7 @@ function parseMacroArgs(
         }
     }
 
-    // From here on out, we need defined macro arguments to do anything about it
-    if (macroInfo?.arguments === undefined) {
-        return;
-    }
-
-    if (macroInfo.arguments === true) {
+    if (macroInfo?.arguments === true) {
         if (args === undefined || !args.trim()) {
             logWarningFor(
                 macroName,
@@ -279,59 +456,9 @@ function parseMacroArgs(
                 state
             );
         }
-    } else if (macroInfo.arguments === false) {
+    } else if (macroInfo?.arguments === false) {
         if (args !== undefined && args.trim()) {
             logWarningFor(args, argsIndex, "Expected no arguments", state);
-        }
-    } else if (macroInfo.parsedArguments !== undefined) {
-        // We got arguments definitions we can validate against
-        const t3ltArgsAndErrors = argumentTokens.map((t) =>
-            macroArgumentTokenToArg(t, state, sugarcubeState)
-        );
-
-        // Map argument indices to token indices
-        const t3ltArgs: Arg[] = [];
-        const argToToken: Record<number, number> = {};
-        let argCount = 0;
-        for (const [ndx, arg] of t3ltArgsAndErrors.entries()) {
-            if (arg !== undefined) {
-                argToToken[argCount++] = ndx;
-                t3ltArgs.push(arg);
-            }
-        }
-
-        // Validate arguments and log errors
-        const validationInfo = macroInfo.parsedArguments.validate(t3ltArgs);
-        for (const error of validationInfo.info.errors) {
-            const errorToken = argumentTokens[argToToken[error.index] ?? 0];
-            if (errorToken === undefined) {
-                logErrorFor(args ?? "", argsIndex, error.error.message, state);
-            } else {
-                logErrorFor(
-                    errorToken.text,
-                    errorToken.at,
-                    error.error.message,
-                    state
-                );
-            }
-        }
-        for (const warning of validationInfo.info.warnings) {
-            const warningToken = argumentTokens[argToToken[warning.index] ?? 0];
-            if (warningToken === undefined) {
-                logErrorFor(
-                    args ?? "",
-                    argsIndex,
-                    warning.warning.message,
-                    state
-                );
-            } else {
-                logErrorFor(
-                    warningToken.text,
-                    warningToken.at,
-                    warning.warning.message,
-                    state
-                );
-            }
         }
     }
 }
