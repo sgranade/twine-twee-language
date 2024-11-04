@@ -122,10 +122,8 @@ namespace Heartbeat {
             // Only do one of the following things during a single heartbeat
             if (workspaceIndexRequested) {
                 await indexAllTweeFiles();
-                workspaceIndexRequested = false;
             } else if (sugarcubeMacroIndexRequested) {
                 await indexT3LTMacroFiles();
-                sugarcubeMacroIndexRequested = false;
             }
         } finally {
             lastTime = Date.now();
@@ -151,9 +149,8 @@ namespace Heartbeat {
                 await connection.sendRequest(FindTweeFilesRequest)
             );
 
-            // We'll loop through the files three times: once to find a StoryData value, a second time
-            // to parse passages (since the story format can change how parsing occurs), and a
-            // third time to validate (since validation depends on the results of parsing all docs).
+            // We'll loop through the files in stages: first to find a StoryData value,
+            // and then to validate.
 
             // Right now we don't cache the results so as not to have to
             // potentially hold every file in a project in memory.
@@ -172,6 +169,12 @@ namespace Heartbeat {
             const storyFormat = projectIndex.getStoryData()?.storyFormat;
             if (storyFormat !== undefined) {
                 onStoryFormatChange(storyFormat);
+
+                // The story format change may set up other processing
+                // we need before we do a full indexing.
+                if (sugarcubeMacroIndexRequested) {
+                    await indexT3LTMacroFiles();
+                }
             }
 
             const diagnosticsOptions = (await getSettings())["twee-3"];
@@ -213,6 +216,8 @@ namespace Heartbeat {
         } catch (err) {
             connection.console.error(`Client couldn't find Twee files: ${err}`);
         }
+
+        workspaceIndexRequested = false;
     }
 
     /**
@@ -233,8 +238,12 @@ namespace Heartbeat {
 
             onSCMacroChanges();
         } catch (err) {
-            connection.console.error(`Client couldn't find Twee files: ${err}`);
+            connection.console.error(
+                `Client couldn't find SugarCube 2 macro files: ${err}`
+            );
         }
+
+        sugarcubeMacroIndexRequested = false;
     }
 }
 
