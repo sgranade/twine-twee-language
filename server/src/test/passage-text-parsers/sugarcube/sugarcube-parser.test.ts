@@ -1514,32 +1514,6 @@ describe("SugarCube Parser", () => {
             });
         });
 
-        // Added this test to make sure the <<script>> macro isn't mistaken for the <script> HTML tag
-        it("should capture a reference for the script macro", () => {
-            const header = ":: Passage\n";
-            const passage = "Macro: <<script>><</script>>";
-            const callbacks = new MockCallbacks();
-            const state = buildParsingState({
-                uri: "fake-uri",
-                content: header + passage,
-                callbacks: callbacks,
-            });
-            const parser = uut.getSugarCubeParser(undefined);
-
-            parser?.parsePassageText(passage, header.length, state);
-            const result = callbacks.references[0];
-
-            expect(callbacks.references.length).to.equal(1);
-            expect(result).to.eql({
-                contents: "script",
-                location: Location.create(
-                    "fake-uri",
-                    Range.create(1, 9, 1, 15)
-                ),
-                kind: OSugarCubeSymbolKind.KnownMacro,
-            });
-        });
-
         it("should not capture a macro reference inside a {{{no-wiki block}}}", () => {
             const header = ":: Passage\n";
             const passage = "Macro: {{{<<testy>>}}}";
@@ -1663,6 +1637,147 @@ describe("SugarCube Parser", () => {
             const result = callbacks.references;
 
             expect(result).to.be.empty;
+        });
+
+        describe("built-in macros", () => {
+            // Added this test to make sure the <<script>> macro isn't mistaken for the <script> HTML tag
+            it("should capture a reference for the script macro", () => {
+                const header = ":: Passage\n";
+                const passage = "Macro: <<script>><</script>>";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    uri: "fake-uri",
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const parser = uut.getSugarCubeParser(undefined);
+
+                parser?.parsePassageText(passage, header.length, state);
+                const result = callbacks.references[0];
+
+                expect(callbacks.references.length).to.equal(1);
+                expect(result).to.eql({
+                    contents: "script",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(1, 9, 1, 15)
+                    ),
+                    kind: OSugarCubeSymbolKind.KnownMacro,
+                });
+            });
+
+            it("should create semantic tokens for the contents of a script macro as JavaScript", () => {
+                const header = ":: Passage\n";
+                const passage = "Macro: <<script>>const tempy = 1;<</script>>";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    uri: "fake-uri",
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const parser = uut.getSugarCubeParser(undefined);
+
+                parser?.parsePassageText(passage, header.length, state);
+                const result = callbacks.tokens;
+
+                // Slice to get rid of the tokens for the <<script>> macro
+                expect(result.slice(1, -1)).to.eql([
+                    {
+                        line: 1,
+                        char: 17,
+                        length: 5,
+                        tokenType: ETokenType.keyword,
+                        tokenModifiers: [],
+                    },
+                    {
+                        line: 1,
+                        char: 23,
+                        length: 5,
+                        tokenType: ETokenType.variable,
+                        tokenModifiers: [],
+                    },
+                    {
+                        line: 1,
+                        char: 31,
+                        length: 1,
+                        tokenType: ETokenType.number,
+                        tokenModifiers: [],
+                    },
+                ]);
+            });
+
+            it("should ignore macros inside the script macro", () => {
+                const header = ":: Passage\n";
+                const passage = "Macro: <<script>><<silently>><</script>>";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    uri: "fake-uri",
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const parser = uut.getSugarCubeParser(undefined);
+
+                parser?.parsePassageText(passage, header.length, state);
+                const result = callbacks.references;
+
+                expect(result).to.eql([
+                    {
+                        contents: "script",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(1, 9, 1, 15)
+                        ),
+                        kind: OSugarCubeSymbolKind.KnownMacro,
+                    },
+                ]);
+            });
+
+            it("should create variables for the contents of a TwineScript script macro", () => {
+                const header = ":: Passage\n";
+                const passage =
+                    "Macro: <<script TwineScript>>\n" +
+                    "if ($items.includes('bloody knife')) {\n" +
+                    "  _hit += 1;\n" +
+                    "}\n" +
+                    "<</script>>";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    uri: "fake-uri",
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const parser = uut.getSugarCubeParser(undefined);
+
+                parser?.parsePassageText(passage, header.length, state);
+                const result = callbacks.references;
+
+                expect(result).to.eql([
+                    {
+                        contents: "$items",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(2, 4, 2, 10)
+                        ),
+                        kind: OSugarCubeSymbolKind.Variable,
+                    },
+                    {
+                        contents: "_hit",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(3, 2, 3, 6)
+                        ),
+                        kind: OSugarCubeSymbolKind.Variable,
+                    },
+                    {
+                        contents: "script",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(1, 9, 1, 15)
+                        ),
+                        kind: OSugarCubeSymbolKind.KnownMacro,
+                    },
+                ]);
+            });
         });
 
         describe("unknown macro arguments", () => {

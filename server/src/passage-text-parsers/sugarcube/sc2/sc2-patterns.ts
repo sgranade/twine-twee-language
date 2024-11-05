@@ -45,6 +45,17 @@ export const scriptStyleBlock = [
     .map(([open, close]) => `(?:${open}(?:.|\r?\n)*?${close})`)
     .join("|");
 /**
+ * Script macro block.
+ */
+export const scriptMacroBlock = [
+    ["<<script(?:\\s*(?<language>.*?)\\s*)>>", "<</script>>"],
+]
+    .map(
+        ([open, close]) =>
+            `(?:(?<open>${open})(?<contents>(?:.|\r?\n)*?)${close})`
+    )
+    .join("|");
+/**
  * Body of a macro (i.e. its arguments). Taken from SugarCube 2 `parserlib.js`
  */
 const macroBody = [

@@ -175,6 +175,7 @@ function removeNoWikiText(subsection: string): string {
 
 const macroRegex = new RegExp(SC2Patterns.fullMacro, "gm");
 const scriptStyleBlockRegex = new RegExp(SC2Patterns.scriptStyleBlock, "gm");
+const scriptMacroRegex = new RegExp(SC2Patterns.scriptMacroBlock, "gm");
 
 interface macroLocationInfo {
     name: string;
@@ -482,7 +483,49 @@ function parseMacros(
 
     // Remove all script/style tag blocks
     scriptStyleBlockRegex.lastIndex = 0;
-    const cleanedPassageText = eraseMatches(passageText, scriptStyleBlockRegex);
+    let cleanedPassageText = eraseMatches(passageText, scriptStyleBlockRegex);
+
+    // Special case the <<script>> container, as its contents are treated as raw JavaScript/TwineScript
+    for (const m of cleanedPassageText.matchAll(scriptMacroRegex)) {
+        if (m.groups !== undefined) {
+            const isTwinescript =
+                (m.groups.language ?? "").toLowerCase() === "twinescript";
+            const open = m.groups.open ?? "";
+            const contents = m.groups.contents ?? "";
+            const contentsIndex = m.index + open.length;
+            if (isTwinescript) {
+                createVariableAndPropertyReferences(
+                    tokenizeTwineScriptExpression(
+                        contents,
+                        contentsIndex + textIndex,
+                        state.textDocument,
+                        sugarcubeState
+                    ),
+                    state
+                );
+            } else {
+                // Tokenize as a JavaScript program but don't capture vars
+                tokenizeJavaScript(
+                    true,
+                    contents,
+                    contentsIndex + textIndex,
+                    state.textDocument,
+                    sugarcubeState
+                );
+            }
+
+            // Get rid of the <<script>> contents in both the cleaned text that we'll process
+            // and the passage text that we'll return
+            cleanedPassageText =
+                cleanedPassageText.slice(0, contentsIndex) +
+                " ".repeat(contents.length) +
+                cleanedPassageText.slice(contentsIndex + contents.length);
+            passageText =
+                passageText.slice(0, contentsIndex) +
+                " ".repeat(contents.length) +
+                passageText.slice(contentsIndex + contents.length);
+        }
+    }
 
     let macroId = 0;
     const unclosedMacros: macroLocationInfo[] = [];
