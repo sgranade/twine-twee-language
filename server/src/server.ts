@@ -185,7 +185,8 @@ namespace Heartbeat {
                     await parseTextDocument(
                         doc,
                         ParseLevel.Full,
-                        diagnosticsOptions
+                        diagnosticsOptions,
+                        false // Don't re-index on story format change b/c we're in the middle of re-indexing
                     );
                 }
             }
@@ -207,7 +208,8 @@ namespace Heartbeat {
                 await parseTextDocument(
                     doc,
                     ParseLevel.Full,
-                    diagnosticsOptions
+                    diagnosticsOptions,
+                    false // Don't re-index on story format change
                 );
             }
             for (const doc of unprocessedOpenDocuments) {
@@ -379,7 +381,8 @@ connection.onDidChangeConfiguration(async (change) => {
 });
 
 documents.onDidChangeContent(async (change) => {
-    await parseTextDocument(change.document, ParseLevel.Full, undefined);
+    // Parse, and request a re-index if the story format changes
+    await parseTextDocument(change.document, ParseLevel.Full, undefined, true);
     await validateTextDocument(change.document, undefined);
 });
 
@@ -400,7 +403,8 @@ connection.onDidChangeWatchedFiles((_change) => {
 });
 
 documents.onDidOpen(async (change) => {
-    await parseTextDocument(change.document, ParseLevel.Full, undefined);
+    // Parse, and request a re-index if the story format changes
+    await parseTextDocument(change.document, ParseLevel.Full, undefined, true);
     await validateTextDocument(change.document, undefined);
 });
 
@@ -519,11 +523,15 @@ async function getSettings(): Promise<ServerSettings> {
  *
  * @param document Document to process.
  * @param parseLevel What level of parsing to do.
+ * @param diagnosticsOptions Diagnostic options.
+ * @param reindexOnStoryFormatChange If true and the story format changes, re-index all project files.
+ * @returns True if the story format changed; false otherwise.
  */
 async function parseTextDocument(
     document: TextDocument,
     parseLevel: ParseLevel,
-    diagnosticsOptions: DiagnosticsOptions | undefined
+    diagnosticsOptions: DiagnosticsOptions | undefined,
+    reindexOnStoryFormatChange: boolean
 ) {
     if (diagnosticsOptions === undefined) {
         // We'll only get the diagnostic options if we're parsing passage
@@ -537,11 +545,15 @@ async function parseTextDocument(
     }
 
     // Keep track of the story format so, if it changes, we can notify listeners
+    // and (optionally) request a full re-index
     const storyFormat = projectIndex.getStoryData()?.storyFormat?.format;
     updateProjectIndex(document, parseLevel, projectIndex, diagnosticsOptions);
     const newStoryFormat = projectIndex.getStoryData()?.storyFormat;
     if (newStoryFormat?.format !== storyFormat && newStoryFormat?.format) {
         onStoryFormatChange(newStoryFormat);
+        if (reindexOnStoryFormatChange) {
+            Heartbeat.indexWorkspace();
+        }
     }
 
     // Request a refresh of semantic tokens since we've potentially changed them
@@ -616,7 +628,7 @@ async function processAllOpenDocuments() {
 
     // Loop through twice since validation can depend on the result of parsing all docs
     for (const doc of documents.all()) {
-        await parseTextDocument(doc, ParseLevel.Full, diagnosticsOptions);
+        await parseTextDocument(doc, ParseLevel.Full, diagnosticsOptions, true);
     }
     for (const doc of documents.all()) {
         await validateTextDocument(doc, diagnosticsOptions);

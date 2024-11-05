@@ -5,10 +5,11 @@ node_modules
 client/server
 tsconfig.tsbuildinfo
 
-# Test and Coverage
+# Test, Profiling, Coverage
 .vscode-test
 .nyc_output
 coverage.lcov
+*.cpuprofile
 
 # Other
 TODO.md
