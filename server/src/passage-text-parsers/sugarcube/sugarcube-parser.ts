@@ -10,6 +10,7 @@ import {
     logErrorFor,
     logSemanticTokenFor,
     logWarningFor,
+    findAndParseHtml,
     parsePassageReference,
 } from "../../parser";
 import { ETokenModifier, ETokenType } from "../../semantic-tokens";
@@ -989,6 +990,8 @@ export function parsePassageText(
     );
 
     parseBareVariables(passageText, textIndex, state, sugarcubeState);
+
+    findAndParseHtml(passageText, textIndex, state);
 
     // Submit semantic tokens in document order
     // (taking advantage of object own key enumeration order)

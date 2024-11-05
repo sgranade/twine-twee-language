@@ -19,7 +19,7 @@ import {
     parsePassageReference,
     createSymbolFor,
     createLocationFor,
-    parseHtml,
+    findAndParseHtml,
     ParseLevel,
 } from "../../parser";
 import { Label, ProjectIndex } from "../../project-index";
@@ -47,11 +47,11 @@ import {
     ValueType,
 } from "./types";
 
-const varsSepPattern = /^--(\r?\n|$)/m;
-const conditionPattern = /((\((.+?)\)?)\s*)([^)]*)$/;
-const modifierPattern = /^([ \t]*)\[([^[].+[^\]])\](\s*?)(?:\r?\n|$)/gm;
-const varsLineExtractionPattern = /^([ \t]*?)\b(.*)$/gm;
-const varsLineVarOnlyExtractionPattern =
+const varsSepRegex = /^--(\r?\n|$)/m;
+const conditionRegex = /((\((.+?)\)?)\s*)([^)]*)$/;
+const modifierRegex = /^([ \t]*)\[([^[].+[^\]])\](\s*?)(?:\r?\n|$)/gm;
+const varsLineExtractionRegex = /^([ \t]*?)\b(.*)$/gm;
+const varsLineVarOnlyExtractionRegex =
     /^(\s*)([A-Za-z$_][A-Za-z0-9$_.]*)?.*$/gmu;
 
 /**
@@ -174,7 +174,7 @@ export interface ChapbookParsingState extends StoryFormatParsingState {
     modifierKind: ModifierKind;
 }
 
-const varInsertPattern = /^({\s*)(\S+)\s*}$/;
+const varInsertRegex = /^({\s*)(\S+)\s*}$/;
 
 /**
  * Get Chapbook-specific symbol definitions across all indexed documents.
@@ -398,9 +398,9 @@ export function findEndOfPartialModifier(
     startOffset: number
 ): number | undefined {
     // Look for the end bracket or end of line
-    const pattern = /]|\r?\n/gm;
-    pattern.lastIndex = startOffset;
-    const m = pattern.exec(text) ?? undefined;
+    const regex = /]|\r?\n/gm;
+    regex.lastIndex = startOffset;
+    const m = regex.exec(text) ?? undefined;
     return m?.index;
 }
 
@@ -949,14 +949,14 @@ function parseEngineExtension(
     }
 
     // Look for new inserts or modifiers
-    const engineTemplatePattern = /engine\.template\.([^\.]+)\.add\(/g;
+    const engineTemplateRegex = /engine\.template\.([^\.]+)\.add\(/g;
     let m: RegExpExecArray | null;
-    while ((m = engineTemplatePattern.exec(contents)) !== null) {
+    while ((m = engineTemplateRegex.exec(contents)) !== null) {
         const addedContents = extractToMatchingDelimiter(
             contents,
             "(",
             ")",
-            engineTemplatePattern.lastIndex
+            engineTemplateRegex.lastIndex
         );
         if (addedContents === undefined) continue;
 
@@ -969,7 +969,7 @@ function parseEngineExtension(
         if (symbolKind !== undefined) {
             parseCustomInsertOrModifierDefinition(
                 addedContents,
-                contentsIndex + engineTemplatePattern.lastIndex,
+                contentsIndex + engineTemplateRegex.lastIndex,
                 symbolKind,
                 state
             );
@@ -982,7 +982,7 @@ function parseEngineExtension(
             );
         }
 
-        engineTemplatePattern.lastIndex += addedContents.length + 1;
+        engineTemplateRegex.lastIndex += addedContents.length + 1;
     }
 }
 
@@ -1503,7 +1503,7 @@ function parseInsertOrVariable(
     chapbookState: ChapbookParsingState
 ): void {
     // A single word insert is a variable
-    const m = varInsertPattern.exec(insert);
+    const m = varInsertRegex.exec(insert);
     if (m !== null) {
         const invocation = m[2];
         const invocationIndex = m[1].length;
@@ -1641,7 +1641,7 @@ function parseTextSubsection(
         );
 
         // Parse specific HTML tags
-        subsection = parseHtml(subsection, subsectionIndex, state);
+        subsection = findAndParseHtml(subsection, subsectionIndex, state);
 
         // Parse inserts
         // Parsing code taken from `render()` in `render-insert.ts` from Chapbook
@@ -1898,10 +1898,10 @@ function parseTextSection(
     // Go through the text modifier block by modifier block,
     // starting with no modifier
     chapbookState.modifierKind = ModifierKind.None;
-    modifierPattern.lastIndex = 0;
+    modifierRegex.lastIndex = 0;
     let previousModifierEndIndex = 0;
 
-    for (const m of section.matchAll(modifierPattern)) {
+    for (const m of section.matchAll(modifierRegex)) {
         // Parse the text from just after the previous modifier to just before the current one
         parseTextSubsection(
             section.slice(previousModifierEndIndex, m.index),
@@ -2008,8 +2008,8 @@ function parseVarsSectionForSetVarsAndPropsOnly(
     state: ParsingState
 ): void {
     // Parse line by line
-    varsLineVarOnlyExtractionPattern.lastIndex = 0;
-    for (const m of section.matchAll(varsLineVarOnlyExtractionPattern)) {
+    varsLineVarOnlyExtractionRegex.lastIndex = 0;
+    for (const m of section.matchAll(varsLineVarOnlyExtractionRegex)) {
         // Matches are [line (0), leading whitespace (1), variable name (and properties) being set (2; may not be there)]
         if (m[2] !== undefined) {
             const ndx = sectionIndex + m.index + m[1].length;
@@ -2047,8 +2047,8 @@ function parseVarsSection(
     chapbookState: ChapbookParsingState
 ): void {
     // Parse line by line
-    varsLineExtractionPattern.lastIndex = 0;
-    for (const m of section.matchAll(varsLineExtractionPattern)) {
+    varsLineExtractionRegex.lastIndex = 0;
+    for (const m of section.matchAll(varsLineExtractionRegex)) {
         // Matches are [line (0), leading whitespace (1), contents (2)]
         // Skip blank lines
         if (m[0].trim() === "") continue;
@@ -2068,7 +2068,7 @@ function parseVarsSection(
         const nameIndex = m.index + m[1].length;
 
         // Check for a condition
-        const conditionMatch = conditionPattern.exec(name);
+        const conditionMatch = conditionRegex.exec(name);
         if (conditionMatch !== null) {
             // Matches are [whole thing (0), (condition)\s* (1), (condition) (2), condition (3), ignored text (4)]
             name = name.slice(0, conditionMatch.index).trimEnd();
@@ -2211,7 +2211,7 @@ export function divideChapbookPassage(
         content: passageText,
         contentIndex: 0,
     };
-    const varSeparatorMatch = varsSepPattern.exec(passageText);
+    const varSeparatorMatch = varsSepRegex.exec(passageText);
     if (varSeparatorMatch !== null) {
         passageParts.vars = passageText.slice(0, varSeparatorMatch.index);
         passageParts.contentIndex =

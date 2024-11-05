@@ -1198,7 +1198,7 @@ describe("Twine Parser", () => {
                     callbacks: callbacks,
                 });
 
-                uut.parseHtml(passage, header.length, state);
+                uut.findAndParseHtml(passage, header.length, state);
                 const [result] = callbacks.embeddedDocuments;
 
                 expect(result.document.getText()).to.eql(
@@ -1223,7 +1223,11 @@ describe("Twine Parser", () => {
                     callbacks: callbacks,
                 });
 
-                const result = uut.parseHtml(passage, header.length, state);
+                const result = uut.findAndParseHtml(
+                    passage,
+                    header.length,
+                    state
+                );
 
                 expect(result).to.eql(
                     "Some content.\n" +

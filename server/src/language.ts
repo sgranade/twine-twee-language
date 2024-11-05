@@ -1,24 +1,24 @@
 /**
- * Pattern to find the tags portion of a Twee 3 header.
+ * Regex to find the tags portion of a Twee 3 header.
  */
-export const tagPattern = /\[(.*?)((?<!\\)\])\s*/;
+export const tagRegex = /\[(.*?)((?<!\\)\])\s*/;
 
 /**
- * Pattern to find an opening meta character in a Twee 3 header.
+ * Regex to find an opening meta character in a Twee 3 header.
  */
-export const openMetaCharPattern = /(?<!\\)(\{|\[)/;
+export const openMetaCharRegex = /(?<!\\)(\{|\[)/;
 
 /**
- * Pattern to find all closing meta characters in a Twee 3 header.
+ * Regex to find all closing meta characters in a Twee 3 header.
  *
- * The pattern is global and multi-line.
+ * The regex is global and multi-line.
  */
-export const closeMetaCharPattern = /(?<!\\)(\}|\])/gm;
+export const closeMetaCharRegex = /(?<!\\)(\}|\])/gm;
 
 /**
- * Pattern to find the metadata portion of a Twee 3 header.
+ * Regex to find the metadata portion of a Twee 3 header.
  */
-export const metadataPattern = /(\{(.*?)((?<!\\)\}))\s*/;
+export const metadataRegex = /(\{(.*?)((?<!\\)\}))\s*/;
 
 /**
  * JSON schema for header metadata.

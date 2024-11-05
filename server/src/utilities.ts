@@ -66,7 +66,7 @@ export function hasOwnProperty<T, K extends PropertyKey>(
 
 /** TEXT AND STRING MANIPULATION **/
 
-const lineEndPattern = /\r?\n|$/g;
+const lineEndRegex = /\r?\n|$/g;
 
 /**
  * Scan a document's text to find the end of the current line.
@@ -77,8 +77,8 @@ const lineEndPattern = /\r?\n|$/g;
  */
 export function nextLineIndex(document: string, startIndex: number): number {
     let lineEnd: number;
-    lineEndPattern.lastIndex = startIndex;
-    const m = lineEndPattern.exec(document);
+    lineEndRegex.lastIndex = startIndex;
+    const m = lineEndRegex.exec(document);
     if (m) {
         lineEnd = m.index + m[0].length;
     } else {
@@ -105,7 +105,7 @@ export function eraseMatches(s: string, r: RegExp): string {
     return s;
 }
 
-const paddingAndTextPattern = /^(\s*)(.*?)(\s*)$/s;
+const paddingAndTextRegex = /^(\s*)(.*?)(\s*)$/s;
 
 /**
  * Remove padding from a string and capture how many pad characters were removed.
@@ -114,7 +114,7 @@ const paddingAndTextPattern = /^(\s*)(.*?)(\s*)$/s;
  * @returns Tuple of the un-padded string and the lengths of removed padding on left and right.
  */
 export function removeAndCountPadding(s: string): [string, number, number] {
-    const m = paddingAndTextPattern.exec(s);
+    const m = paddingAndTextRegex.exec(s);
     if (m === null) {
         return ["", 0, 0];
     }

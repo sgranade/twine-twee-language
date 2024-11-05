@@ -6,8 +6,10 @@ Changes to the plugin.
 
 ### Added
 
--   SugarCube TwineScript parsing in wiki link markup such as `[Go back->previous()]`.
--   Additional SugarCube macro argument parsing.
+-   SugarCube: TwineScript parsing in wiki link markup such as `[Go back->previous()]`.
+-   SugarCube: JavaScript/TwineScript parsing in `<<script>>` macros.
+-   SugarCube: CSS parsing in `<style>` tags.
+-   SugarCube: additional macro argument parsing.
 
 ## [0.1.0] - 2024 11 01
 

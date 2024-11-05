@@ -14,33 +14,8 @@ import {
 
 import * as macrosModule from "../../../passage-text-parsers/sugarcube/macros";
 import * as uut from "../../../passage-text-parsers/sugarcube";
-import {
-    Parameters,
-    parseMacroParameters,
-} from "../../../passage-text-parsers/sugarcube/sc2/t3lt-parameters";
 
 describe("SugarCube Parser", () => {
-    it("should create an embedded html document for the passage", () => {
-        const header = ":: Passage\n";
-        const passage = "Contents!\n";
-        const callbacks = new MockCallbacks();
-        const state = buildParsingState({
-            uri: "fake-uri",
-            content: header + passage,
-            callbacks: callbacks,
-        });
-        const parser = uut.getSugarCubeParser(undefined);
-
-        parser?.parsePassageText(passage, header.length, state);
-        const result = callbacks.embeddedDocuments[0];
-
-        expect(callbacks.embeddedDocuments.length).to.equal(1);
-        expect(result.document.getText()).to.eql("Contents!\n");
-        expect(result.document.languageId).to.eql("html");
-        expect(result.range).to.eql(Range.create(1, 0, 2, 0));
-        expect(result.isPassage).to.be.true;
-    });
-
     describe("special passages", () => {
         it("should create an embedded css document for a stylesheet-tagged passage", () => {
             const header = ":: Passage [stylesheet]\n";
@@ -2161,6 +2136,52 @@ describe("SugarCube Parser", () => {
                     },
                 ]);
             });
+        });
+    });
+
+    describe("html", () => {
+        it("should create an embedded html document for the passage", () => {
+            const header = ":: Passage\n";
+            const passage = "Contents!\n";
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                uri: "fake-uri",
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            const parser = uut.getSugarCubeParser(undefined);
+
+            parser?.parsePassageText(passage, header.length, state);
+            const result = callbacks.embeddedDocuments[0];
+
+            expect(callbacks.embeddedDocuments.length).to.equal(1);
+            expect(result.document.getText()).to.eql("Contents!\n");
+            expect(result.document.languageId).to.eql("html");
+            expect(result.range).to.eql(Range.create(1, 0, 2, 0));
+            expect(result.isPassage).to.be.true;
+        });
+
+        it("should create an embedded css document for the style tag", () => {
+            const header = ":: Passage\n";
+            const passage = "HTML: <style>p {\n  color: #26b72b;\n}</style>";
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                uri: "fake-uri",
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            const parser = uut.getSugarCubeParser(undefined);
+
+            parser?.parsePassageText(passage, header.length, state);
+            const result = callbacks.embeddedDocuments[1];
+
+            expect(callbacks.embeddedDocuments.length).to.equal(2); // HTML doc for the full passage + CSS
+            expect(result.document.getText()).to.eql(
+                "p {\n  color: #26b72b;\n}"
+            );
+            expect(result.document.languageId).to.eql("css");
+            expect(result.range).to.eql(Range.create(1, 13, 3, 1));
+            expect(result.isPassage).to.be.false;
         });
     });
 

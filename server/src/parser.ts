@@ -22,10 +22,10 @@ import {
     TwineSymbolKind,
 } from "./project-index";
 import {
-    closeMetaCharPattern,
-    metadataPattern,
-    openMetaCharPattern,
-    tagPattern,
+    closeMetaCharRegex,
+    metadataRegex,
+    openMetaCharRegex,
+    tagRegex,
 } from "./language";
 import {
     StoryFormatParser,
@@ -116,6 +116,12 @@ export interface ParserCallbacks {
     onSemanticToken(token: SemanticToken): void;
     onParseError(error: Diagnostic): void;
 }
+
+//#region UtilityFunctions
+
+/**
+ * Utility functions for creating common parsing constructs.
+ */
 
 /**
  * Create a location for text in a document.
@@ -255,6 +261,14 @@ export function logSemanticTokenFor(
     }
 }
 
+//#endregion
+
+//#region SharedParsingFunctions
+
+/**
+ * Functions that both the main parser and the story format parsers use.
+ */
+
 /**
  * Parse a reference to a passage.
  *
@@ -387,8 +401,8 @@ function parseLink(linkText: string, linkIndex: number): TwineLink {
 /**
  * Find and parse Twine links.
  *
- * Story formats are responsible for calling this, but since this format is shared among
- * those formats, it's part of the main parsing code.
+ * Story formats are responsible for calling this, but since the Twine link style is shared
+ * among story formats, it's part of the main parsing code.
  *
  * Semantic tokens are captured in the passage text parsing state for them to submit
  * to the index later, as semantic tokens have to be in document order, and links
@@ -445,12 +459,12 @@ export function findAndParseLinks(
     return subsection;
 }
 
-const styleTagOpenPattern =
+const styleTagOpenRegex =
     /<style\b(?=[^>]*(?:(?:type=('text\/css'|"text\/css")|lang=(css|'css'|"css")))?)(?![^\/>]*\/>$)>/gi;
-const styleTagClosePattern = /<\/style>/gi;
+const styleTagCloseRegex = /<\/style>/gi;
 
 /**
- * Parse specific HTML tags that produce embedded documents.
+ * Find and parse specific HTML tags that produce embedded documents.
  *
  * As with Twine links, story formats are responsible for calling this function.
  *
@@ -459,19 +473,19 @@ const styleTagClosePattern = /<\/style>/gi;
  * @param state Parsing state.
  * @returns Updated subsection with the parsed HTML tags blanked out.
  */
-export function parseHtml(
+export function findAndParseHtml(
     subsection: string,
     subsectionIndex: number,
     state: ParsingState
 ): string {
-    styleTagOpenPattern.lastIndex = 0;
+    styleTagOpenRegex.lastIndex = 0;
     // I'm going to pretend that no one ever nests style tags inside style tags
-    for (const openMatch of subsection.matchAll(styleTagOpenPattern)) {
+    for (const openMatch of subsection.matchAll(styleTagOpenRegex)) {
         // Find the closing tag, if any
         const styleOpenTagBeginIndex = openMatch.index;
         const openInnerIndex = styleOpenTagBeginIndex + openMatch[0].length;
-        styleTagClosePattern.lastIndex = openInnerIndex;
-        const closeMatch = styleTagClosePattern.exec(subsection);
+        styleTagCloseRegex.lastIndex = openInnerIndex;
+        const closeMatch = styleTagCloseRegex.exec(subsection);
         const closeInnerIndex =
             closeMatch !== null ? closeMatch.index : subsection.length;
         const styleCloseTagEndIndex =
@@ -498,6 +512,8 @@ export function parseHtml(
 
     return subsection;
 }
+
+//#endregion
 
 /**
  * Parse header metadata.
@@ -573,7 +589,7 @@ function parsePassageHeader(
     const headerStartIndex = index + 2; // Index where the header string starts. The + 2 is for the leading "::"
     let parsingIndex = headerStartIndex; // Index where we're currently parsing.
     // Stop before an unescaped [ (for tags) or { (for metadata)
-    let m = openMetaCharPattern.exec(unparsedHeader);
+    let m = openMetaCharRegex.exec(unparsedHeader);
     if (m === null) {
         // Easy peasy: the header's just a passage name
         name = unparsedHeader;
@@ -585,7 +601,7 @@ function parsePassageHeader(
 
         // Handle tags (which should come before any metadata)
         if (m[0] === "[") {
-            const tagMatch = tagPattern.exec(unparsedHeader);
+            const tagMatch = tagRegex.exec(unparsedHeader);
             if (tagMatch === null) {
                 logErrorFor(
                     unparsedHeader,
@@ -613,12 +629,12 @@ function parsePassageHeader(
                 });
                 unparsedHeader = unparsedHeader.substring(tagMatch[0].length);
                 parsingIndex += tagMatch[0].length;
-                m = openMetaCharPattern.exec(unparsedHeader); // Re-run to see if we have any trailing metadata
+                m = openMetaCharRegex.exec(unparsedHeader); // Re-run to see if we have any trailing metadata
             }
         }
 
         if (m !== null && m[0] === "{") {
-            const metaMatch = metadataPattern.exec(unparsedHeader);
+            const metaMatch = metadataRegex.exec(unparsedHeader);
             if (metaMatch === null) {
                 logErrorFor(
                     unparsedHeader,
@@ -662,8 +678,8 @@ function parsePassageHeader(
 
     // If the name contains unescaped tag or block closing characters, flag them.
     // (No need to check for tag/block opening characters, as they'll be processed above.)
-    closeMetaCharPattern.lastIndex = 0;
-    for (const closeMatch of name.matchAll(closeMetaCharPattern)) {
+    closeMetaCharRegex.lastIndex = 0;
+    for (const closeMatch of name.matchAll(closeMetaCharRegex)) {
         logErrorFor(
             closeMatch[0],
             headerStartIndex + closeMatch.index,
