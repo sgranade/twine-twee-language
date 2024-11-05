@@ -2,9 +2,9 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 
 import {
     JSPropertyLabel,
-    parseJSExpressionStrict,
-    tokenizeJSExpression,
-    tokenizeParsedJSExpression,
+    parseJSStrict,
+    tokenizeJavaScript,
+    tokenizeParsedJS,
 } from "../../../js-parser";
 import { ETokenType } from "../../../semantic-tokens";
 import { createLocationFor } from "../../../parser";
@@ -177,17 +177,19 @@ function getSugaredPositionAndNewText(
 /**
  * See if an expression is valid TwineScript.
  *
+ * Note that this expects an expression (like `{prop: "value"}`) and not a full program.
+ *
  * @param expression Expression to test.
  * @returns True if it's TwineScript; false otherwise.
  */
-export function isTwineScript(expression: string): boolean {
+export function isTwineScriptExpression(expression: string): boolean {
     // We'll claim it's TwineScript if it strictly parses as JavaScript
     const { desugared, positionMapping } = desugar(expression);
     try {
-        const ast = parseJSExpressionStrict(desugared);
+        const ast = parseJSStrict(desugared, false);
         // Make sure all variables are SugarCube variables, as barewords will look like
         // variables to the JS parser
-        const tokens = tokenizeParsedJSExpression(expression, ast);
+        const tokens = tokenizeParsedJS(expression, ast);
         for (const token of Object.values(tokens)) {
             if (token.type === ETokenType.variable) {
                 // Resugar the text (if needed) and test to see if it's an SC2 variable.
@@ -247,7 +249,8 @@ export function tokenizeTwineScriptExpression(
         desugared
     );
 
-    let [vars, props] = tokenizeJSExpression(
+    let [vars, props] = tokenizeJavaScript(
+        false,
         desugared,
         0, // offset of 0 since the desugared expression starts at the start of the doc
         desugaredDocument,

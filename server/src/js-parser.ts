@@ -217,60 +217,77 @@ function fullAncestorTokenizingCallback(
         unprocessedTokens[node.start] = {
             text: node.kind,
             at: node.start,
-            type: ETokenType.variable,
+            type: ETokenType.keyword,
             modifiers: [],
         };
     }
 }
 
 /**
- * Parse a JavaScript expression.
+ * Parse text as a JavaScript program or expression.
  *
- * This performs strict parsing, and throws SyntaxError if the expression isn't valid JS.
+ * This performs strict parsing, and throws SyntaxError if the program doesn't parse correctly.
  *
- * @param expression Expression to parse as JavaScript.
+ * A program has to have full statements. An expression can be just a snippet.
+ *
+ * @param text Text to parse as JavaScript.
+ * @param isProgram Whether the text is a full program or just an expression.
  * @returns Top-most node in the AST.
  */
-export function parseJSExpressionStrict(expression: string): acorn.Expression {
-    return acorn.parseExpressionAt(expression, 0, {
+export function parseJSStrict(text: string, isProgram: boolean): acorn.Node {
+    if (isProgram) {
+        return acorn.parse(text, {
+            ecmaVersion: 2020,
+            sourceType: "script",
+        });
+    } else {
+        return acorn.parseExpressionAt(text, 0, {
+            ecmaVersion: 2020,
+            sourceType: "script",
+        });
+    }
+}
+
+/**
+ * Parse a JavaScript program or expression.
+ *
+ * This performs strict parsing (first a full parse, then as an expression), then loose parsing,
+ * and does not throw an exception.
+ *
+ * @param text Text to parse as JavaScript.
+ * @param isProgram Whether to parse it as a full JS program or a small expression
+ * @returns Top-most node in the AST, or undefined if the parsing failed.
+ */
+export function parseJS(
+    text: string,
+    isProgram: boolean
+): acorn.Node | undefined {
+    try {
+        return parseJSStrict(text, isProgram);
+    } catch (err) {
+        if (!(err instanceof SyntaxError)) {
+            return undefined;
+        }
+    }
+
+    // Finally try whatever parsing we can get away with
+    return acornLoose.parse(text, {
         ecmaVersion: 2020,
-        sourceType: "script",
     });
 }
 
 /**
- * Parse a JavaScript epxression.
+ * Tokenize parsed JavaScript.
  *
- * This performs strict parsing first, then loose parsing, and does not throw an exception.
- *
- * @param expression Expression to parse as JavaScript.
- * @returns Top-most node in the AST, or undefined if the parsing failed.
+ * @param text Original unparsed text.
+ * @param ast Parsed text.
+ * @returns Object whose keys are the token's location in the unparsed text and whose values are unprocessed tokens.
  */
-export function parseJSExpression(expression: string): acorn.Node | undefined {
-    try {
-        return parseJSExpressionStrict(expression);
-    } catch (err) {
-        if (err instanceof SyntaxError) {
-            return acornLoose.parse(expression, {
-                ecmaVersion: 2020,
-            });
-        }
-    }
-    return undefined;
-}
-
-/**
- * Tokenize a parsed JavaScript expression.
- *
- * @param expression Original unparsed expression.
- * @param ast Parsed expression.
- * @returns Object whose keys are the token's location in the unparsed expression and whose values are unprocessed tokens.
- */
-export function tokenizeParsedJSExpression(
-    expression: string,
+export function tokenizeParsedJS(
+    text: string,
     ast: acorn.Node
 ): Record<number, astUnprocessedToken> {
-    currentExpression = expression;
+    currentExpression = text;
     unprocessedTokens = {};
 
     acornWalk.fullAncestor(ast, fullAncestorTokenizingCallback);
@@ -279,19 +296,21 @@ export function tokenizeParsedJSExpression(
 }
 
 /**
- * Tokenize a JavaScript expression and find referenced variables and properties in it.
+ * Tokenize a JavaScript program or expression and find referenced variables and properties in it.
  *
  * Returned properties are only those for which the parser could trace their "ownership"
  * back to a root variable.
  *
- * @param expression Expression to parse.
+ * @param isProgram Whether to parse it as a program (true) or expression (false).
+ * @param text Text to parse.
  * @param offset Offset into the document where the expression occurs.
  * @param document Document containing the expression.
  * @param storyFormatState Story format parsing state that will collect semantic tokens.
  * @returns Two-tuple with separate lists of variable and property labels found in parsing.
  */
-export function tokenizeJSExpression(
-    expression: string,
+export function tokenizeJavaScript(
+    isProgram: boolean,
+    text: string,
     offset: number,
     document: TextDocument,
     storyFormatState: StoryFormatParsingState
@@ -299,9 +318,9 @@ export function tokenizeJSExpression(
     const vars: Label[] = [];
     const props: JSPropertyLabel[] = [];
 
-    const ast = parseJSExpression(expression);
+    const ast = parseJS(text, isProgram);
     if (ast !== undefined) {
-        const tokens = tokenizeParsedJSExpression(expression, ast);
+        const tokens = tokenizeParsedJS(text, ast);
 
         for (const token of Object.values(tokens)) {
             if (token.type === ETokenType.variable) {

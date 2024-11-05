@@ -1481,7 +1481,7 @@ describe("Chapbook Parser", () => {
                 it("should produce semantic tokens for a variable insert", () => {
                     const header = ":: Passage\n";
                     const passage =
-                        "Some content.\n" + "A variable insert: { var  }.\n";
+                        "Some content.\n" + "A variable insert: { varbl  }.\n";
                     const callbacks = new MockCallbacks();
                     const state = buildParsingState({
                         content: header + passage,
@@ -1496,7 +1496,7 @@ describe("Chapbook Parser", () => {
                     expect(insertToken).to.eql({
                         line: 2,
                         char: 21,
-                        length: 3,
+                        length: 5,
                         tokenType: ETokenType.variable,
                         tokenModifiers: [],
                     });
@@ -1776,7 +1776,7 @@ describe("Chapbook Parser", () => {
                 it("should interleave tokens in document order", () => {
                     const header = ":: Passage\n";
                     const passage =
-                        "Link: [[target]] insert {var} another link [[target2]].";
+                        "Link: [[target]] insert {varbl} another link [[target2]].";
                     const callbacks = new MockCallbacks();
                     const state = buildParsingState({
                         content: header + passage,
@@ -1799,13 +1799,13 @@ describe("Chapbook Parser", () => {
                     expect(varToken).to.eql({
                         line: 1,
                         char: 25,
-                        length: 3,
+                        length: 5,
                         tokenType: ETokenType.variable,
                         tokenModifiers: [],
                     });
                     expect(target2Token).to.eql({
                         line: 1,
-                        char: 45,
+                        char: 47,
                         length: 7,
                         tokenType: ETokenType.class,
                         tokenModifiers: [],

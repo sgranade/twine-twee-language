@@ -20,7 +20,8 @@ describe("JS Parser", () => {
             passageTokens: {},
         };
 
-        uut.tokenizeJSExpression(
+        uut.tokenizeJavaScript(
+            false,
             expression,
             offset,
             state.textDocument,
@@ -50,7 +51,8 @@ describe("JS Parser", () => {
             passageTokens: {},
         };
 
-        uut.tokenizeJSExpression(
+        uut.tokenizeJavaScript(
+            false,
             expression,
             offset,
             state.textDocument,
@@ -80,7 +82,8 @@ describe("JS Parser", () => {
             passageTokens: {},
         };
 
-        uut.tokenizeJSExpression(
+        uut.tokenizeJavaScript(
+            false,
             expression,
             offset,
             state.textDocument,
@@ -110,7 +113,8 @@ describe("JS Parser", () => {
             passageTokens: {},
         };
 
-        uut.tokenizeJSExpression(
+        uut.tokenizeJavaScript(
+            false,
             expression,
             offset,
             state.textDocument,
@@ -138,7 +142,8 @@ describe("JS Parser", () => {
             passageTokens: {},
         };
 
-        uut.tokenizeJSExpression(
+        uut.tokenizeJavaScript(
+            false,
             expression,
             offset,
             state.textDocument,
@@ -166,7 +171,8 @@ describe("JS Parser", () => {
             passageTokens: {},
         };
 
-        uut.tokenizeJSExpression(
+        uut.tokenizeJavaScript(
+            false,
             expression,
             offset,
             state.textDocument,
@@ -194,7 +200,8 @@ describe("JS Parser", () => {
             passageTokens: {},
         };
 
-        uut.tokenizeJSExpression(
+        uut.tokenizeJavaScript(
+            false,
             expression,
             offset,
             state.textDocument,
@@ -222,7 +229,8 @@ describe("JS Parser", () => {
             passageTokens: {},
         };
 
-        uut.tokenizeJSExpression(
+        uut.tokenizeJavaScript(
+            false,
             expression,
             offset,
             state.textDocument,
@@ -234,6 +242,47 @@ describe("JS Parser", () => {
             text: "var1",
             at: 13,
             type: ETokenType.variable,
+            modifiers: [],
+        });
+    });
+
+    it("should set a semantic token for a variable declaration", () => {
+        const expression = " let var1 = 7;";
+        const offset = 12;
+        const state = buildParsingState({
+            uri: "fake-uri",
+            content: "fake content",
+            callbacks: new MockCallbacks(),
+        });
+        const storyState: StoryFormatParsingState = {
+            passageTokens: {},
+        };
+
+        uut.tokenizeJavaScript(
+            true,
+            expression,
+            offset,
+            state.textDocument,
+            storyState
+        );
+        const result = storyState.passageTokens;
+
+        expect(result[13]).to.eql({
+            text: "let",
+            at: 13,
+            type: ETokenType.keyword,
+            modifiers: [],
+        });
+        expect(result[17]).to.eql({
+            text: "var1",
+            at: 17,
+            type: ETokenType.variable,
+            modifiers: [],
+        });
+        expect(result[24]).to.eql({
+            text: "7",
+            at: 24,
+            type: ETokenType.number,
             modifiers: [],
         });
     });
@@ -250,7 +299,8 @@ describe("JS Parser", () => {
             passageTokens: {},
         };
 
-        uut.tokenizeJSExpression(
+        uut.tokenizeJavaScript(
+            false,
             expression,
             offset,
             state.textDocument,
@@ -278,7 +328,8 @@ describe("JS Parser", () => {
             passageTokens: {},
         };
 
-        uut.tokenizeJSExpression(
+        uut.tokenizeJavaScript(
+            false,
             expression,
             offset,
             state.textDocument,
@@ -312,7 +363,8 @@ describe("JS Parser", () => {
             passageTokens: {},
         };
 
-        uut.tokenizeJSExpression(
+        uut.tokenizeJavaScript(
+            false,
             expression,
             offset,
             state.textDocument,
@@ -340,7 +392,8 @@ describe("JS Parser", () => {
             passageTokens: {},
         };
 
-        uut.tokenizeJSExpression(
+        uut.tokenizeJavaScript(
+            false,
             expression,
             offset,
             state.textDocument,
@@ -368,7 +421,8 @@ describe("JS Parser", () => {
             passageTokens: {},
         };
 
-        uut.tokenizeJSExpression(
+        uut.tokenizeJavaScript(
+            false,
             expression,
             offset,
             state.textDocument,
@@ -414,7 +468,8 @@ describe("JS Parser", () => {
             passageTokens: {},
         };
 
-        const result = uut.tokenizeJSExpression(
+        const result = uut.tokenizeJavaScript(
+            true,
             expression,
             offset,
             state.textDocument,
@@ -443,7 +498,8 @@ describe("JS Parser", () => {
             passageTokens: {},
         };
 
-        const result = uut.tokenizeJSExpression(
+        const result = uut.tokenizeJavaScript(
+            false,
             expression,
             offset,
             state.textDocument,
@@ -480,7 +536,8 @@ describe("JS Parser", () => {
             passageTokens: {},
         };
 
-        const result = uut.tokenizeJSExpression(
+        const result = uut.tokenizeJavaScript(
+            false,
             expression,
             offset,
             state.textDocument,
@@ -519,7 +576,8 @@ describe("JS Parser", () => {
             passageTokens: {},
         };
 
-        const result = uut.tokenizeJSExpression(
+        const result = uut.tokenizeJavaScript(
+            false,
             expression,
             offset,
             state.textDocument,
@@ -558,7 +616,8 @@ describe("JS Parser", () => {
             passageTokens: {},
         };
 
-        const result = uut.tokenizeJSExpression(
+        const result = uut.tokenizeJavaScript(
+            false,
             expression,
             offset,
             state.textDocument,
@@ -585,7 +644,8 @@ describe("JS Parser", () => {
             passageTokens: {},
         };
 
-        const result = uut.tokenizeJSExpression(
+        const result = uut.tokenizeJavaScript(
+            false,
             expression,
             offset,
             state.textDocument,
@@ -612,7 +672,8 @@ describe("JS Parser", () => {
             passageTokens: {},
         };
 
-        const result = uut.tokenizeJSExpression(
+        const result = uut.tokenizeJavaScript(
+            false,
             expression,
             offset,
             state.textDocument,

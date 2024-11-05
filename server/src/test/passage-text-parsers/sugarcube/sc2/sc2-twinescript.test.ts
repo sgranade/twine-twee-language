@@ -185,7 +185,7 @@ describe("SugarCube TwineScript", () => {
         it("should return true for bare variables", () => {
             // No arrange
 
-            const result = uut.isTwineScript("$bare_var");
+            const result = uut.isTwineScriptExpression("$bare_var");
 
             expect(result).to.be.true;
         });
@@ -193,7 +193,7 @@ describe("SugarCube TwineScript", () => {
         it("should return false for bare words", () => {
             // No arrange
 
-            const result = uut.isTwineScript("bareWord");
+            const result = uut.isTwineScriptExpression("bareWord");
 
             expect(result).to.be.false;
         });
@@ -201,7 +201,7 @@ describe("SugarCube TwineScript", () => {
         it("should return false for several bare words", () => {
             // No arrange
 
-            const result = uut.isTwineScript("bare word number 2");
+            const result = uut.isTwineScriptExpression("bare word number 2");
 
             expect(result).to.be.false;
         });
@@ -209,7 +209,9 @@ describe("SugarCube TwineScript", () => {
         it("should return true for a complex TwineScript expression", () => {
             // No arrange
 
-            const result = uut.isTwineScript('$var to (17 + 23) - "text"');
+            const result = uut.isTwineScriptExpression(
+                '$var to (17 + 23) - "text"'
+            );
 
             expect(result).to.be.true;
         });

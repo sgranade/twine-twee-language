@@ -14,7 +14,7 @@ import { capturePreSemanticTokenFor, StoryFormatParsingState } from "../..";
 import { Token } from "../../types";
 import { createVariableAndPropertyReferences } from "../sugarcube-utils";
 import {
-    isTwineScript,
+    isTwineScriptExpression,
     tokenizeTwineScriptExpression,
 } from "./sc2-twinescript";
 
@@ -51,7 +51,7 @@ export function parseSugarCubeTwineLink(
         // of tap-dancing to decide if the link refers to a passage or is TwineScript.
         // If someone ever literally names a passage `"Go to" + $destinationVar`, boy won't
         // we look foolish.
-        if (isTwineScript(markupData.link.text)) {
+        if (isTwineScriptExpression(markupData.link.text)) {
             createVariableAndPropertyReferences(
                 tokenizeTwineScriptExpression(
                     markupData.link.text,

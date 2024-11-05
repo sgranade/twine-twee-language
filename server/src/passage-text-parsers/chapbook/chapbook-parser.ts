@@ -7,8 +7,8 @@ import { StoryFormatParsingState, capturePreSemanticTokenFor } from "..";
 import { EmbeddedDocument } from "../../embedded-languages";
 import {
     JSPropertyLabel,
-    parseJSExpressionStrict,
-    tokenizeJSExpression,
+    parseJSStrict,
+    tokenizeJavaScript,
 } from "../../js-parser";
 import {
     ParsingState,
@@ -707,7 +707,7 @@ function parseCustomInsertOrModifierDefinition(
 
     try {
         // Parse the contents as a JavaScript expression so we can extract the properties
-        const ast = parseJSExpressionStrict(contents);
+        const ast = parseJSStrict(contents, false);
         acornWalk.simple(ast, {
             Property(node) {
                 if (node.key.type === "Identifier") {
@@ -1515,9 +1515,10 @@ function parseInsertOrVariable(
             chapbookState
         );
 
-        // Parse the value as JavaScript
+        // Parse the value as a JavaScript expression
         createVariableAndPropertyReferences(
-            tokenizeJSExpression(
+            tokenizeJavaScript(
+                false,
                 invocation,
                 insertIndex + invocationIndex,
                 state.textDocument,
@@ -1550,7 +1551,8 @@ function parseInsertOrVariable(
     if (insertTokens.firstArgument !== undefined) {
         // Parse the first argument as a JS expression and capture semantic tokens & var references
         createVariableAndPropertyReferences(
-            tokenizeJSExpression(
+            tokenizeJavaScript(
+                false,
                 insertTokens.firstArgument.text,
                 insertTokens.firstArgument.at,
                 state.textDocument,
@@ -1563,9 +1565,10 @@ function parseInsertOrVariable(
         Token,
         Token,
     ][]) {
-        // Parse properties' values as JavaScript
+        // Parse properties' values as a JavaScript expression
         createVariableAndPropertyReferences(
-            tokenizeJSExpression(
+            tokenizeJavaScript(
+                false,
                 propValueToken.text,
                 propValueToken.at,
                 state.textDocument,
@@ -1598,10 +1601,11 @@ function parseTextSubsection(
 ): void {
     if (chapbookState.modifierKind === ModifierKind.Javascript) {
         findEngineExtensions(subsection, subsectionIndex, state);
-        // We'll tokenize the contents, but not capture variable and
+        // We'll tokenize the contents as a program, but not capture variable and
         // property references, as they mostly won't be set in Chapbook
         // vars sections and thus would cause a lot of spurious warnings
-        tokenizeJSExpression(
+        tokenizeJavaScript(
+            true,
             subsection,
             subsectionIndex,
             state.textDocument,
@@ -1827,7 +1831,8 @@ function parseModifier(
             // Otherwise, tokenize it as function parameters
             if (modifier.firstArgument?.type !== undefined) {
                 createVariableAndPropertyReferences(
-                    tokenizeJSExpression(
+                    tokenizeJavaScript(
+                        false,
                         modifierTokens.firstArgument.text,
                         modifierTokens.firstArgument.at,
                         state.textDocument,
@@ -2081,7 +2086,8 @@ function parseVarsSection(
                 );
             } else {
                 createVariableAndPropertyReferences(
-                    tokenizeJSExpression(
+                    tokenizeJavaScript(
+                        false,
                         conditionMatch[3],
                         sectionIndex +
                             conditionMatchIndex +
@@ -2139,7 +2145,8 @@ function parseVarsSection(
         // Capture the variable name reference as being set by this vars section
         // and update the token for the name to show that it's being modified.
         createVariableAndPropertyReferences(
-            tokenizeJSExpression(
+            tokenizeJavaScript(
+                false,
                 name,
                 sectionIndex + nameIndex,
                 state.textDocument,
@@ -2167,7 +2174,8 @@ function parseVarsSection(
             m.index + m[1].length + colonIndex + 1
         );
         createVariableAndPropertyReferences(
-            tokenizeJSExpression(
+            tokenizeJavaScript(
+                false,
                 value,
                 sectionIndex + valueIndex,
                 state.textDocument,

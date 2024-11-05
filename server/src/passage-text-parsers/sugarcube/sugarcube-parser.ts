@@ -2,7 +2,7 @@ import { Diagnostic, DiagnosticSeverity } from "vscode-languageserver";
 
 import { capturePreSemanticTokenFor, StoryFormatParsingState } from "..";
 import { EmbeddedDocument } from "../../embedded-languages";
-import { tokenizeJSExpression } from "../../js-parser";
+import { tokenizeJavaScript } from "../../js-parser";
 import {
     ParseLevel,
     ParsingState,
@@ -818,9 +818,10 @@ function checkPassageTags(
     const tagNames = tags.map((t) => t.contents);
     const mediaTags = tags.filter((x) => mediaPassageTags.has(x.contents));
     if (tagNames.includes("script")) {
-        // We'll tokenize the contents, but not capture variable and
+        // We'll tokenize the contents as a program, but not capture variable and
         // property references
-        tokenizeJSExpression(
+        tokenizeJavaScript(
+            true,
             passageText,
             textIndex,
             state.textDocument,
