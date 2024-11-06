@@ -2837,6 +2837,29 @@ describe("SugarCube Parser", () => {
                     expect(result.range).to.eql(Range.create(1, 14, 1, 30));
                 });
 
+                it("should do nothing for a macro whose arguments are undefined", () => {
+                    const header = ":: Passage\n";
+                    const passage = "Let's go: <<a [no error here]>>\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getSugarCubeParser(undefined);
+                    const macro = buildMacroInfo({ name: "a" });
+                    macro.arguments = undefined;
+                    const mockFunction = ImportMock.mockFunction(
+                        macrosModule,
+                        "allMacros"
+                    ).returns({ a: macro });
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    mockFunction.restore();
+                    const result = callbacks.errors;
+
+                    expect(result).to.be.empty;
+                });
+
                 it("should raise an error for a non-boolean argument to a macro that takes a boolean", () => {
                     const header = ":: Passage\n";
                     const passage = "Let's go: <<a 1>>\n";

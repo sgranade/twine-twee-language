@@ -203,6 +203,12 @@ function parseMacroArgs(
     state: ParsingState,
     sugarcubeState: StoryFormatParsingState
 ): void {
+    // If we have information about a macro and its arguments
+    // are undefined (which means: don't do anything!), bail
+    if (macroInfo !== undefined && macroInfo?.arguments === undefined) {
+        return;
+    }
+
     const argumentTokens =
         args !== undefined ? tokenizeMacroArguments(args, argsIndex) : [];
 
