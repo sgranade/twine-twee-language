@@ -1,14 +1,14 @@
 {
 	"name": "twine-twee-language",
 	"displayName": "Twine (Twee 3)",
-	"description": "Twine (Twee 3) language support for VS Code, including Chapbook and SugarCube support.",
+	"description": "Twine (Twee 3) language support for VS Code, including Chapbook and SugarCube story formats.",
 	"author": {
 		"name": "Stephen Granade",
 		"email": "stephen@granades.com",
 		"url": "https://github.com/sgranade"
 	},
 	"license": "MIT",
-	"version": "0.1.1",
+	"version": "0.1.2",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/sgranade/twine-twee-language"
