@@ -1758,7 +1758,8 @@ describe("SugarCube Parser", () => {
         describe("unknown macro arguments", () => {
             it("should produce semantic tokens for argument values of unknown macros", () => {
                 const header = ":: Passage\n";
-                const passage = "Let's go: <<a 'string' $var1 to true>>\n";
+                const passage =
+                    "Let's go: <<a 'string' $var1 to true `'str' + $testy`>>\n";
                 const callbacks = new MockCallbacks();
                 const state = buildParsingState({
                     content: header + passage,
@@ -1805,12 +1806,34 @@ describe("SugarCube Parser", () => {
                         tokenType: ETokenType.keyword,
                         tokenModifiers: [],
                     },
+                    {
+                        line: 1,
+                        char: 38,
+                        length: 5,
+                        tokenType: ETokenType.string,
+                        tokenModifiers: [],
+                    },
+                    {
+                        line: 1,
+                        char: 44,
+                        length: 1,
+                        tokenType: ETokenType.operator,
+                        tokenModifiers: [],
+                    },
+                    {
+                        line: 1,
+                        char: 46,
+                        length: 6,
+                        tokenType: ETokenType.variable,
+                        tokenModifiers: [],
+                    },
                 ]);
             });
 
             it("should capture variable references for argument values of unknown macros", () => {
                 const header = ":: Passage\n";
-                const passage = "Let's go: <<a $var1 to _var2>>\n";
+                const passage =
+                    "Let's go: <<a $var1 to _var2 `'str' + $testy`>>\n";
                 const callbacks = new MockCallbacks();
                 const state = buildParsingState({
                     content: header + passage,
@@ -1821,7 +1844,6 @@ describe("SugarCube Parser", () => {
                 parser?.parsePassageText(passage, header.length, state);
                 const results = callbacks.references;
 
-                expect(results.length).to.equal(3);
                 expect(results.slice(1)).to.eql([
                     {
                         contents: "$var1",
@@ -1836,6 +1858,14 @@ describe("SugarCube Parser", () => {
                         location: Location.create(
                             "fake-uri",
                             Range.create(1, 23, 1, 28)
+                        ),
+                        kind: OSugarCubeSymbolKind.Variable,
+                    },
+                    {
+                        contents: "$testy",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(1, 38, 1, 44)
                         ),
                         kind: OSugarCubeSymbolKind.Variable,
                     },
@@ -2122,6 +2152,94 @@ describe("SugarCube Parser", () => {
                         location: Location.create(
                             "fake-uri",
                             Range.create(1, 33, 1, 39)
+                        ),
+                        kind: OSugarCubeSymbolKind.Variable,
+                    },
+                ]);
+            });
+
+            it("should produce semantic tokens for backticks used in text type arguments", () => {
+                const header = ":: Passage\n";
+                const passage = "Let's go: <<a `'str' + $testy`>>\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const parser = uut.getSugarCubeParser(undefined);
+                const macro = buildMacroInfoWithArgs({
+                    name: "a",
+                    args: ["text"],
+                });
+                const mockFunction = ImportMock.mockFunction(
+                    macrosModule,
+                    "allMacros"
+                ).returns({ a: macro });
+
+                parser?.parsePassageText(passage, header.length, state);
+                mockFunction.restore();
+                const result = callbacks.tokens;
+
+                expect(result).to.eql([
+                    {
+                        line: 1,
+                        char: 12,
+                        length: 1,
+                        tokenType: ETokenType.function,
+                        tokenModifiers: [],
+                    },
+                    {
+                        line: 1,
+                        char: 15,
+                        length: 5,
+                        tokenType: ETokenType.string,
+                        tokenModifiers: [],
+                    },
+                    {
+                        line: 1,
+                        char: 21,
+                        length: 1,
+                        tokenType: ETokenType.operator,
+                        tokenModifiers: [],
+                    },
+                    {
+                        line: 1,
+                        char: 23,
+                        length: 6,
+                        tokenType: ETokenType.variable,
+                        tokenModifiers: [],
+                    },
+                ]);
+            });
+
+            it("should capture variable references for backticks used in text type arguments", () => {
+                const header = ":: Passage\n";
+                const passage = "Let's go: <<a `'str' + $testy`>>\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const parser = uut.getSugarCubeParser(undefined);
+                const macro = buildMacroInfoWithArgs({
+                    name: "a",
+                    args: ["text"],
+                });
+                const mockFunction = ImportMock.mockFunction(
+                    macrosModule,
+                    "allMacros"
+                ).returns({ a: macro });
+
+                parser?.parsePassageText(passage, header.length, state);
+                mockFunction.restore();
+                const results = callbacks.references;
+
+                expect(results.slice(1)).to.eql([
+                    {
+                        contents: "$testy",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(1, 23, 1, 29)
                         ),
                         kind: OSugarCubeSymbolKind.Variable,
                     },

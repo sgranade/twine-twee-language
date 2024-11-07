@@ -7,6 +7,7 @@ Changes to the plugin.
 ### Added
 
 -   SugarCube: Arguments to macros like `<<set>>` that take expressions are now fully parsed.
+-   SugarCube: Expressions that contain backquotes are now fully parsed.
 
 ## [0.1.1] - 2024 11 05
 

@@ -218,108 +218,117 @@ function parseMacroArgs(
         return;
     }
 
-    const argumentTokens =
+    // Note that we're going to have to do some mental disambiguation, as there are two
+    // sets of arguments/tokens flying around: SC2 and T3LT (which are parsed from the SC2 ones).
+    // On top of that, we deal with argument _format_ types, which are combined T3LT ArgTypes and
+    // macro parameter types.
+
+    // SugarCube 2 argument tokens
+    const sc2ArgumentTokens =
         args !== undefined ? tokenizeMacroArguments(args, argsIndex) : [];
 
     // If we have macro arguments to parse against, do that first, as we'll use its
     // parsing information to produce semantic tokens and references
     if (macroInfo?.parsedArguments !== undefined) {
         // We got arguments definitions we can validate against
-        const t3ltArgsAndErrors = argumentTokens.map((t) =>
+        const t3ltArgsAndErrors = sc2ArgumentTokens.map((t) =>
             macroArgumentTokenToT3LTArg(t, state, sugarcubeState)
         );
 
-        // Since `macroArgumentTokenToArg()` can produce undefined values if
+        // Since `macroArgumentTokenToT3LTArg()` can produce undefined values if
         // a lexed token doesn't convert to a T3LT macro argument, we need
         // to remove the undefined values and map T3LT macro argument indices
         // to original lexed token indices.
         const t3ltArgs: T3LTArg[] = [];
-        const argToToken: Record<number, number> = {};
+        const t3ltArgToSC2Token: Record<number, number> = {};
         let argCount = 0;
         for (const [ndx, t3ltArg] of t3ltArgsAndErrors.entries()) {
             if (t3ltArg !== undefined) {
-                argToToken[argCount++] = ndx;
+                t3ltArgToSC2Token[argCount++] = ndx;
                 t3ltArgs.push(t3ltArg);
             }
         }
 
         // Validate arguments, capture references and semantic tokens, and log errors
         const validationInfo = macroInfo.parsedArguments.validate(t3ltArgs);
-        for (const [argNdxStr, argType] of Object.entries(
-            validationInfo.info.argTypes
+        for (const [t3ltArgNdxStr, t3ltArgFormatType] of Object.entries(
+            validationInfo.info.argFormatTypes
         )) {
-            const argNdx = Number(argNdxStr);
-            const arg = t3ltArgs[argNdx];
-            const token = argumentTokens[argToToken[argNdx]];
-            // argType is one of either the T3LT macro ArgType enum values or
+            const t3ltArgNdx = Number(t3ltArgNdxStr);
+            const t3ltArg = t3ltArgs[t3ltArgNdx];
+            const sc2Token = sc2ArgumentTokens[t3ltArgToSC2Token[t3ltArgNdx]];
+            // t3ltArgFormatType is one of either the T3LT macro ArgType enum values or
             // the macro parameter types, all of which are defined in `t3lt-parameters.ts`
             if (
-                argType === "null" ||
-                argType === "undefined" ||
-                argType === "true" ||
-                argType === "false" ||
-                argType === "NaN" ||
-                argType === "bool"
+                t3ltArgFormatType === "null" ||
+                t3ltArgFormatType === "undefined" ||
+                t3ltArgFormatType === "true" ||
+                t3ltArgFormatType === "false" ||
+                t3ltArgFormatType === "NaN" ||
+                t3ltArgFormatType === "bool"
             ) {
                 // keyword
                 capturePreSemanticTokenFor(
-                    token.text,
-                    token.at,
+                    sc2Token.text,
+                    sc2Token.at,
                     ETokenType.keyword,
                     [],
                     sugarcubeState
                 );
-            } else if (argType === "number") {
+            } else if (t3ltArgFormatType === "number") {
                 // number
                 capturePreSemanticTokenFor(
-                    token.text,
-                    token.at,
+                    sc2Token.text,
+                    sc2Token.at,
                     ETokenType.number,
                     [],
                     sugarcubeState
                 );
-            } else if (argType === "string") {
+            } else if (t3ltArgFormatType === "string") {
                 // string
                 capturePreSemanticTokenFor(
-                    token.text,
-                    token.at,
+                    sc2Token.text,
+                    sc2Token.at,
                     ETokenType.string,
                     [],
                     sugarcubeState
                 );
-            } else if (argType === "var") {
+            } else if (t3ltArgFormatType === "var") {
                 // variable
                 state.callbacks.onSymbolReference(
                     createSymbolFor(
-                        token.text,
-                        token.at,
+                        sc2Token.text,
+                        sc2Token.at,
                         OSugarCubeSymbolKind.Variable,
                         state.textDocument
                     )
                 );
                 capturePreSemanticTokenFor(
-                    token.text,
-                    token.at,
+                    sc2Token.text,
+                    sc2Token.at,
                     ETokenType.variable,
                     [],
                     sugarcubeState
                 );
-            } else if (argType === "link" || argType === "linkNoSetter") {
+            } else if (
+                t3ltArgFormatType === "link" ||
+                t3ltArgFormatType === "linkNoSetter"
+            ) {
                 // Twine wiki link
                 // For simplicity, re-parse it using our utility function so we
                 // get all of the semantic tokens and references correct
                 parseSugarCubeTwineLink(
-                    token.text,
+                    sc2Token.text,
                     2,
-                    token.at,
+                    sc2Token.at,
                     state,
                     sugarcubeState
                 );
-            } else if (argType === "receiver") {
+            } else if (t3ltArgFormatType === "receiver") {
                 // A "$var" in quotes or an expression/settingssetupaccess/variable
-                if (arg.type === T3LTArgType.String) {
-                    const varName = token.text.slice(1, -1);
-                    const varAt = token.at + 1;
+                if (t3ltArg.type === T3LTArgType.String) {
+                    const varName = sc2Token.text.slice(1, -1);
+                    const varAt = sc2Token.at + 1;
                     // variable
                     state.callbacks.onSymbolReference(
                         createSymbolFor(
@@ -339,27 +348,27 @@ function parseMacroArgs(
                 } else {
                     createVariableAndPropertyReferences(
                         tokenizeTwineScriptExpression(
-                            token.text,
-                            token.at,
+                            sc2Token.text,
+                            sc2Token.at,
                             state.textDocument,
                             sugarcubeState
                         ),
                         state
                     );
                 }
-            } else if (argType === "passage") {
+            } else if (t3ltArgFormatType === "passage") {
                 // A bareword, string (the passage name is in the string), NaN, or number (sure)
                 let passageName: string | undefined;
-                let passageAt = token.at;
-                if (arg.type === T3LTArgType.Bareword) {
-                    passageName = arg.value;
-                } else if (arg.type === T3LTArgType.String) {
-                    passageName = arg.text;
+                let passageAt = sc2Token.at;
+                if (t3ltArg.type === T3LTArgType.Bareword) {
+                    passageName = t3ltArg.value;
+                } else if (t3ltArg.type === T3LTArgType.String) {
+                    passageName = t3ltArg.text;
                     passageAt++; // To skip the leading quote
-                } else if (arg.type === T3LTArgType.NaN) {
+                } else if (t3ltArg.type === T3LTArgType.NaN) {
                     passageName = String(NaN);
-                } else if (arg.type === T3LTArgType.Number) {
-                    passageName = String(arg.value);
+                } else if (t3ltArg.type === T3LTArgType.Number) {
+                    passageName = String(t3ltArg.value);
                 }
                 if (passageName !== undefined) {
                     passageName = passageName.replace(/\\/g, "");
@@ -370,10 +379,22 @@ function parseMacroArgs(
                         sugarcubeState
                     );
                 }
+            } else if (t3ltArg.type === T3LTArgType.Expression) {
+                // We got a `backtick expression` (which we parse regardless of what kind of T3LT arg type it mapped to)
+                createVariableAndPropertyReferences(
+                    tokenizeTwineScriptExpression(
+                        sc2Token.text.slice(1, -1), // Remove the backticks
+                        sc2Token.at + 1,
+                        state.textDocument,
+                        sugarcubeState
+                    ),
+                    state
+                );
             }
         }
         for (const error of validationInfo.info.errors) {
-            const errorToken = argumentTokens[argToToken[error.index] ?? 0];
+            const errorToken =
+                sc2ArgumentTokens[t3ltArgToSC2Token[error.index] ?? 0];
             if (errorToken === undefined) {
                 logErrorFor(args ?? "", argsIndex, error.error.message, state);
             } else {
@@ -386,7 +407,8 @@ function parseMacroArgs(
             }
         }
         for (const warning of validationInfo.info.warnings) {
-            const warningToken = argumentTokens[argToToken[warning.index] ?? 0];
+            const warningToken =
+                sc2ArgumentTokens[t3ltArgToSC2Token[warning.index] ?? 0];
             if (warningToken === undefined) {
                 logErrorFor(
                     args ?? "",
@@ -407,7 +429,7 @@ function parseMacroArgs(
         return;
     }
 
-    for (const arg of argumentTokens) {
+    for (const arg of sc2ArgumentTokens) {
         if (arg.type === MacroParse.Item.Error) {
             logErrorFor(
                 arg.text,

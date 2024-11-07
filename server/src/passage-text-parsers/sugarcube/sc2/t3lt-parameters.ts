@@ -103,7 +103,6 @@ export enum ArgType {
     // Unknown Bareword.
     Bareword = "bareword",
     // These are from Expression
-    // (SRG these are template literals)
     EmptyExpression = "EmptyExpression",
     Expression = "expression",
     // These are from String
@@ -737,7 +736,7 @@ export class Parameters {
                 warnings: [],
                 rank: -1,
                 argIndex: 0,
-                argTypes: {},
+                argFormatTypes: {},
             },
         };
 
@@ -763,10 +762,10 @@ export class Parameters {
     }
 }
 /**
- * Argument data types, as a record linking argument index to data type.
+ * Argument data format types, as a record linking argument index to data format type name.
  * (SRG added)
  */
-type ArgumentTypes = Record<number, string>;
+type ArgumentFormatTypes = Record<number, string>;
 /**
  * Information about the result of validating arguments against a variant of a macro's acceptable parameters.
  */
@@ -779,8 +778,8 @@ interface ValidateInformation {
     rank: number;
     // The index that was reached into the arguments.
     argIndex: number;
-    // The data types each argument parsed as (SRG added)
-    argTypes: ArgumentTypes;
+    // The data format types each argument parsed as (SRG added)
+    argFormatTypes: ArgumentFormatTypes;
 }
 /**
  * An error for a specific argument.
@@ -884,7 +883,7 @@ class Variant {
             status: Status,
             text: string,
             argIndex: number,
-            argTypes: ArgumentTypes,
+            argFormatTypes: ArgumentFormatTypes,
             rank: number = 0
         ): CrawlInformation {
             return {
@@ -897,7 +896,7 @@ class Variant {
                 warnings: [],
                 rank,
                 argIndex,
-                argTypes,
+                argFormatTypes: argFormatTypes,
                 status,
             };
         }
@@ -907,7 +906,7 @@ class Variant {
          */
         function makeSuccess(
             argIndex: number,
-            argTypes: ArgumentTypes,
+            argFormatTypes: ArgumentFormatTypes,
             rank: number,
             warnings: ArgumentWarning[] = []
         ): CrawlInformation {
@@ -916,7 +915,7 @@ class Variant {
                 warnings,
                 rank,
                 argIndex,
-                argTypes,
+                argFormatTypes: argFormatTypes,
                 status: Status.Success,
             };
         }
@@ -961,7 +960,7 @@ class Variant {
             if (format.kind === FormatKind.MaybeNext) {
                 let rank: number = 0;
                 let warnings: ArgumentWarning[] = [];
-                const argTypes: ArgumentTypes = {};
+                const argFormatTypes: ArgumentFormatTypes = {};
                 // If we have a left, then that has to exist before the right can be thought about
                 if (format.left) {
                     const infoLeft = crawl(format.left, argIndex);
@@ -973,26 +972,31 @@ class Variant {
                         return infoLeft;
                     }
 
-                    Object.assign(argTypes, infoLeft.argTypes);
+                    Object.assign(argFormatTypes, infoLeft.argFormatTypes);
                     warnings = infoLeft.warnings;
                 }
 
                 const infoRight = crawl(format.right, argIndex);
                 if (infoRight.status === Status.NotFoundFailure) {
                     // It wasn't found. We can continue on from that since it was optional.
-                    return makeSuccess(argIndex, argTypes, rank, warnings);
+                    return makeSuccess(
+                        argIndex,
+                        argFormatTypes,
+                        rank,
+                        warnings
+                    );
                 } else if (isFailure(infoRight.status)) {
                     // It was an error.
                     infoRight.status = Status.Failure;
-                    Object.assign(infoRight.argTypes, argTypes);
+                    Object.assign(infoRight.argFormatTypes, argFormatTypes);
                     return infoRight;
                 }
 
                 argIndex = infoRight.argIndex;
                 rank += infoRight.rank;
-                Object.assign(argTypes, infoRight.argTypes);
+                Object.assign(argFormatTypes, infoRight.argFormatTypes);
                 warnings = warnings.concat(infoRight.warnings);
-                return makeSuccess(argIndex, argTypes, rank, warnings);
+                return makeSuccess(argIndex, argFormatTypes, rank, warnings);
             } else if (format.kind === FormatKind.AndNext) {
                 let rank: number = 0;
                 let warnings: ArgumentWarning[] = [];
@@ -1001,7 +1005,7 @@ class Variant {
                 if (isFailure(infoLeft.status)) {
                     return infoLeft;
                 }
-                const argTypes = infoLeft.argTypes;
+                const argFormatTypes = infoLeft.argFormatTypes;
 
                 rank += infoLeft.rank;
                 argIndex = infoLeft.argIndex;
@@ -1009,17 +1013,17 @@ class Variant {
 
                 const infoRight = crawl(format.right, argIndex);
                 if (isFailure(infoRight.status)) {
-                    Object.assign(infoRight.argTypes, argTypes);
+                    Object.assign(infoRight.argFormatTypes, argFormatTypes);
                     // TODO: should we try wrapping the error or adding our own?
                     return infoRight;
                 }
 
                 rank += infoRight.rank;
                 argIndex = infoRight.argIndex;
-                Object.assign(argTypes, infoRight.argTypes);
+                Object.assign(argFormatTypes, infoRight.argFormatTypes);
                 warnings = warnings.concat(infoRight.warnings);
 
-                return makeSuccess(argIndex, argTypes, rank, warnings);
+                return makeSuccess(argIndex, argFormatTypes, rank, warnings);
             } else if (format.kind === FormatKind.Or) {
                 const infoLeft = crawl(format.left, argIndex);
                 if (!isFailure(infoLeft.status)) {
@@ -1028,7 +1032,10 @@ class Variant {
 
                 const infoRight = crawl(format.right, argIndex);
                 if (!isFailure(infoRight.status)) {
-                    Object.assign(infoRight.argTypes, infoLeft.argTypes);
+                    Object.assign(
+                        infoRight.argFormatTypes,
+                        infoLeft.argFormatTypes
+                    );
                     return infoRight;
                 }
 
@@ -1041,7 +1048,7 @@ class Variant {
                 return infoLeft;
             } else if (format.kind === FormatKind.Repeat) {
                 let rank: number = 0;
-                const argTypes: ArgumentTypes = {};
+                const argFormatTypes: ArgumentFormatTypes = {};
                 let warnings: ArgumentWarning[] = [];
 
                 while (true) {
@@ -1054,12 +1061,12 @@ class Variant {
                     }
                     argIndex = info.argIndex;
                     rank += info.rank;
-                    Object.assign(argTypes, info.argTypes);
+                    Object.assign(argFormatTypes, info.argFormatTypes);
                     warnings = warnings.concat(info.warnings);
                 }
 
                 // We'll always succeed with a repeat, since it is zero or more.
-                return makeSuccess(argIndex, argTypes, rank, warnings);
+                return makeSuccess(argIndex, argFormatTypes, rank, warnings);
             } else if (format.kind === FormatKind.Literal) {
                 let arg = args[argIndex];
                 if (arg === undefined) {
@@ -1074,11 +1081,11 @@ class Variant {
                 // The success is the same for all, but their errors are different
                 // so it is constructed here to avoid repetitiveness. This is fine since
                 // `makeSuccess` is 'pure'.
-                const argTypes: ArgumentTypes = {};
-                argTypes[argIndex] = arg.type;
+                const argFormatTypes: ArgumentFormatTypes = {};
+                argFormatTypes[argIndex] = arg.type;
                 const success = makeSuccess(
                     argIndex + 1,
-                    argTypes,
+                    argFormatTypes,
                     correctRank
                 );
                 if (isAlwaysArgument(arg)) {
@@ -1091,7 +1098,7 @@ class Variant {
                             Status.Failure,
                             `Found string, but its value was not the expected '${format.value}'`,
                             argIndex,
-                            argTypes,
+                            argFormatTypes,
                             correctTypeRank
                         );
                     }
@@ -1103,7 +1110,7 @@ class Variant {
                             Status.Failure,
                             `Found text, but its value was not the expected '${format.value}'`,
                             argIndex,
-                            argTypes,
+                            argFormatTypes,
                             correctTypeRank
                         );
                     }
@@ -1130,14 +1137,14 @@ class Variant {
                         Status.Failure,
                         `Expected literal ('${format.value}'), but found:  `,
                         argIndex,
-                        argTypes
+                        argFormatTypes
                     );
                 }
             } else if (format.kind === FormatKind.Type) {
                 const arg = args[argIndex];
                 const type = format.type;
-                const argTypes: ArgumentTypes = {};
-                argTypes[argIndex] = format.type.name[0]; // Always take the first format type name
+                const argFormatTypes: ArgumentFormatTypes = {};
+                argFormatTypes[argIndex] = format.type.name[0]; // Always take the first format type name
                 if (arg === undefined) {
                     return makeError(
                         Status.NotFoundFailure,
@@ -1146,7 +1153,11 @@ class Variant {
                         {}
                     );
                 } else if (isAlwaysArgument(arg)) {
-                    return makeSuccess(argIndex + 1, argTypes, correctRank);
+                    return makeSuccess(
+                        argIndex + 1,
+                        argFormatTypes,
+                        correctRank
+                    );
                 }
 
                 const result = type.validate({
@@ -1159,7 +1170,7 @@ class Variant {
                     // Failure
                     return {
                         argIndex,
-                        argTypes,
+                        argFormatTypes: argFormatTypes,
                         rank: 0,
                         errors: [
                             {
@@ -1173,15 +1184,24 @@ class Variant {
                 } else if (result instanceof Warning) {
                     // Success but we received a warning.
                     // TODO: Slightly decrease the rank due to warning?
-                    return makeSuccess(argIndex + 1, argTypes, correctRank, [
-                        {
-                            warning: result,
-                            index: argIndex,
-                        },
-                    ]);
+                    return makeSuccess(
+                        argIndex + 1,
+                        argFormatTypes,
+                        correctRank,
+                        [
+                            {
+                                warning: result,
+                                index: argIndex,
+                            },
+                        ]
+                    );
                 } else {
                     // Success. (result === null)
-                    return makeSuccess(argIndex + 1, argTypes, correctRank);
+                    return makeSuccess(
+                        argIndex + 1,
+                        argFormatTypes,
+                        correctRank
+                    );
                 }
             } else {
                 // Typescript thinks format is 'never' here, but if the error is removed then it
@@ -1199,7 +1219,7 @@ class Variant {
                 warnings: [],
                 rank: 0,
                 argIndex: 0,
-                argTypes: {},
+                argFormatTypes: {},
             };
         }
 
@@ -1210,7 +1230,7 @@ class Variant {
             errors: crawlInfo.errors,
             warnings: crawlInfo.warnings,
             argIndex: crawlInfo.argIndex,
-            argTypes: crawlInfo.argTypes,
+            argFormatTypes: crawlInfo.argFormatTypes,
         };
     }
 
