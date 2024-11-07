@@ -1,3 +1,7 @@
+import { ParsingState } from "../../../parser";
+import { StoryFormatParsingState } from "../..";
+import { createVariableAndPropertyReferences } from "../sugarcube-utils";
+import { tokenizeTwineScriptExpression } from "../sc2/sc2-twinescript";
 import { Parameters } from "../sc2/t3lt-parameters";
 
 /**
@@ -24,6 +28,22 @@ export namespace MacroParent {
         return p.name !== undefined && p.max !== undefined;
     }
 }
+
+// Note on macro argument parsing order:
+//
+// First, if `MacroInfo.parse` is defined, it's called
+//   If it returns true, then it's parsed successfully and no more parsing occurs
+//   If it returns false, then parsing continues
+//
+// Second, if `MacroInfo.arguments` is undefined, parsing ends
+//
+// Third, if `MacroInfo.parsedArguments` is defined, then T3LT-style validation occurs
+//
+// Fourth, the arguments parsed into T3LT tokens are used to generate references and sematic tokens
+//
+// Finally, if `MacroInfo.arguments` is true/false, then warnings are generated if there are arguments
+// where none are expected (`MacroInfo.arguments = false`) or there are none where there should be some
+// (`MacroInfo.arguments = true`).
 
 /**
  * Information about a specific macro.
@@ -74,4 +94,56 @@ export interface MacroInfo {
      * SugarCube version when this function was removed.
      */
     removed?: string;
+    /**
+     * Parses the macro's arguments.
+     *
+     * A macro's custom parse function is called before any other argument parsing
+     * occurs, and is called whether or not the `arguments` property is set.
+     * If it returns true, then no further parsing occurs. If it returns false,
+     * then regular parsing continues.
+     *
+     * If it stops all further parsing, then the function is solely responsible for
+     * setting all semantic tokens and any variable or passage references.
+     *
+     * @param args Unparsed arguments.
+     * @param argsIndex Index of the unparsed arguments in the larger document (zero-based).
+     * @param state Parsing state.
+     * @param sugarcubeState SugarCube-specific parsing state.
+     * @returns True to indicate that parsing is complete, or false to let parsing continue.
+     */
+    parse?: (
+        args: string | undefined,
+        argsIndex: number,
+        state: ParsingState,
+        sugarcubeState: StoryFormatParsingState
+    ) => boolean;
+}
+
+/**
+ * Utility function for macros who parse their arguments as a TwineScript expression.
+ *
+ * @param args Unparsed arguments.
+ * @param argsIndex Index of the unparsed arguments in the larger document (zero-based).
+ * @param state Parsing state.
+ * @param sugarcubeState SugarCube-specific parsing state.
+ * @returns True to indicate that parsing is complete, or false to let parsing continue.
+ */
+export function parseArgsAsTwineScriptExpression(
+    args: string | undefined,
+    argsIndex: number,
+    state: ParsingState,
+    sugarcubeState: StoryFormatParsingState
+): boolean {
+    if (args !== undefined) {
+        createVariableAndPropertyReferences(
+            tokenizeTwineScriptExpression(
+                args,
+                argsIndex,
+                state.textDocument,
+                sugarcubeState
+            ),
+            state
+        );
+    }
+    return true;
 }

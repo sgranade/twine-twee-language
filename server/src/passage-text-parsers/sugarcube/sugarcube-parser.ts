@@ -188,6 +188,8 @@ interface macroLocationInfo {
 /**
  * Parse the arguments to a macro.
  *
+ * @param macroName The name of the macro being parsed.
+ * @param macroNameIndex Index of the macro's name in the larger document (zero-based).
  * @param args Unparsed arguments.
  * @param argsIndex Index of the unparsed arguments in the larger document (zero-based).
  * @param macroInfo Information about the macro the arguments belong to, if known.
@@ -203,9 +205,16 @@ function parseMacroArgs(
     state: ParsingState,
     sugarcubeState: StoryFormatParsingState
 ): void {
+    // If we have information about a macro and it has a custom parser function, call it
+    if (macroInfo?.parse !== undefined) {
+        if (macroInfo.parse(args, argsIndex, state, sugarcubeState)) {
+            return; // A return of true means we're done parsing
+        }
+    }
+
     // If we have information about a macro and its arguments
     // are undefined (which means: don't do anything!), bail
-    if (macroInfo !== undefined && macroInfo?.arguments === undefined) {
+    if (macroInfo !== undefined && macroInfo.arguments === undefined) {
         return;
     }
 

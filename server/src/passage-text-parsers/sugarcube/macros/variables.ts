@@ -1,4 +1,4 @@
-import { MacroInfo } from "./types";
+import { MacroInfo, parseArgsAsTwineScriptExpression } from "./types";
 
 export const captureMacro: MacroInfo = {
     name: "capture",
@@ -12,11 +12,11 @@ export const captureMacro: MacroInfo = {
 
 export const setMacro: MacroInfo = {
     name: "set",
-    arguments: true,
     syntax: "<<set expression>>",
     description:
         "Sets story `$variables` and temporary `_variables` based on the given expression.",
     since: "2.0.0",
+    parse: parseArgsAsTwineScriptExpression,
 };
 
 export const unsetMacro: MacroInfo = {

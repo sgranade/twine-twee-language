@@ -103,6 +103,7 @@ export enum ArgType {
     // Unknown Bareword.
     Bareword = "bareword",
     // These are from Expression
+    // (SRG these are template literals)
     EmptyExpression = "EmptyExpression",
     Expression = "expression",
     // These are from String
@@ -598,7 +599,7 @@ interface ArgumentInfo {
     index: number;
     // Easy access. Equivalent to `arguments[index]`.
     arg: Arg;
-    // StateInfo removed, as t3lt only uses it to confirm that a passage reference exists,
+    // SRG StateInfo removed, as t3lt only uses it to confirm that a passage reference exists,
     // which we do when validation's requested
 }
 

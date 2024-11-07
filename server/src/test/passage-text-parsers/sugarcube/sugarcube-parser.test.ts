@@ -1892,6 +1892,142 @@ describe("SugarCube Parser", () => {
             });
         });
 
+        describe("Custom macro argument parsing", () => {
+            it("should send the argument text to a macro's custom parse function", () => {
+                const header = ":: Passage\n";
+                const passage = "Let's go: <<a true 1 bare 'cont' $testy>>\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const parser = uut.getSugarCubeParser(undefined);
+                const macro = buildMacroInfo({
+                    name: "a",
+                });
+                const allArgs: string[] = [];
+                macro.parse = (args) => {
+                    allArgs.push(args ?? "UNDEFINED");
+                    return true;
+                };
+                const mockFunction = ImportMock.mockFunction(
+                    macrosModule,
+                    "allMacros"
+                ).returns({ a: macro });
+
+                parser?.parsePassageText(passage, header.length, state);
+                mockFunction.restore();
+
+                expect(allArgs).to.eql(["true 1 bare 'cont' $testy"]);
+            });
+
+            it("should stop parsing macro arguments if the macro's custom parse function returns true", () => {
+                const header = ":: Passage\n";
+                const passage = "Let's go: <<a true 1 bare 'cont' $testy>>\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const parser = uut.getSugarCubeParser(undefined);
+                const macro = buildMacroInfo({
+                    name: "a",
+                });
+                macro.arguments = true;
+                macro.parse = () => {
+                    return true;
+                };
+                const mockFunction = ImportMock.mockFunction(
+                    macrosModule,
+                    "allMacros"
+                ).returns({ a: macro });
+
+                parser?.parsePassageText(passage, header.length, state);
+                mockFunction.restore();
+
+                // If there's no more parsing, then no non-macro tokens or references should be created
+                expect(callbacks.tokens).to.eql([
+                    {
+                        line: 1,
+                        char: 12,
+                        length: 1,
+                        tokenType: ETokenType.function,
+                        tokenModifiers: [],
+                    },
+                ]);
+                expect(callbacks.references).to.eql([
+                    {
+                        contents: "a",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(1, 12, 1, 13)
+                        ),
+                        kind: OSugarCubeSymbolKind.KnownMacro,
+                    },
+                ]);
+            });
+
+            it("should continue parsing macro arguments if the macro's custom parse function returns false", () => {
+                const header = ":: Passage\n";
+                const passage = "Let's go: <<a $testy>>\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const parser = uut.getSugarCubeParser(undefined);
+                const macro = buildMacroInfo({
+                    name: "a",
+                });
+                macro.arguments = true;
+                macro.parse = () => {
+                    return false;
+                };
+                const mockFunction = ImportMock.mockFunction(
+                    macrosModule,
+                    "allMacros"
+                ).returns({ a: macro });
+
+                parser?.parsePassageText(passage, header.length, state);
+                mockFunction.restore();
+
+                expect(callbacks.tokens).to.eql([
+                    {
+                        line: 1,
+                        char: 12,
+                        length: 1,
+                        tokenType: ETokenType.function,
+                        tokenModifiers: [],
+                    },
+                    {
+                        line: 1,
+                        char: 14,
+                        length: 6,
+                        tokenType: ETokenType.variable,
+                        tokenModifiers: [],
+                    },
+                ]);
+                expect(callbacks.references).to.eql([
+                    {
+                        contents: "a",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(1, 12, 1, 13)
+                        ),
+                        kind: OSugarCubeSymbolKind.KnownMacro,
+                    },
+                    {
+                        contents: "$testy",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(1, 14, 1, 20)
+                        ),
+                        kind: OSugarCubeSymbolKind.Variable,
+                    },
+                ]);
+            });
+        });
+
         describe("T3LT macro arguments", () => {
             it("should produce semantic tokens for base argument types", () => {
                 const header = ":: Passage\n";

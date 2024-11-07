@@ -1,23 +1,23 @@
-import { MacroInfo } from "./types";
+import { MacroInfo, parseArgsAsTwineScriptExpression } from "./types";
 
 export const ifMacro: MacroInfo = {
     name: "if",
     container: true,
-    arguments: true,
     syntax: "<<if conditional>> … [<<elseif conditional>> …] [<<else>> …] <</if>>",
     description:
         "Executes its contents if the given conditional expression evaluates to true. If the condition evaluates to false and an `<<elseif>>` or `<<else>>` exists, then other contents can be executed.",
     since: "2.0.0",
+    parse: parseArgsAsTwineScriptExpression,
 };
 
 export const elseifMacro: MacroInfo = {
     name: "elseif",
-    arguments: true,
     parents: ["if"],
     syntax: "<<elseif conditional>>",
     description:
         "Executes its contents if the given conditional expression evaluates to true.",
     since: "2.0.0",
+    parse: parseArgsAsTwineScriptExpression,
 };
 
 export const elseMacro: MacroInfo = {
@@ -68,21 +68,21 @@ export const continueMacro: MacroInfo = {
 export const switchMacro: MacroInfo = {
     name: "switch",
     container: true,
-    arguments: true,
     syntax: "<<switch expression>>\n\t[<<case valueList>> …]\n\t[<<default>> …]\n<</switch>>",
     description:
         "Evaluates the given expression and compares it to the value(s) within its `<<case>>` children. The value(s) within each case are compared to the result of the expression given to the parent `<<switch>>`. Upon a successful match, the matching case will have its contents executed. If no cases match and an optional `<<default>>` case exists, which must be the final case, then its contents will be executed. At most one case will execute.",
     since: "2.7.2",
+    parse: parseArgsAsTwineScriptExpression,
 };
 
 export const caseMacro: MacroInfo = {
     name: "case",
-    arguments: true,
     parents: ["switch"],
     syntax: "<<case>>",
     description:
         "Executes its contents if the value of the parent `<<switch>>` macro evaluates to one of the `<<case>>` values.",
     since: "2.7.2",
+    parse: parseArgsAsTwineScriptExpression,
 };
 
 export const defaultMacro: MacroInfo = {
