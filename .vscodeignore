@@ -10,7 +10,6 @@ node_modules
 !CHANGELOG.md
 !LICENSE
 !package.json
-!package-lock.json
 !README.md
 # Note that the following are the actual extension files
 !dist/client/src/extension.js
