@@ -2,6 +2,17 @@
 
 Changes to the plugin.
 
+## Unreleased
+
+### Added
+
+-   New build system.
+    -   Offers to download local copies of the story format (Chapbook and SugarCube only).
+
+### Fixed
+
+-   Language server now correctly indexes files that have been edited but not saved.
+
 ## [0.1.2] - 2024 11 07
 
 ### Added

@@ -31,7 +31,9 @@ import {
 } from "./client-server";
 import { Configuration } from "./constants";
 import * as notifications from "./notifications";
+import { storyFormatToLanguageID } from "./manage-storyformats";
 import { VSCodeWorkspaceProvider } from "./vscode-workspace-provider";
+import { checkForLocalStoryFormat } from "./build-system";
 
 let client: LanguageClient;
 let currentStoryFormat: StoryFormat;
@@ -46,48 +48,10 @@ const workspaceProvider = new VSCodeWorkspaceProvider();
  */
 async function _updateStoryFormatLanguage(): Promise<boolean> {
     const previousStoryFormatLanguage = currentStoryFormatLanguageID;
-
-    // If there's no story format, then all we can do is choose the generic twee3 language
-    if (currentStoryFormat?.format === undefined) {
-        currentStoryFormatLanguageID = "twee3";
-    } else {
-        const langs = await languages.getLanguages();
-
-        // Get a language format, starting with the most specific and going from there.
-        // Currently we only support languages based on the major version number
-        // (i.e. `twee3-chapbook-2` and not `twee3-chapbook-2-1`)
-        let format = `twee3-${currentStoryFormat.format}`.toLowerCase();
-        if (currentStoryFormat.formatVersion !== undefined) {
-            const testLanguage = `${format}-${currentStoryFormat.formatVersion.split(".")[0]}`;
-            if (langs.includes(testLanguage)) {
-                format = testLanguage;
-            }
-        } else if (!langs.includes(format)) {
-            // As a fallback, pick the most recent version of the story format
-            let provisionalFormat: undefined | string;
-            for (const lang of langs) {
-                if (lang.startsWith(format)) {
-                    if (
-                        provisionalFormat === undefined ||
-                        lang[lang.length - 1] >
-                            provisionalFormat[provisionalFormat.length - 1]
-                    ) {
-                        provisionalFormat = lang;
-                    }
-                }
-            }
-            if (provisionalFormat !== undefined) {
-                format = provisionalFormat;
-            }
-        }
-
-        if (langs.includes(format)) {
-            currentStoryFormatLanguageID = format;
-        } else {
-            currentStoryFormatLanguageID = "twee3";
-        }
-    }
-
+    currentStoryFormatLanguageID = storyFormatToLanguageID(
+        currentStoryFormat,
+        await languages.getLanguages()
+    );
     return currentStoryFormatLanguageID !== previousStoryFormatLanguage;
 }
 
@@ -119,9 +83,17 @@ async function _updateTweeDocumentLanguage(
 }
 
 async function _onUpdatedStoryFormat(e: StoryFormat) {
+    // Let's bounce if the story format hasn't changed
+    if (
+        e.format === currentStoryFormat?.format &&
+        e.formatVersion === currentStoryFormat?.formatVersion
+    ) {
+        return;
+    }
+
     currentStoryFormat = e;
     if (await _updateStoryFormatLanguage()) {
-        // If the story format changed, get rid of any previous language configuration.
+        // If the story format ID changed, get rid of any previous language configuration.
         if (currentStoryFormatLanguageConfiguration) {
             currentStoryFormatLanguageConfiguration.dispose();
             currentStoryFormatLanguageConfiguration = undefined;
@@ -131,6 +103,8 @@ async function _onUpdatedStoryFormat(e: StoryFormat) {
     if (window.activeTextEditor !== undefined) {
         _updateTweeDocumentLanguage(window.activeTextEditor.document);
     }
+
+    checkForLocalStoryFormat(currentStoryFormat, workspaceProvider);
 }
 
 async function _onUpdatedSugarCube2MacroInfo(e: SC2MacroInfo[]) {
