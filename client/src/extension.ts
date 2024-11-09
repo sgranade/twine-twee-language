@@ -31,11 +31,14 @@ import {
 } from "./client-server";
 import { Configuration } from "./constants";
 import * as notifications from "./notifications";
+import { VSCodeWorkspaceProvider } from "./vscode-workspace-provider";
 
 let client: LanguageClient;
 let currentStoryFormat: StoryFormat;
 let currentStoryFormatLanguageID: string;
 let currentStoryFormatLanguageConfiguration: Disposable | undefined; // Any current language settings
+
+const workspaceProvider = new VSCodeWorkspaceProvider();
 
 /**
  * Update the cached story format language based on the value in currentStoryFormat.
@@ -189,13 +192,15 @@ async function _onUpdatedSugarCube2MacroInfo(e: SC2MacroInfo[]) {
 }
 
 const includeFiles = (): string =>
-    workspace
-        .getConfiguration(Configuration.BaseSection)
-        .get(Configuration.FilesInclude);
+    workspaceProvider.getConfigurationItem(
+        Configuration.BaseSection,
+        Configuration.FilesInclude
+    ) as string;
 const excludeFiles = (): string =>
-    workspace
-        .getConfiguration(Configuration.BaseSection)
-        .get(Configuration.FilesExclude);
+    workspaceProvider.getConfigurationItem(
+        Configuration.BaseSection,
+        Configuration.FilesExclude
+    ) as string;
 
 export function activate(context: ExtensionContext) {
     // The server is implemented in node
@@ -268,20 +273,20 @@ export function activate(context: ExtensionContext) {
 
     // Handle file requests
     client.onRequest(FindTweeFilesRequest, async () => {
-        return (await workspace.findFiles(includeFiles(), excludeFiles())).map(
-            (f) => f.toString()
-        );
+        return (
+            await workspaceProvider.findFiles(includeFiles(), excludeFiles())
+        ).map((f) => f.toString());
     });
     client.onRequest(FindFilesRequest, async (glob: string) => {
         return (
-            await workspace.findFiles(glob, "**/{node_modules,.git}/**")
+            await workspaceProvider.findFiles(glob, "**/{node_modules,.git}/**")
         ).map((f) => f.toString());
     });
     client.onRequest(
         ReadFileRequest,
         async (args: { uri: URI; encoding?: string }) => {
             return new TextDecoder().decode(
-                await workspace.fs.readFile(Uri.parse(args.uri))
+                await workspaceProvider.fs.readFile(Uri.parse(args.uri))
             );
         }
     );
