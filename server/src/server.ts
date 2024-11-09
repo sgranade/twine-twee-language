@@ -132,6 +132,23 @@ namespace Heartbeat {
     }
 
     /**
+     * Get a document, first from our document store, then (if that fails)
+     * by requesting it from the client.
+     *
+     * @param uri Uri to the document.
+     * @returns The document, or undefined if it's not available.
+     */
+    async function getDoc(uri: string): Promise<TextDocument | undefined> {
+        // If the doc is open and we're tracking it, use that verison, as otherwise
+        // we'll read an old version from disk
+        let doc = documents.get(uri);
+        if (doc === undefined) {
+            doc = await fetchFile(uri);
+        }
+        return doc;
+    }
+
+    /**
      * Index all Twee files in an opened project, as reported by the client.
      */
     async function indexAllTweeFiles() {
@@ -152,23 +169,34 @@ namespace Heartbeat {
             // We'll loop through the files in stages: first to find a StoryData value,
             // and then to validate.
 
-            // Right now we don't cache the results so as not to have to
+            // Right now we don't cache the file fetch results so as not to have to
             // potentially hold every file in a project in memory.
+            const oldStoryFormat = projectIndex.getStoryData()?.storyFormat;
             for (const uri of tweeFileUris) {
-                const doc = await fetchFile(uri);
+                const doc = await getDoc(uri);
                 if (doc !== undefined) {
                     updateProjectIndex(doc, ParseLevel.StoryData, projectIndex);
-                    // The moment we have a story format, we can stop looking
+                    // If we get a story format that's different than the old one,
+                    // we can stop looking
+                    const newStoryFormat =
+                        projectIndex.getStoryData()?.storyFormat;
                     if (
-                        projectIndex.getStoryData()?.storyFormat !== undefined
+                        newStoryFormat?.format !== oldStoryFormat?.format ||
+                        newStoryFormat?.formatVersion !==
+                            oldStoryFormat?.formatVersion
                     ) {
                         break;
                     }
                 }
             }
-            const storyFormat = projectIndex.getStoryData()?.storyFormat;
-            if (storyFormat !== undefined) {
-                onStoryFormatChange(storyFormat);
+            const newStoryFormat = projectIndex.getStoryData()?.storyFormat;
+            if (
+                newStoryFormat !== undefined &&
+                (newStoryFormat?.format !== oldStoryFormat?.format ||
+                    newStoryFormat?.formatVersion !==
+                        oldStoryFormat?.formatVersion)
+            ) {
+                onStoryFormatChange(newStoryFormat);
 
                 // The story format change may set up other processing
                 // we need before we do a full indexing.
@@ -180,7 +208,7 @@ namespace Heartbeat {
             const diagnosticsOptions = (await getSettings())["twee-3"];
 
             for (const uri of tweeFileUris) {
-                const doc = await fetchFile(uri);
+                const doc = await getDoc(uri);
                 if (doc !== undefined) {
                     await parseTextDocument(
                         doc,
@@ -192,7 +220,7 @@ namespace Heartbeat {
             }
 
             for (const uri of tweeFileUris) {
-                const doc = await fetchFile(uri);
+                const doc = await getDoc(uri);
                 if (doc !== undefined) {
                     await validateTextDocument(doc, diagnosticsOptions);
                 }
@@ -546,10 +574,14 @@ async function parseTextDocument(
 
     // Keep track of the story format so, if it changes, we can notify listeners
     // and (optionally) request a full re-index
-    const storyFormat = projectIndex.getStoryData()?.storyFormat?.format;
+    const storyFormat = projectIndex.getStoryData()?.storyFormat;
     updateProjectIndex(document, parseLevel, projectIndex, diagnosticsOptions);
     const newStoryFormat = projectIndex.getStoryData()?.storyFormat;
-    if (newStoryFormat?.format !== storyFormat && newStoryFormat?.format) {
+    if (
+        newStoryFormat?.format &&
+        (newStoryFormat?.format !== storyFormat?.format ||
+            newStoryFormat?.formatVersion !== storyFormat?.formatVersion)
+    ) {
         onStoryFormatChange(newStoryFormat);
         if (reindexOnStoryFormatChange) {
             Heartbeat.indexWorkspace();
