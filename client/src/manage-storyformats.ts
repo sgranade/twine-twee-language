@@ -267,7 +267,7 @@ async function downloadSugarCubeFormat(
  */
 export async function downloadStoryFormat(
     storyFormat: StoryFormat
-): Promise<string | undefined | Error> {
+): Promise<string | Error> {
     if (storyFormat.formatVersion === undefined) {
         return new Error("Story format downloads require a format version");
     }
