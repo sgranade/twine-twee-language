@@ -5,12 +5,13 @@ import { ImportMock } from "ts-mock-imports";
 import { Range, Position, Location } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
+import { StoryFormat } from "../client-server";
+import { TwineSymbolKind } from "../project-index";
+import { ETokenType } from "../semantic-tokens";
 import { MockCallbacks, buildParsingState } from "./builders";
+
 import * as ptpModule from "../passage-text-parsers";
 import * as uut from "../parser";
-import { StoryFormat } from "../client-server";
-import { ETokenType } from "../semantic-tokens";
-import { TwineSymbolKind } from "../project-index";
 
 function buildStoryData({
     ifid = "9F187C0A-AE64-465A-8B13-B30B9DE446E2",
@@ -30,7 +31,7 @@ function buildStoryData({
     };
 }
 
-describe("Twine Parser", () => {
+describe("Server Twine Parser", () => {
     describe("Passages", () => {
         describe("General", () => {
             it("should call back on a passage", () => {

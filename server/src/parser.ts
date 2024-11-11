@@ -752,7 +752,6 @@ function parseStoryDataPassage(
     const subDocument = EmbeddedDocument.create(
         storyDataJSONUri,
         "json",
-
         passageText,
         textIndex,
         state.textDocument
