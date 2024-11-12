@@ -1,13 +1,14 @@
 import "mocha";
 import { expect } from "chai";
 
+import { Story } from "../../build/types";
 import * as uut from "../../build/twee-parser";
 
 describe("Client Twine Parser", () => {
     describe("Passages", () => {
         describe("General", () => {
             it("should parse a simple passage", () => {
-                const story: uut.Story = { passages: [] };
+                const story: Story = { passages: [] };
                 const text = ":: Passage 1 \nP1 contents";
 
                 uut.parseTwee3(story, text);
@@ -24,7 +25,7 @@ describe("Client Twine Parser", () => {
             });
 
             it("should properly decode escaped characters", () => {
-                const story: uut.Story = { passages: [] };
+                const story: Story = { passages: [] };
                 const text = ":: \\[Passage\\] \\1 \nP1 contents";
 
                 uut.parseTwee3(story, text);
@@ -34,7 +35,7 @@ describe("Client Twine Parser", () => {
             });
 
             it("should parse the passage's tag names", () => {
-                const story: uut.Story = { passages: [] };
+                const story: Story = { passages: [] };
                 const text = ":: Passage 1 [tag-1  tag_2]\nP1 contents";
 
                 uut.parseTwee3(story, text);
@@ -44,7 +45,7 @@ describe("Client Twine Parser", () => {
             });
 
             it("should ignore repeated tag names", () => {
-                const story: uut.Story = { passages: [] };
+                const story: Story = { passages: [] };
                 const text = ":: Passage 1 [tag-1  tag_2 tag-1]\nP1 contents";
 
                 uut.parseTwee3(story, text);
@@ -54,7 +55,7 @@ describe("Client Twine Parser", () => {
             });
 
             it("should capture tags with escaped metacharacters", () => {
-                const story: uut.Story = { passages: [] };
+                const story: Story = { passages: [] };
                 const text = ":: Passage 1 [tag-1 \\[tag_2\\]]\nP1 contents";
 
                 uut.parseTwee3(story, text);
@@ -64,7 +65,7 @@ describe("Client Twine Parser", () => {
             });
 
             it("should mark a passage with the script tag as being a script passage", () => {
-                const story: uut.Story = { passages: [] };
+                const story: Story = { passages: [] };
                 const text = ":: Passage 1 [script] \nP1 contents";
 
                 uut.parseTwee3(story, text);
@@ -74,7 +75,7 @@ describe("Client Twine Parser", () => {
             });
 
             it("should mark a passage with the stylesheet tag as being a stylesheet passage", () => {
-                const story: uut.Story = { passages: [] };
+                const story: Story = { passages: [] };
                 const text = ":: Passage 1 [stylesheet] \nP1 contents";
 
                 uut.parseTwee3(story, text);
@@ -84,7 +85,7 @@ describe("Client Twine Parser", () => {
             });
 
             it("should parse the passage's metadata", () => {
-                const story: uut.Story = { passages: [] };
+                const story: Story = { passages: [] };
                 const text =
                     ':: Passage 1 {"position":"600,400", "size":"100,200"}\nP1 contents';
 
@@ -98,7 +99,7 @@ describe("Client Twine Parser", () => {
             });
 
             it("should parse both tags and metadata", () => {
-                const story: uut.Story = { passages: [] };
+                const story: Story = { passages: [] };
                 const text =
                     ':: Passage 1 [tag-1] {"position":"600,400"}\nP1 contents';
 
@@ -120,7 +121,7 @@ describe("Client Twine Parser", () => {
             });
 
             it("should parse multiple passages", () => {
-                const story: uut.Story = { passages: [] };
+                const story: Story = { passages: [] };
                 const text =
                     ":: Passage 1 \nP1 contents\n:: Passage 2 [tagged]\nStuff in passage 2.";
 
@@ -145,7 +146,7 @@ describe("Client Twine Parser", () => {
             });
 
             it("should parse multiple passages, even on Windows", () => {
-                const story: uut.Story = { passages: [] };
+                const story: Story = { passages: [] };
                 const text =
                     ":: Passage 1 \r\nP1 contents\r\n:: Passage 2 [tagged]\r\nStuff in passage 2.";
 
@@ -172,7 +173,7 @@ describe("Client Twine Parser", () => {
 
         describe("Special Passages", () => {
             it("should set the story's title from a StoryTitle passage", () => {
-                const story: uut.Story = { passages: [] };
+                const story: Story = { passages: [] };
                 const text = ":: StoryTitle \n Sweet title! \n";
 
                 uut.parseTwee3(story, text);
@@ -182,7 +183,7 @@ describe("Client Twine Parser", () => {
             });
 
             it("should set the story's ifid from a StoryData passage", () => {
-                const story: uut.Story = { passages: [] };
+                const story: Story = { passages: [] };
                 const text =
                     ":: StoryData \n" +
                     "{\n" +
@@ -199,7 +200,7 @@ describe("Client Twine Parser", () => {
             });
 
             it("should set the story's format from a StoryData passage", () => {
-                const story: uut.Story = { passages: [] };
+                const story: Story = { passages: [] };
                 const text =
                     ":: StoryData \n" +
                     "{\n" +
@@ -220,7 +221,7 @@ describe("Client Twine Parser", () => {
             });
 
             it("should set the story's format version from a StoryData passage", () => {
-                const story: uut.Story = { passages: [] };
+                const story: Story = { passages: [] };
                 const text =
                     ":: StoryData \n" +
                     "{\n" +
@@ -243,7 +244,7 @@ describe("Client Twine Parser", () => {
             });
 
             it("should set the story's start passage from a StoryData passage", () => {
-                const story: uut.Story = { passages: [] };
+                const story: Story = { passages: [] };
                 const text =
                     ":: StoryData \n" +
                     "{\n" +
@@ -262,7 +263,7 @@ describe("Client Twine Parser", () => {
             });
 
             it("should set the story's tag colors from a StoryData passage", () => {
-                const story: uut.Story = { passages: [] };
+                const story: Story = { passages: [] };
                 const text =
                     ":: StoryData \n" +
                     "{\n" +
@@ -283,7 +284,7 @@ describe("Client Twine Parser", () => {
             });
 
             it("should set the story's zoom level from a StoryData passage", () => {
-                const story: uut.Story = { passages: [] };
+                const story: Story = { passages: [] };
                 const text =
                     ":: StoryData \n" +
                     "{\n" +
@@ -306,7 +307,7 @@ describe("Client Twine Parser", () => {
             describe("Passages", () => {
                 describe("General", () => {
                     it("should error on passages with metadata before tags", () => {
-                        const story: uut.Story = { passages: [] };
+                        const story: Story = { passages: [] };
                         const text =
                             ':: Passage 1 {"position":"600,400"} [tag]\nP1 contents';
 
@@ -325,7 +326,7 @@ describe("Client Twine Parser", () => {
                     });
 
                     it("should error on passages with text after metadata", () => {
-                        const story: uut.Story = { passages: [] };
+                        const story: Story = { passages: [] };
                         const text =
                             ':: Passage 1 {"position":"600,400"} Bad!\nP1 contents';
 
@@ -344,7 +345,7 @@ describe("Client Twine Parser", () => {
                     });
 
                     it("should error on passages with text after tags", () => {
-                        const story: uut.Story = { passages: [] };
+                        const story: Story = { passages: [] };
                         const text = ":: Passage 1 [tag1] Bad!\nP1 contents";
 
                         let result: uut.TweeParseError;
@@ -362,7 +363,7 @@ describe("Client Twine Parser", () => {
                     });
 
                     it("should error on passages with names containing unescaped link markup metacharacters", () => {
-                        const story: uut.Story = { passages: [] };
+                        const story: Story = { passages: [] };
                         const text = ":: Passage ] 1 } Bad!\nP1 contents";
 
                         let result: uut.TweeParseError;
@@ -380,7 +381,7 @@ describe("Client Twine Parser", () => {
                     });
 
                     it("should error on passages with unclosed tags", () => {
-                        const story: uut.Story = { passages: [] };
+                        const story: Story = { passages: [] };
                         const text = ":: Passage 1 [nopers\nP1 contents";
 
                         let result: uut.TweeParseError;
@@ -398,7 +399,7 @@ describe("Client Twine Parser", () => {
                     });
 
                     it("should error on passages with unclosed metadata", () => {
-                        const story: uut.Story = { passages: [] };
+                        const story: Story = { passages: [] };
                         const text = ':: Passage 1 {"nopers": 7\nP1 contents';
 
                         let result: uut.TweeParseError;
@@ -416,7 +417,7 @@ describe("Client Twine Parser", () => {
                     });
 
                     it("should error on passages with badly-formatted metadata", () => {
-                        const story: uut.Story = { passages: [] };
+                        const story: Story = { passages: [] };
                         const text = ':: Passage 1 {"nopers"}\nP1 contents';
 
                         let result: uut.TweeParseError;
@@ -436,7 +437,7 @@ describe("Client Twine Parser", () => {
 
                 describe("Special Passages", () => {
                     it("should error on badly formatted StoryData", () => {
-                        const story: uut.Story = { passages: [] };
+                        const story: Story = { passages: [] };
                         const text = ':: StoryData\n{"nopers"}';
 
                         let result: uut.TweeParseError;
@@ -454,7 +455,7 @@ describe("Client Twine Parser", () => {
                     });
 
                     it("should error on a StoryData passage without an ifid", () => {
-                        const story: uut.Story = { passages: [] };
+                        const story: Story = { passages: [] };
                         const text =
                             ":: StoryData \n" +
                             "{\n" +
@@ -476,7 +477,7 @@ describe("Client Twine Parser", () => {
                     });
 
                     it("should error on a badly formatted ifid in a StoryData passage", () => {
-                        const story: uut.Story = { passages: [] };
+                        const story: Story = { passages: [] };
                         const text =
                             ":: StoryData \n" +
                             "{\n" +

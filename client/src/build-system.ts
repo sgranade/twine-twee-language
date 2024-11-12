@@ -78,7 +78,7 @@ export async function checkForLocalStoryFormat(
             title: "Downloading Story Format",
             cancellable: false,
         },
-        (progress) => downloadStoryFormat(storyFormat)
+        () => downloadStoryFormat(storyFormat)
     );
     if (format instanceof Error) {
         vscode.window.showErrorMessage(
