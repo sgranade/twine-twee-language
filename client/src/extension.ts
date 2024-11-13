@@ -33,7 +33,10 @@ import { Configuration } from "./constants";
 import * as notifications from "./notifications";
 import { storyFormatToLanguageID } from "./manage-storyformats";
 import { VSCodeWorkspaceProvider } from "./vscode-workspace-provider";
-import { checkForLocalStoryFormat } from "./build-system";
+import {
+    checkForLocalStoryFormat,
+    checkForProjectDirectories,
+} from "./build-system";
 
 let client: LanguageClient;
 let currentStoryFormat: StoryFormat;
@@ -203,7 +206,7 @@ export function activate(context: ExtensionContext) {
         },
     };
 
-    // Create the language client and start the client.
+    // Create the language client
     client = new LanguageClient(
         "twineChapbook",
         "Twine Chapbook",
@@ -266,7 +269,7 @@ export function activate(context: ExtensionContext) {
     );
 
     // Start the client. This will also launch the server
-    client.start();
+    client.start().then(() => checkForProjectDirectories(workspaceProvider));
 }
 
 export function deactivate(): Thenable<void> | undefined {

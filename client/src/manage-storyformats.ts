@@ -91,7 +91,7 @@ export function storyFormatToWorkspacePath(
     const storyFormatDirectory =
         workspaceProvider.getConfigurationItem(
             Configuration.BaseSection,
-            Configuration.StoryFormatDirectory
+            Configuration.StoryFormatsDirectory
         ) ?? ".";
     const path = Utils.joinPath(
         URI.file(storyFormatDirectory),

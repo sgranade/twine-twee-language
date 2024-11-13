@@ -37,7 +37,32 @@ export interface WorkspaceProvider {
      * @returns The configuration item.
      */
     getConfigurationItem(section: string, item: string): any;
+    /**
+     * URI of the first entry in the workspace folders.
+     *
+     * Returns undefined if no workspace is open.
+     *
+     * N.B. we don't currently support multiple workspace folders.
+     */
+    rootWorkspaceUri(): URI | undefined;
     fs: {
+        /**
+         * Create a new directory (Note, that new files are created via `write`-calls).
+         *
+         * *Note* that missing directories are created automatically, e.g this call has
+         * `mkdirp` semantics.
+         *
+         * @param uri The uri of the new folder.
+         */
+        createDirectory(uri: URI): Thenable<void>;
+        /**
+         * Retrieve all entries of a {@link FileType.Directory directory}.
+         *
+         * @param uri The uri of the folder.
+         * @returns An array of name/type-tuples or a thenable that resolves to such.
+         * @throws Error (FileNotFound) if the directory isn't found.
+         */
+        readDirectory(uri: URI): Thenable<[string, FileType][]>;
         /**
          * Read the entire contents of a file.
          *
@@ -46,4 +71,32 @@ export interface WorkspaceProvider {
          */
         readFile: (uri: URI) => Thenable<Uint8Array>;
     };
+}
+
+/**
+ * Enumerations taken from vscode.
+ */
+
+/**
+ * Enumeration of file types. The types `File` and `Directory` can also be
+ * a symbolic links, in that case use `FileType.File | FileType.SymbolicLink` and
+ * `FileType.Directory | FileType.SymbolicLink`.
+ */
+export enum FileType {
+    /**
+     * The file type is unknown.
+     */
+    Unknown = 0,
+    /**
+     * A regular file.
+     */
+    File = 1,
+    /**
+     * A directory.
+     */
+    Directory = 2,
+    /**
+     * A symbolic link to a file.
+     */
+    SymbolicLink = 64,
 }

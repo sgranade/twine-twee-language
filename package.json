@@ -132,27 +132,47 @@
 					"default": "true",
 					"markdownDescription": "Warn about references to unrecognized passages, such as in `[[passage]]` links."
 				},
+				"twineTweeLanguage.project.create": {
+					"type": "boolean",
+					"default": true,
+					"order": 0,
+					"description": "Offer to create a project directory structure."
+				},
+				"twineTweeLanguage.project.downloadStoryFormat": {
+					"type": "boolean",
+					"default": true,
+					"order": 1,
+					"markdownDescription": "Offer to download the Twine story format used in a project. (Currently only supports [Chapbook](https://klembot.github.io/chapbook/) and [SugarCube 2](https://motoslave.net/sugarcube/2/).)"
+				},
+				"twineTweeLanguage.project.storyFilesDirectory": {
+					"type": "string",
+					"default": "src/story",
+					"order": 2,
+					"markdownDescription": "Directory with Twine `.twee` files (relative to the workspace). Twee files in this directory and any of its subdirectories will be compiled."
+				},
+				"twineTweeLanguage.project.buildDirectory": {
+					"type": "string",
+					"default": "build",
+					"order": 3,
+					"markdownDescription": "Directory to put the output `.html` files in (relative to the workspace)."
+				},
+				"twineTweeLanguage.project.storyFormatsDirectory": {
+					"type": "string",
+					"default": ".storyformats",
+					"order": 4,
+					"description": "Directory relative to the root level of the project where Twine story formats are stored."
+				},
 				"twineTweeLanguage.files.include": {
 					"type": "string",
 					"default": "**/*.{tw,twee}",
 					"order": 1,
-					"markdownDescription": "Files to include as Twee files. Supports [glob patterns](https://code.visualstudio.com/docs/editor/glob-patterns), which should be *relative* to the workspace folders (e.g. `src/static/*.{tw,twee}`)."
+					"markdownDescription": "Files to include as Twee files. Supports [glob patterns](https://code.visualstudio.com/docs/editor/glob-patterns), which should be *relative* to the workspace folders (e.g. `src/story/*.{tw,twee}`)."
 				},
 				"twineTweeLanguage.files.exclude": {
 					"type": "string",
 					"default": "",
 					"order": 2,
 					"markdownDescription": "Files and directories to exclude from Twee files searches. Supports [glob patterns](https://code.visualstudio.com/docs/editor/glob-patterns). For example, to exclude the directories `skip` and `ignore`, use `{skip/**,ignore/**}`."
-				},
-				"twineTweeLanguage.build.downloadStoryFormat": {
-					"type": "boolean",
-					"default": true,
-					"markdownDescription": "Offer to download the Twine story format used in a project. (Currently only supports Chapbook and SugarCube.)"
-				},
-				"twineTweeLanguage.build.storyFormatDirectory": {
-					"type": "string",
-					"default": ".storyformats",
-					"markdownDescription": "Directory relative to the root level of the project where Twine story formats are stored."
 				}
 			}
 		}
