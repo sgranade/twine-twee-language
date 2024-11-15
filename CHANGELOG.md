@@ -1,13 +1,14 @@
 # Change Log
 
-Changes to the plugin.
+Changes to the extension.
 
 ## Unreleased
 
 ### Added
 
 -   New build system.
-    -   Offers to download local copies of the story format (Chapbook and SugarCube only).
+    -   Automatically downloads local copies of the story format (Chapbook and SugarCube only).
+    -   Compiles games into playable `.html` files.
 
 ### Fixed
 

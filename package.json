@@ -184,8 +184,8 @@
 				},
 				"twineTweeLanguage.project.storyFilesDirectory": {
 					"type": "string",
-					"default": "src/story",
-					"markdownDescription": "Directory with Twine `.twee` files (relative to the workspace). Twee files in this directory and any of its subdirectories will be compiled."
+					"default": "src",
+					"markdownDescription": "Directory with game source files (relative to the workspace). Files in this directory and all of its subdirectories will be compiled. Supports [all Tweego-supported files](http://www.motoslave.net/tweego/docs/#usage-supported-files) except for `.tw2`, `.twee2`, `.htm`, and `.html`."
 				},
 				"twineTweeLanguage.project.buildDirectory": {
 					"type": "string",
@@ -208,7 +208,19 @@
 					"markdownDescription": "Files and directories to exclude from Twee files searches. Supports [glob patterns](https://code.visualstudio.com/docs/editor/glob-patterns). For example, to exclude the directories `skip` and `ignore`, use `{skip/**,ignore/**}`."
 				}
 			}
-		}
+		},
+		"taskDefinitions": [
+			{
+				"type": "twine",
+				"required": ["test"],
+				"properties": {
+					"test": {
+						"type": "boolean",
+						"description": "Whether to build the Twine story in test mode."
+					}
+				}
+			}
+		]
 	},
 	"scripts": {
 		"vscode:prepublish": "npm run package",

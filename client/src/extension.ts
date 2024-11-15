@@ -29,6 +29,7 @@ import * as notifications from "./notifications";
 import { storyFormatToLanguageID } from "./manage-storyformats";
 import { createStatusBarItems } from "./status-bar-items";
 import { VSCodeWorkspaceProvider } from "./vscode-workspace-provider";
+import { TwineTaskProvider } from "./tasks";
 
 let client: LanguageClient;
 let currentStoryFormat: StoryFormat;
@@ -250,27 +251,31 @@ export function activate(context: vscode.ExtensionContext) {
     );
 
     // Handle configuration changes
-    vscode.workspace.onDidChangeConfiguration((e) => {
-        // If the user changes what files to include or exclude, request a re-index
-        if (
-            e.affectsConfiguration(
-                `${Configuration.BaseSection}.${Configuration.FilesInclude}`
-            ) ||
-            e.affectsConfiguration(
-                `${Configuration.BaseSection}.${Configuration.FilesExclude}`
-            )
-        ) {
-            client.sendNotification(CustomMessages.RequestReindex);
-        }
-    });
+    context.subscriptions.push(
+        vscode.workspace.onDidChangeConfiguration((e) => {
+            // If the user changes what files to include or exclude, request a re-index
+            if (
+                e.affectsConfiguration(
+                    `${Configuration.BaseSection}.${Configuration.FilesInclude}`
+                ) ||
+                e.affectsConfiguration(
+                    `${Configuration.BaseSection}.${Configuration.FilesExclude}`
+                )
+            ) {
+                client.sendNotification(CustomMessages.RequestReindex);
+            }
+        })
+    );
 
     // Adjust document languages on edit if needed
-    vscode.window.onDidChangeActiveTextEditor(
-        async (e: vscode.TextEditor | undefined) => {
-            if (e !== undefined) {
-                await updateTweeDocumentLanguage(e.document);
+    context.subscriptions.push(
+        vscode.window.onDidChangeActiveTextEditor(
+            async (e: vscode.TextEditor | undefined) => {
+                if (e !== undefined) {
+                    await updateTweeDocumentLanguage(e.document);
+                }
             }
-        }
+        )
     );
 
     // Handle file requests
@@ -296,11 +301,21 @@ export function activate(context: vscode.ExtensionContext) {
     // Register our custom commands
     registerCommands(context);
 
+    // Register our custom tasks
+    context.subscriptions.push(
+        vscode.tasks.registerTaskProvider(
+            TwineTaskProvider.TwineBuildScriptType,
+            new TwineTaskProvider(workspaceProvider)
+        )
+    );
+
     // Set up our status bar items
     createStatusBarItems(context);
 
     // If a text document changes, see if we need to clear annotations
-    vscode.workspace.onDidChangeTextDocument(clearAnnotationOnChangeEvent);
+    context.subscriptions.push(
+        vscode.workspace.onDidChangeTextDocument(clearAnnotationOnChangeEvent)
+    );
 
     // Start the client. This will also launch the server
     client.start().then(() => checkForProjectDirectories(workspaceProvider));
