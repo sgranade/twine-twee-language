@@ -119,6 +119,41 @@
 				}
 			}
 		],
+		"commands": [
+			{
+				"command": "twineTweeLanguage.buildGame",
+				"title": "Build Game",
+				"category": "Twine (Twee 3) Language",
+				"enablement": "isWorkspaceTrusted"
+			},
+			{
+				"command": "twineTweeLanguage.buildGameTest",
+				"title": "Build Game (Test Mode)",
+				"category": "Twine (Twee 3) Language",
+				"enablement": "isWorkspaceTrusted"
+			},
+			{
+				"command": "twineTweeLanguage.downloadStoryFormat",
+				"title": "Download Story Format",
+				"category": "Twine (Twee 3) Language",
+				"enablement": "isWorkspaceTrusted"
+			}
+		],
+		"menus": {
+			"commandPalette": [
+				{
+					"command": "twineTweeLanguage.buildGame",
+					"when": "!twineTweeLanguage.building"
+				},
+				{
+					"command": "twineTweeLanguage.buildGameTest",
+					"when": "!twineTweeLanguage.building"
+				},
+				{
+					"command": "twineTweeLanguage.downloadStoryFormat"
+				}
+			]
+		},
 		"configuration": {
 			"title": "Twine (Twee 3) Language",
 			"properties": {
@@ -132,46 +167,44 @@
 					"default": "true",
 					"markdownDescription": "Warn about references to unrecognized passages, such as in `[[passage]]` links."
 				},
+				"twineTweeLanguage.project.outputFile": {
+					"type": "string",
+					"default": "",
+					"markdownDescription": "Name to give the game when turned into an HTML file, such as `story.html`. If blank, the game's filename will be its name from the `StoryTitle` passage, with spaces replaced by hyphens."
+				},
 				"twineTweeLanguage.project.create": {
 					"type": "boolean",
 					"default": true,
-					"order": 0,
 					"description": "Offer to create a project directory structure."
 				},
 				"twineTweeLanguage.project.downloadStoryFormat": {
 					"type": "boolean",
 					"default": true,
-					"order": 1,
 					"markdownDescription": "Offer to download the Twine story format used in a project. (Currently only supports [Chapbook](https://klembot.github.io/chapbook/) and [SugarCube 2](https://motoslave.net/sugarcube/2/).)"
 				},
 				"twineTweeLanguage.project.storyFilesDirectory": {
 					"type": "string",
 					"default": "src/story",
-					"order": 2,
 					"markdownDescription": "Directory with Twine `.twee` files (relative to the workspace). Twee files in this directory and any of its subdirectories will be compiled."
 				},
 				"twineTweeLanguage.project.buildDirectory": {
 					"type": "string",
 					"default": "build",
-					"order": 3,
-					"markdownDescription": "Directory to put the output `.html` files in (relative to the workspace)."
+					"markdownDescription": "Directory to put the output `.html` file in (relative to the workspace)."
 				},
 				"twineTweeLanguage.project.storyFormatsDirectory": {
 					"type": "string",
 					"default": ".storyformats",
-					"order": 4,
 					"description": "Directory relative to the root level of the project where Twine story formats are stored."
 				},
 				"twineTweeLanguage.files.include": {
 					"type": "string",
 					"default": "**/*.{tw,twee}",
-					"order": 1,
 					"markdownDescription": "Files to include as Twee files. Supports [glob patterns](https://code.visualstudio.com/docs/editor/glob-patterns), which should be *relative* to the workspace folders (e.g. `src/story/*.{tw,twee}`)."
 				},
 				"twineTweeLanguage.files.exclude": {
 					"type": "string",
 					"default": "",
-					"order": 2,
 					"markdownDescription": "Files and directories to exclude from Twee files searches. Supports [glob patterns](https://code.visualstudio.com/docs/editor/glob-patterns). For example, to exclude the directories `skip` and `ignore`, use `{skip/**,ignore/**}`."
 				}
 			}
@@ -179,13 +212,14 @@
 	},
 	"scripts": {
 		"vscode:prepublish": "npm run package",
-		"compile": "npm-run-all check-types esbuild",
+		"compile": "npm-run-all check-types prebuild esbuild",
+		"prebuild": "node -p \"'export const CLIENT_VERSION = ' + JSON.stringify(require('./package.json').version) + ';'\" > client/src/version.ts",
 		"esbuild": "node esbuild.js",
 		"check-types": "tsc -b --noEmit",
 		"watch": "npm-run-all -p watch:*",
-    	"watch:esbuild": "node esbuild.js --watch",
+    	"watch:esbuild": "npm run prebuild && node esbuild.js --watch",
     	"watch:tsc": "tsc -b --noEmit --watch",
-		"package": "npm-run-all check-types \"esbuild -- --production\"",
+		"package": "npm-run-all check-types prebuild \"esbuild -- --production\"",
 		"test": "nyc mocha",
 		"coverage": "nyc report --reporter=text-lcov > coverage.lcov",
 		"lint": "eslint ./client/src ./server/src",

@@ -70,6 +70,13 @@ export interface WorkspaceProvider {
          * @returns An array of bytes or a thenable that resolves to such.
          */
         readFile: (uri: URI) => Thenable<Uint8Array>;
+        /**
+         * Write data to a file, replacing its entire contents.
+         *
+         * @param uri The uri of the file.
+         * @param content The new content of the file.
+         */
+        writeFile: (uri: URI, content: Uint8Array) => Thenable<void>;
     };
 }
 

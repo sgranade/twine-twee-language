@@ -1,16 +1,5 @@
 import * as path from "path";
-import {
-    languages,
-    window,
-    workspace,
-    Disposable,
-    ExtensionContext,
-    IndentAction,
-    OnEnterRule,
-    TextDocument,
-    TextEditor,
-    Uri,
-} from "vscode";
+import * as vscode from "vscode";
 import {
     LanguageClient,
     LanguageClientOptions,
@@ -29,31 +18,60 @@ import {
     SC2MacroInfo,
     StoryFormat,
 } from "./client-server";
-import { Configuration } from "./constants";
+import { Configuration, CustomCommands } from "./constants";
 import * as notifications from "./notifications";
 import { storyFormatToLanguageID } from "./manage-storyformats";
 import { VSCodeWorkspaceProvider } from "./vscode-workspace-provider";
 import {
+    build,
     checkForLocalStoryFormat,
     checkForProjectDirectories,
 } from "./build-system";
+import { createStatusBarItems } from "./status-bar-items";
 
 let client: LanguageClient;
 let currentStoryFormat: StoryFormat;
 let currentStoryFormatLanguageID: string;
-let currentStoryFormatLanguageConfiguration: Disposable | undefined; // Any current language settings
+let currentStoryFormatLanguageConfiguration: vscode.Disposable | undefined; // Any current language settings
 
 const workspaceProvider = new VSCodeWorkspaceProvider();
+
+/**
+ * Register the extension's custom commands.
+ *
+ * @param context Context to manage the commands.
+ */
+function registerCommands(context: vscode.ExtensionContext) {
+    const commands = [
+        vscode.commands.registerCommand(CustomCommands.BuildGame, () =>
+            build({}, workspaceProvider)
+        ),
+        vscode.commands.registerCommand(CustomCommands.BuildGameTest, () =>
+            build({ debug: true }, workspaceProvider)
+        ),
+        vscode.commands.registerCommand(
+            CustomCommands.DownloadStoryFormat,
+            () =>
+                checkForLocalStoryFormat(
+                    currentStoryFormat,
+                    true,
+                    workspaceProvider
+                )
+        ),
+    ];
+
+    context.subscriptions.push(...commands);
+}
 
 /**
  * Update the cached story format language based on the value in currentStoryFormat.
  * @returns True if the story format language changed; false otherwise.
  */
-async function _updateStoryFormatLanguage(): Promise<boolean> {
+async function updateStoryFormatLanguage(): Promise<boolean> {
     const previousStoryFormatLanguage = currentStoryFormatLanguageID;
     currentStoryFormatLanguageID = storyFormatToLanguageID(
         currentStoryFormat,
-        await languages.getLanguages()
+        await vscode.languages.getLanguages()
     );
     return currentStoryFormatLanguageID !== previousStoryFormatLanguage;
 }
@@ -67,9 +85,9 @@ async function _updateStoryFormatLanguage(): Promise<boolean> {
  * @param document Document whose language might need to be updated.
  * @returns Document.
  */
-async function _updateTweeDocumentLanguage(
-    document: TextDocument
-): Promise<TextDocument> {
+async function updateTweeDocumentLanguage(
+    document: vscode.TextDocument
+): Promise<vscode.TextDocument> {
     // N.B. that currentStoryFormatLanguage may not be set due to
     // the parser not yet having encountered the StoryData passage
     if (
@@ -77,7 +95,7 @@ async function _updateTweeDocumentLanguage(
         /^twee3.*/.test(document.languageId) &&
         document.languageId !== currentStoryFormatLanguageID
     ) {
-        return await languages.setTextDocumentLanguage(
+        return await vscode.languages.setTextDocumentLanguage(
             document,
             currentStoryFormatLanguageID
         );
@@ -85,7 +103,7 @@ async function _updateTweeDocumentLanguage(
     return document;
 }
 
-async function _onUpdatedStoryFormat(e: StoryFormat) {
+async function onUpdatedStoryFormat(e: StoryFormat) {
     // Let's bounce if the story format hasn't changed
     if (
         e.format === currentStoryFormat?.format &&
@@ -95,7 +113,7 @@ async function _onUpdatedStoryFormat(e: StoryFormat) {
     }
 
     currentStoryFormat = e;
-    if (await _updateStoryFormatLanguage()) {
+    if (await updateStoryFormatLanguage()) {
         // If the story format ID changed, get rid of any previous language configuration.
         if (currentStoryFormatLanguageConfiguration) {
             currentStoryFormatLanguageConfiguration.dispose();
@@ -103,16 +121,18 @@ async function _onUpdatedStoryFormat(e: StoryFormat) {
         }
     }
     // If we have an active text window, adjust its language if necessary
-    if (window.activeTextEditor !== undefined) {
-        _updateTweeDocumentLanguage(window.activeTextEditor.document);
+    if (vscode.window.activeTextEditor !== undefined) {
+        updateTweeDocumentLanguage(vscode.window.activeTextEditor.document);
     }
 
-    checkForLocalStoryFormat(currentStoryFormat, workspaceProvider);
+    // Offer to download the story format, but only if it hasn't
+    // already been downloaded
+    checkForLocalStoryFormat(currentStoryFormat, false, workspaceProvider);
 }
 
-async function _onUpdatedSugarCube2MacroInfo(e: SC2MacroInfo[]) {
+async function onUpdatedSugarCube2MacroInfo(e: SC2MacroInfo[]) {
     // Create a bunch of onEnterRules to indent/outdent container macros and kids
-    const onEnterRules: OnEnterRule[] = [];
+    const onEnterRules: vscode.OnEnterRule[] = [];
     for (const info of e) {
         if (info.isContainer) {
             onEnterRules.push(
@@ -126,7 +146,7 @@ async function _onUpdatedSugarCube2MacroInfo(e: SC2MacroInfo[]) {
                         "gm"
                     ),
                     action: {
-                        indentAction: IndentAction.IndentOutdent,
+                        indentAction: vscode.IndentAction.IndentOutdent,
                     },
                 },
                 {
@@ -135,7 +155,7 @@ async function _onUpdatedSugarCube2MacroInfo(e: SC2MacroInfo[]) {
                         "gm"
                     ),
                     action: {
-                        indentAction: IndentAction.None,
+                        indentAction: vscode.IndentAction.None,
                     },
                 },
                 {
@@ -144,7 +164,7 @@ async function _onUpdatedSugarCube2MacroInfo(e: SC2MacroInfo[]) {
                         "gm"
                     ),
                     action: {
-                        indentAction: IndentAction.Indent,
+                        indentAction: vscode.IndentAction.Indent,
                     },
                 }
             );
@@ -156,16 +176,19 @@ async function _onUpdatedSugarCube2MacroInfo(e: SC2MacroInfo[]) {
                     "gm"
                 ),
                 action: {
-                    indentAction: IndentAction.Indent,
+                    indentAction: vscode.IndentAction.Indent,
                 },
             });
         }
     }
 
     currentStoryFormatLanguageConfiguration =
-        languages.setLanguageConfiguration(currentStoryFormatLanguageID, {
-            onEnterRules: onEnterRules,
-        });
+        vscode.languages.setLanguageConfiguration(
+            currentStoryFormatLanguageID,
+            {
+                onEnterRules: onEnterRules,
+            }
+        );
 }
 
 const includeFiles = (): string =>
@@ -179,7 +202,7 @@ const excludeFiles = (): string =>
         Configuration.FilesExclude
     ) as string;
 
-export function activate(context: ExtensionContext) {
+export function activate(context: vscode.ExtensionContext) {
     // The server is implemented in node
     const serverModule = context.asAbsolutePath(
         path.join("dist", "server", "src", "server.js")
@@ -200,7 +223,7 @@ export function activate(context: ExtensionContext) {
         documentSelector: [{ scheme: "file", pattern: "**/*.{tw,twee}" }],
         synchronize: {
             // Notify the server about file changes to SugarCube 2 macro definition files
-            fileEvents: workspace.createFileSystemWatcher(
+            fileEvents: vscode.workspace.createFileSystemWatcher(
                 "**/*.twee-config.{json,yaml,yml}"
             ),
         },
@@ -216,18 +239,17 @@ export function activate(context: ExtensionContext) {
 
     // Handle notifications
     context.subscriptions.push(notifications.initNotifications(client));
-
     notifications.addNotificationHandler(
         CustomMessages.UpdatedStoryFormat,
-        async (e) => await _onUpdatedStoryFormat(e[0])
+        async (e) => await onUpdatedStoryFormat(e[0])
     );
     notifications.addNotificationHandler(
         CustomMessages.UpdatedSugarCubeMacroList,
-        async (e) => await _onUpdatedSugarCube2MacroInfo(e[0])
+        async (e) => await onUpdatedSugarCube2MacroInfo(e[0])
     );
 
     // Handle configuration changes
-    workspace.onDidChangeConfiguration((e) => {
+    vscode.workspace.onDidChangeConfiguration((e) => {
         // If the user changes what files to include or exclude, request a re-index
         if (
             e.affectsConfiguration(
@@ -242,11 +264,13 @@ export function activate(context: ExtensionContext) {
     });
 
     // Adjust document languages on edit if needed
-    window.onDidChangeActiveTextEditor(async (e: TextEditor | undefined) => {
-        if (e !== undefined) {
-            await _updateTweeDocumentLanguage(e.document);
+    vscode.window.onDidChangeActiveTextEditor(
+        async (e: vscode.TextEditor | undefined) => {
+            if (e !== undefined) {
+                await updateTweeDocumentLanguage(e.document);
+            }
         }
-    });
+    );
 
     // Handle file requests
     client.onRequest(FindTweeFilesRequest, async () => {
@@ -263,10 +287,16 @@ export function activate(context: ExtensionContext) {
         ReadFileRequest,
         async (args: { uri: URI; encoding?: string }) => {
             return new TextDecoder().decode(
-                await workspaceProvider.fs.readFile(Uri.parse(args.uri))
+                await workspaceProvider.fs.readFile(vscode.Uri.parse(args.uri))
             );
         }
     );
+
+    // Register our custom commands
+    registerCommands(context);
+
+    // Set up our status bar items
+    createStatusBarItems(context);
 
     // Start the client. This will also launch the server
     client.start().then(() => checkForProjectDirectories(workspaceProvider));

@@ -146,6 +146,31 @@ export function storyFormatSupportsDownloading(
 }
 
 /**
+ * Read a local Twine story format.
+ *
+ * @param storyFormat Story format to read.
+ * @returns The story format's contents.
+ * @throws Error if the story format couldn't be read.
+ */
+export async function readLocalStoryFormat(
+    storyFormat: StoryFormat,
+    workspaceProvider: WorkspaceProvider
+): Promise<string> {
+    const path = storyFormatToWorkspacePath(storyFormat, workspaceProvider);
+    if (path === undefined) {
+        throw new Error(
+            `Couldn't create a local path for story format ${storyFormat.format} version ${storyFormat.formatVersion}`
+        );
+    }
+    const storyFormatUri = (
+        await workspaceProvider.findFiles(path, undefined, 1)
+    )[0];
+    return Buffer.from(
+        await workspaceProvider.fs.readFile(storyFormatUri)
+    ).toString("utf-8");
+}
+
+/**
  * See if the project contains a local copy of the story format.
  *
  * @param storyFormat Story format to check.

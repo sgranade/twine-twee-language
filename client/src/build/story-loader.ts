@@ -113,6 +113,75 @@ function createSugarCube2MediaPassage(
     };
 }
 
+interface FilenameParts {
+    /**
+     * The stem. For `story.twee`, the stem is `story`. For `archive.tar.gz` it's `archive`.
+     */
+    stem: string;
+    /**
+     * The extension, if it exists. For `archive.tar.gz` it's `gz`.
+     */
+    ext?: string;
+}
+
+/**
+ * Divide a base filename into constituent parts.
+ *
+ * @param basename Base filename (like `story.twee`).
+ * @returns The individual parts of the filename.
+ */
+function filenameParts(basename: string): FilenameParts {
+    const filepartsList = basename.split(".");
+    const filenameParts: FilenameParts = {
+        stem: filepartsList[0],
+    };
+    if (filepartsList.length >= 2) {
+        filenameParts.ext = filepartsList.pop();
+    }
+    return filenameParts;
+}
+
+/**
+ * Extensions that can be added to a Story.
+ */
+const supportedExtensions = new RegExp(
+    "^" +
+        [
+            "tw(ee)?",
+            "css",
+            "js",
+            "(o|t)tf",
+            "woff2?",
+            "gif",
+            "jpe?g",
+            "png",
+            "svg",
+            "tiff?",
+            "webp",
+            "aac",
+            "flac",
+            "m4a",
+            "mp(3|4)",
+            "og(a|g|v)",
+            "opus",
+            "wave?",
+            "web(a|m)",
+            "vtt",
+        ].join("|") +
+        "$"
+);
+
+/**
+ * See if a file can be loaded into a Story.
+ *
+ * @param basename Base filename, such as `story.twee`.
+ * @returns True if the file can be added to a Story.
+ */
+export function canAddFileToStory(basename: string): boolean {
+    const { ext } = filenameParts(basename);
+    return supportedExtensions.test(ext.toLowerCase());
+}
+
 /**
  * Add a file to a Twine story.
  *
@@ -127,11 +196,11 @@ export function addFileToStory(
     contents: Buffer,
     encoding?: BufferEncoding
 ) {
-    const fileparts = basename.split(".");
-    if (fileparts.length < 2) {
+    let { stem, ext } = filenameParts(basename);
+    if (ext === undefined) {
         return; // No extension
     }
-    const ext = fileparts.pop().toLowerCase();
+    ext = ext.toLowerCase();
 
     if (ext === "tw" || ext === "twee") {
         parseTwee3(story, contents.toString(encoding));
@@ -150,14 +219,14 @@ export function addFileToStory(
         ext === "woff2"
     ) {
         // Turn a font into a base64-encoded CSS font face
-        const family = fileparts[0];
+        const family = stem;
         let hint = ext;
         if (hint === "ttf") {
             hint = "truetype";
         } else if (hint === "otf") {
             hint = "opentype";
         }
-        const css = `@font-face {\n\tfont-family: ${family};\n\tsrc: url("data:${mediaTypeFromExt(ext)};base64,${contents.toString("base64")}") format(${hint});\n}`;
+        const css = `@font-face {\n\tfont-family: "${family}";\n\tsrc: url("data:${mediaTypeFromExt(ext)};base64,${contents.toString("base64")}") format("${hint}");\n}`;
         story.passages.push({
             name: basename,
             isScript: false,
@@ -176,12 +245,7 @@ export function addFileToStory(
         ext === "webp"
     ) {
         story.passages.push(
-            createSugarCube2MediaPassage(
-                fileparts[0],
-                ext,
-                contents,
-                "Twine.image"
-            )
+            createSugarCube2MediaPassage(stem, ext, contents, "Twine.image")
         );
     } else if (
         ext === "aac" ||
@@ -196,30 +260,49 @@ export function addFileToStory(
         ext == "weba"
     ) {
         story.passages.push(
-            createSugarCube2MediaPassage(
-                fileparts[0],
-                ext,
-                contents,
-                "Twine.audio"
-            )
+            createSugarCube2MediaPassage(stem, ext, contents, "Twine.audio")
         );
     } else if (ext === "mp4" || ext === "ogv" || ext === "webm") {
         story.passages.push(
-            createSugarCube2MediaPassage(
-                fileparts[0],
-                ext,
-                contents,
-                "Twine.video"
-            )
+            createSugarCube2MediaPassage(stem, ext, contents, "Twine.video")
         );
     } else if (ext === "vtt") {
         story.passages.push(
-            createSugarCube2MediaPassage(
-                fileparts[0],
-                ext,
-                contents,
-                "Twine.vtt"
-            )
+            createSugarCube2MediaPassage(stem, ext, contents, "Twine.vtt")
         );
     }
+}
+
+/**
+ * Validate a story has everything it needs after loading.
+ *
+ * @param story Story to be validated.
+ * @throws Error if the story doesn't validate properly.
+ */
+export function validateStory(story: Story) {
+    if (story.name === undefined) {
+        story.name = "";
+    }
+    if (story.storyData === undefined) {
+        throw new Error("Story has no story data");
+    }
+    if (story.storyData.start === undefined) {
+        story.storyData.start = "Start";
+    }
+    if (
+        !/^[a-fA-F\d]{8}-[a-fA-F\d]{4}-4[a-fA-F\d]{3}-[a-fA-F\d]{4}-[a-fA-F\d]{12}$/.test(
+            story.storyData.ifid
+        )
+    ) {
+        throw new Error(
+            `Story has a badly-formatted IFID value: ${story.storyData.ifid}`
+        );
+    }
+    // Final check: see if the start passage exists
+    for (const p of story.passages) {
+        if (p.name === story.storyData.start) {
+            return;
+        }
+    }
+    throw new Error(`Starting passage ${story.storyData.start} not found`);
 }

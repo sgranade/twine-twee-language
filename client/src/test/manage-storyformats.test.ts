@@ -3,6 +3,7 @@ import { expect } from "chai";
 import * as sinon from "sinon";
 import { ImportMock } from "ts-mock-imports";
 import AdmZip = require("adm-zip");
+import { URI } from "vscode-uri";
 
 import { StoryFormat } from "../client-server";
 import { buildWorkspaceProvider } from "./builders";
@@ -121,6 +122,110 @@ describe("Manage Story Formats", () => {
             expect(result).to.equal(
                 ".storyformatpath/chapbook-2-1-3/format.js"
             );
+        });
+    });
+
+    describe("Local Story Format Reading", () => {
+        it("should read a local copy of a story format", async () => {
+            const storyFormat: StoryFormat = {
+                format: "Chapbook",
+                formatVersion: "2.1.3",
+            };
+            const provider = buildWorkspaceProvider({
+                configurationItem: ".fmtpath",
+            });
+            provider.findFiles = async (path) => {
+                if (path.includes(".fmtpath/chapbook-2-1-3")) {
+                    return [URI.parse("mock-chapbook-uri")];
+                }
+                return [];
+            };
+            provider.fs.readFile = async (uri) => {
+                if (uri.toString().includes("mock-chapbook-uri")) {
+                    return Buffer.from("I'm a story format!");
+                }
+                throw new Error("ENOENT: File not found");
+            };
+
+            const result = await uut.readLocalStoryFormat(
+                storyFormat,
+                provider
+            );
+
+            expect(result).to.equal("I'm a story format!");
+        });
+
+        it("should throw an error if the story format path can't be created", async () => {
+            const storyFormat: StoryFormat = {
+                format: "Chapbook",
+            };
+            const provider = buildWorkspaceProvider({});
+
+            let result: Error;
+            try {
+                await uut.readLocalStoryFormat(storyFormat, provider);
+            } catch (e) {
+                result = e;
+            }
+
+            expect(result.message).to.equal(
+                "Couldn't create a local path for story format Chapbook version undefined"
+            );
+        });
+    });
+
+    describe("Local Story Format Existence", () => {
+        it("should return false if the story format has no Tweego ID (i.e. has no version)", async () => {
+            const storyFormat: StoryFormat = {
+                format: "Chapbook",
+            };
+            const provider = buildWorkspaceProvider({});
+
+            const result = await uut.localStoryFormatExists(
+                storyFormat,
+                provider
+            );
+
+            expect(result).to.be.false;
+        });
+
+        it("should return true if the `format.js` file exists at the expected location", async () => {
+            const storyFormat: StoryFormat = {
+                format: "Chapbook",
+                formatVersion: "2.1.3",
+            };
+            const provider = buildWorkspaceProvider({
+                configurationItem: ".fmtpath",
+            });
+            provider.findFiles = async (path) => {
+                if (path === ".fmtpath/chapbook-2-1-3/format.js") {
+                    return [URI.parse("mock-chapbook-uri")];
+                }
+                return [];
+            };
+
+            const result = await uut.localStoryFormatExists(
+                storyFormat,
+                provider
+            );
+
+            expect(result).to.be.true;
+        });
+
+        it("should return false if the `format.js` file doesn't exist at the expected location", async () => {
+            const storyFormat: StoryFormat = {
+                format: "Chapbook",
+                formatVersion: "2.1.3",
+            };
+            const provider = buildWorkspaceProvider({});
+            provider.findFiles = async () => [];
+
+            const result = await uut.localStoryFormatExists(
+                storyFormat,
+                provider
+            );
+
+            expect(result).to.be.false;
         });
     });
 
