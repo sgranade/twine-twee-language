@@ -8,6 +8,12 @@ import {
     URI,
 } from "vscode-languageclient/node";
 
+import { clearAnnotationOnChangeEvent } from "./annotations";
+import {
+    build,
+    checkForLocalStoryFormat,
+    checkForProjectDirectories,
+} from "./build-system";
 import {
     createSC2CloseContainerMacroPattern,
     createSC2OpenContainerMacroPattern,
@@ -21,13 +27,8 @@ import {
 import { Configuration, CustomCommands } from "./constants";
 import * as notifications from "./notifications";
 import { storyFormatToLanguageID } from "./manage-storyformats";
-import { VSCodeWorkspaceProvider } from "./vscode-workspace-provider";
-import {
-    build,
-    checkForLocalStoryFormat,
-    checkForProjectDirectories,
-} from "./build-system";
 import { createStatusBarItems } from "./status-bar-items";
+import { VSCodeWorkspaceProvider } from "./vscode-workspace-provider";
 
 let client: LanguageClient;
 let currentStoryFormat: StoryFormat;
@@ -297,6 +298,9 @@ export function activate(context: vscode.ExtensionContext) {
 
     // Set up our status bar items
     createStatusBarItems(context);
+
+    // If a text document changes, see if we need to clear annotations
+    vscode.workspace.onDidChangeTextDocument(clearAnnotationOnChangeEvent);
 
     // Start the client. This will also launch the server
     client.start().then(() => checkForProjectDirectories(workspaceProvider));

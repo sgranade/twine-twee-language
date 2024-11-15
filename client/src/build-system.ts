@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { URI, Utils as UriUtils } from "vscode-uri";
 
+import { addTrailingAnnotation } from "./annotations";
 import { StoryFormat } from "./client-server";
 import { Configuration, CustomWhenContext } from "./constants";
 import {
@@ -18,8 +19,9 @@ import {
     canAddFileToStory,
     validateStory,
 } from "./build/story-loader";
-import { Story } from "./build/types";
 import { compileStory } from "./build/story-output";
+import { TweeParseError } from "./build/twee-parser";
+import { Story } from "./build/types";
 
 /**
  * Record whether a directory exists in a lookup object.
@@ -271,6 +273,7 @@ export async function build(
         return;
     }
 
+    let currentFileUri: URI; // Current file URI
     try {
         await vscode.commands.executeCommand(
             "setContext",
@@ -300,13 +303,12 @@ export async function build(
 
         // Parse all of the files into a Twine story
         const story: Story = { passages: [] };
-        let currentUri: URI;
         for (const fileUri of allFiles) {
-            currentUri = fileUri;
+            currentFileUri = fileUri;
             const contents = Buffer.from(
-                await workspaceProvider.fs.readFile(currentUri)
+                await workspaceProvider.fs.readFile(currentFileUri)
             );
-            addFileToStory(story, UriUtils.basename(currentUri), contents);
+            addFileToStory(story, UriUtils.basename(currentFileUri), contents);
         }
 
         validateStory(story);
@@ -362,7 +364,21 @@ export async function build(
         await workspaceProvider.fs.writeFile(storyUri, Buffer.from(html));
     } catch (err) {
         vscode.window.showErrorMessage(`Build failed: ${err.message}`);
-        // TODO open URI of error
+        // If we have a Twee parsing error, try to show the document and annotate the error
+        if (err instanceof TweeParseError) {
+            const doc = await vscode.workspace.openTextDocument(currentFileUri);
+            const editor = await vscode.window.showTextDocument(doc);
+            const { line } = doc.positionAt(err.start);
+            const range = doc.validateRange(
+                new vscode.Range(line, 0, line, Number.MAX_SAFE_INTEGER)
+            );
+            editor.revealRange(
+                range,
+                vscode.TextEditorRevealType.InCenterIfOutsideViewport
+            );
+            editor.selection = new vscode.Selection(line, 0, line, 0);
+            addTrailingAnnotation(editor, line, `Error: ${err.message.trim()}`);
+        }
     } finally {
         statusBarItemVisibility(StatusBarItemIDs.Building, false);
         await vscode.commands.executeCommand(
