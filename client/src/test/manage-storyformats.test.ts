@@ -126,7 +126,7 @@ describe("Manage Story Formats", () => {
     });
 
     describe("Local Story Format Reading", () => {
-        it("should read a local copy of a story format", async () => {
+        it("should read a local copy of a story format whose version matches exactly", async () => {
             const storyFormat: StoryFormat = {
                 format: "Chapbook",
                 formatVersion: "2.1.3",
@@ -135,13 +135,42 @@ describe("Manage Story Formats", () => {
                 configurationItem: ".fmtpath",
             });
             provider.findFiles = async (path) => {
-                if (path.includes(".fmtpath/chapbook-2-1-3")) {
+                if (path.includes(".fmtpath/chapbook-2-1-3/")) {
                     return [URI.parse("mock-chapbook-uri")];
                 }
                 return [];
             };
             provider.fs.readFile = async (uri) => {
                 if (uri.toString().includes("mock-chapbook-uri")) {
+                    return Buffer.from("I'm a story format!");
+                }
+                throw new Error("ENOENT: File not found");
+            };
+
+            const result = await uut.readLocalStoryFormat(
+                storyFormat,
+                provider
+            );
+
+            expect(result).to.equal("I'm a story format!");
+        });
+
+        it("should read a local copy of a story format whose less-precise version matches", async () => {
+            const storyFormat: StoryFormat = {
+                format: "Chapbook",
+                formatVersion: "2.1.3",
+            };
+            const provider = buildWorkspaceProvider({
+                configurationItem: ".fmtpath",
+            });
+            provider.findFiles = async (path) => {
+                if (path.includes(".fmtpath/chapbook-2/")) {
+                    return [URI.parse("mock-chapbook-uri")];
+                }
+                return [];
+            };
+            provider.fs.readFile = async (uri) => {
+                if (uri?.toString().includes("mock-chapbook-uri")) {
                     return Buffer.from("I'm a story format!");
                 }
                 throw new Error("ENOENT: File not found");
@@ -169,7 +198,7 @@ describe("Manage Story Formats", () => {
             }
 
             expect(result.message).to.equal(
-                "Couldn't create a local path for story format Chapbook version undefined"
+                "Couldn't find a local copy of story format Chapbook version undefined"
             );
         });
     });

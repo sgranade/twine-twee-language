@@ -156,18 +156,42 @@ export async function readLocalStoryFormat(
     storyFormat: StoryFormat,
     workspaceProvider: WorkspaceProvider
 ): Promise<string> {
-    const path = storyFormatToWorkspacePath(storyFormat, workspaceProvider);
-    if (path === undefined) {
-        throw new Error(
-            `Couldn't create a local path for story format ${storyFormat.format} version ${storyFormat.formatVersion}`
+    const currentStoryFormat = {
+        format: storyFormat.format,
+        formatVersion: storyFormat.formatVersion,
+    };
+    while (currentStoryFormat.formatVersion) {
+        const path = storyFormatToWorkspacePath(
+            currentStoryFormat,
+            workspaceProvider
         );
+        if (path === undefined) {
+            throw new Error(
+                `Couldn't create a local path for story format ${currentStoryFormat.format} version ${currentStoryFormat.formatVersion}`
+            );
+        }
+        const storyFormatUri = (
+            await workspaceProvider.findFiles(path, undefined, 1)
+        )[0];
+        // If we didn't find a file, try reducing the precision of the story format version
+        // (so "2.1.3" becomes "2.1", while "2.1" would become "2")
+        if (storyFormatUri === undefined) {
+            const formatParts = currentStoryFormat.formatVersion.split(".");
+            if (formatParts.length < 2) {
+                break;
+            }
+            currentStoryFormat.formatVersion = formatParts
+                .slice(0, -1)
+                .join(".");
+        } else {
+            return Buffer.from(
+                await workspaceProvider.fs.readFile(storyFormatUri)
+            ).toString("utf-8");
+        }
     }
-    const storyFormatUri = (
-        await workspaceProvider.findFiles(path, undefined, 1)
-    )[0];
-    return Buffer.from(
-        await workspaceProvider.fs.readFile(storyFormatUri)
-    ).toString("utf-8");
+    throw new Error(
+        `Couldn't find a local copy of story format ${currentStoryFormat.format} version ${currentStoryFormat.formatVersion}`
+    );
 }
 
 /**
