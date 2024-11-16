@@ -2,6 +2,12 @@
 
 Changes to the extension.
 
+## Unreleased
+
+### Fixed
+
+-   Chapbook: Custom inserts with defined completions are no longer listed twice in the completions list.
+
 ## [0.2.0] - 2024 11 15
 
 ### Added

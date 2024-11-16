@@ -16,7 +16,11 @@ import {
     findStartOfModifierOrInsert,
     getChapbookDefinitions,
 } from "./chapbook-parser";
-import { ChapbookFunctionInfo, OChapbookSymbolKind } from "./types";
+import {
+    ChapbookFunctionInfo,
+    ChapbookSymbol,
+    OChapbookSymbolKind,
+} from "./types";
 import { all as allInserts } from "./inserts";
 import { all as allModifiers } from "./modifiers";
 import { ArgumentRequirement, InsertProperty, ValueType } from "./types";
@@ -410,7 +414,16 @@ function generateInsertCompletions(
         let placeholderCount = 1;
         const insertCompletions: CompletionItem[] = [];
         for (const insert of inserts) {
-            for (const label of insert.completions ?? []) {
+            // Completions can be explicitly defined, but if not,
+            // use the insert's name or (if a custom insert) contents
+            let completions = insert.completions
+                ? insert.completions
+                : ChapbookSymbol.is(insert) && insert.contents
+                  ? [insert.contents]
+                  : insert.name
+                    ? [insert.name]
+                    : [];
+            for (const label of completions) {
                 let textEditText = label;
                 if (
                     colonMissing &&
@@ -437,16 +450,6 @@ function generateInsertCompletions(
                     textEditText: textEditText,
                 });
             }
-        }
-        for (const customInsert of getChapbookDefinitions(
-            OChapbookSymbolKind.CustomInsert,
-            index
-        )) {
-            insertCompletions.push({
-                label: customInsert.contents,
-                kind: CompletionItemKind.Function,
-                textEditText: customInsert.contents,
-            });
         }
 
         // If we have a one-word insert (so far), it could also be a variable (or property), so add those completions in

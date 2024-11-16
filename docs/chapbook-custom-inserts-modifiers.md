@@ -5,7 +5,7 @@ The extension recognizes [custom inserts] and [modifiers][custom modifiers] for 
 -   `name` (string): The custom insert/modifier's name.
 -   `syntax` (string): What the author will type to use your custom insert/modifier, such as "[custom modifier]" or "{new insert: 'text to display'}". Shown when hovering over the insert/modifier.
 -   `description` (string): What your custom insert/modifier does. Shown when hovering over it.
--   `completions` (string or array of strings): The text to be used when VS Code tries to auto-complete your insert/modifier. If the insert or modifier can be invoked in multiple ways, use an array of strings. For example, the `[if]` and `[else]` modifiers are represented by a single modifier, and its completions are `['if', 'else']`.
+-   `completions` (string or array of strings): The text to be used when VS Code tries to auto-complete your insert/modifier. If the insert or modifier can be invoked in multiple ways, use an array of strings. For example, the `[if]` and `[else]` modifiers are represented by a single modifier, and its completions are `['if', 'else']`. If not defined, then the insert or modifier's `name` is used.
 -   `arguments` (object; see below): The argument and (for custom inserts) properties the custom insert/modifier takes, whether they're required or optional, and their default values.
 
 Here's how the example custom modifier from the Chapbook documentation could use these properties.
