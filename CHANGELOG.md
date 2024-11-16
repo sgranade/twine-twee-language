@@ -2,13 +2,13 @@
 
 Changes to the extension.
 
-## Unreleased
+## [0.2.0] - 2024 11 15
 
 ### Added
 
 -   New build system.
-    -   Automatically downloads local copies of the story format (Chapbook and SugarCube only).
     -   Compiles games into playable `.html` files.
+    -   Automatically downloads local copies of the story format (Chapbook and SugarCube only).
 
 ### Fixed
 
