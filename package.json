@@ -196,16 +196,6 @@
 					"type": "string",
 					"default": ".storyformats",
 					"description": "Directory relative to the root level of the project where Twine story formats are stored."
-				},
-				"twineTweeLanguage.files.include": {
-					"type": "string",
-					"default": "**/*.{tw,twee}",
-					"markdownDescription": "Files to include as Twee files. Supports [glob patterns](https://code.visualstudio.com/docs/editor/glob-patterns), which should be *relative* to the workspace folders (e.g. `src/story/*.{tw,twee}`)."
-				},
-				"twineTweeLanguage.files.exclude": {
-					"type": "string",
-					"default": "",
-					"markdownDescription": "Files and directories to exclude from Twee files searches. Supports [glob patterns](https://code.visualstudio.com/docs/editor/glob-patterns). For example, to exclude the directories `skip` and `ignore`, use `{skip/**,ignore/**}`."
 				}
 			}
 		},

@@ -193,16 +193,16 @@ async function onUpdatedSugarCube2MacroInfo(e: SC2MacroInfo[]) {
         );
 }
 
-const includeFiles = (): string =>
-    workspaceProvider.getConfigurationItem(
+const storyFilesGlob = (): string => {
+    let dir = workspaceProvider.getConfigurationItem(
         Configuration.BaseSection,
-        Configuration.FilesInclude
+        Configuration.StoryFilesDirectory
     ) as string;
-const excludeFiles = (): string =>
-    workspaceProvider.getConfigurationItem(
-        Configuration.BaseSection,
-        Configuration.FilesExclude
-    ) as string;
+    if (!dir.endsWith("/")) {
+        dir += "/";
+    }
+    return dir + "**/**.{tw,twee}";
+};
 
 export function activate(context: vscode.ExtensionContext) {
     // The server is implemented in node
@@ -253,13 +253,10 @@ export function activate(context: vscode.ExtensionContext) {
     // Handle configuration changes
     context.subscriptions.push(
         vscode.workspace.onDidChangeConfiguration((e) => {
-            // If the user changes what files to include or exclude, request a re-index
+            // If the user changes what directories include story files, request a re-index
             if (
                 e.affectsConfiguration(
-                    `${Configuration.BaseSection}.${Configuration.FilesInclude}`
-                ) ||
-                e.affectsConfiguration(
-                    `${Configuration.BaseSection}.${Configuration.FilesExclude}`
+                    `${Configuration.BaseSection}.${Configuration.StoryFilesDirectory}`
                 )
             ) {
                 client.sendNotification(CustomMessages.RequestReindex);
@@ -280,9 +277,9 @@ export function activate(context: vscode.ExtensionContext) {
 
     // Handle file requests
     client.onRequest(FindTweeFilesRequest, async () => {
-        return (
-            await workspaceProvider.findFiles(includeFiles(), excludeFiles())
-        ).map((f) => f.toString());
+        return (await workspaceProvider.findFiles(storyFilesGlob())).map((f) =>
+            f.toString()
+        );
     });
     client.onRequest(FindFilesRequest, async (glob: string) => {
         return (

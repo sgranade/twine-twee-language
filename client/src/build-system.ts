@@ -335,6 +335,7 @@ export async function build(
                 true,
                 workspaceProvider
             );
+            return;
         }
 
         // Compile to an HTML string
