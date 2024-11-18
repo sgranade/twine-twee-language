@@ -22,5 +22,6 @@ export class VSCodeWorkspaceProvider implements WorkspaceProvider {
         readDirectory: workspace.fs.readDirectory,
         readFile: workspace.fs.readFile,
         writeFile: workspace.fs.writeFile,
+        copy: workspace.fs.copy,
     };
 }

@@ -77,6 +77,23 @@ export interface WorkspaceProvider {
          * @param content The new content of the file.
          */
         writeFile: (uri: URI, content: Uint8Array) => Thenable<void>;
+        /**
+         * Copy files or folders.
+         *
+         * @param source The existing file.
+         * @param target The destination location.
+         * @param options Defines if existing files should be overwritten.
+         */
+        copy(
+            source: URI,
+            target: URI,
+            options?: {
+                /**
+                 * Overwrite the file if it does exist.
+                 */
+                overwrite?: boolean;
+            }
+        ): Thenable<void>;
     };
 }
 

@@ -9,6 +9,7 @@ export enum Configuration {
     DownloadStoryFormat = "project.downloadStoryFormat",
     StoryFilesDirectory = "project.storyFilesDirectory",
     BuildDirectory = "project.buildDirectory",
+    IncludeDirectory = "project.includeDirectory",
     OutputFile = "project.outputFile",
     StoryFormatsDirectory = "project.storyFormatsDirectory",
     Twee3WarningUnknownMacro = "twee-3.warning.unknownMacro",

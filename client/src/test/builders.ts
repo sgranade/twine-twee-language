@@ -16,6 +16,7 @@ export function buildWorkspaceProvider({
             readDirectory: async () => [],
             readFile: async () => Buffer.from(fileContents),
             writeFile: async () => {},
+            copy: async () => {},
         },
     };
 }

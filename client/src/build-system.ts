@@ -89,35 +89,22 @@ export async function checkForProjectDirectories(
     }
 
     const config = vscode.workspace.getConfiguration(Configuration.BaseSection);
-    const storyFilesDirectory = removeEndingSlash(
-        config.get(Configuration.StoryFilesDirectory) as string
-    );
-    const buildDirectory = removeEndingSlash(
-        config.get(Configuration.BuildDirectory) as string
-    );
-    const storyFormatDirectory = removeEndingSlash(
-        config.get(Configuration.StoryFormatsDirectory) as string
-    );
+    const projectDirs = [
+        Configuration.StoryFormatsDirectory,
+        Configuration.StoryFilesDirectory,
+        Configuration.IncludeDirectory,
+        Configuration.BuildDirectory,
+    ].map((key) => removeEndingSlash(config.get(key) as string));
 
     const directoriesExist: Record<string, boolean> = {};
-    await recordDirectoryExistence(
-        storyFilesDirectory,
-        rootUri,
-        directoriesExist,
-        workspaceProvider
-    );
-    await recordDirectoryExistence(
-        buildDirectory,
-        rootUri,
-        directoriesExist,
-        workspaceProvider
-    );
-    await recordDirectoryExistence(
-        storyFormatDirectory,
-        rootUri,
-        directoriesExist,
-        workspaceProvider
-    );
+    for (const d of projectDirs) {
+        await recordDirectoryExistence(
+            d,
+            rootUri,
+            directoriesExist,
+            workspaceProvider
+        );
+    }
     if (!Object.values(directoriesExist).includes(false)) {
         // All of the directories exist
         return;
@@ -361,8 +348,52 @@ export async function build(
             }
             storyFilename += "html";
         }
-        const storyUri = UriUtils.joinPath(rootUri, buildDir, storyFilename);
+        const buildDirUri = UriUtils.joinPath(rootUri, buildDir);
+        const storyUri = UriUtils.joinPath(buildDirUri, storyFilename);
         await workspaceProvider.fs.writeFile(storyUri, Buffer.from(html));
+
+        // If the include directory exists and isn't the root directory, copy all files from there into the build folder
+        const includeDir = removeEndingSlash(
+            workspaceProvider.getConfigurationItem(
+                Configuration.BaseSection,
+                Configuration.IncludeDirectory
+            )
+        );
+        if (includeDir) {
+            // The URI of the include directory assuming it lives in the first workspace
+            const includeRootWorkspaceDir = UriUtils.joinPath(
+                rootUri,
+                includeDir
+            ).toString();
+            for (const includeFileUri of await workspaceProvider.findFiles(
+                includeDir + "/**"
+            )) {
+                // To replicate the sub-directory structure, we can't just get the filename's
+                // basename. Instead, we need to remove the leading directories up to and
+                // including the include directory in the workspace.
+                let includeFilepath = "ERROR";
+                const includeFileStr = includeFileUri.toString();
+                // First see if the included file is in the root workspace's include directory
+                const ndx = includeFileStr.indexOf(includeRootWorkspaceDir);
+                if (ndx !== -1) {
+                    includeFilepath = includeFileStr.slice(
+                        ndx + includeRootWorkspaceDir.length
+                    );
+                } else {
+                    // As a fallback, try to remove everything before the name of the include
+                    // directory, which can give odd results if that name shows up multiple
+                    // times in the URI (ex: `file://root/include/fonts/include/font.otf`)
+                    includeFilepath = includeFileStr
+                        .split(includeDir, 1)
+                        .slice(-1)[0];
+                }
+                await workspaceProvider.fs.copy(
+                    includeFileUri,
+                    UriUtils.joinPath(buildDirUri, includeFilepath),
+                    { overwrite: true }
+                );
+            }
+        }
     } catch (err) {
         vscode.window.showErrorMessage(`Build failed: ${err.message}`);
         // If we have a Twee parsing error, try to show the document and annotate the error

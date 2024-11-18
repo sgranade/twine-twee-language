@@ -4,11 +4,17 @@ Changes to the extension.
 
 ## Unreleased
 
+### Added
+
+-   Build system: You can now include files without bundling them into the `.html` file.
+
 ### Fixed
 
 -   Chapbook: Custom inserts with defined completions are no longer listed twice in the completions list.
 
 ## [0.2.0] - 2024 11 15
+
+The extension has a new build system to turn your games into playable `.html` files.
 
 ### Added
 
@@ -22,12 +28,16 @@ Changes to the extension.
 
 ## [0.1.2] - 2024 11 07
 
+More updated support for SugarCube.
+
 ### Added
 
 -   SugarCube: Arguments to macros like `<<set>>` that take expressions are now fully parsed.
 -   SugarCube: Expressions that contain backquotes are now fully parsed.
 
 ## [0.1.1] - 2024 11 05
+
+Updated support for SugarCube.
 
 ### Added
 
