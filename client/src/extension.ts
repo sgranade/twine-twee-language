@@ -46,10 +46,10 @@ const workspaceProvider = new VSCodeWorkspaceProvider();
 function registerCommands(context: vscode.ExtensionContext) {
     const commands = [
         vscode.commands.registerCommand(CustomCommands.BuildGame, () =>
-            build({}, workspaceProvider)
+            build({}, workspaceProvider, currentStoryFormat)
         ),
         vscode.commands.registerCommand(CustomCommands.BuildGameTest, () =>
-            build({ debug: true }, workspaceProvider)
+            build({ debug: true }, workspaceProvider, currentStoryFormat)
         ),
         vscode.commands.registerCommand(
             CustomCommands.DownloadStoryFormat,

@@ -245,14 +245,48 @@ export async function checkForLocalStoryFormat(
 }
 
 /**
+ * Reads a story format from a local copy or asks the user to download if it doesn't exist.
+ *
+ * If the story format isn't found and the user's prompted about whether
+ * or not to download it, this function doesn't wait for that response.
+ *
+ * @param storyFormat Story format to read from the local cache.
+ * @param workspaceProvider Workspace provider.
+ * @returns Story format contents as a string, or undefined if it couldn't be read.
+ * @throws Error if the format can't be read for any reason other than it not being found.
+ */
+export async function readLocalStoryFormatOrAskToDownload(
+    storyFormat: StoryFormat,
+    workspaceProvider: WorkspaceProvider
+): Promise<string | undefined> {
+    try {
+        return await readLocalStoryFormat(storyFormat, workspaceProvider);
+    } catch (err) {
+        // If it's any error other than "file not found", throw
+        if (!err.message.includes("ENOENT")) {
+            throw err;
+        }
+
+        await vscode.window.showErrorMessage(
+            `Couldn't find a local copy of the story format ${storyFormat.format}`
+        );
+        // Don't await this call so we don't wait around for the user to make up their mind
+        checkForLocalStoryFormat(storyFormat, true, workspaceProvider);
+        return undefined;
+    }
+}
+
+/**
  * Build the story, turning it into an HTML file.
  *
  * @param options Options which, if true, are added to the story.
  * @param workspaceProvider Workspace provider
+ * @param storyFormat Story format for the story, if already known.
  */
 export async function build(
     options: Record<string, boolean>,
-    workspaceProvider: WorkspaceProvider
+    workspaceProvider: WorkspaceProvider,
+    storyFormat?: StoryFormat
 ) {
     const rootUri = workspaceProvider.rootWorkspaceUri();
     if (rootUri === undefined) {
@@ -262,6 +296,22 @@ export async function build(
 
     let currentFileUri: URI; // Current file URI
     try {
+        let storyFormatData: string;
+
+        // Get the story format, if defined
+        if (storyFormat !== undefined) {
+            const maybeStoryFormatData =
+                await readLocalStoryFormatOrAskToDownload(
+                    storyFormat,
+                    workspaceProvider
+                );
+            if (maybeStoryFormatData === undefined) {
+                // If it's not read, then return
+                return;
+            }
+            storyFormatData = maybeStoryFormatData;
+        }
+
         await vscode.commands.executeCommand(
             "setContext",
             CustomWhenContext.Building,
@@ -300,29 +350,24 @@ export async function build(
 
         validateStory(story);
 
-        // Get the story format
-        let storyFormatData: string;
-        try {
-            storyFormatData = await readLocalStoryFormat(
-                story.storyData.storyFormat,
-                workspaceProvider
-            );
-        } catch (err) {
-            // If it's any error other than "file not found", throw
-            if (!err.message.includes("ENOENT")) {
-                throw err;
+        // Get the story format if it hasn't already been gotten or if the newly-parsed
+        // story has a different story format than what was passed
+        if (
+            storyFormat === undefined ||
+            story.storyData.storyFormat.format !== storyFormat.format ||
+            story.storyData.storyFormat.formatVersion !==
+                storyFormat.formatVersion
+        ) {
+            const maybeStoryFormatData =
+                await readLocalStoryFormatOrAskToDownload(
+                    storyFormat,
+                    workspaceProvider
+                );
+            if (maybeStoryFormatData === undefined) {
+                // If it's not read, then return
+                return;
             }
-
-            await vscode.window.showErrorMessage(
-                `Couldn't find a local copy of the story format ${story.storyData.storyFormat.format}`
-            );
-            // Don't await this call so we close the status bar item in the finally clause
-            checkForLocalStoryFormat(
-                story.storyData.storyFormat,
-                true,
-                workspaceProvider
-            );
-            return;
+            storyFormatData = maybeStoryFormatData;
         }
 
         // Compile to an HTML string
