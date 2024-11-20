@@ -11,6 +11,81 @@ import { buildWorkspaceProvider } from "./builders";
 import * as uut from "../manage-storyformats";
 
 describe("Manage Story Formats", () => {
+    describe("Cache Story Formats", () => {
+        it("should cache the information about the story format", async () => {
+            const storyFormat: StoryFormat = {
+                format: "Chapbook",
+                formatVersion: "2.1.3",
+            };
+            const provider = buildWorkspaceProvider({});
+            provider.findFiles = async () => [];
+
+            await uut.cacheStoryFormat(storyFormat, provider);
+            const result = uut.getCachedStoryFormat();
+
+            expect(result).to.eql({
+                format: {
+                    format: "Chapbook",
+                    formatVersion: "2.1.3",
+                },
+            });
+        });
+
+        it("should handle an exception when reading the local story file", async () => {
+            const storyFormat: StoryFormat = {
+                format: "Chapbook",
+                formatVersion: "2.1.3",
+            };
+            const provider = buildWorkspaceProvider({});
+            provider.findFiles = async () => {
+                throw new Error("whoops");
+            };
+
+            await uut.cacheStoryFormat(storyFormat, provider);
+            const result = uut.getCachedStoryFormat();
+
+            expect(result).to.eql({
+                format: {
+                    format: "Chapbook",
+                    formatVersion: "2.1.3",
+                },
+            });
+        });
+
+        it("should cache the contents if the local story file is available", async () => {
+            const storyFormat: StoryFormat = {
+                format: "Chapbook",
+                formatVersion: "2.1.3",
+            };
+            const provider = buildWorkspaceProvider({
+                configurationItem: ".fmtpath",
+            });
+            provider.findFiles = async (path) => {
+                if (path.includes(".fmtpath/chapbook-2-1-3/")) {
+                    return [URI.parse("mock-chapbook-uri")];
+                }
+                return [];
+            };
+            provider.fs.readFile = async (uri) => {
+                if (uri.toString().includes("mock-chapbook-uri")) {
+                    return Buffer.from("I'm a story format!");
+                }
+                throw new Error("ENOENT: File not found");
+            };
+
+            await uut.cacheStoryFormat(storyFormat, provider);
+            const result = uut.getCachedStoryFormat();
+
+            expect(result).to.eql({
+                format: {
+                    format: "Chapbook",
+                    formatVersion: "2.1.3",
+                },
+                contents: "I'm a story format!",
+            });
+        });
+    });
+
     describe("Story Format to Language ID", () => {
         it("should return the generic Twee language for unsupported story formats", () => {
             const storyFormat: StoryFormat = { format: "Unknown" };

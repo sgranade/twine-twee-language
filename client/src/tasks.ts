@@ -74,6 +74,7 @@ class TwineTaskTerminal implements vscode.Pseudoterminal {
     onDidClose?: vscode.Event<number> = this.closeEmitter.event;
 
     private fileWatcher: vscode.FileSystemWatcher | undefined;
+    private provider = new VSCodeWorkspaceProvider();
 
     constructor(private flags: BuildFlags[]) {}
 
@@ -119,10 +120,7 @@ class TwineTaskTerminal implements vscode.Pseudoterminal {
                     this.buildRequested = false;
                     this.writeEmitter.fire("Starting build...\r\n");
                     const isTest = this.flags.includes("test");
-                    await build(
-                        isTest ? { debug: true } : {},
-                        new VSCodeWorkspaceProvider()
-                    );
+                    await build(isTest ? { debug: true } : {}, this.provider);
                     this.writeEmitter.fire("Build complete.\r\n");
                     if (!this.flags.includes("watch")) {
                         this.closeEmitter.fire(0);

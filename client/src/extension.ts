@@ -25,14 +25,17 @@ import {
     StoryFormat,
 } from "./client-server";
 import { Configuration, CustomCommands } from "./constants";
+import {
+    cacheStoryFormat,
+    getCachedStoryFormat,
+    storyFormatToLanguageID,
+} from "./manage-storyformats";
 import * as notifications from "./notifications";
-import { storyFormatToLanguageID } from "./manage-storyformats";
 import { createStatusBarItems } from "./status-bar-items";
-import { VSCodeWorkspaceProvider } from "./vscode-workspace-provider";
 import { TwineTaskProvider } from "./tasks";
+import { VSCodeWorkspaceProvider } from "./vscode-workspace-provider";
 
 let client: LanguageClient;
-let currentStoryFormat: StoryFormat;
 let currentStoryFormatLanguageID: string;
 let currentStoryFormatLanguageConfiguration: vscode.Disposable | undefined; // Any current language settings
 
@@ -46,19 +49,27 @@ const workspaceProvider = new VSCodeWorkspaceProvider();
 function registerCommands(context: vscode.ExtensionContext) {
     const commands = [
         vscode.commands.registerCommand(CustomCommands.BuildGame, () =>
-            build({}, workspaceProvider, currentStoryFormat)
+            build({}, workspaceProvider)
         ),
         vscode.commands.registerCommand(CustomCommands.BuildGameTest, () =>
-            build({ debug: true }, workspaceProvider, currentStoryFormat)
+            build({ debug: true }, workspaceProvider)
         ),
         vscode.commands.registerCommand(
             CustomCommands.DownloadStoryFormat,
-            () =>
-                checkForLocalStoryFormat(
-                    currentStoryFormat,
-                    true,
-                    workspaceProvider
-                )
+            () => {
+                const format = getCachedStoryFormat();
+                if (format === undefined) {
+                    vscode.window.showErrorMessage(
+                        `Can't download the project's Twine story format because it isn't known`
+                    );
+                } else {
+                    checkForLocalStoryFormat(
+                        format.format,
+                        true,
+                        workspaceProvider
+                    );
+                }
+            }
         ),
     ];
 
@@ -67,12 +78,16 @@ function registerCommands(context: vscode.ExtensionContext) {
 
 /**
  * Update the cached story format language based on the value in currentStoryFormat.
+ *
+ * @param format Story format we're updating the story format language to match.
  * @returns True if the story format language changed; false otherwise.
  */
-async function updateStoryFormatLanguage(): Promise<boolean> {
+async function updateStoryFormatLanguage(
+    format: StoryFormat
+): Promise<boolean> {
     const previousStoryFormatLanguage = currentStoryFormatLanguageID;
     currentStoryFormatLanguageID = storyFormatToLanguageID(
-        currentStoryFormat,
+        format,
         await vscode.languages.getLanguages()
     );
     return currentStoryFormatLanguageID !== previousStoryFormatLanguage;
@@ -107,15 +122,15 @@ async function updateTweeDocumentLanguage(
 
 async function onUpdatedStoryFormat(e: StoryFormat) {
     // Let's bounce if the story format hasn't changed
+    const oldFormat = getCachedStoryFormat()?.format;
     if (
-        e.format === currentStoryFormat?.format &&
-        e.formatVersion === currentStoryFormat?.formatVersion
+        e.format === oldFormat?.format &&
+        e.formatVersion === oldFormat?.formatVersion
     ) {
         return;
     }
 
-    currentStoryFormat = e;
-    if (await updateStoryFormatLanguage()) {
+    if (await updateStoryFormatLanguage(e)) {
         // If the story format ID changed, get rid of any previous language configuration.
         if (currentStoryFormatLanguageConfiguration) {
             currentStoryFormatLanguageConfiguration.dispose();
@@ -128,8 +143,10 @@ async function onUpdatedStoryFormat(e: StoryFormat) {
     }
 
     // Offer to download the story format, but only if it hasn't
-    // already been downloaded
-    checkForLocalStoryFormat(currentStoryFormat, false, workspaceProvider);
+    // already been downloaded. Once done, cache the story format.
+    checkForLocalStoryFormat(e, false, workspaceProvider).then(() =>
+        cacheStoryFormat(e, workspaceProvider)
+    );
 }
 
 async function onUpdatedSugarCube2MacroInfo(e: SC2MacroInfo[]) {

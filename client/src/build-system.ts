@@ -6,6 +6,7 @@ import { StoryFormat } from "./client-server";
 import { Configuration, CustomWhenContext } from "./constants";
 import {
     downloadStoryFormat,
+    getCachedStoryFormat,
     localStoryFormatExists,
     readLocalStoryFormat,
     StoryFormatDownloadSupport,
@@ -188,7 +189,7 @@ export async function checkForLocalStoryFormat(
         case StoryFormatDownloadSupport.MissingVersion:
             // Give a warning and return
             vscode.window.showInformationMessage(
-                "The story format in the :: StoryData passage has no `format-version`, limiting the available support"
+                "The story format in the :: StoryData passage has no format-version, limiting the available support"
             );
             return;
     }
@@ -281,12 +282,10 @@ export async function readLocalStoryFormatOrAskToDownload(
  *
  * @param options Options which, if true, are added to the story.
  * @param workspaceProvider Workspace provider
- * @param storyFormat Story format for the story, if already known.
  */
 export async function build(
     options: Record<string, boolean>,
-    workspaceProvider: WorkspaceProvider,
-    storyFormat?: StoryFormat
+    workspaceProvider: WorkspaceProvider
 ) {
     const rootUri = workspaceProvider.rootWorkspaceUri();
     if (rootUri === undefined) {
@@ -298,18 +297,10 @@ export async function build(
     try {
         let storyFormatData: string;
 
-        // Get the story format, if defined
-        if (storyFormat !== undefined) {
-            const maybeStoryFormatData =
-                await readLocalStoryFormatOrAskToDownload(
-                    storyFormat,
-                    workspaceProvider
-                );
-            if (maybeStoryFormatData === undefined) {
-                // If it's not read, then return
-                return;
-            }
-            storyFormatData = maybeStoryFormatData;
+        // See if we have a cached format
+        const cachedStoryFormat = getCachedStoryFormat();
+        if (cachedStoryFormat?.contents !== undefined) {
+            storyFormatData = cachedStoryFormat.contents;
         }
 
         await vscode.commands.executeCommand(
@@ -351,12 +342,14 @@ export async function build(
         validateStory(story);
 
         // Get the story format if it hasn't already been gotten or if the newly-parsed
-        // story has a different story format than what was passed
+        // story has a different story format than what's cached. (That should never happen,
+        // but weirder things have occurred.)
         if (
-            storyFormat === undefined ||
-            story.storyData.storyFormat.format !== storyFormat.format ||
+            cachedStoryFormat === undefined ||
+            story.storyData.storyFormat.format !==
+                cachedStoryFormat.format.format ||
             story.storyData.storyFormat.formatVersion !==
-                storyFormat.formatVersion
+                cachedStoryFormat.format.formatVersion
         ) {
             const maybeStoryFormatData =
                 await readLocalStoryFormatOrAskToDownload(

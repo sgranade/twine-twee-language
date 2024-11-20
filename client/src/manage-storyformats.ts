@@ -6,6 +6,49 @@ import { Configuration } from "./constants";
 import { WorkspaceProvider } from "./workspace-provider";
 
 /**
+ * In-memory cache of the story's format.
+ */
+export interface CachedStoryFormat {
+    /**
+     * Information about the story format.
+     */
+    format: StoryFormat;
+    /**
+     * Contents of the format's `format.js` file, if available.
+     */
+    contents?: string;
+}
+
+let cachedStoryFormat: CachedStoryFormat | undefined;
+
+/**
+ * Cache a story format.
+ *
+ * If the story format is available locally, its contents will be
+ * cached as well. Await the function if you need that to be completed
+ * before continuing.
+ *
+ * @param format Story format to cache.
+ * @param workspaceProvider Workspace provider.
+ */
+export async function cacheStoryFormat(
+    format: StoryFormat,
+    workspaceProvider: WorkspaceProvider
+) {
+    cachedStoryFormat = { format };
+    try {
+        cachedStoryFormat.contents = await readLocalStoryFormat(
+            format,
+            workspaceProvider
+        );
+    } catch {}
+}
+
+export function getCachedStoryFormat(): CachedStoryFormat | undefined {
+    return cachedStoryFormat;
+}
+
+/**
  * Get the language ID that corresponds to a given story format.
  *
  * @param storyFormat The story format whose ID we need.
