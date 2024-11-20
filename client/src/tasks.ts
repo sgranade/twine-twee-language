@@ -1,16 +1,19 @@
 import * as vscode from "vscode";
+import { Utils as UriUtils } from "vscode-uri";
 
 import { build } from "./build-system";
-import { WorkspaceProvider } from "./workspace-provider";
+import { VSCodeWorkspaceProvider } from "./vscode-workspace-provider";
+
+type BuildFlags = "test" | "watch";
 
 /**
  * Task definition for Twine build tasks.
  */
 interface TwineBuildTaskDefinition extends vscode.TaskDefinition {
     /**
-     * Whether we're building in test mode.
+     * Build flags, such as "test" or "watch".
      */
-    test: boolean;
+    flags: BuildFlags[];
 }
 
 /**
@@ -20,41 +23,44 @@ export class TwineTaskProvider implements vscode.TaskProvider {
     static TwineBuildScriptType = "twine";
     private tasks: vscode.Task[] | undefined;
 
-    constructor(private workspaceProvider: WorkspaceProvider) {}
-
     public async provideTasks(): Promise<vscode.Task[]> {
         return this.getTasks();
     }
 
     public resolveTask(_task: vscode.Task): vscode.Task | undefined {
-        const test: boolean = _task.definition.test;
-        if (test !== undefined) {
-            return this.getTask(test);
+        const flags: BuildFlags[] = _task.definition.flags;
+        if (flags !== undefined) {
+            return this.getTask(flags);
         }
         return undefined;
     }
 
     private getTasks(): vscode.Task[] {
         if (this.tasks === undefined) {
-            this.tasks = [this.getTask(true), this.getTask(false)];
+            this.tasks = [
+                this.getTask([]),
+                this.getTask(["test"]),
+                this.getTask(["watch"]),
+                this.getTask(["test", "watch"]),
+            ];
         }
         return this.tasks;
     }
 
-    private getTask(test: boolean): vscode.Task {
+    private getTask(flags: BuildFlags[]): vscode.Task {
         const definition: TwineBuildTaskDefinition = {
             type: TwineTaskProvider.TwineBuildScriptType,
-            test,
+            flags,
         };
         return new vscode.Task(
             definition,
             vscode.TaskScope.Workspace,
-            `Build${test ? " (test mode)" : ""}`,
+            `${flags.includes("watch") ? "Watch" : "Build"}${flags.includes("test") ? " (test mode)" : ""}`,
             TwineTaskProvider.TwineBuildScriptType,
             new vscode.CustomExecution(
                 async (): Promise<vscode.Pseudoterminal> => {
                     // When the task is executed, set up the pseudoterminal
-                    return new TwineTaskTerminal(this.workspaceProvider, test);
+                    return new TwineTaskTerminal(flags);
                 }
             )
         );
@@ -67,26 +73,65 @@ class TwineTaskTerminal implements vscode.Pseudoterminal {
     private closeEmitter = new vscode.EventEmitter<number>();
     onDidClose?: vscode.Event<number> = this.closeEmitter.event;
 
-    constructor(
-        private workspaceProvider: WorkspaceProvider,
-        private test: boolean
-    ) {}
+    private fileWatcher: vscode.FileSystemWatcher | undefined;
+
+    constructor(private flags: BuildFlags[]) {}
 
     open(): void {
+        if (this.flags.includes("watch")) {
+            this.fileWatcher = vscode.workspace.createFileSystemWatcher(
+                new vscode.RelativePattern(
+                    vscode.workspace.workspaceFolders[0],
+                    "**/*.{twee, tw}"
+                )
+            );
+            this.fileWatcher.onDidChange((uri) => this.doBuild(uri));
+            this.fileWatcher.onDidCreate((uri) => this.doBuild(uri));
+            this.fileWatcher.onDidDelete((uri) => this.doBuild(uri));
+        }
         this.doBuild();
     }
 
-    close(): void {}
+    close(): void {
+        if (this.fileWatcher) {
+            this.fileWatcher.dispose();
+        }
+    }
 
-    private async doBuild(): Promise<void> {
+    private building: boolean = false;
+    private buildRequested: boolean = false;
+
+    private async doBuild(uri?: vscode.Uri): Promise<void> {
+        this.buildRequested = true;
+        // Don't have dueling builds
+        if (this.building) {
+            return;
+        }
         return new Promise<void>(async (resolve) => {
-            this.writeEmitter.fire("Starting build...\r\n");
-            await build(
-                this.test ? { debug: true } : {},
-                this.workspaceProvider
-            );
-            this.writeEmitter.fire("Build complete.\r\n\r\n");
-            resolve();
+            if (uri !== undefined) {
+                this.writeEmitter.fire(
+                    `\r\nFile changed: ${UriUtils.basename(uri)}\r\n`
+                );
+            }
+            try {
+                this.building = true;
+                while (this.buildRequested) {
+                    this.buildRequested = false;
+                    this.writeEmitter.fire("Starting build...\r\n");
+                    const isTest = this.flags.includes("test");
+                    await build(
+                        isTest ? { debug: true } : {},
+                        new VSCodeWorkspaceProvider()
+                    );
+                    this.writeEmitter.fire("Build complete.\r\n");
+                    if (!this.flags.includes("watch")) {
+                        this.closeEmitter.fire(0);
+                        resolve();
+                    }
+                }
+            } finally {
+                this.building = false;
+            }
         });
     }
 }

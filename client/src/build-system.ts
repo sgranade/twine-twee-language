@@ -360,7 +360,7 @@ export async function build(
         ) {
             const maybeStoryFormatData =
                 await readLocalStoryFormatOrAskToDownload(
-                    storyFormat,
+                    story.storyData.storyFormat,
                     workspaceProvider
                 );
             if (maybeStoryFormatData === undefined) {

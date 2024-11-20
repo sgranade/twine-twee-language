@@ -302,7 +302,7 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.tasks.registerTaskProvider(
             TwineTaskProvider.TwineBuildScriptType,
-            new TwineTaskProvider(workspaceProvider)
+            new TwineTaskProvider()
         )
     );
 
