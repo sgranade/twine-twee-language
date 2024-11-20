@@ -7,6 +7,7 @@ Changes to the extension.
 ### Added
 
 -   Build system: You can now include files without bundling them into the `.html` file.
+-   Build system: New `Watch` task continuously builds the story whenever source code is changed.
 
 ### Fixed
 

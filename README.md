@@ -54,11 +54,11 @@ The extension determines what story format to use based on the `format` property
 
 The extension can turn your story into a playable file. It bundles all files in the source directory (default: `src`), combines them with the appropriate story format in the story formats directory (default: `.storyformats`), and creates an `.html` file in the build directory (default: `build`). The extension bundles all files [supported by Tweego][Tweego files] except for `.tw2`, `.twee2`, `.htm`, and `.html`.
 
-There are two ways you can build your story. One, the extension includes two commands to build the story. Open the [command palette] and begin typing `Twine`. The palette will list all commands provided by the extension. Select either `Build Game` or `Build Game (test mode)` to build your game.
+There are two ways you can build your story. One, the extension includes two commands to build the story. To run a command, pen the [command palette] and begin typing `Twine`. The palette will list all commands provided by the extension. Select either `Build Game` or `Build Game (test mode)` to build your game.
 
 ![Build Game Commands](https://raw.githubusercontent.com/sgranade/twine-twee-language/main/images/twine-extension-commands.png)
 
-Two, the extension also provides native VS Code tasks so that you can build the story using the `Ctrl+Shift+B` shortcut. Open the comand palette and select the `Run Tasks` command. In the list of task folder that appears, select the `Twine` folder. Then select either `twine: Build` or `twine: Build (test mode)`. When it asks you what kind of errors or warnings to scan for, select `Continue without scanning the build output`.
+Two, the extension also provides native VS Code tasks so that you can build the story using the `Ctrl+Shift+B` shortcut. The tasks include `Watch` tasks that rebuild the game any time you save your Twee files. To run a task, pen the comand palette and select the `Run Tasks` command. In the list of task folder that appears, select the `Twine` folder. Then select one of the tasks. When it asks you what kind of errors or warnings to scan for, select `Continue without scanning the build output`.
 
 ![Build Game Tasks](https://raw.githubusercontent.com/sgranade/twine-twee-language/main/images/twine-extension-tasks.png)
 
