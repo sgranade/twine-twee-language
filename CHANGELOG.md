@@ -4,8 +4,11 @@ Changes to the extension.
 
 ## Unreleased
 
+You can now view compiled Twine games natively in VS Code.
+
 ### Added
 
+-   You can run compiled Twine games directly within VS Code.
 -   Build system: You can now include files without bundling them into the `.html` file.
 -   Build system: New `Watch` task continuously builds the story whenever source code is changed.
 

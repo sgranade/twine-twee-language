@@ -21,6 +21,7 @@ export enum Configuration {
 export enum CustomCommands {
     BuildGame = "twineTweeLanguage.buildGame",
     BuildGameTest = "twineTweeLanguage.buildGameTest",
+    RunGame = "twineTweeLanguage.runGame",
     DownloadStoryFormat = "twineTweeLanguage.downloadStoryFormat",
 }
 

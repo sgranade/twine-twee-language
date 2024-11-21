@@ -64,6 +64,55 @@ function removeEndingSlash(str: string): string {
     return str;
 }
 
+interface BuildDirAndStoryUris {
+    /**
+     * URI to the build directory.
+     */
+    build: URI;
+    /**
+     * URI to the story file.
+     */
+    story: URI;
+}
+
+/**
+ * Get URIs to the build directory and story file.
+ *
+ * @param workspaceProvider Workspace provider.
+ * @param storyName Name (title) of the story, if known.
+ * @returns URIs to the build directory and story file.
+ */
+export function getBuildAndStoryUris(
+    workspaceProvider: WorkspaceProvider,
+    storyName?: string
+): BuildDirAndStoryUris {
+    const buildDir = workspaceProvider
+        .getConfigurationItem(
+            Configuration.BaseSection,
+            Configuration.BuildDirectory
+        )
+        .trim();
+    let storyFilename = workspaceProvider
+        .getConfigurationItem(
+            Configuration.BaseSection,
+            Configuration.OutputFile
+        )
+        .trim();
+    if (!storyFilename) {
+        storyFilename = (storyName ?? "story").replace(/ /g, "-");
+        if (!storyFilename.endsWith(".")) {
+            storyFilename += ".";
+        }
+        storyFilename += "html";
+    }
+    const buildDirUri = UriUtils.joinPath(
+        workspaceProvider.rootWorkspaceUri(),
+        buildDir
+    );
+    const storyUri = UriUtils.joinPath(buildDirUri, storyFilename);
+    return { build: buildDirUri, story: storyUri };
+}
+
 /**
  * See if we need to create project directories.
  *
@@ -367,28 +416,8 @@ export async function build(
         const html = compileStory(story, storyFormatData, options);
 
         // Write out the final game
-        let buildDir = workspaceProvider
-            .getConfigurationItem(
-                Configuration.BaseSection,
-                Configuration.BuildDirectory
-            )
-            .trim();
-        let storyFilename = workspaceProvider
-            .getConfigurationItem(
-                Configuration.BaseSection,
-                Configuration.OutputFile
-            )
-            .trim();
-        if (!storyFilename) {
-            storyFilename = (story.name ?? "story").replace(/ /g, "-");
-            if (!storyFilename.endsWith(".")) {
-                storyFilename += ".";
-            }
-            storyFilename += "html";
-        }
-        const buildDirUri = UriUtils.joinPath(rootUri, buildDir);
-        const storyUri = UriUtils.joinPath(buildDirUri, storyFilename);
-        await workspaceProvider.fs.writeFile(storyUri, Buffer.from(html));
+        const outUris = getBuildAndStoryUris(workspaceProvider, story.name);
+        await workspaceProvider.fs.writeFile(outUris.story, Buffer.from(html));
 
         // If the include directory exists and isn't the root directory, copy all files from there into the build folder
         const includeDir = removeEndingSlash(
@@ -427,7 +456,7 @@ export async function build(
                 }
                 await workspaceProvider.fs.copy(
                     includeFileUri,
-                    UriUtils.joinPath(buildDirUri, includeFilepath),
+                    UriUtils.joinPath(outUris.build, includeFilepath),
                     { overwrite: true }
                 );
             }

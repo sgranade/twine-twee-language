@@ -13,6 +13,7 @@ import {
     build,
     checkForLocalStoryFormat,
     checkForProjectDirectories,
+    getBuildAndStoryUris,
 } from "./build-system";
 import {
     createSC2CloseContainerMacroPattern,
@@ -25,6 +26,7 @@ import {
     StoryFormat,
 } from "./client-server";
 import { Configuration, CustomCommands } from "./constants";
+import { viewCompiledGame } from "./game-view";
 import {
     cacheStoryFormat,
     getCachedStoryFormat,
@@ -36,6 +38,7 @@ import { TwineTaskProvider } from "./tasks";
 import { VSCodeWorkspaceProvider } from "./vscode-workspace-provider";
 
 let client: LanguageClient;
+let currentStoryTitle: string;
 let currentStoryFormatLanguageID: string;
 let currentStoryFormatLanguageConfiguration: vscode.Disposable | undefined; // Any current language settings
 
@@ -54,6 +57,13 @@ function registerCommands(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand(CustomCommands.BuildGameTest, () =>
             build({ debug: true }, workspaceProvider)
         ),
+        vscode.commands.registerCommand(CustomCommands.RunGame, () => {
+            const { story } = getBuildAndStoryUris(
+                workspaceProvider,
+                currentStoryTitle
+            );
+            viewCompiledGame(story);
+        }),
         vscode.commands.registerCommand(
             CustomCommands.DownloadStoryFormat,
             () => {
@@ -258,6 +268,10 @@ export function activate(context: vscode.ExtensionContext) {
 
     // Handle notifications
     context.subscriptions.push(notifications.initNotifications(client));
+    notifications.addNotificationHandler(
+        CustomMessages.UpdatedStoryTitle,
+        (e) => (currentStoryTitle = e[0])
+    );
     notifications.addNotificationHandler(
         CustomMessages.UpdatedStoryFormat,
         async (e) => await onUpdatedStoryFormat(e[0])

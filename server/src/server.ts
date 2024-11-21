@@ -572,11 +572,18 @@ async function parseTextDocument(
         }
     }
 
-    // Keep track of the story format so, if it changes, we can notify listeners
-    // and (optionally) request a full re-index
+    // Keep track of the story title and format so, if either changes, we can notify
+    // listeners and (optionally, for changed story format) request a full re-index
+    const storyTitle = projectIndex.getStoryTitle();
     const storyFormat = projectIndex.getStoryData()?.storyFormat;
+
     updateProjectIndex(document, parseLevel, projectIndex, diagnosticsOptions);
+
+    const newStoryTitle = projectIndex.getStoryTitle();
     const newStoryFormat = projectIndex.getStoryData()?.storyFormat;
+    if (newStoryTitle && newStoryTitle !== storyTitle) {
+        onStoryTitleChange(newStoryTitle);
+    }
     if (
         newStoryFormat?.format &&
         (newStoryFormat?.format !== storyFormat?.format ||
@@ -605,14 +612,23 @@ function onSCMacroChanges() {
 /**
  * Handle a changed story format.
  *
- * @param storyFormat New story format.
+ * @param format New story format.
  */
-function onStoryFormatChange(storyFormat: StoryFormat) {
-    connection.sendNotification(CustomMessages.UpdatedStoryFormat, storyFormat);
+function onStoryFormatChange(format: StoryFormat) {
+    connection.sendNotification(CustomMessages.UpdatedStoryFormat, format);
     // If the story format is SugarCube 2, we need to look for macro definition files
-    if (storyFormat.format.toLowerCase() === "sugarcube") {
+    if (format.format.toLowerCase() === "sugarcube") {
         Heartbeat.indexSugarCubeMacros();
     }
+}
+
+/**
+ * Handle a changed story title.
+ *
+ * @param title New story title.
+ */
+function onStoryTitleChange(title: string) {
+    connection.sendNotification(CustomMessages.UpdatedStoryTitle, title);
 }
 
 /**
