@@ -23,7 +23,7 @@ export interface Label {
 /**
  * A label with a number that identifies the kind of label it is.
  */
-export interface Symbol extends Label, Kind {}
+export interface ProjSymbol extends Label, Kind {}
 
 /**
  * Kind of a Twine symbol.
@@ -101,7 +101,7 @@ export interface ProjectIndex {
      * @param uri URI of the document whose index is to be updated.
      * @param definitions New list of symbols.
      */
-    setDefinitions(uri: string, definitions: Symbol[]): void;
+    setDefinitions(uri: string, definitions: ProjSymbol[]): void;
     /**
      * Set references to symbols in a document.
      * @param uri URI of the document whose index is to be updated.
@@ -153,7 +153,7 @@ export interface ProjectIndex {
      * @param uri Document URI.
      * @param kind Kind of symbol definitions to get.
      */
-    getDefinitions(uri: string, kind: number): Symbol[] | undefined;
+    getDefinitions(uri: string, kind: number): ProjSymbol[] | undefined;
     /**
      * Get a document's references, if indexed.
      * @param uri Document URI.
@@ -192,7 +192,7 @@ export interface ProjectIndex {
      * @param position Position in the document.
      * @returns Symbol, or undefined if none is found.
      */
-    getDefinitionAt(uri: string, position: Position): Symbol | undefined;
+    getDefinitionAt(uri: string, position: Position): ProjSymbol | undefined;
     /**
      * Get the symbol reference at a location in a document.
      * @param uri Document URI.
@@ -208,7 +208,7 @@ export interface ProjectIndex {
     getDefinitionBySymbolAt(
         uri: string,
         position: Position
-    ): Symbol | undefined;
+    ): ProjSymbol | undefined;
     /**
      * Get all references to a symbol based on a symbol or single reference in a document.
      * @param uri Document URI.
@@ -264,7 +264,7 @@ export class Index implements ProjectIndex {
     private _storyData?: StoryData;
     private _storyDataUri?: string;
     private _passages: Record<string, Passage[]> = {};
-    private _definitions: Record<string, RepositoryPerKind<Symbol>> = {};
+    private _definitions: Record<string, RepositoryPerKind<ProjSymbol>> = {};
     private _references: Record<string, RepositoryPerKind<References>> = {};
     private _embeddedDocuments: Record<string, EmbeddedDocument[]> = {};
     private _semanticTokens: Record<string, SemanticToken[]> = {};
@@ -290,7 +290,7 @@ export class Index implements ProjectIndex {
         }
         return repo;
     }
-    setDefinitions(uri: string, definitions: Symbol[]): void {
+    setDefinitions(uri: string, definitions: ProjSymbol[]): void {
         this._definitions[uri] = this._setPerKind(definitions);
     }
     setReferences(uri: string, references: References[]): void {
@@ -320,7 +320,7 @@ export class Index implements ProjectIndex {
     getPassages(uri: string): Passage[] | undefined {
         return this._passages[uri];
     }
-    getDefinitions(uri: string, kind: number): Symbol[] | undefined {
+    getDefinitions(uri: string, kind: number): ProjSymbol[] | undefined {
         const definitionsPerSymbolKind = this._definitions[uri];
         if (definitionsPerSymbolKind !== undefined) {
             return definitionsPerSymbolKind[kind];
@@ -368,7 +368,7 @@ export class Index implements ProjectIndex {
 
         return undefined;
     }
-    getDefinitionAt(uri: string, position: Position): Symbol | undefined {
+    getDefinitionAt(uri: string, position: Position): ProjSymbol | undefined {
         // See if the index has a passage name here
         const passage = this.getPassages(uri)?.find((p) =>
             positionInRange(position, p.name.location.range)
@@ -412,7 +412,7 @@ export class Index implements ProjectIndex {
     getDefinitionBySymbolAt(
         uri: string,
         position: Position
-    ): Symbol | undefined {
+    ): ProjSymbol | undefined {
         // Do we have a reference at the position?
         const ref = this.getReferencesAt(uri, position);
         if (ref !== undefined) {

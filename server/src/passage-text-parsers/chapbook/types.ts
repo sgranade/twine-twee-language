@@ -1,4 +1,4 @@
-import { Symbol, TwineSymbolKind } from "../../project-index";
+import { ProjSymbol, TwineSymbolKind } from "../../project-index";
 import { versionCompare } from "../../utilities";
 
 /**
@@ -190,7 +190,7 @@ export type ChapbookSymbolKind =
 /**
  * A Chapbook symbol, which corresponds to a modifier, insert, or variable.
  */
-export interface ChapbookSymbol extends Symbol, ChapbookFunctionInfo {}
+export interface ChapbookSymbol extends ProjSymbol, ChapbookFunctionInfo {}
 export namespace ChapbookSymbol {
     /**
      * Type guard for ChapbookSymbol.

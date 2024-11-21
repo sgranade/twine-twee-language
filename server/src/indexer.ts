@@ -7,7 +7,7 @@ import {
     ProjectIndex,
     References,
     StoryData,
-    Symbol,
+    ProjSymbol,
 } from "./project-index";
 import { ParseLevel, ParserCallbacks, parse } from "./parser";
 import { SemanticToken } from "./semantic-tokens";
@@ -23,8 +23,8 @@ class IndexingState {
     textDocument: TextDocument;
 
     passages: Passage[] = [];
-    definitions: Symbol[] = [];
-    references: Symbol[] = [];
+    definitions: ProjSymbol[] = [];
+    references: ProjSymbol[] = [];
     parseErrors: Diagnostic[] = [];
     semanticTokens: SemanticToken[] = [];
     embeddedDocuments: EmbeddedDocument[] = [];
@@ -60,10 +60,10 @@ export function updateProjectIndex(
         onPassage: function (passage: Passage): void {
             indexingState.passages.push(passage);
         },
-        onSymbolDefinition: function (symbol: Symbol): void {
+        onSymbolDefinition: function (symbol: ProjSymbol): void {
             indexingState.definitions.push(symbol);
         },
-        onSymbolReference: function (symbol: Symbol): void {
+        onSymbolReference: function (symbol: ProjSymbol): void {
             indexingState.references.push(symbol);
         },
         onStoryTitle: function (title: string, range: Range): void {

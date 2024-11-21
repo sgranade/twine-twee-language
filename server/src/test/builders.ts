@@ -2,7 +2,7 @@ import { Diagnostic, Range } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { EmbeddedDocument } from "../embedded-languages";
-import { Passage, StoryData, Symbol } from "../project-index";
+import { Passage, StoryData, ProjSymbol } from "../project-index";
 import { ParseLevel, ParserCallbacks, ParsingState } from "../parser";
 import { defaultDiagnosticsOptions } from "../server-options";
 import { SemanticToken } from "../semantic-tokens";
@@ -50,8 +50,8 @@ export function buildParsingState({
 
 export class MockCallbacks implements ParserCallbacks {
     public passages: Passage[] = [];
-    public definitions: Symbol[] = [];
-    public references: Symbol[] = [];
+    public definitions: ProjSymbol[] = [];
+    public references: ProjSymbol[] = [];
     public passageContents: string[] = [];
     public storyTitle?: string;
     public storyTitleRange?: Range;
@@ -64,10 +64,10 @@ export class MockCallbacks implements ParserCallbacks {
     onPassage(passage: Passage): void {
         this.passages.push(passage);
     }
-    onSymbolDefinition(symbol: Symbol): void {
+    onSymbolDefinition(symbol: ProjSymbol): void {
         this.definitions.push(symbol);
     }
-    onSymbolReference(symbol: Symbol): void {
+    onSymbolReference(symbol: ProjSymbol): void {
         this.references.push(symbol);
     }
     onStoryTitle(title: string, range: Range): void {

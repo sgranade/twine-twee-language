@@ -18,7 +18,7 @@ import {
     Passage,
     PassageMetadata,
     StoryData,
-    Symbol,
+    ProjSymbol,
     TwineSymbolKind,
 } from "./project-index";
 import {
@@ -108,8 +108,8 @@ export interface ParsingState {
  */
 export interface ParserCallbacks {
     onPassage(passage: Passage): void;
-    onSymbolDefinition(symbol: Symbol): void;
-    onSymbolReference(symbol: Symbol): void;
+    onSymbolDefinition(symbol: ProjSymbol): void;
+    onSymbolReference(symbol: ProjSymbol): void;
     onStoryTitle(title: string, range: Range): void;
     onStoryData(data: StoryData, range: Range): void;
     onEmbeddedDocument(document: EmbeddedDocument): void;
@@ -169,7 +169,7 @@ export function createSymbolFor(
     at: number,
     kind: number,
     doc: TextDocument
-): Symbol {
+): ProjSymbol {
     return {
         contents: text,
         location: createLocationFor(text, at, doc),
