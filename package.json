@@ -225,11 +225,11 @@
 		"taskDefinitions": [
 			{
 				"type": "twine",
-				"required": ["test"],
+				"required": ["flags"],
 				"properties": {
-					"test": {
-						"type": "boolean",
-						"description": "Whether to build the Twine story in test mode."
+					"flags": {
+						"type": "array",
+						"description": "Flags to the Twine build process."
 					}
 				}
 			}

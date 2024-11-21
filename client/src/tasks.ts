@@ -8,6 +8,8 @@ type BuildFlags = "test" | "watch";
 
 /**
  * Task definition for Twine build tasks.
+ *
+ * Note that this needs to be synchronized with `taskDefinitions` in package.json
  */
 interface TwineBuildTaskDefinition extends vscode.TaskDefinition {
     /**
@@ -20,7 +22,7 @@ interface TwineBuildTaskDefinition extends vscode.TaskDefinition {
  * Task provider for Twine tasks.
  */
 export class TwineTaskProvider implements vscode.TaskProvider {
-    static TwineBuildScriptType = "twine";
+    static TwineBuildScriptType = "twine"; // Synchronize w/taskDefinitions in package.json
     private tasks: vscode.Task[] | undefined;
 
     public async provideTasks(): Promise<vscode.Task[]> {
@@ -30,7 +32,9 @@ export class TwineTaskProvider implements vscode.TaskProvider {
     public resolveTask(_task: vscode.Task): vscode.Task | undefined {
         const flags: BuildFlags[] = _task.definition.flags;
         if (flags !== undefined) {
-            return this.getTask(flags);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const definition = <any>_task.definition;
+            return this.getTask(flags, definition);
         }
         return undefined;
     }
@@ -41,17 +45,22 @@ export class TwineTaskProvider implements vscode.TaskProvider {
                 this.getTask([]),
                 this.getTask(["test"]),
                 this.getTask(["watch"]),
-                this.getTask(["test", "watch"]),
+                this.getTask(["watch", "test"]),
             ];
         }
         return this.tasks;
     }
 
-    private getTask(flags: BuildFlags[]): vscode.Task {
-        const definition: TwineBuildTaskDefinition = {
-            type: TwineTaskProvider.TwineBuildScriptType,
-            flags,
-        };
+    private getTask(
+        flags: BuildFlags[],
+        definition?: TwineBuildTaskDefinition
+    ): vscode.Task {
+        if (definition === undefined) {
+            definition = {
+                type: TwineTaskProvider.TwineBuildScriptType,
+                flags,
+            };
+        }
         return new vscode.Task(
             definition,
             vscode.TaskScope.Workspace,
