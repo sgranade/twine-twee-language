@@ -36,7 +36,7 @@ export function statusBarItemVisibility(
     id: StatusBarItemIDs,
     visible: boolean
 ) {
-    let item = statusBarItems[id];
+    const item = statusBarItems[id];
     if (visible) {
         item?.show();
     } else {

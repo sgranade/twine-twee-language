@@ -20,7 +20,7 @@ function getStoryFormatSource(storyFormatContents: string): string {
         );
     }
     const rawJson = storyFormatContents.slice(start, end + 1);
-    let format: any;
+    let format: unknown;
     try {
         format = JSON.parse(rawJson);
     } catch (err) {
@@ -168,7 +168,7 @@ function storyToHtml(story: Story, options: Record<string, boolean>): string {
     const formatVersion = escapeAttrEntities(
         story.storyData.storyFormat.formatVersion
     );
-    let optionsArr: string[] = [];
+    const optionsArr: string[] = [];
     for (const [option, val] of Object.entries(options)) {
         if (val) optionsArr.push(option);
     }

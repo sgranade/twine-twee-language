@@ -42,7 +42,7 @@ export namespace JSPropertyLabel {
     /**
      * Type guard for JSPropertyLabel.
      */
-    export function is(val: any): val is JSPropertyLabel {
+    export function is(val: unknown): val is JSPropertyLabel {
         if (typeof val !== "object" || Array.isArray(val) || val === null)
             return false;
         return (val as JSPropertyLabel).scope !== undefined;

@@ -1,3 +1,4 @@
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 import AdmZip = require("adm-zip");
 import { URI, Utils } from "vscode-uri";
 
@@ -41,7 +42,9 @@ export async function cacheStoryFormat(
             format,
             workspaceProvider
         );
-    } catch {}
+    } catch {
+        // If we fail, we don't care
+    }
 }
 
 export function getCachedStoryFormat(): CachedStoryFormat | undefined {
@@ -132,7 +135,7 @@ export function storyFormatToWorkspacePath(
         return undefined;
     }
     const storyFormatDirectory =
-        workspaceProvider.getConfigurationItem(
+        workspaceProvider.getConfigurationItem<string>(
             Configuration.BaseSection,
             Configuration.StoryFormatsDirectory
         ) ?? ".";

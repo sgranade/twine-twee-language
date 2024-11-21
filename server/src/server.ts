@@ -396,7 +396,7 @@ connection.onDefinition((params: DefinitionParams): Definition | undefined => {
     return getDefinitionAt(document, params.position, projectIndex);
 });
 
-connection.onDidChangeConfiguration(async (change) => {
+connection.onDidChangeConfiguration(async () => {
     // Only re-parse if our parse-affecting options have changed
     const prev = lastSettings["twee-3"];
     const cur = (await getSettings())["twee-3"];
@@ -414,7 +414,7 @@ documents.onDidChangeContent(async (change) => {
     await validateTextDocument(change.document, undefined);
 });
 
-documents.onDidClose;
+// documents.onDidClose;
 
 connection.onDidChangeWatchedFiles((_change) => {
     for (const change of _change.changes ?? []) {

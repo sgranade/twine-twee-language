@@ -43,7 +43,7 @@ export namespace InsertProperty {
     /**
      * Type guard for InsertProperty.
      */
-    export function is(val: any): val is InsertProperty {
+    export function is(val: unknown): val is InsertProperty {
         if (typeof val !== "object" || Array.isArray(val) || val === null)
             return false;
         return (val as InsertProperty).placeholder !== undefined;
@@ -129,7 +129,7 @@ export namespace ChapbookFunctionInfo {
     /**
      * Type guard for ChapbookSymbol.
      */
-    export function is(val: any): val is ChapbookFunctionInfo {
+    export function is(val: unknown): val is ChapbookFunctionInfo {
         if (typeof val !== "object" || Array.isArray(val) || val === null)
             return false;
         return (val as ChapbookFunctionInfo).match !== undefined;
@@ -195,7 +195,7 @@ export namespace ChapbookSymbol {
     /**
      * Type guard for ChapbookSymbol.
      */
-    export function is(val: any): val is ChapbookSymbol {
+    export function is(val: unknown): val is ChapbookSymbol {
         if (typeof val !== "object" || Array.isArray(val) || val === null)
             return false;
         return (val as ChapbookSymbol).match !== undefined;

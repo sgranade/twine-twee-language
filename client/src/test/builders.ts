@@ -9,7 +9,9 @@ export function buildWorkspaceProvider({
 }): WorkspaceProvider {
     return {
         findFiles: async () => files.map((f) => URI.parse(f)),
-        getConfigurationItem: () => configurationItem,
+        getConfigurationItem: <T>() => {
+            return configurationItem as T;
+        },
         rootWorkspaceUri: () => URI.parse("file://placeholder"),
         fs: {
             createDirectory: async () => {},

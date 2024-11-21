@@ -10,7 +10,7 @@ export function getDefinitionAt(
     index: ProjectIndex
 ): Definition | undefined {
     // First: check the index
-    let definition = index.getDefinitionBySymbolAt(document.uri, position);
+    const definition = index.getDefinitionBySymbolAt(document.uri, position);
     if (definition !== undefined) return definition.location;
 
     // Second: check the story format

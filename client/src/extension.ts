@@ -221,10 +221,10 @@ async function onUpdatedSugarCube2MacroInfo(e: SC2MacroInfo[]) {
 }
 
 const storyFilesGlob = (): string => {
-    let dir = workspaceProvider.getConfigurationItem(
+    let dir = workspaceProvider.getConfigurationItem<string>(
         Configuration.BaseSection,
         Configuration.StoryFilesDirectory
-    ) as string;
+    );
     if (!dir.endsWith("/")) {
         dir += "/";
     }

@@ -576,15 +576,10 @@ function parseMacros(
         // macroBody: the body of the macro (e.g. its arguments)
         // macroEnd: "end" or "/" at the start of the macro (e.g. <</if>>)
         // macroSelfClose: "/" at the end of the macro
-        const {
-            macroName,
-            preMacroBodySpace,
-            macroBody,
-            macroEnd,
-            macroSelfClose,
-        } = m.groups as {
-            [key: string]: string;
-        };
+        const { macroName, preMacroBodySpace, macroBody, macroEnd } =
+            m.groups as {
+                [key: string]: string;
+            };
 
         const macroBodyIndex =
             macroIndex +
@@ -594,8 +589,7 @@ function parseMacros(
 
         let isOpenMacro = true, // whether the macro is an opening one (i.e. not a close or self-closing one)
             endVariant = false, // whether it's one that starts with "end"
-            name = macroName,
-            isSelfClosedMacro = false;
+            name = macroName;
 
         // Handle e.g. "<<endif>>" alternate ending macros
         // n.b. we need to do special handling because some macros may start with the letters "end"
@@ -626,7 +620,7 @@ function parseMacros(
         if (macroEnd === "/" || endVariant) isOpenMacro = false; // Note if we know this is a closing macro
 
         // Capture a reference to the macro
-        if (isOpenMacro || isSelfClosedMacro) {
+        if (isOpenMacro) {
             state.callbacks.onSymbolReference(
                 createSymbolFor(
                     name,
@@ -658,10 +652,7 @@ function parseMacros(
         if (macroInfo !== undefined) {
             // Check for macros that have been removed or aren't yet available
             const storyFormatVersion = state.storyFormat?.formatVersion;
-            if (
-                storyFormatVersion !== undefined &&
-                (isOpenMacro || isSelfClosedMacro)
-            ) {
+            if (storyFormatVersion !== undefined && isOpenMacro) {
                 if (
                     macroInfo.since !== undefined &&
                     versionCompare(storyFormatVersion, macroInfo.since) < 0

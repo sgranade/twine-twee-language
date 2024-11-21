@@ -21,7 +21,7 @@ export namespace MacroParent {
     /**
      * Type guard for MacroParent.
      */
-    export function is(val: any): val is MacroParent {
+    export function is(val: unknown): val is MacroParent {
         if (typeof val !== "object" || Array.isArray(val) || val === null)
             return false;
         const p = val as MacroParent;

@@ -249,7 +249,7 @@ export function tokenizeTwineScriptExpression(
         desugared
     );
 
-    let [vars, props] = tokenizeJavaScript(
+    const [vars, props] = tokenizeJavaScript(
         false,
         desugared,
         0, // offset of 0 since the desugared expression starts at the start of the doc

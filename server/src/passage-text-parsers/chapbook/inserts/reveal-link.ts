@@ -18,7 +18,7 @@ export const revealLink: InsertInfo = {
         passage: { placeholder: "'passage name'", type: ValueType.passage },
     },
     completions: ["reveal link"],
-    parse(args, state, chapbookState) {
+    parse(args, state) {
         const passageProp = args.props.passage;
         const textProp = args.props.text;
         // In reality, either text or passage property must be defined. If both are defined,

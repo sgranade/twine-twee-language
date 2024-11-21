@@ -238,9 +238,9 @@ function createVariableAndPropertyReferences(
     }
 }
 
-const braceMatch = /[\({['"}]/g; // For an opening "{"
-const bracketMatch = /[\({['"\]]/g; // For an opening "["
-const parenMatch = /[\({['"\)]/g; // For a nopening "("
+const braceMatch = /[({['"}]/g; // For an opening "{"
+const bracketMatch = /[({['"\]]/g; // For an opening "["
+const parenMatch = /[({['")]/g; // For a nopening "("
 
 /**
  * Find the index after the closing delimeter for an opening {, [, (, ', or ".
@@ -461,7 +461,8 @@ function parseCustomFunctionArguments(
 
             let errorNode: acorn.Node | undefined;
             let errorMessage = ""; // Placeholder
-            let errorSeverity: DiagnosticSeverity = DiagnosticSeverity.Warning;
+            const errorSeverity: DiagnosticSeverity =
+                DiagnosticSeverity.Warning;
 
             // Handle the sub-properties of firstArgument, optionalProps, and requiredProps
             if (
@@ -949,7 +950,7 @@ function parseEngineExtension(
     }
 
     // Look for new inserts or modifiers
-    const engineTemplateRegex = /engine\.template\.([^\.]+)\.add\(/g;
+    const engineTemplateRegex = /engine\.template\.([^.]+)\.add\(/g;
     let m: RegExpExecArray | null;
     while ((m = engineTemplateRegex.exec(contents)) !== null) {
         const addedContents = extractToMatchingDelimiter(
@@ -1230,9 +1231,10 @@ export function validateInsertContents(
 
     // Check for required and unknown properties
     const seenProperties: Set<string> = new Set();
-    for (const [propName, [propNameToken, propValueToken]] of Object.entries(
-        tokens.props
-    ) as [string, [Token, Token]][]) {
+    for (const [propName, [propNameToken]] of Object.entries(tokens.props) as [
+        string,
+        [Token, Token],
+    ][]) {
         let propInfo: string | InsertProperty | null | undefined =
             insert.requiredProps?.[propName];
 
@@ -1349,7 +1351,7 @@ function parseInsertContents(
     for (const [propName, [, propValueToken]] of Object.entries(
         tokens.props
     ) as [string, [Token, Token]][]) {
-        let propInfo: string | InsertProperty | null | undefined =
+        const propInfo: string | InsertProperty | null | undefined =
             insert.requiredProps[propName] ?? insert.optionalProps[propName];
 
         if (InsertProperty.is(propInfo)) {
@@ -2169,7 +2171,7 @@ function parseVarsSection(
         }
 
         // Handle the value
-        let [value, valueIndex] = skipSpaces(
+        const [value, valueIndex] = skipSpaces(
             m[2].slice(colonIndex + 1),
             m.index + m[1].length + colonIndex + 1
         );

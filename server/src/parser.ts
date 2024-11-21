@@ -460,7 +460,7 @@ export function findAndParseLinks(
 }
 
 const styleTagOpenRegex =
-    /<style\b(?=[^>]*(?:(?:type=('text\/css'|"text\/css")|lang=(css|'css'|"css")))?)(?![^\/>]*\/>$)>/gi;
+    /<style\b(?=[^>]*(?:(?:type=('text\/css'|"text\/css")|lang=(css|'css'|"css")))?)(?![^/>]*\/>$)>/gi;
 const styleTagCloseRegex = /<\/style>/gi;
 
 /**

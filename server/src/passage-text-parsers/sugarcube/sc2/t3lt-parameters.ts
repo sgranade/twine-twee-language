@@ -41,41 +41,13 @@ export type EnumRecord = Record<string, string>;
  */
 export function parseEnums(baseString: string, enums: EnumRecord): string {
     // Two replaces is currently faster in js
-    let result = baseString.replace(
+    const result = baseString.replace(
         /(?<!\\)%([\w]+)%/g,
         (_m: string, p1: string) => {
             return enums[p1] === undefined ? `%${p1} NOT FOUND%` : enums[p1];
         }
     );
     return result.replace(/\\(%[\w]+%)/g, "$1");
-}
-
-interface ParsedArguments {
-    /// Errors encountered whilst parsing
-    /// If this has entries then it may mean that the rest of the arguments were not parsed
-    errors: ArgumentParseError[];
-    /// Warnings about parts that have been parsed. These are ones we can manage to skip past and
-    // continue, usually due to guessing what you meant.
-    warnings: ArgumentParseWarning[];
-    arguments: Arg[];
-}
-enum ArgumentParseErrorKind {
-    Failure,
-    SquareBracketFailure,
-    SquareBracketExpectedCharacter,
-}
-interface ArgumentParseError {
-    kind: ArgumentParseErrorKind;
-    message?: string;
-    range: Range;
-}
-enum ArgumentParseWarningKind {
-    InvalidPassageName,
-}
-interface ArgumentParseWarning {
-    kind: ArgumentParseWarningKind;
-    message?: string;
-    range: Range;
 }
 
 /**
@@ -333,7 +305,7 @@ export function macroArgumentTokenToT3LTArg(
 
         // It is a link or an image
         if (markup.isLink) {
-            let arg: LinkArgument = {
+            const arg: LinkArgument = {
                 type: ArgType.Link,
                 syntax: LinkSyntax.Wiki,
                 range,
@@ -347,7 +319,7 @@ export function macroArgumentTokenToT3LTArg(
             }
             return arg;
         } else if (markup.isImage) {
-            let arg: ImageArgument = {
+            const arg: ImageArgument = {
                 type: ArgType.Image,
                 // TODO: should we assume that source is a string?
                 // TODO: This can actually be a passage through some Twine 1.4, but
@@ -470,7 +442,7 @@ const parameterTypes: ParameterType[] = [
         name: ["receiver"],
         validate(info: ArgumentInfo): Error | Warning | null {
             if (info.arg.type === ArgType.String) {
-                let text = info.arg.text;
+                const text = info.arg.text;
                 if (text[0] === "_" || text[0] === "$") {
                     if (text.length === 1) {
                         return new Error(
@@ -650,8 +622,9 @@ export class Parameters {
      * @param variants The variants/'overloads' of the macro's parameters.
      * @throws {Error}
      */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     constructor(variants: any[]) {
-        let result: Variant[] = [];
+        const result: Variant[] = [];
 
         for (let i = 0; i < variants.length; i++) {
             const variant = variants[i];
@@ -705,8 +678,8 @@ export class Parameters {
 
         // Due to the order mattering, we don't have to do a more complicated check.
         for (let i = 0; i < this.variants.length; i++) {
-            let left: Variant = this.variants[i];
-            let right: Variant | undefined = other.variants[i];
+            const left: Variant = this.variants[i];
+            const right: Variant | undefined = other.variants[i];
             if (right === undefined) {
                 // Certainly not equal. One of the keys is gone.
                 return false;
@@ -729,7 +702,7 @@ export class Parameters {
         // We track the current most likely variant based on type and somewhat on
         // argument count. This certainly isn't the most accurate implementation but it
         // should work well enough for now.
-        let highestVariant: ChosenVariantInformation = {
+        const highestVariant: ChosenVariantInformation = {
             variantIndex: null,
             info: {
                 errors: [],
@@ -743,7 +716,7 @@ export class Parameters {
         // TODO: Add rank based on correct argument count?
         for (let i = 0; i < this.variants.length; i++) {
             const variant = this.variants[i];
-            let info = variant.validate(args);
+            const info = variant.validate(args);
 
             if (info.rank > highestVariant.info.rank) {
                 highestVariant.info = info;
@@ -1068,7 +1041,7 @@ class Variant {
                 // We'll always succeed with a repeat, since it is zero or more.
                 return makeSuccess(argIndex, argFormatTypes, rank, warnings);
             } else if (format.kind === FormatKind.Literal) {
-                let arg = args[argIndex];
+                const arg = args[argIndex];
                 if (arg === undefined) {
                     return makeError(
                         Status.NotFoundFailure,
@@ -1247,7 +1220,7 @@ class Variant {
      * @throws {Error}
      */
     private static parseFormat(formatString: string): Format | null {
-        let lexed = Variant.lexFormat(formatString);
+        const lexed = Variant.lexFormat(formatString);
         let index: number = 0;
         // Keep track of iterations to avoid infinite loops.
         let iterations: number = 0;
@@ -1401,7 +1374,7 @@ class Variant {
                 if (op === undefined) break;
                 const bindingPower = infixBindingPower(op.kind);
                 if (bindingPower !== null) {
-                    let [lBp, rBp] = bindingPower;
+                    const [lBp, rBp] = bindingPower;
                     if (lBp < minBp) {
                         break;
                     }
@@ -1441,8 +1414,8 @@ class Variant {
     private static Identifier: RegExp = /[a-zA-Z]/;
     // Characters which the identifier parsing should stop at and let alternative parts of the code
     // handle.
-    private static IdentifierStop: RegExp = /[\|\&\+\-\s\)\(]/;
-    private static Quote: RegExp = /[\'\"]/;
+    private static IdentifierStop: RegExp = /[|&+\-\s)(]/;
+    private static Quote: RegExp = /['"]/;
     private static Digit: RegExp = /[0-9]/;
 
     /**
@@ -1456,7 +1429,7 @@ class Variant {
         // Our index within the `formatString`.
         let position: number = 0;
         // The resulting tokens.
-        let lexed: FormatLex[] = [];
+        const lexed: FormatLex[] = [];
         // Tracks the current number of iterations to avoid infinite loops or non-sane input.
         let iterations = 0;
 
@@ -1488,16 +1461,16 @@ class Variant {
                 break;
             }
 
-            let chr = formatString[position];
+            const chr = formatString[position];
             if (Variant.Whitespace.test(chr)) {
                 // Ignore it, whitespace only matters in literals.
                 position++;
             } else if (chr === "&") {
                 // &+
-                let start = position;
+                const start = position;
                 // Consume &
                 position++;
-                let next = formatString[position];
+                const next = formatString[position];
                 if (next === "+") {
                     // Consume +
                     position++;
@@ -1527,10 +1500,10 @@ class Variant {
                 }
             } else if (chr === "|") {
                 // | or |+
-                let start = position;
+                const start = position;
                 // Consume |
                 position++;
-                let next = formatString[position];
+                const next = formatString[position];
                 if (next === "+") {
                     // |+
                     // Consume +
@@ -1562,9 +1535,9 @@ class Variant {
                     );
                 }
             } else if (Variant.Quote.test(chr)) {
-                let openingQuote = chr;
+                const openingQuote = chr;
                 // Start is at the quote.
-                let start = position;
+                const start = position;
                 position++;
                 while (true) {
                     iterations++;
@@ -1574,7 +1547,7 @@ class Variant {
                         );
                     }
 
-                    let current = formatString[position];
+                    const current = formatString[position];
                     // TODO: Escape sequences:
                     // \n,\t,\f?,\x?,\u?,\\,\",\'
                     if (current === undefined) {
@@ -1612,7 +1585,7 @@ class Variant {
                     open: chr === "(",
                 });
             } else if (Variant.IdentifierStart.test(chr)) {
-                let start = position;
+                const start = position;
                 position++;
                 while (true) {
                     iterations++;
@@ -1622,7 +1595,7 @@ class Variant {
                         );
                     }
 
-                    let current = formatString[position];
+                    const current = formatString[position];
                     if (
                         current === undefined ||
                         Variant.IdentifierStop.test(current)
@@ -1648,7 +1621,7 @@ class Variant {
                 }
 
                 const identifier: string = formatString.slice(start, position);
-                let parameterType = findParameterType(identifier);
+                const parameterType = findParameterType(identifier);
                 if (parameterType !== null) {
                     lexed.push({
                         kind: FormatKind.Type,
@@ -1665,7 +1638,7 @@ class Variant {
                 formatString[position + 1] === "." &&
                 formatString[position + 2] === "."
             ) {
-                let start = position;
+                const start = position;
                 // Consume ...
                 position += 3;
 
@@ -1739,7 +1712,7 @@ interface FormatLexRepeat {
 
 // FormatKind (lexer) without the Group, since that does not appear.
 // Sadly this isn't an enum, so we still have to ues formatkind.
-type FormatParseKind = Exclude<FormatKind, FormatKind.Group>;
+// type FormatParseKind = Exclude<FormatKind, FormatKind.Group>;
 type Format =
     | FormatType
     | FormatLiteral

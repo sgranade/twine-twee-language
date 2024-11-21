@@ -5,8 +5,8 @@ import { URI } from "vscode-uri";
 
 export class VSCodeWorkspaceProvider implements WorkspaceProvider {
     findFiles = workspace.findFiles;
-    getConfigurationItem(section: string, item: string) {
-        return workspace.getConfiguration(section).get(item);
+    getConfigurationItem<T>(section: string, item: string) {
+        return workspace.getConfiguration(section).get(item) as T;
     }
     rootWorkspaceUri(): URI | undefined {
         if (

@@ -146,7 +146,7 @@ function generateModifierCompletions(
 
     // Find the end of the modifier section: ], ;, or the end of the line
     modifierStopChar.lastIndex = offset;
-    let modifierContentEnd = modifierStopChar.test(text)
+    const modifierContentEnd = modifierStopChar.test(text)
         ? modifierStopChar.lastIndex - 1
         : text.length;
 
@@ -416,7 +416,7 @@ function generateInsertCompletions(
         for (const insert of inserts) {
             // Completions can be explicitly defined, but if not,
             // use the insert's name or (if a custom insert) contents
-            let completions = insert.completions
+            const completions = insert.completions
                 ? insert.completions
                 : ChapbookSymbol.is(insert) && insert.contents
                   ? [insert.contents]

@@ -108,28 +108,27 @@ class TwineTaskTerminal implements vscode.Pseudoterminal {
         if (this.building) {
             return;
         }
-        return new Promise<void>(async (resolve) => {
-            if (uri !== undefined) {
-                this.writeEmitter.fire(
-                    `\r\nFile changed: ${UriUtils.basename(uri)}\r\n`
-                );
-            }
-            try {
-                this.building = true;
-                while (this.buildRequested) {
-                    this.buildRequested = false;
-                    this.writeEmitter.fire("Starting build...\r\n");
-                    const isTest = this.flags.includes("test");
-                    await build(isTest ? { debug: true } : {}, this.provider);
-                    this.writeEmitter.fire("Build complete.\r\n");
-                    if (!this.flags.includes("watch")) {
-                        this.closeEmitter.fire(0);
-                        resolve();
-                    }
+
+        if (uri !== undefined) {
+            this.writeEmitter.fire(
+                `\r\nFile changed: ${UriUtils.basename(uri)}\r\n`
+            );
+        }
+        try {
+            this.building = true;
+            while (this.buildRequested) {
+                this.buildRequested = false;
+                this.writeEmitter.fire("Starting build...\r\n");
+                const isTest = this.flags.includes("test");
+                await build(isTest ? { debug: true } : {}, this.provider);
+                this.writeEmitter.fire("Build complete.\r\n");
+                if (!this.flags.includes("watch")) {
+                    this.closeEmitter.fire(0);
+                    break;
                 }
-            } finally {
-                this.building = false;
             }
-        });
+        } finally {
+            this.building = false;
+        }
     }
 }

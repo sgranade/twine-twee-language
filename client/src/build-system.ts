@@ -87,13 +87,13 @@ export function getBuildAndStoryUris(
     storyName?: string
 ): BuildDirAndStoryUris {
     const buildDir = workspaceProvider
-        .getConfigurationItem(
+        .getConfigurationItem<string>(
             Configuration.BaseSection,
             Configuration.BuildDirectory
         )
         .trim();
     let storyFilename = workspaceProvider
-        .getConfigurationItem(
+        .getConfigurationItem<string>(
             Configuration.BaseSection,
             Configuration.OutputFile
         )

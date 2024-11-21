@@ -275,7 +275,7 @@ export async function generateCompletions(
     let passageDocument: EmbeddedDocument | undefined;
 
     // Embedded documents get to create their own completions
-    for (let embeddedDocument of index.getEmbeddedDocuments(document.uri) ||
+    for (const embeddedDocument of index.getEmbeddedDocuments(document.uri) ||
         []) {
         if (positionInRange(position, embeddedDocument.range)) {
             // If the document corresponds to an entire passage, wait to form completions

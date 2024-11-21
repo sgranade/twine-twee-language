@@ -341,7 +341,7 @@ const htmlService: LanguageService = {
         );
     },
 
-    async doValidation(embeddedDocument) {
+    async doValidation() {
         return [];
     },
 };

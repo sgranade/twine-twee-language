@@ -154,6 +154,7 @@ class Lexer<T> {
     /**
      * Data
      */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     data: Record<string, any> = {};
 
     constructor(source: string, initial: LexerState<T>) {
@@ -178,7 +179,7 @@ class Lexer<T> {
      * Advances position.
      */
     next(): EOFT | string {
-        let ch = this.peek();
+        const ch = this.peek();
         this.pos++;
         return ch;
     }
@@ -324,7 +325,6 @@ export function tokenizeMacroArguments(
 
     const lexer = new Lexer(source, MacroParse.lexSpace);
     for (const item of lexer.run()) {
-        const arg = item.text;
         const token: ArgumentToken = {
             text: item.text,
             at: item.start + sourceIndex,
@@ -477,7 +477,7 @@ export namespace MacroParse {
     // Lexing functions.
     function slurpQuote(lexer: Lexer<Item>, endQuote: string): EOFT | number {
         for (;;) {
-            let next = lexer.next();
+            const next = lexer.next();
             if (next === "\\") {
                 const ch = lexer.next();
 
@@ -569,7 +569,6 @@ export namespace MacroParse {
         lexer.depth = 2; // account for both initial left square brackets
 
         loop: for (;;) {
-            /* eslint-disable indent */
             switch (lexer.next()) {
                 case "\\": {
                     const ch = lexer.next();
@@ -609,7 +608,6 @@ export namespace MacroParse {
                     }
                     break;
             }
-            /* eslint-enable indent */
         }
 
         lexer.emit(Item.SquareBracket);

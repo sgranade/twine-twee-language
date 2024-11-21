@@ -16,7 +16,7 @@ export const embedPassage: InsertInfo = {
     requiredProps: {},
     optionalProps: {},
     completions: ["embed passage"],
-    parse(args, state, chapbookState) {
+    parse(args, state) {
         if (args.firstArgument) {
             // If the first argument is a string, it's a passage. Otherwise it has to be a variable
             if (
