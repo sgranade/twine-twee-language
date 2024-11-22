@@ -2,9 +2,14 @@ import * as vscode from "vscode";
 import { Utils as UriUtils } from "vscode-uri";
 
 import { addBuildListener } from "./build-system";
-import { CustomWhenContext } from "./constants";
+import {
+    Configuration,
+    CustomWhenContext,
+    RunningGameUpdateOptions,
+} from "./constants";
 
 let panel: vscode.WebviewPanel | undefined;
+let gameUri: vscode.Uri;
 let panelDisposables: vscode.Disposable[] = [];
 
 /**
@@ -136,24 +141,11 @@ function webviewifyHtml(rootUri: vscode.Uri, src: string): string {
 }
 
 /**
- * Reload a running game.
+ * Reload a running game from disk and restart it.
  */
 export async function reloadRunningGame() {
-    await panel?.webview.postMessage({
-        command: WebviewMessageCommands.ResetState,
-    });
-}
-
-/**
- * Update timestamp in a compiled game to make the webview contents look different.
- */
-function updateRunningGameTimestamp() {
-    if (panel !== undefined) {
-        // Update the contents to force a reload
-        panel.webview.html = panel.webview.html.replace(
-            /<div style='display: none;' id='time-cache'>.*?<\/div>/g,
-            `<div style='display: none;' id='time-cache'>${new Date().getTime()}</div>`
-        );
+    if (panel !== undefined && gameUri !== undefined) {
+        viewCompiledGame(gameUri, true);
     }
 }
 
@@ -161,8 +153,14 @@ function updateRunningGameTimestamp() {
  * View a compiled game in a webview.
  *
  * @param htmlUri URI to the local HTML file.
+ * @param restart Whether to restart the game or not.
  */
-export async function viewCompiledGame(htmlUri: vscode.Uri) {
+export async function viewCompiledGame(
+    htmlUri: vscode.Uri,
+    restart: boolean = false
+) {
+    gameUri = htmlUri;
+
     try {
         if (!panel) {
             panel = vscode.window.createWebviewPanel(
@@ -179,7 +177,11 @@ export async function viewCompiledGame(htmlUri: vscode.Uri) {
             panel.webview.onDidReceiveMessage(
                 (message) => {
                     if (message.command === WebviewMessageCommands.Reload) {
-                        updateRunningGameTimestamp();
+                        // Update the contents to force a reload
+                        panel.webview.html = panel.webview.html.replace(
+                            /<div style='display: none;' id='time-cache'>.*?<\/div>/g,
+                            `<div style='display: none;' id='time-cache'>${new Date().getTime()}</div>`
+                        );
                     }
                 },
                 undefined,
@@ -204,7 +206,17 @@ export async function viewCompiledGame(htmlUri: vscode.Uri) {
                 );
             });
             panelDisposables.push(
-                addBuildListener((uri) => viewCompiledGame(uri))
+                addBuildListener((uri) => {
+                    const updateOption = vscode.workspace
+                        .getConfiguration(Configuration.BaseSection)
+                        .get(
+                            Configuration.RunningGameUpdate
+                        ) as RunningGameUpdateOptions;
+                    if (updateOption !== "no update") {
+                        const restart = updateOption === "restart";
+                        viewCompiledGame(uri, restart);
+                    }
+                })
             );
         }
 
@@ -222,6 +234,11 @@ export async function viewCompiledGame(htmlUri: vscode.Uri) {
 
         panel.title = gameTitle;
         panel.webview.html = htmlContents;
+        if (restart) {
+            await panel?.webview.postMessage({
+                command: WebviewMessageCommands.ResetState,
+            });
+        }
         panel.reveal();
     } catch (error) {
         vscode.window.showErrorMessage(

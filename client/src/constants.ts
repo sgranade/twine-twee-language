@@ -3,17 +3,18 @@
  */
 export enum Configuration {
     BaseSection = "twineTweeLanguage",
-    FilesInclude = "files.include",
-    FilesExclude = "files.exclude",
     ProjectCreate = "project.create",
     DownloadStoryFormat = "project.downloadStoryFormat",
     StoryFilesDirectory = "project.storyFilesDirectory",
-    BuildDirectory = "project.buildDirectory",
-    IncludeDirectory = "project.includeDirectory",
-    OutputFile = "project.outputFile",
     StoryFormatsDirectory = "project.storyFormatsDirectory",
+    OutputFile = "build.outputFile",
+    RunningGameUpdate = "build.runningGameUpdate",
+    BuildDirectory = "build.buildDirectory",
+    IncludeDirectory = "build.includeDirectory",
     Twee3WarningUnknownMacro = "twee-3.warning.unknownMacro",
 }
+
+export type RunningGameUpdateOptions = "live reload" | "restart" | "no update";
 
 /**
  * Extension custom commands.

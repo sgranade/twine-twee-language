@@ -188,46 +188,58 @@
 					"order": 2,
 					"markdownDescription": "Offer to download the Twine story format used in a project. (Currently only supports [Chapbook](https://klembot.github.io/chapbook/) and [SugarCube 2](https://motoslave.net/sugarcube/2/).)"
 				},
-				"twineTweeLanguage.project.outputFile": {
-					"type": "string",
-					"default": "",
-					"order": 3,
-					"markdownDescription": "Name to give the game when turned into an HTML file, such as `story.html`. If blank, the game's filename will be its name from the `StoryTitle` passage, with spaces replaced by hyphens."
-				},
-				"twineTweeLanguage.project.buildDirectory": {
-					"type": "string",
-					"default": "build",
-					"order": 4,
-					"markdownDescription": "Directory to put the output `.html` file in (relative to the workspace)."
-				},
-				"twineTweeLanguage.project.includeDirectory": {
-					"type": "string",
-					"default": "include",
-					"order": 5,
-					"markdownDescription": "Directory with non-game files to add to the build directory (relative to the workspace). Files in this directory and all of its subdirectories will be added as-is to the build directory. If blank, no files will be included. Useful for images, fonts, and other files you don't want to bundle directly into the compiled `.html` file."
-				},
 				"twineTweeLanguage.project.storyFilesDirectory": {
 					"type": "string",
 					"default": "src",
-					"order": 6,
+					"order": 3,
 					"markdownDescription": "Directory with game source files (relative to the workspace). Files in this directory and all of its subdirectories will be compiled. Supports [all Tweego-supported files](http://www.motoslave.net/tweego/docs/#usage-supported-files) except for `.tw2`, `.twee2`, `.htm`, and `.html`."
 				},
 				"twineTweeLanguage.project.storyFormatsDirectory": {
 					"type": "string",
 					"default": ".storyformats",
-					"order": 7,
+					"order": 4,
 					"description": "Directory relative to the root level of the project where Twine story formats are stored."
+				},
+				"twineTweeLanguage.build.outputFile": {
+					"type": "string",
+					"default": "",
+					"order": 5,
+					"markdownDescription": "Name to give the game when turned into an HTML file, such as `story.html`. If blank, the game's filename will be its name from the `StoryTitle` passage, with spaces replaced by hyphens."
+				},
+				"twineTweeLanguage.build.runningGameUpdate": {
+					"type": "string",
+					"default": "live reload",
+					"enum": ["live reload", "restart", "no update"],
+					"enumDescriptions": [
+						"Reload the game without restarting it.",
+						"Reload the game and restart it.",
+						"Don't reload the game."
+					],
+					"order": 6,
+					"markdownDescription": "What to do with a running game after building a new version."
+				},
+				"twineTweeLanguage.build.buildDirectory": {
+					"type": "string",
+					"default": "build",
+					"order": 7,
+					"markdownDescription": "Directory to put the output `.html` file in (relative to the workspace)."
+				},
+				"twineTweeLanguage.build.includeDirectory": {
+					"type": "string",
+					"default": "include",
+					"order": 8,
+					"markdownDescription": "Directory with non-game files to add to the build directory (relative to the workspace). Files in this directory and all of its subdirectories will be added as-is to the build directory. If blank, no files will be included. Useful for images, fonts, and other files you don't want to bundle directly into the compiled `.html` file."
 				},
 				"twineTweeLanguage.twee-3.warnings.unknownMacro": {
 					"type": "boolean",
 					"default": "true",
-					"order": 8,
+					"order": 9,
 					"description": "Warn about unrecognized macros (in SugarCube) or inserts and modifiers (in Chapbook)."
 				},
 				"twineTweeLanguage.twee-3.warnings.unknownPassage": {
 					"type": "boolean",
 					"default": "true",
-					"order": 9,
+					"order": 10,
 					"markdownDescription": "Warn about references to unrecognized passages, such as in `[[passage]]` links."
 				}
 			}
