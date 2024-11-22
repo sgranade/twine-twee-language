@@ -139,6 +139,12 @@
 				"enablement": "isWorkspaceTrusted"
 			},
 			{
+				"command": "twineTweeLanguage.reloadGame",
+				"title": "Reload Game",
+				"category": "Twine (Twee 3) Language",
+				"enablement": "isWorkspaceTrusted"
+			},
+			{
 				"command": "twineTweeLanguage.downloadStoryFormat",
 				"title": "Download Story Format",
 				"category": "Twine (Twee 3) Language",
@@ -157,6 +163,10 @@
 				},
 				{
 					"command": "twineTweeLanguage.runGame"
+				},
+				{
+					"command": "twineTweeLanguage.reloadGame",
+					"when": "twineTweeLanguage.running"
 				},
 				{
 					"command": "twineTweeLanguage.downloadStoryFormat"

@@ -26,7 +26,7 @@ import {
     StoryFormat,
 } from "./client-server";
 import { Configuration, CustomCommands } from "./constants";
-import { viewCompiledGame } from "./game-view";
+import { reloadRunningGame, viewCompiledGame } from "./game-view";
 import {
     cacheStoryFormat,
     getCachedStoryFormat,
@@ -64,6 +64,10 @@ function registerCommands(context: vscode.ExtensionContext) {
             );
             viewCompiledGame(story);
         }),
+        vscode.commands.registerCommand(
+            CustomCommands.ReloadGame,
+            reloadRunningGame
+        ),
         vscode.commands.registerCommand(
             CustomCommands.DownloadStoryFormat,
             () => {

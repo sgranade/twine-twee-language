@@ -326,6 +326,39 @@ export async function readLocalStoryFormatOrAskToDownload(
     }
 }
 
+interface BuildListener {
+    (uri: URI): void;
+}
+
+class BuildListenerWrapper {
+    handler: BuildListener;
+    id: number;
+    dispose: () => void;
+    constructor(id: number, handler: BuildListener, dispose: () => void) {
+        this.id = id;
+        this.handler = handler;
+        this.dispose = dispose;
+    }
+}
+
+const listeners: Record<number, BuildListenerWrapper> = {};
+
+/**
+ * Add a listener to be notified when a build is successfully completed.
+ *
+ * @param listener Listener function to be notified on a successful build.
+ * @returns Disposable that, when disposed, cancels the listener.
+ */
+export function addBuildListener(listener: BuildListener): vscode.Disposable {
+    const ids = Object.keys(listeners).map((k) => Number(k));
+    const nextId = (ids.length > 0 ? Math.max(...ids) : 0) + 1;
+    const wrapper = new BuildListenerWrapper(nextId, listener, () => {
+        delete listeners[nextId];
+    });
+    listeners[nextId] = wrapper;
+    return vscode.Disposable.from(wrapper);
+}
+
 /**
  * Build the story, turning it into an HTML file.
  *
@@ -460,6 +493,11 @@ export async function build(
                     { overwrite: true }
                 );
             }
+        }
+
+        // Notify any listeners that we've completed a build
+        for (const l of Object.values(listeners)) {
+            l.handler(outUris.story);
         }
     } catch (err) {
         vscode.window.showErrorMessage(`Build failed: ${err.message}`);

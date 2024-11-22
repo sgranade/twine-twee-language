@@ -1,8 +1,19 @@
 import * as vscode from "vscode";
 import { Utils as UriUtils } from "vscode-uri";
 
+import { addBuildListener } from "./build-system";
+import { CustomWhenContext } from "./constants";
+
 let panel: vscode.WebviewPanel | undefined;
 let panelDisposables: vscode.Disposable[] = [];
+
+/**
+ * Commands between the game webview and the extension.
+ */
+enum WebviewMessageCommands {
+    Reload = "twine-iframe-requests-reload", // Request from iframe to reload
+    ResetState = "twine-extension-requests-state-reset", // Request from extension to reset story state
+}
 
 /**
  * Turn a file URI or path from an HTML tag into a webview-approved URI.
@@ -49,21 +60,52 @@ function webviewifyHtml(rootUri: vscode.Uri, src: string): string {
 
     // Create a content security policy, even though it's super lenient.
     // (It has to be, since e.g. SugarCube 2 uses `eval()`, sigh.)
-    const securityPolicy = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; font-src data: ${cspSource} https:; media-src data: ${cspSource} https:; img-src ${cspSource} 'unsafe-inline' data: ${cspSource} https:; script-src ${cspSource} 'unsafe-inline' 'unsafe-eval' https:; style-src ${cspSource} 'unsafe-inline' https:"/>`;
+    const securityPolicies = {
+        "default-src": ["'none'"],
+        "font-src": [cspSource, "data:", "https:"],
+        "img-src": [cspSource, "data:", "https:", "'unsafe-inline'"],
+        "script-src": [cspSource, "https:", "'unsafe-inline'", "'unsafe-eval'"],
+        "style-src": [cspSource, "https:", "'unsafe-inline'"],
+    };
+    const securityPoliciesContent = Object.entries(securityPolicies)
+        .map(([k, v]) => `${k} ${v.join(" ")}`)
+        .join("; ");
+    const securityPolicyTag = `<meta http-equiv="Content-Security-Policy" content="${securityPoliciesContent}"/>`;
 
     // Some story formats use `window.location.reload()` to restart. Since that
     // erases the entire webview, add a function to send a message requesting
     // reload that can take the place of the reload() call.
-    const customScript = [
-        '<script id="webview-support" type="text/javascript">',
-        "const vscode = acquireVsCodeApi();",
-        "const requestWebviewReload = () => {",
-        "  vscode.postMessage({ command: 'request-iframe-reload' });",
-        "}",
-        "</script>",
-    ].join("\n");
+    // Also, SugarCube and Chapbook save state in ways that survives a reload().
+    // Add a function that, when it receives a message from the extension, tries
+    // to reset SugarCube/Chapbook state.
+    const customScriptTag = `
+    <script id="webview-support" type="text/javascript">
+    const vscode = acquireVsCodeApi();
+    const requestWebviewReload = () => {
+        vscode.postMessage({ command: '${WebviewMessageCommands.Reload}' });
+    }
+    window.addEventListener('message', event => {
+        if (event.data.command === '${WebviewMessageCommands.ResetState}') {
+            try {
+                if (typeof SugarCube !== 'undefined' && SugarCube.Engine !== undefined) {
+                    SugarCube.Engine.restart();
+                }
+                else if (typeof restart === 'function') {
+                    restart();
+                }
+                else {
+                    requestWebviewReload();
+                }
+            }
+            catch {}
+        }
+    });
+    </script>`;
 
-    src = src.replace("<head>", `<head>\n${securityPolicy}\n${customScript}`);
+    src = src.replace(
+        "<head>",
+        `<head>\n${securityPolicyTag}\n${customScriptTag}`
+    );
 
     // Add an invisible timestamp to the end of the body, so we can
     // update it on a re-run and force the webview to refresh.
@@ -94,6 +136,28 @@ function webviewifyHtml(rootUri: vscode.Uri, src: string): string {
 }
 
 /**
+ * Reload a running game.
+ */
+export async function reloadRunningGame() {
+    await panel?.webview.postMessage({
+        command: WebviewMessageCommands.ResetState,
+    });
+}
+
+/**
+ * Update timestamp in a compiled game to make the webview contents look different.
+ */
+function updateRunningGameTimestamp() {
+    if (panel !== undefined) {
+        // Update the contents to force a reload
+        panel.webview.html = panel.webview.html.replace(
+            /<div style='display: none;' id='time-cache'>.*?<\/div>/g,
+            `<div style='display: none;' id='time-cache'>${new Date().getTime()}</div>`
+        );
+    }
+}
+
+/**
  * View a compiled game in a webview.
  *
  * @param htmlUri URI to the local HTML file.
@@ -110,21 +174,21 @@ export async function viewCompiledGame(htmlUri: vscode.Uri) {
                     localResourceRoots: [
                         vscode.workspace.workspaceFolders[0].uri,
                     ], // Limit to our workspace only
-                    retainContextWhenHidden: true,
                 }
             );
             panel.webview.onDidReceiveMessage(
                 (message) => {
-                    if (message.command === "request-iframe-reload") {
-                        // Update the contents to force a reload
-                        panel.webview.html = panel.webview.html.replace(
-                            /<div style='display: none;' id='time-cache'>.*?<\/div>/g,
-                            `<div style='display: none;' id='time-cache'>${new Date().getTime()}</div>`
-                        );
+                    if (message.command === WebviewMessageCommands.Reload) {
+                        updateRunningGameTimestamp();
                     }
                 },
                 undefined,
                 panelDisposables
+            );
+            await vscode.commands.executeCommand(
+                "setContext",
+                CustomWhenContext.Running,
+                true
             );
             panel.onDidDispose(() => {
                 panel = undefined;
@@ -132,7 +196,16 @@ export async function viewCompiledGame(htmlUri: vscode.Uri) {
                     d.dispose();
                 }
                 panelDisposables = [];
+                // When we're disposed, we're no longer running a game
+                vscode.commands.executeCommand(
+                    "setContext",
+                    CustomWhenContext.Running,
+                    false
+                );
             });
+            panelDisposables.push(
+                addBuildListener((uri) => viewCompiledGame(uri))
+            );
         }
 
         const htmlContents = webviewifyHtml(

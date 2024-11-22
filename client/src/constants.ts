@@ -22,6 +22,7 @@ export enum CustomCommands {
     BuildGame = "twineTweeLanguage.buildGame",
     BuildGameTest = "twineTweeLanguage.buildGameTest",
     RunGame = "twineTweeLanguage.runGame",
+    ReloadGame = "twineTweeLanguage.reloadGame",
     DownloadStoryFormat = "twineTweeLanguage.downloadStoryFormat",
 }
 
@@ -31,4 +32,5 @@ export enum CustomCommands {
  */
 export enum CustomWhenContext {
     Building = "twineTweeLanguage.building",
+    Running = "twineTweeLanguage.running",
 }
