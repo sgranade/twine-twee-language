@@ -3,7 +3,7 @@
 	"description": "Twine (Twee 3) language client",
 	"author": "Stephen Granade",
 	"license": "MIT",
-	"version": "0.2.0",
+	"version": "1.0.0",
 	"publisher": "Stephen Granade",
 	"repository": {
 		"type": "git",
