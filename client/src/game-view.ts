@@ -1,12 +1,12 @@
 import * as vscode from "vscode";
 import { Utils as UriUtils } from "vscode-uri";
 
-import { addBuildListener } from "./build-system";
 import {
     Configuration,
     CustomWhenContext,
     RunningGameUpdateOptions,
 } from "./constants";
+import { addListener } from "./context";
 
 let panel: vscode.WebviewPanel | undefined;
 let gameUri: vscode.Uri;
@@ -206,7 +206,7 @@ export async function viewCompiledGame(
                 );
             });
             panelDisposables.push(
-                addBuildListener((uri) => {
+                addListener("buildSuccessful", (params) => {
                     const updateOption = vscode.workspace
                         .getConfiguration(Configuration.BaseSection)
                         .get(
@@ -214,7 +214,7 @@ export async function viewCompiledGame(
                         ) as RunningGameUpdateOptions;
                     if (updateOption !== "no update") {
                         const restart = updateOption === "restart";
-                        viewCompiledGame(uri, restart);
+                        viewCompiledGame(params[0], restart);
                     }
                 })
             );

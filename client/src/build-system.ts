@@ -13,7 +13,10 @@ import {
     storyFormatSupportsDownloading,
     storyFormatToWorkspacePath,
 } from "./manage-storyformats";
-import { StatusBarItemIDs, statusBarItemVisibility } from "./status-bar-items";
+import {
+    StatusBarItemIDs,
+    setStatusBarItemVisibility,
+} from "./status-bar-items";
 import { WorkspaceProvider } from "./workspace-provider";
 import {
     addFileToStory,
@@ -23,6 +26,7 @@ import {
 import { compileStory } from "./build/story-output";
 import { TweeParseError } from "./build/twee-parser";
 import { Story } from "./build/types";
+import { signalContextEvent } from "./context";
 
 /**
  * Record whether a directory exists in a lookup object.
@@ -326,39 +330,6 @@ export async function readLocalStoryFormatOrAskToDownload(
     }
 }
 
-interface BuildListener {
-    (uri: URI): void;
-}
-
-class BuildListenerWrapper {
-    handler: BuildListener;
-    id: number;
-    dispose: () => void;
-    constructor(id: number, handler: BuildListener, dispose: () => void) {
-        this.id = id;
-        this.handler = handler;
-        this.dispose = dispose;
-    }
-}
-
-const listeners: Record<number, BuildListenerWrapper> = {};
-
-/**
- * Add a listener to be notified when a build is successfully completed.
- *
- * @param listener Listener function to be notified on a successful build.
- * @returns Disposable that, when disposed, cancels the listener.
- */
-export function addBuildListener(listener: BuildListener): vscode.Disposable {
-    const ids = Object.keys(listeners).map((k) => Number(k));
-    const nextId = (ids.length > 0 ? Math.max(...ids) : 0) + 1;
-    const wrapper = new BuildListenerWrapper(nextId, listener, () => {
-        delete listeners[nextId];
-    });
-    listeners[nextId] = wrapper;
-    return vscode.Disposable.from(wrapper);
-}
-
 /**
  * Build the story, turning it into an HTML file.
  *
@@ -390,7 +361,7 @@ export async function build(
             CustomWhenContext.Building,
             true
         );
-        statusBarItemVisibility(StatusBarItemIDs.Building, true);
+        setStatusBarItemVisibility(StatusBarItemIDs.Building, true);
 
         // Get all files from the source directory
         const storyFilesDirectory = removeEndingSlash(
@@ -495,10 +466,8 @@ export async function build(
             }
         }
 
-        // Notify any listeners that we've completed a build
-        for (const l of Object.values(listeners)) {
-            l.handler(outUris.story);
-        }
+        // Tell everyone our build was successful
+        signalContextEvent("buildSuccessful", outUris.story);
     } catch (err) {
         vscode.window.showErrorMessage(`Build failed: ${err.message}`);
         // If we have a Twee parsing error, try to show the document and annotate the error
@@ -517,7 +486,7 @@ export async function build(
             addTrailingAnnotation(editor, line, `Error: ${err.message.trim()}`);
         }
     } finally {
-        statusBarItemVisibility(StatusBarItemIDs.Building, false);
+        setStatusBarItemVisibility(StatusBarItemIDs.Building, false);
         await vscode.commands.executeCommand(
             "setContext",
             CustomWhenContext.Building,
