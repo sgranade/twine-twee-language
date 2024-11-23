@@ -13,10 +13,6 @@ import {
     storyFormatSupportsDownloading,
     storyFormatToWorkspacePath,
 } from "./manage-storyformats";
-import {
-    StatusBarItemIDs,
-    setStatusBarItemVisibility,
-} from "./status-bar-items";
 import { WorkspaceProvider } from "./workspace-provider";
 import {
     addFileToStory,
@@ -356,12 +352,12 @@ export async function build(
             storyFormatData = cachedStoryFormat.contents;
         }
 
+        signalContextEvent("buildStarts");
         await vscode.commands.executeCommand(
             "setContext",
             CustomWhenContext.Building,
             true
         );
-        setStatusBarItemVisibility(StatusBarItemIDs.Building, true);
 
         // Get all files from the source directory
         const storyFilesDirectory = removeEndingSlash(
@@ -486,7 +482,7 @@ export async function build(
             addTrailingAnnotation(editor, line, `Error: ${err.message.trim()}`);
         }
     } finally {
-        setStatusBarItemVisibility(StatusBarItemIDs.Building, false);
+        signalContextEvent("buildEnds");
         await vscode.commands.executeCommand(
             "setContext",
             CustomWhenContext.Building,

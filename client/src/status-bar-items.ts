@@ -1,7 +1,13 @@
 import * as vscode from "vscode";
 
+import { CustomCommands } from "./constants";
+import { addListener } from "./context";
+import { gameRunning } from "./game-view";
+
 export const enum StatusBarItemIDs {
     Building = "twine_building",
+    Run = "twine_run",
+    Reload = "twine_reload",
 }
 
 const statusBarItems: Record<string, vscode.StatusBarItem> = {};
@@ -22,24 +28,47 @@ export function createStatusBarItems(context: vscode.ExtensionContext) {
     buildingStatusBarItem.text = "$(sync~spin) Building Twine game";
     buildingStatusBarItem.hide();
     statusBarItems[StatusBarItemIDs.Building] = buildingStatusBarItem;
+    addListener("buildStarts", () => buildingStatusBarItem.show());
+    addListener("buildEnds", () => buildingStatusBarItem.hide());
+
+    const runStatusBarItem = vscode.window.createStatusBarItem(
+        StatusBarItemIDs.Building,
+        vscode.StatusBarAlignment.Left,
+        20
+    );
+    runStatusBarItem.name = "Run Twine Game";
+    runStatusBarItem.text = "$(debug-start) Run Twine Game";
+    runStatusBarItem.tooltip = "Run project's game";
+    runStatusBarItem.command = CustomCommands.RunGame;
+    runStatusBarItem.show();
+    statusBarItems[StatusBarItemIDs.Run] = runStatusBarItem;
+
+    addListener("buildSuccessful", () => {
+        if (!gameRunning()) {
+            runStatusBarItem.show();
+        }
+    });
+
+    const reloadStatusBarItem = vscode.window.createStatusBarItem(
+        StatusBarItemIDs.Building,
+        vscode.StatusBarAlignment.Left,
+        20
+    );
+    reloadStatusBarItem.name = "Reload Twine Game";
+    reloadStatusBarItem.text = "$(debug-rerun) Reload Twine Game";
+    reloadStatusBarItem.tooltip = "Reload project's game";
+    reloadStatusBarItem.command = CustomCommands.ReloadGame;
+    reloadStatusBarItem.hide();
+    statusBarItems[StatusBarItemIDs.Reload] = reloadStatusBarItem;
+
+    addListener("runStarts", () => {
+        runStatusBarItem.hide();
+        reloadStatusBarItem.show();
+    });
+    addListener("runEnds", () => {
+        reloadStatusBarItem.hide();
+        runStatusBarItem.show();
+    });
 
     context.subscriptions.push(...Object.values(statusBarItems));
-}
-
-/**
- * Change a status bar item's visibility.
- *
- * @param id ID of the status bar item.
- * @param visible Whether the item should be visible (true) or not.
- */
-export function statusBarItemVisibility(
-    id: StatusBarItemIDs,
-    visible: boolean
-) {
-    const item = statusBarItems[id];
-    if (visible) {
-        item?.show();
-    } else {
-        item?.hide();
-    }
 }

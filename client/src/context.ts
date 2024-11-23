@@ -4,7 +4,12 @@ import * as vscode from "vscode";
  * Manages the extension's context.
  */
 
-type ContextEvent = "buildStarts" | "buildEnds" | "buildSuccessful";
+type ContextEvent =
+    | "buildStarts"
+    | "buildEnds"
+    | "buildSuccessful"
+    | "runStarts"
+    | "runEnds";
 
 const contextListenerManagers: Record<string, EventListenerManager> = {};
 

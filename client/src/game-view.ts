@@ -6,11 +6,19 @@ import {
     CustomWhenContext,
     RunningGameUpdateOptions,
 } from "./constants";
-import { addListener } from "./context";
+import { addListener, signalContextEvent } from "./context";
 
 let panel: vscode.WebviewPanel | undefined;
 let gameUri: vscode.Uri;
 let panelDisposables: vscode.Disposable[] = [];
+
+/**
+ * Determine if a game is running.
+ * @returns True if the game is running.
+ */
+export function gameRunning(): boolean {
+    return panel !== undefined;
+}
 
 /**
  * Commands between the game webview and the extension.
@@ -187,6 +195,7 @@ export async function viewCompiledGame(
                 undefined,
                 panelDisposables
             );
+            signalContextEvent("runStarts");
             await vscode.commands.executeCommand(
                 "setContext",
                 CustomWhenContext.Running,
@@ -199,6 +208,7 @@ export async function viewCompiledGame(
                 }
                 panelDisposables = [];
                 // When we're disposed, we're no longer running a game
+                signalContextEvent("runEnds");
                 vscode.commands.executeCommand(
                     "setContext",
                     CustomWhenContext.Running,
