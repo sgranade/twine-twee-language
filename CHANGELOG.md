@@ -2,7 +2,7 @@
 
 Changes to the extension.
 
-## Unreleased
+## [1.0.0] - 2024 11 23
 
 You can now run built Twine games natively in VS Code.
 
