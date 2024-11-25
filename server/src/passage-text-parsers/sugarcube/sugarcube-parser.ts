@@ -158,9 +158,13 @@ function parseAndRemoveTwineLinks(
 }
 
 const noWikiRegex = new RegExp(SC2Patterns.noWikiBlock, "gi");
+const scriptStyleBlockRegex = new RegExp(
+    SC2Patterns.htmlScriptStyleBlock,
+    "gmi"
+);
 
 /**
- * Remove nowiki text from a subsection.
+ * Remove nowiki text plus <style>, <script>, and <html> blocks from a subsection.
  *
  * (Strictly speaking, we also remove inline code markup, too.)
  *
@@ -169,13 +173,14 @@ const noWikiRegex = new RegExp(SC2Patterns.noWikiBlock, "gi");
  * @param subsection Subsection to remove nowiki text from.
  * @returns The subsection with nowiki text blanked out.
  */
-function removeNoWikiText(subsection: string): string {
+function removeNoWikiAndPureHtmlText(subsection: string): string {
     noWikiRegex.lastIndex = 0;
-    return eraseMatches(subsection, noWikiRegex);
+    subsection = eraseMatches(subsection, noWikiRegex);
+    scriptStyleBlockRegex.lastIndex = 0;
+    return eraseMatches(subsection, scriptStyleBlockRegex);
 }
 
 const macroRegex = new RegExp(SC2Patterns.fullMacro, "gm");
-const scriptStyleBlockRegex = new RegExp(SC2Patterns.scriptStyleBlock, "gm");
 const scriptMacroRegex = new RegExp(SC2Patterns.scriptMacroBlock, "gm");
 
 interface macroLocationInfo {
@@ -519,12 +524,8 @@ function parseMacros(
 ): string {
     const knownMacros = allMacros();
 
-    // Remove all script/style tag blocks
-    scriptStyleBlockRegex.lastIndex = 0;
-    let cleanedPassageText = eraseMatches(passageText, scriptStyleBlockRegex);
-
     // Special case the <<script>> container, as its contents are treated as raw JavaScript/TwineScript
-    for (const m of cleanedPassageText.matchAll(scriptMacroRegex)) {
+    for (const m of passageText.matchAll(scriptMacroRegex)) {
         if (m.groups !== undefined) {
             const isTwinescript =
                 (m.groups.language ?? "").toLowerCase() === "twinescript";
@@ -552,12 +553,7 @@ function parseMacros(
                 );
             }
 
-            // Get rid of the <<script>> contents in both the cleaned text that we'll process
-            // and the passage text that we'll return
-            cleanedPassageText =
-                cleanedPassageText.slice(0, contentsIndex) +
-                " ".repeat(contents.length) +
-                cleanedPassageText.slice(contentsIndex + contents.length);
+            // Get rid of the <<script>> contents in the passage text that we'll return
             passageText =
                 passageText.slice(0, contentsIndex) +
                 " ".repeat(contents.length) +
@@ -569,7 +565,7 @@ function parseMacros(
     const unclosedMacros: macroLocationInfo[] = [];
     const macroChildCount: Record<number, Record<string, number>> = {}; // Map of parent macro ID to child name + count
     macroRegex.lastIndex = 0;
-    for (const m of cleanedPassageText.matchAll(macroRegex)) {
+    for (const m of passageText.matchAll(macroRegex)) {
         const macroIndex = m.index + 2; // Index of the start of the macro (inside the <<)
 
         // macroName: name of the macro
@@ -1006,7 +1002,12 @@ export function parsePassageText(
 
     // This parsing order mostly matches that of the SC2 Wikifier Parser (`parserlib.js`)
 
-    passageText = removeNoWikiText(passageText);
+    passageText = findAndParseHtml(passageText, textIndex, state);
+
+    // The above gets rid of pure <style> tags; now take care
+    // of <script>, verbatim <html>, and the no-wiki text
+
+    passageText = removeNoWikiAndPureHtmlText(passageText);
 
     passageText = parseMacros(passageText, textIndex, state, sugarcubeState);
 
@@ -1018,8 +1019,6 @@ export function parsePassageText(
     );
 
     parseBareVariables(passageText, textIndex, state, sugarcubeState);
-
-    findAndParseHtml(passageText, textIndex, state);
 
     // Submit semantic tokens in document order
     // (taking advantage of object own key enumeration order)

@@ -2,6 +2,12 @@
 
 Changes to the extension.
 
+## Unreleased
+
+### Fixed
+
+-   SugarCube: Macros and variables are no longer parsed inside verbatim HTML markup.
+
 ## [1.0.0] - 2024 11 23
 
 You can now run built Twine games natively in VS Code.

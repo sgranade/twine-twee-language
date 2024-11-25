@@ -35,12 +35,13 @@ export const noWikiBlock = [
     .map(([open, close]) => `(?:${open}(?:.|\r?\n)*?${close})`)
     .join("|");
 /**
- * JS scripts or CSS style blocks.
+ * Verbatim HTML, JS scripts or CSS style blocks.
  * This is also mainly important to keep us from interpolating variables or parsing macros.
  */
-export const scriptStyleBlock = [
-    ["(?!<<)<script>(?!>)", "(?!<<)</script>(?!>)"],
-    ["(?!<<)<style>(?!>)", "(?!<<)</style>(?!>)"],
+export const htmlScriptStyleBlock = [
+    ["(?!<<)<html>(?!>)", "(?!<<)</html>(?!>)"],
+    ["(?!<<)<script[^>]*>(?!>)", "(?!<<)</script>(?!>)"],
+    ["(?!<<)<style[^>]*>(?!>)", "(?!<<)</style>(?!>)"],
 ]
     .map(([open, close]) => `(?:${open}(?:.|\r?\n)*?${close})`)
     .join("|");

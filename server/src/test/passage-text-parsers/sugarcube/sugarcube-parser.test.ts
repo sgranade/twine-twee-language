@@ -306,6 +306,24 @@ describe("SugarCube Parser", () => {
             expect(result).to.be.empty;
         });
 
+        it("should not capture a variable reference for a bare variable inside verbatim html markup", () => {
+            const header = ":: Passage\n";
+            const passage =
+                "Some content.\n" +
+                "This is not a <html>$bareVariable</html>.\n";
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            const parser = uut.getSugarCubeParser(undefined);
+
+            parser?.parsePassageText(passage, header.length, state);
+            const result = callbacks.references;
+
+            expect(result).to.be.empty;
+        });
+
         it("should not capture a variable reference for a bare variable preceded by a double $ sigil", () => {
             const header = ":: Passage\n";
             const passage =
@@ -1542,6 +1560,31 @@ describe("SugarCube Parser", () => {
         it("should not capture a macro reference inside a <nowiki></nowiki> block", () => {
             const header = ":: Passage\n";
             const passage = "Macro: <nowiki><<testy>></nowiki>";
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                uri: "fake-uri",
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            const parser = uut.getSugarCubeParser(undefined);
+            const macro = buildMacroInfo({
+                name: "testy",
+            });
+            const mockFunction = ImportMock.mockFunction(
+                macrosModule,
+                "allMacros"
+            ).returns({ testy: macro });
+
+            parser?.parsePassageText(passage, header.length, state);
+            mockFunction.restore();
+            const result = callbacks.references;
+
+            expect(result).to.be.empty;
+        });
+
+        it("should not capture a macro reference inside an <html></html> block", () => {
+            const header = ":: Passage\n";
+            const passage = "Macro: <html><<testy>></html>";
             const callbacks = new MockCallbacks();
             const state = buildParsingState({
                 uri: "fake-uri",
