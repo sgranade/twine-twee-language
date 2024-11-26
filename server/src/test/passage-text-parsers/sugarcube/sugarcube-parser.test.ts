@@ -2436,6 +2436,386 @@ describe("SugarCube Parser", () => {
         });
     });
 
+    describe("html and svg attributes", () => {
+        it("should capture a passage reference in an a tag's data-passage attribute", () => {
+            const header = ":: Passage\n";
+            const passage =
+                "Some content.\n" +
+                'data-passage example: <a data-passage="OtherPassage">.\n';
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            const parser = uut.getSugarCubeParser(undefined);
+
+            parser?.parsePassageText(passage, header.length, state);
+            const result = callbacks.references;
+
+            expect(result).to.eql([
+                {
+                    contents: "OtherPassage",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(2, 39, 2, 51)
+                    ),
+                    kind: TwineSymbolKind.Passage,
+                },
+            ]);
+        });
+
+        it("should capture a variable reference in an a tag's data-passage attribute", () => {
+            const header = ":: Passage\n";
+            const passage =
+                "Some content.\n" +
+                `data-passage example: <a data-passage="$tempy + 'Passage'">.\n`;
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            const parser = uut.getSugarCubeParser(undefined);
+
+            parser?.parsePassageText(passage, header.length, state);
+            const result = callbacks.references;
+
+            expect(result).to.eql([
+                {
+                    contents: "$tempy",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(2, 39, 2, 45)
+                    ),
+                    kind: OSugarCubeSymbolKind.Variable,
+                },
+            ]);
+        });
+
+        it("should capture a passage reference in an area tag's data-passage attribute", () => {
+            const header = ":: Passage\n";
+            const passage =
+                "Some content.\n" +
+                'data-passage example: <area  data-passage="OtherPassage">.\n';
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            const parser = uut.getSugarCubeParser(undefined);
+
+            parser?.parsePassageText(passage, header.length, state);
+            const result = callbacks.references;
+
+            expect(result).to.eql([
+                {
+                    contents: "OtherPassage",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(2, 43, 2, 55)
+                    ),
+                    kind: TwineSymbolKind.Passage,
+                },
+            ]);
+        });
+
+        it("should capture a passage reference in a button tag's data-passage attribute", () => {
+            const header = ":: Passage\n";
+            const passage =
+                "Some content.\n" +
+                'data-passage example: <button   data-passage="OtherPassage">.\n';
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            const parser = uut.getSugarCubeParser(undefined);
+
+            parser?.parsePassageText(passage, header.length, state);
+            const result = callbacks.references;
+
+            expect(result).to.eql([
+                {
+                    contents: "OtherPassage",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(2, 46, 2, 58)
+                    ),
+                    kind: TwineSymbolKind.Passage,
+                },
+            ]);
+        });
+
+        it("should capture a passage reference in an audio tag's data-passage attribute", () => {
+            const header = ":: Passage\n";
+            const passage =
+                "Some content.\n" +
+                'data-passage example: <audio data-passage="OtherPassage">.\n';
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            const parser = uut.getSugarCubeParser(undefined);
+
+            parser?.parsePassageText(passage, header.length, state);
+            const result = callbacks.references;
+
+            expect(result).to.eql([
+                {
+                    contents: "OtherPassage",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(2, 43, 2, 55)
+                    ),
+                    kind: TwineSymbolKind.Passage,
+                },
+            ]);
+        });
+
+        it("should capture a passage reference in an img tag's data-passage attribute", () => {
+            const header = ":: Passage\n";
+            const passage =
+                "Some content.\n" +
+                'data-passage example: <img  data-passage="OtherPassage">.\n';
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            const parser = uut.getSugarCubeParser(undefined);
+
+            parser?.parsePassageText(passage, header.length, state);
+            const result = callbacks.references;
+
+            expect(result).to.eql([
+                {
+                    contents: "OtherPassage",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(2, 42, 2, 54)
+                    ),
+                    kind: TwineSymbolKind.Passage,
+                },
+            ]);
+        });
+
+        it("should capture a passage reference in an image tag's data-passage attribute", () => {
+            const header = ":: Passage\n";
+            const passage =
+                "Some content.\n" +
+                'data-passage example: <image data-passage="OtherPassage">.\n';
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            const parser = uut.getSugarCubeParser(undefined);
+
+            parser?.parsePassageText(passage, header.length, state);
+            const result = callbacks.references;
+
+            expect(result).to.eql([
+                {
+                    contents: "OtherPassage",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(2, 43, 2, 55)
+                    ),
+                    kind: TwineSymbolKind.Passage,
+                },
+            ]);
+        });
+
+        it("should capture a passage reference in a source tag's data-passage attribute", () => {
+            const header = ":: Passage\n";
+            const passage =
+                "Some content.\n" +
+                'data-passage example: <source data-passage="OtherPassage">.\n';
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            const parser = uut.getSugarCubeParser(undefined);
+
+            parser?.parsePassageText(passage, header.length, state);
+            const result = callbacks.references;
+
+            expect(result).to.eql([
+                {
+                    contents: "OtherPassage",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(2, 44, 2, 56)
+                    ),
+                    kind: TwineSymbolKind.Passage,
+                },
+            ]);
+        });
+
+        it("should capture a passage reference in a video tag's data-passage attribute", () => {
+            const header = ":: Passage\n";
+            const passage =
+                "Some content.\n" +
+                'data-passage example: <video data-passage="OtherPassage">.\n';
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            const parser = uut.getSugarCubeParser(undefined);
+
+            parser?.parsePassageText(passage, header.length, state);
+            const result = callbacks.references;
+
+            expect(result).to.eql([
+                {
+                    contents: "OtherPassage",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(2, 43, 2, 55)
+                    ),
+                    kind: TwineSymbolKind.Passage,
+                },
+            ]);
+        });
+
+        it("should capture a variable reference in an a tag's data-setter attribute", () => {
+            const header = ":: Passage\n";
+            const passage =
+                "Some content.\n" +
+                `data-passage example: <a data-setter="$thing to 'done'">.\n`;
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            const parser = uut.getSugarCubeParser(undefined);
+
+            parser?.parsePassageText(passage, header.length, state);
+            const result = callbacks.references;
+
+            expect(result).to.eql([
+                {
+                    contents: "$thing",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(2, 38, 2, 44)
+                    ),
+                    kind: OSugarCubeSymbolKind.Variable,
+                },
+            ]);
+        });
+
+        it("should capture a variable reference in an area tag's data-setter attribute", () => {
+            const header = ":: Passage\n";
+            const passage =
+                "Some content.\n" +
+                `data-passage example: <area  data-setter="$thing to 'done'">.\n`;
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            const parser = uut.getSugarCubeParser(undefined);
+
+            parser?.parsePassageText(passage, header.length, state);
+            const result = callbacks.references;
+
+            expect(result).to.eql([
+                {
+                    contents: "$thing",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(2, 42, 2, 48)
+                    ),
+                    kind: OSugarCubeSymbolKind.Variable,
+                },
+            ]);
+        });
+
+        it("should capture a variable reference in a button tag's data-setter attribute", () => {
+            const header = ":: Passage\n";
+            const passage =
+                "Some content.\n" +
+                `data-passage example: <button   data-setter="$thing to 'done'">.\n`;
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            const parser = uut.getSugarCubeParser(undefined);
+
+            parser?.parsePassageText(passage, header.length, state);
+            const result = callbacks.references;
+
+            expect(result).to.eql([
+                {
+                    contents: "$thing",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(2, 45, 2, 51)
+                    ),
+                    kind: OSugarCubeSymbolKind.Variable,
+                },
+            ]);
+        });
+
+        it("should capture a variable reference in an sc-eval attribute directive", () => {
+            const header = ":: Passage\n";
+            const passage =
+                "Some content.\n" +
+                `data-passage example: <span sc-eval:id="'pre-' + _id + '-suf'">.\n`;
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            const parser = uut.getSugarCubeParser(undefined);
+
+            parser?.parsePassageText(passage, header.length, state);
+            const result = callbacks.references;
+
+            expect(result).to.eql([
+                {
+                    contents: "_id",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(2, 49, 2, 52)
+                    ),
+                    kind: OSugarCubeSymbolKind.Variable,
+                },
+            ]);
+        });
+
+        it("should capture a variable reference in an @ attribute directive", () => {
+            const header = ":: Passage\n";
+            const passage =
+                "Some content.\n" +
+                `data-passage example: <span @id="'pre-' + _id + '-suf'">.\n`;
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            const parser = uut.getSugarCubeParser(undefined);
+
+            parser?.parsePassageText(passage, header.length, state);
+            const result = callbacks.references;
+
+            expect(result).to.eql([
+                {
+                    contents: "_id",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(2, 42, 2, 45)
+                    ),
+                    kind: OSugarCubeSymbolKind.Variable,
+                },
+            ]);
+        });
+    });
+
     describe("html", () => {
         it("should create an embedded html document for the passage", () => {
             const header = ":: Passage\n";
@@ -3243,6 +3623,77 @@ describe("SugarCube Parser", () => {
                     );
                     expect(result.range).to.eql(Range.create(1, 22, 1, 28));
                 });
+            });
+        });
+
+        describe("html and svg attributes", () => {
+            it("should error on an HTML tag with both data-passage and href attributes", () => {
+                const header = ":: Passage\n";
+                const passage =
+                    "Some content.\n" +
+                    'This is no good: <a href="https://tech.omfg" data-passage = "OtherPassage">.\n';
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const parser = uut.getSugarCubeParser(undefined);
+
+                parser?.parsePassageText(passage, header.length, state);
+                const [result] = callbacks.errors;
+
+                expect(callbacks.errors.length).to.equal(1);
+                expect(result.severity).to.eql(DiagnosticSeverity.Error);
+                expect(result.message).to.include(
+                    `Both "data-passage" and "href" attributes aren't allowed`
+                );
+                expect(result.range).to.eql(Range.create(2, 45, 2, 57));
+            });
+
+            it("should error on an HTML tag whose data-setter attribute has an @ evaluation directive", () => {
+                const header = ":: Passage\n";
+                const passage =
+                    "Some content.\n" +
+                    'This is no good: <a @data-setter = "_id to 7">.\n';
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const parser = uut.getSugarCubeParser(undefined);
+
+                parser?.parsePassageText(passage, header.length, state);
+                const [result] = callbacks.errors;
+
+                expect(callbacks.errors.length).to.equal(1);
+                expect(result.severity).to.eql(DiagnosticSeverity.Error);
+                expect(result.message).to.include(
+                    `"data-setter" can't have an evaluation directive`
+                );
+                expect(result.range).to.eql(Range.create(2, 20, 2, 21));
+            });
+
+            it("should error on an HTML tag whose data-setter attribute has an sc-eval evaluation directive", () => {
+                const header = ":: Passage\n";
+                const passage =
+                    "Some content.\n" +
+                    'This is no good: <a sc-eval:data-setter = "_id to 7">.\n';
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const parser = uut.getSugarCubeParser(undefined);
+
+                parser?.parsePassageText(passage, header.length, state);
+                const [result] = callbacks.errors;
+
+                expect(callbacks.errors.length).to.equal(1);
+                expect(result.severity).to.eql(DiagnosticSeverity.Error);
+                expect(result.message).to.include(
+                    `"data-setter" can't have an evaluation directive`
+                );
+                expect(result.range).to.eql(Range.create(2, 20, 2, 28));
             });
         });
     });

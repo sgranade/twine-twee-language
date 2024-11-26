@@ -20,6 +20,7 @@ import { createVariableAndPropertyReferences } from "./sugarcube-utils";
 import { OSugarCubeSymbolKind } from "./types";
 import {
     MacroParse,
+    parseSugarCubePassageRefOrTwinescriptExpr,
     parseSugarCubeTwineLink,
     tokenizeMacroArguments,
 } from "./sc2/sc2-lexer-parser";
@@ -101,7 +102,6 @@ function parseBareVariables(
     state: ParsingState,
     sugarcubeState: StoryFormatParsingState
 ): void {
-    bareVariableRegex.lastIndex = 0;
     for (const m of passageText.matchAll(bareVariableRegex)) {
         createVariableAndPropertyReferences(
             tokenizeTwineScriptExpression(
@@ -564,7 +564,6 @@ function parseMacros(
     let macroId = 0;
     const unclosedMacros: macroLocationInfo[] = [];
     const macroChildCount: Record<number, Record<string, number>> = {}; // Map of parent macro ID to child name + count
-    macroRegex.lastIndex = 0;
     for (const m of passageText.matchAll(macroRegex)) {
         const macroIndex = m.index + 2; // Index of the start of the macro (inside the <<)
 
@@ -804,6 +803,97 @@ function parseMacros(
     return passageText;
 }
 
+const htmlTagRegex = new RegExp(SC2Patterns.htmlTag, "gm");
+const sc2AttrsAndDirectives = new RegExp(
+    `(data-(?:passage|setter)|(@|sc-eval:)${SC2Patterns.htmlAttrName})\\s*=\\s*(${SC2Patterns.htmlAttrValue})`,
+    "g"
+);
+const hrefAttr = new RegExp(
+    `\\bhref(?:\\s*=\\s*${SC2Patterns.htmlAttrValue})?`
+);
+
+/**
+ * Parse HTML attributes and attribute directives.
+ *
+ * @param passageText Passage text to parse.
+ * @param textIndex Index of the text in the document (zero-based).
+ * @param state Parsing state.
+ * @param sugarcubeState SugarCube-specific parsing state.
+ * @returns The passage text with the attributes and attribute directives removed.
+ */
+function parseHtmlAttributesAndDirectives(
+    passageText: string,
+    textIndex: number,
+    state: ParsingState,
+    sugarcubeState: StoryFormatParsingState
+): string {
+    for (const m of passageText.matchAll(htmlTagRegex)) {
+        const tag = m[0];
+        const tagIndex = m.index;
+        for (const m1 of tag.matchAll(sc2AttrsAndDirectives)) {
+            const attrIndex = tagIndex + m1.index;
+            const attrName = m1[1];
+            const evalDirective = m1[2];
+            let attrContents = m1[3];
+            let attrContentsIndex =
+                attrIndex + m1[0].length - attrContents.length;
+            if (attrContents[0] === '"' || attrContents[0] === "'") {
+                attrContents = attrContents.slice(1, -1);
+                attrContentsIndex++;
+            }
+
+            // data-passage can be a passage or TwineScript.
+            // Everything else gets treated as TwineScript.
+            if (attrName === "data-passage") {
+                parseSugarCubePassageRefOrTwinescriptExpr(
+                    attrContents,
+                    textIndex + attrContentsIndex,
+                    state,
+                    sugarcubeState
+                );
+                // Make sure we don't have an href attribute, too
+                if (hrefAttr.test(tag)) {
+                    logErrorFor(
+                        attrName,
+                        textIndex + attrIndex,
+                        `Both "data-passage" and "href" attributes aren't allowed`,
+                        state
+                    );
+                }
+            } else {
+                createVariableAndPropertyReferences(
+                    tokenizeTwineScriptExpression(
+                        attrContents,
+                        textIndex + attrContentsIndex,
+                        state.textDocument,
+                        sugarcubeState
+                    ),
+                    state
+                );
+                // Make sure we don't have an evaluation directive on a data-setter attribute
+                if (
+                    evalDirective !== undefined &&
+                    attrName.endsWith("data-setter")
+                ) {
+                    logErrorFor(
+                        evalDirective,
+                        textIndex + attrIndex,
+                        `"data-setter" can't have an evaluation directive`,
+                        state
+                    );
+                }
+            }
+
+            passageText =
+                passageText.slice(0, attrIndex) +
+                " ".repeat(m1[0].length) +
+                passageText.slice(attrIndex + m1[0].length);
+        }
+    }
+
+    return passageText;
+}
+
 /**
  * Check for special passages and whether the special passage doesn't require additional processing.
  *
@@ -1008,6 +1098,13 @@ export function parsePassageText(
     // of <script>, verbatim <html>, and the no-wiki text
 
     passageText = removeNoWikiAndPureHtmlText(passageText);
+
+    passageText = parseHtmlAttributesAndDirectives(
+        passageText,
+        textIndex,
+        state,
+        sugarcubeState
+    );
 
     passageText = parseMacros(passageText, textIndex, state, sugarcubeState);
 

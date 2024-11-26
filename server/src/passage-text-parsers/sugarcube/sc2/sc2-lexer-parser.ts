@@ -23,6 +23,42 @@ import {
  */
 
 /**
+ * Parse text that may be either a passage reference or a TwineScript expression.
+ *
+ * @param text Text to parse.
+ * @param textIndex Index of the text in the document (zero-based).
+ * @param state Parsing state.
+ * @param sugarcubeState SugarCube-specific parsing state.
+ */
+export function parseSugarCubePassageRefOrTwinescriptExpr(
+    text: string,
+    textIndex: number,
+    state: ParsingState,
+    sugarcubeState: StoryFormatParsingState
+) {
+    // SC2 treats a link expression or data-passage attribute as a passage reference
+    // unless and until it's not found, at which point it's treated as if it's
+    // TwineScript. We'll do a bit of tap-dancing to decide if the link refers to a
+    // passage or is TwineScript.
+    //
+    // If someone ever literally names a passage `"Go to" + $destinationVar`, boy won't
+    // we look foolish.
+    if (isTwineScriptExpression(text)) {
+        createVariableAndPropertyReferences(
+            tokenizeTwineScriptExpression(
+                text,
+                textIndex,
+                state.textDocument,
+                sugarcubeState
+            ),
+            state
+        );
+    } else {
+        parsePassageReference(text, textIndex, state, sugarcubeState);
+    }
+}
+
+/**
  * Parse an SC2 Twine link.
  *
  * @param text Text to parse.
@@ -46,29 +82,12 @@ export function parseSugarCubeTwineLink(
         markupData.isLink &&
         markupData.link !== undefined
     ) {
-        // SC2 treats all link expressions as passage references unless and until it's
-        // not found, at which point it's treated as if it's TwineScript. We'll do a bit
-        // of tap-dancing to decide if the link refers to a passage or is TwineScript.
-        // If someone ever literally names a passage `"Go to" + $destinationVar`, boy won't
-        // we look foolish.
-        if (isTwineScriptExpression(markupData.link.text)) {
-            createVariableAndPropertyReferences(
-                tokenizeTwineScriptExpression(
-                    markupData.link.text,
-                    markupData.link.at + textIndex,
-                    state.textDocument,
-                    sugarcubeState
-                ),
-                state
-            );
-        } else {
-            parsePassageReference(
-                markupData.link.text,
-                markupData.link.at + textIndex,
-                state,
-                sugarcubeState
-            );
-        }
+        parseSugarCubePassageRefOrTwinescriptExpr(
+            markupData.link.text,
+            markupData.link.at + textIndex,
+            state,
+            sugarcubeState
+        );
         if (markupData.text !== undefined) {
             capturePreSemanticTokenFor(
                 markupData.text.text,

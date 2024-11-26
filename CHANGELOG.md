@@ -4,6 +4,11 @@ Changes to the extension.
 
 ## Unreleased
 
+### Added
+
+-   SugarCube: The `data-passage` and `data-setter` [special HTML attributes ](http://www.motoslave.net/sugarcube/2/docs/#markup-html-svg-attribute-special) are now parsed.
+-   SugarCube: [Attribute directives](http://www.motoslave.net/sugarcube/2/docs/#markup-html-svg-attribute-directive) are now parsed.
+
 ### Fixed
 
 -   SugarCube: Macros and variables are no longer parsed inside verbatim HTML markup.
