@@ -339,11 +339,14 @@ export function findEndOfPartialInsert(
     text: string,
     startOffset: number
 ): number | undefined {
+    // This partially duplicates code from parseTextSubsection() below so
+    // that the diagnostics code can get access to insert parsing.
+
     // Parsing code adapted from `render()` in `render-insert.ts` from Chapbook
 
     // Scan forward until we reach:
-    // -   another '{', indicating that the original '{' isn't the start of an
-    //     insert
+    // -   another '{' outside of a string value, indicating that the original '{'
+    //     isn't the start of an insert
     // -   a single or double quote, indicating the start of a string value
     // -   a '}' that isn't inside a string, indicating the end of a possible
     //     insert
@@ -354,8 +357,11 @@ export function findEndOfPartialInsert(
     for (let i = startOffset + 1; i < text.length; i++) {
         switch (text[i]) {
             case "{":
-                // We're not in an insert -- bail out
-                return undefined;
+                if (!inString) {
+                    // We're not in an insert -- bail out
+                    return undefined;
+                }
+                break;
 
             case "\n":
                 // Return this index as the end of the partial insert
@@ -1654,8 +1660,8 @@ function parseTextSubsection(
 
         if (startCurly !== -1) {
             // Scan forward until we reach:
-            // -   another '{', indicating that the original '{' isn't the start of an
-            //     insert
+            // -   another '{' outside of a string value, indicating that the original '{'
+            //     isn't the start of an insert
             // -   a single or double quote, indicating the start of a string value
             // -   a '}' that isn't inside a string, indicating the end of a possible
             //     insert
@@ -1665,8 +1671,10 @@ function parseTextSubsection(
             for (let i = startCurly + 1; i < subsection.length; i++) {
                 switch (subsection[i]) {
                     case "{":
-                        startCurly = i;
-                        inString = false;
+                        if (!inString) {
+                            startCurly = i;
+                            inString = false;
+                        }
                         break;
 
                     case "'":

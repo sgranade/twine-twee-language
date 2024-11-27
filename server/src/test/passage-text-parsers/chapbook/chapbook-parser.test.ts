@@ -1977,6 +1977,140 @@ describe("Chapbook Parser", () => {
                     expect(allTokens[0].props).to.be.empty;
                 });
 
+                it("should handle multiple inserts in a row on the same line", () => {
+                    const header = ":: Passage\n";
+                    const passage =
+                        "Insert: {mock insert: 'arg}'} {mock insert: 'arg{'}";
+                    const callbacks = new MockCallbacks();
+                    const insert = buildInsertInfo({
+                        match: /^mock insert/,
+                    });
+                    const allTokens: insertsModule.InsertTokens[] = [];
+                    insert.parse = (tokens) => {
+                        allTokens.push(tokens);
+                    };
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
+                    const mockFunction = ImportMock.mockFunction(
+                        insertsModule,
+                        "all"
+                    ).returns([insert]);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    mockFunction.restore();
+
+                    expect(allTokens.length).to.equal(2);
+                    expect(allTokens[0].firstArgument).to.eql({
+                        text: "'arg}'",
+                        at: 33,
+                    });
+                    expect(allTokens[0].props).to.be.empty;
+                    expect(allTokens[1].firstArgument).to.eql({
+                        text: "'arg{'",
+                        at: 55,
+                    });
+                    expect(allTokens[1].props).to.be.empty;
+                });
+
+                it("should handle first args that have } in a string", () => {
+                    const header = ":: Passage\n";
+                    const passage = "Insert: {mock insert:  'arg}'}";
+                    const callbacks = new MockCallbacks();
+                    const insert = buildInsertInfo({
+                        match: /^mock insert/,
+                    });
+                    const allTokens: insertsModule.InsertTokens[] = [];
+                    insert.parse = (tokens) => {
+                        allTokens.push(tokens);
+                    };
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
+                    const mockFunction = ImportMock.mockFunction(
+                        insertsModule,
+                        "all"
+                    ).returns([insert]);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    mockFunction.restore();
+
+                    expect(allTokens.length).to.equal(1);
+                    expect(allTokens[0].firstArgument).to.eql({
+                        text: "'arg}'",
+                        at: 34,
+                    });
+                    expect(allTokens[0].props).to.be.empty;
+                });
+
+                it("should handle first args that have { in a string", () => {
+                    const header = ":: Passage\n";
+                    const passage = "Insert: {mock insert:  'arg{'}";
+                    const callbacks = new MockCallbacks();
+                    const insert = buildInsertInfo({
+                        match: /^mock insert/,
+                    });
+                    const allTokens: insertsModule.InsertTokens[] = [];
+                    insert.parse = (tokens) => {
+                        allTokens.push(tokens);
+                    };
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
+                    const mockFunction = ImportMock.mockFunction(
+                        insertsModule,
+                        "all"
+                    ).returns([insert]);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    mockFunction.restore();
+
+                    expect(allTokens.length).to.equal(1);
+                    expect(allTokens[0].firstArgument).to.eql({
+                        text: "'arg{'",
+                        at: 34,
+                    });
+                    expect(allTokens[0].props).to.be.empty;
+                });
+
+                it("should handle first args that have an escaped quote mark in a string", () => {
+                    const header = ":: Passage\n";
+                    const passage = "Insert: {mock insert:  'arg\\''}";
+                    const callbacks = new MockCallbacks();
+                    const insert = buildInsertInfo({
+                        match: /^mock insert/,
+                    });
+                    const allTokens: insertsModule.InsertTokens[] = [];
+                    insert.parse = (tokens) => {
+                        allTokens.push(tokens);
+                    };
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
+                    const mockFunction = ImportMock.mockFunction(
+                        insertsModule,
+                        "all"
+                    ).returns([insert]);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    mockFunction.restore();
+
+                    expect(allTokens.length).to.equal(1);
+                    expect(allTokens[0].firstArgument).to.eql({
+                        text: "'arg\\''",
+                        at: 34,
+                    });
+                    expect(allTokens[0].props).to.be.empty;
+                });
+
                 it("should create a variable reference for a first arg that's an expression and contains a variable", () => {
                     const header = ":: Passage\n";
                     const passage = "Insert: {mock insert:  tempy.prop}";

@@ -11,6 +11,7 @@ Changes to the extension.
 
 ### Fixed
 
+-   Chapbook: Fixed bug where inserts with `{` inside quotation marks weren't parsed properly.
 -   SugarCube: Macros and variables are no longer parsed inside verbatim HTML markup.
 
 ## [1.0.0] - 2024 11 23
