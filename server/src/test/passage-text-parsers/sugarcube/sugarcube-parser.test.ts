@@ -2436,6 +2436,131 @@ describe("SugarCube Parser", () => {
         });
     });
 
+    describe("block comments", () => {
+        it("should produce semantic tokens for a /* */ block comment", () => {
+            const header = ":: Passage\n";
+            const passage =
+                "/* comments\n" + " more comments\n" + "  end comment */";
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            const parser = uut.getSugarCubeParser(undefined);
+
+            parser?.parsePassageText(passage, header.length, state);
+            const result = callbacks.tokens;
+
+            expect(result).to.eql([
+                {
+                    line: 1,
+                    char: 0,
+                    length: 11,
+                    tokenType: ETokenType.comment,
+                    tokenModifiers: [],
+                },
+                {
+                    line: 2,
+                    char: 0,
+                    length: 14,
+                    tokenType: ETokenType.comment,
+                    tokenModifiers: [],
+                },
+                {
+                    line: 3,
+                    char: 0,
+                    length: 16,
+                    tokenType: ETokenType.comment,
+                    tokenModifiers: [],
+                },
+            ]);
+        });
+
+        it("should ignore all contents inside a /* */ block comment", () => {
+            const header = ":: Passage\n";
+            const passage =
+                "/* comments\n" +
+                " $bare_variable [[ passage ]]\n" +
+                "<<testy>>\n" +
+                "end comment */";
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            const parser = uut.getSugarCubeParser(undefined);
+            const macro = buildMacroInfo({
+                name: "testy",
+            });
+            const mockFunction = ImportMock.mockFunction(
+                macrosModule,
+                "allMacros"
+            ).returns({ testy: macro });
+
+            parser?.parsePassageText(passage, header.length, state);
+            mockFunction.restore();
+            const result = callbacks.references;
+
+            expect(result).to.be.empty;
+        });
+
+        it("should ignore all contents inside a /% %/ block comment", () => {
+            const header = ":: Passage\n";
+            const passage =
+                "/% comments\n" +
+                " $bare_variable [[ passage ]]\n" +
+                "<<testy>>\n" +
+                "end comment %/";
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            const parser = uut.getSugarCubeParser(undefined);
+            const macro = buildMacroInfo({
+                name: "testy",
+            });
+            const mockFunction = ImportMock.mockFunction(
+                macrosModule,
+                "allMacros"
+            ).returns({ testy: macro });
+
+            parser?.parsePassageText(passage, header.length, state);
+            mockFunction.restore();
+            const result = callbacks.references;
+
+            expect(result).to.be.empty;
+        });
+
+        it("should ignore all contents inside a <!-- --> block comment", () => {
+            const header = ":: Passage\n";
+            const passage =
+                "<!-- comments\n" +
+                " $bare_variable [[ passage ]]\n" +
+                "<<testy>>\n" +
+                "end comment -->";
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            const parser = uut.getSugarCubeParser(undefined);
+            const macro = buildMacroInfo({
+                name: "testy",
+            });
+            const mockFunction = ImportMock.mockFunction(
+                macrosModule,
+                "allMacros"
+            ).returns({ testy: macro });
+
+            parser?.parsePassageText(passage, header.length, state);
+            mockFunction.restore();
+            const result = callbacks.references;
+
+            expect(result).to.be.empty;
+        });
+    });
+
     describe("html and svg attributes", () => {
         it("should capture a passage reference in an a tag's data-passage attribute", () => {
             const header = ":: Passage\n";

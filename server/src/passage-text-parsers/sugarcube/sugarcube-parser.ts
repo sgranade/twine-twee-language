@@ -157,27 +157,49 @@ function parseAndRemoveTwineLinks(
     return passageText;
 }
 
-const noWikiRegex = new RegExp(SC2Patterns.noWikiBlock, "gi");
-const scriptStyleBlockRegex = new RegExp(
-    SC2Patterns.htmlScriptStyleBlock,
+const noParseRegex = new RegExp(
+    [SC2Patterns.noWikiBlock, SC2Patterns.htmlScriptStyleBlock].join("|"),
     "gmi"
 );
 
+const commentRegex = new RegExp(SC2Patterns.commentBlock, "gmi");
+
 /**
- * Remove nowiki text plus <style>, <script>, and <html> blocks from a subsection.
+ * Remove all text that we won't parse for SugarCube contents.
  *
- * (Strictly speaking, we also remove inline code markup, too.)
+ * This includes:
+ *   - `"""remove"""`
+ *   - `<nowiki>remove</nowiki>`
+ *   - `{{{remove}}}`
+ *   - `<style>remove</style>`
+ *   - `<script>remove</script>`
+ *   - `<html>remove</html>`
+ *   - `/* remove * /`
+ *   - `/% remove %/`
+ *   - `<!-- remove -->`
  *
- * Examples: `"""remove"""`, `<nowiki>remove</nowiki>`, `{{{remove}}}`
- *
- * @param subsection Subsection to remove nowiki text from.
- * @returns The subsection with nowiki text blanked out.
+ * @param text Text to remove unparsed text from.
+ * @returns The subsection with unparsed text blanked out.
  */
-function removeNoWikiAndPureHtmlText(subsection: string): string {
-    noWikiRegex.lastIndex = 0;
-    subsection = eraseMatches(subsection, noWikiRegex);
-    scriptStyleBlockRegex.lastIndex = 0;
-    return eraseMatches(subsection, scriptStyleBlockRegex);
+function removeNonParsedText(
+    text: string,
+    textIndex: number,
+    sugarcubeState: StoryFormatParsingState
+): string {
+    text = eraseMatches(text, noParseRegex);
+
+    // We need to produce semantic tokens for comments
+    return eraseMatches(text, commentRegex, (m) => {
+        if (m !== null) {
+            capturePreSemanticTokenFor(
+                m[0],
+                m.index + textIndex,
+                ETokenType.comment,
+                [],
+                sugarcubeState
+            );
+        }
+    });
 }
 
 const macroRegex = new RegExp(SC2Patterns.fullMacro, "gm");
@@ -1095,9 +1117,9 @@ export function parsePassageText(
     passageText = findAndParseHtml(passageText, textIndex, state);
 
     // The above gets rid of pure <style> tags; now take care
-    // of <script>, verbatim <html>, and the no-wiki text
+    // of <script>, verbatim <html>, no-wiki text, and comments
 
-    passageText = removeNoWikiAndPureHtmlText(passageText);
+    passageText = removeNonParsedText(passageText, textIndex, sugarcubeState);
 
     passageText = parseHtmlAttributesAndDirectives(
         passageText,

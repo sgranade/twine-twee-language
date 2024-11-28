@@ -93,14 +93,30 @@ export function nextLineIndex(document: string, startIndex: number): number {
  *
  * @param s String to erase matches from.
  * @param r RegExp to match. Must be a global regex.
+ * @param c Optional callback that takes the regex match results.
  * @returns String with all matched text replaced by spaces.
  */
-export function eraseMatches(s: string, r: RegExp): string {
-    for (const m of s.matchAll(r)) {
-        s =
-            s.slice(0, m.index) +
-            " ".repeat(m[0].length) +
-            s.slice(m.index + m[0].length);
+export function eraseMatches(
+    s: string,
+    r: RegExp,
+    c?: (m: RegExpExecArray | null) => void
+): string {
+    // Unroll these two for speed, since we call this a lot
+    if (c !== undefined) {
+        for (const m of s.matchAll(r)) {
+            c(m);
+            s =
+                s.slice(0, m.index) +
+                " ".repeat(m[0].length) +
+                s.slice(m.index + m[0].length);
+        }
+    } else {
+        for (const m of s.matchAll(r)) {
+            s =
+                s.slice(0, m.index) +
+                " ".repeat(m[0].length) +
+                s.slice(m.index + m[0].length);
+        }
     }
     return s;
 }

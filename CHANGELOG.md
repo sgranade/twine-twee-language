@@ -13,6 +13,7 @@ Changes to the extension.
 
 -   Chapbook: Fixed bug where inserts with `{` inside quotation marks weren't parsed properly.
 -   SugarCube: Macros and variables are no longer parsed inside verbatim HTML markup.
+-   SugarCube: Comment blocks in passages are now properly ignored.
 
 ## [1.0.0] - 2024 11 23
 

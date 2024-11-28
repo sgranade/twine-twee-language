@@ -135,6 +135,16 @@ describe("Utilities", () => {
 
             expect(result).to.equal(" his is a  es ");
         });
+
+        it("should call back on all matches if a callback is passed", () => {
+            const indices: number[] = [];
+
+            uut.eraseMatches("this is a test", /t/g, (m) => {
+                indices.push(m !== null ? m.index : -1);
+            });
+
+            expect(indices).to.eql([0, 10, 13]);
+        });
     });
 
     describe("remove padding", () => {
