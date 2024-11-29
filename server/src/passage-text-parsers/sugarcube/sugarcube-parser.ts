@@ -367,7 +367,7 @@ function parseMacroArgs(
                     sugarcubeState
                 );
             } else if (t3ltArgFormatType === "receiver") {
-                // A "$var" in quotes or an expression/settingssetupaccess/variable
+                // A "$var" in quotes
                 if (t3ltArg.type === T3LTArgType.String) {
                     const varName = sc2Token.text.slice(1, -1);
                     const varAt = sc2Token.at + 1;
@@ -388,15 +388,40 @@ function parseMacroArgs(
                         sugarcubeState
                     );
                 } else {
-                    createVariableAndPropertyReferences(
-                        tokenizeTwineScriptExpression(
+                    // Non-string receivers are okay, but often are a mistake
+                    // (see https://github.com/cyrusfirheir/twee3-language-tools/issues/65).
+                    // We'll suggest that they should be in back-ticks if they're not
+                    if (
+                        sc2Token.text[0] === "`" &&
+                        sc2Token.text[sc2Token.text.length - 1] === "`"
+                    ) {
+                        createVariableAndPropertyReferences(
+                            tokenizeTwineScriptExpression(
+                                sc2Token.text.slice(1, -1),
+                                sc2Token.at + 1,
+                                state.textDocument,
+                                sugarcubeState
+                            ),
+                            state
+                        );
+                    } else {
+                        logWarningFor(
                             sc2Token.text,
                             sc2Token.at,
-                            state.textDocument,
-                            sugarcubeState
-                        ),
-                        state
-                    );
+                            "Do you mean for this receiver value to be a bare variable? " +
+                                `If so, consider surrounding it with back-ticks: \`${sc2Token.text}\``,
+                            state
+                        );
+                        createVariableAndPropertyReferences(
+                            tokenizeTwineScriptExpression(
+                                sc2Token.text,
+                                sc2Token.at,
+                                state.textDocument,
+                                sugarcubeState
+                            ),
+                            state
+                        );
+                    }
                 }
             } else if (t3ltArgFormatType === "passage") {
                 // A bareword, string (the passage name is in the string), NaN, or number (sure)

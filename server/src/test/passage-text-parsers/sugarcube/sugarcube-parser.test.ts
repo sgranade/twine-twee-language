@@ -2503,6 +2503,40 @@ describe("SugarCube Parser", () => {
                     },
                 ]);
             });
+
+            it("should capture variable references for receiver values in backticks", () => {
+                const header = ":: Passage\n";
+                const passage = "Let's go: <<a bare `$testy`>>\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const parser = uut.getSugarCubeParser(undefined);
+                const macro = buildMacroInfoWithArgs({
+                    name: "a",
+                    args: ["bareword &+ receiver"],
+                });
+                const mockFunction = ImportMock.mockFunction(
+                    macrosModule,
+                    "allMacros"
+                ).returns({ a: macro });
+
+                parser?.parsePassageText(passage, header.length, state);
+                mockFunction.restore();
+                const results = callbacks.references;
+
+                expect(results.slice(1)).to.eql([
+                    {
+                        contents: "$testy",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(1, 20, 1, 26)
+                        ),
+                        kind: OSugarCubeSymbolKind.Variable,
+                    },
+                ]);
+            });
         });
     });
 
@@ -3817,6 +3851,40 @@ describe("SugarCube Parser", () => {
                         "Closing macros don't take arguments"
                     );
                     expect(result.range).to.eql(Range.create(1, 22, 1, 28));
+                });
+
+                describe("T3LT macro arguments", () => {
+                    it("should error on a receiver value that's not a string", () => {
+                        const header = ":: Passage\n";
+                        const passage = "Let's go: <<a bare $testy>>\n";
+                        const callbacks = new MockCallbacks();
+                        const state = buildParsingState({
+                            content: header + passage,
+                            callbacks: callbacks,
+                        });
+                        const parser = uut.getSugarCubeParser(undefined);
+                        const macro = buildMacroInfoWithArgs({
+                            name: "a",
+                            args: ["bareword &+ receiver"],
+                        });
+                        const mockFunction = ImportMock.mockFunction(
+                            macrosModule,
+                            "allMacros"
+                        ).returns({ a: macro });
+
+                        parser?.parsePassageText(passage, header.length, state);
+                        mockFunction.restore();
+                        const [result] = callbacks.errors;
+
+                        expect(callbacks.errors.length).to.equal(1);
+                        expect(result.severity).to.eql(
+                            DiagnosticSeverity.Warning
+                        );
+                        expect(result.message).to.include(
+                            "Do you mean for this receiver value to be a bare variable?"
+                        );
+                        expect(result.range).to.eql(Range.create(1, 19, 1, 25));
+                    });
                 });
             });
         });

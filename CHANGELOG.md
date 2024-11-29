@@ -10,6 +10,7 @@ Changes to the extension.
 -   SugarCube: [Attribute directives](http://www.motoslave.net/sugarcube/2/docs/#markup-html-svg-attribute-directive) are now parsed.
 -   SugarCube: Passages with `<<widget>>` macros now give a warning if they don't have a `widget` tag.
 -   SugarCube: `<<elseif>>` after an `<<else>>` is now flagged as an error.
+-   SugarCube: Receiver values (like those to the `<<checkbox>>` macro) are now warned as an error if they're not a string or back-ticked expression.
 
 ### Fixed
 
