@@ -1,3 +1,4 @@
+import { Diagnostic, DiagnosticSeverity } from "vscode-languageserver";
 import { MacroInfo } from "./types";
 
 export const doneMacro: MacroInfo = {
@@ -67,4 +68,24 @@ export const widgetMacro: MacroInfo = {
     description:
         "Creates a new widget macro (henceforth, widget) with the given name. Widgets allow you to create macros by using the standard macros and markup that you use normally within your story. All widgets may access arguments passed to them via the `_args` special variable. Block widgets may access the contents they enclose via the `_contents` special variable.",
     since: "2.0.0",
+    parse(_args, _argsIndex, state) {
+        // Widgets should be defined in passages with the widget tag
+        if (
+            state.currentPassage !== undefined &&
+            !state.currentPassage.tags
+                ?.map((l) => l.contents)
+                .includes("widget")
+        ) {
+            state.callbacks.onParseError(
+                Diagnostic.create(
+                    state.currentPassage.name.location.range,
+                    `This passage contains <<widget>> macros, so needs a "widget" passage tag`,
+                    DiagnosticSeverity.Warning,
+                    undefined,
+                    "Twine"
+                )
+            );
+        }
+        return false; // Keep on parsin'
+    },
 };

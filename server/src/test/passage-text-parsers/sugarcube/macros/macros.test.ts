@@ -7,7 +7,6 @@ import {
 } from "../../../../passage-text-parsers/sugarcube/sc2/t3lt-parameters";
 
 import * as uut from "../../../../passage-text-parsers/sugarcube/macros";
-import { MacrosAndEnums } from "../../../../passage-text-parsers/sugarcube/macros/custom";
 import { buildMacroInfo } from "./macro-builders";
 
 describe("SugarCube Macros", () => {

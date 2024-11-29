@@ -8,6 +8,7 @@ Changes to the extension.
 
 -   SugarCube: The `data-passage` and `data-setter` [special HTML attributes ](http://www.motoslave.net/sugarcube/2/docs/#markup-html-svg-attribute-special) are now parsed.
 -   SugarCube: [Attribute directives](http://www.motoslave.net/sugarcube/2/docs/#markup-html-svg-attribute-directive) are now parsed.
+-   SugarCube: Passages with `<<widget>>` macros now give a warning if they don't have a `widget` tag.
 
 ### Fixed
 
