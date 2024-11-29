@@ -1,9 +1,19 @@
 /**
  * Adapted from SugarCube's `patterns.js` and twee3-language-tools `macros.ts`.
  *
- * Any changes to this file need to be reflected also in the two `client-server.ts` files.
+ * Any changes to this file also need to be reflected in the two `client-server.ts` files.
  */
 
+/**
+ * \s character class without a line terminator.
+ */
+const spaceNoTerminator =
+    "[\\u0020\\f\\t\\v\\u00a0\\u1680\\u180e\\u2000-\\u200a\\u202f\\u205f\\u3000\\ufeff]";
+/**
+ * Any letter, which also includes `-` (sure, why not).
+ */
+const anyLetter =
+    "[0-9A-Z_a-z\\-\\u00c0-\\u00d6\\u00d8-\\u00f6\\u00f8-\\u00ff\\u0150\\u0170\\u0151\\u0171]";
 /**
  * TwineScript variables with a single `$` (with no `$` before it) or `_` sigil.
  * Separate from the `variable` pattern b/c we don't accept `$$var` but do accept `_$var`.
@@ -74,6 +84,30 @@ export const htmlAttrValue = `(?:"[^"]*?"|'[^']*?'|[^\\s"'=<>\`]+)`;
  * HTML tag.
  */
 export const htmlTag = `<${htmlTagName}(?:\\s+${htmlAttrName}(?:\\s*=\\s*${htmlAttrValue})?)*\\s*\\/?>`;
+/**
+ * CSS ID or class sigil.
+ */
+const cssIdOrClassSigil = "[#.]";
+/**
+ * CSS style pattern.
+ */
+const cssStyle = `(${spaceNoTerminator}*)(${anyLetter}+)(${spaceNoTerminator}*:${spaceNoTerminator}*)([^;\\|\\n]+);`;
+/**
+ * CSS ID or class.
+ */
+export const singleCssIdOrClass = `${cssIdOrClassSigil}${anyLetter}+${spaceNoTerminator}*`;
+/**
+ * Conjoined CSS IDs or classes.
+ */
+const conjoinedCssIdsOrClasses = `(${spaceNoTerminator}*)((?:${cssIdOrClassSigil}${anyLetter}+${spaceNoTerminator}*)+);`;
+/**
+ * Inline CSS pattern.
+ *
+ * Groups:
+ *   1, 2, 3, 4: [space] style [space:space] value;
+ *   5, 6:       [space] #id.classname.otherClass; <- can have spaces in between IDs and classnames
+ */
+export const inlineCss = `${cssStyle}|${conjoinedCssIdsOrClasses}`;
 /**
  * Script macro block.
  */

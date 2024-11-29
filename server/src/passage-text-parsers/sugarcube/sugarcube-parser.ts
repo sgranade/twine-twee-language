@@ -115,6 +115,90 @@ function parseBareVariables(
     }
 }
 
+const customStyleRegex = /@@((?:.|\r?\n)*?)@@/gm;
+const inlineCssRegex = new RegExp(SC2Patterns.inlineCss, "g");
+const singleCssIdOrClass = new RegExp(SC2Patterns.singleCssIdOrClass, "g");
+
+/**
+ * Parse custom styles.
+ *
+ * @param passageText Passage text to parse.
+ * @param textIndex Index of the text in the document (zero-based).
+ * @param state Parsing state.
+ * @param sugarcubeState SugarCube-specific parsing state.
+ */
+function parseCustomStyles(
+    passageText: string,
+    textIndex: number,
+    state: ParsingState,
+    sugarcubeState: StoryFormatParsingState
+): void {
+    for (const m of passageText.matchAll(customStyleRegex)) {
+        // Capture tokens for the custom style tokens
+        capturePreSemanticTokenFor(
+            "@@",
+            m.index + textIndex,
+            ETokenType.decorator,
+            [],
+            sugarcubeState
+        );
+        capturePreSemanticTokenFor(
+            "@@",
+            m.index + m[0].length - 2 + textIndex,
+            ETokenType.decorator,
+            [],
+            sugarcubeState
+        );
+        // Parse the inline CSS, which has to be contiguous
+        let nextIndex = 0; // Where the next match should be for it to be contiguous
+        inlineCssRegex.lastIndex = 0;
+        let cssMatch: RegExpExecArray | null = null;
+        while (
+            (cssMatch = inlineCssRegex.exec(m[1])) !== null &&
+            cssMatch.index === nextIndex
+        ) {
+            let curNdx = m.index + 2 + cssMatch.index + textIndex; // +2 for @@
+            if (cssMatch[1] !== undefined) {
+                curNdx += cssMatch[1].length;
+                // Groups 1, 2, 3, 4: [space] style [space:space] value;
+                capturePreSemanticTokenFor(
+                    cssMatch[2],
+                    curNdx,
+                    ETokenType.property,
+                    [],
+                    sugarcubeState
+                );
+                // This isn't necessarily a string, but go with that for simplicity
+                capturePreSemanticTokenFor(
+                    cssMatch[4],
+                    curNdx + cssMatch[2].length + cssMatch[3].length,
+                    ETokenType.string,
+                    [],
+                    sugarcubeState
+                );
+            } else {
+                // Groups 5, 6:       [space] #id.classname.otherClass; <- can have spaces in between IDs and classnames
+                curNdx += cssMatch[5].length;
+                // Parse each ID or class
+                singleCssIdOrClass.lastIndex = 0;
+                for (const idOrClassMatch of cssMatch[6].matchAll(
+                    singleCssIdOrClass
+                )) {
+                    capturePreSemanticTokenFor(
+                        idOrClassMatch[0].trimEnd(),
+                        curNdx + idOrClassMatch.index,
+                        ETokenType.class,
+                        [],
+                        sugarcubeState
+                    );
+                }
+            }
+
+            nextIndex = cssMatch.index + cssMatch[0].length;
+        }
+    }
+}
+
 /**
  * Parse Twine links and remove them from the text.
  *
@@ -155,51 +239,6 @@ function parseAndRemoveTwineLinks(
     }
 
     return passageText;
-}
-
-const noParseRegex = new RegExp(
-    [SC2Patterns.noWikiBlock, SC2Patterns.htmlScriptStyleBlock].join("|"),
-    "gmi"
-);
-
-const commentRegex = new RegExp(SC2Patterns.commentBlock, "gmi");
-
-/**
- * Remove all text that we won't parse for SugarCube contents.
- *
- * This includes:
- *   - `"""remove"""`
- *   - `<nowiki>remove</nowiki>`
- *   - `{{{remove}}}`
- *   - `<style>remove</style>`
- *   - `<script>remove</script>`
- *   - `<html>remove</html>`
- *   - `/* remove * /`
- *   - `/% remove %/`
- *   - `<!-- remove -->`
- *
- * @param text Text to remove unparsed text from.
- * @returns The subsection with unparsed text blanked out.
- */
-function removeNonParsedText(
-    text: string,
-    textIndex: number,
-    sugarcubeState: StoryFormatParsingState
-): string {
-    text = eraseMatches(text, noParseRegex);
-
-    // We need to produce semantic tokens for comments
-    return eraseMatches(text, commentRegex, (m) => {
-        if (m !== null) {
-            capturePreSemanticTokenFor(
-                m[0],
-                m.index + textIndex,
-                ETokenType.comment,
-                [],
-                sugarcubeState
-            );
-        }
-    });
 }
 
 const macroRegex = new RegExp(SC2Patterns.fullMacro, "gm");
@@ -972,6 +1011,51 @@ function parseHtmlAttributesAndDirectives(
     return passageText;
 }
 
+const noParseRegex = new RegExp(
+    [SC2Patterns.noWikiBlock, SC2Patterns.htmlScriptStyleBlock].join("|"),
+    "gmi"
+);
+
+const commentRegex = new RegExp(SC2Patterns.commentBlock, "gmi");
+
+/**
+ * Remove all text that we won't parse for SugarCube contents.
+ *
+ * This includes:
+ *   - `"""remove"""`
+ *   - `<nowiki>remove</nowiki>`
+ *   - `{{{remove}}}`
+ *   - `<style>remove</style>`
+ *   - `<script>remove</script>`
+ *   - `<html>remove</html>`
+ *   - `/* remove * /`
+ *   - `/% remove %/`
+ *   - `<!-- remove -->`
+ *
+ * @param text Text to remove unparsed text from.
+ * @returns The subsection with unparsed text blanked out.
+ */
+function removeNonParsedText(
+    text: string,
+    textIndex: number,
+    sugarcubeState: StoryFormatParsingState
+): string {
+    text = eraseMatches(text, noParseRegex);
+
+    // We need to produce semantic tokens for comments
+    return eraseMatches(text, commentRegex, (m) => {
+        if (m !== null) {
+            capturePreSemanticTokenFor(
+                m[0],
+                m.index + textIndex,
+                ETokenType.comment,
+                [],
+                sugarcubeState
+            );
+        }
+    });
+}
+
 /**
  * Check for special passages and whether the special passage doesn't require additional processing.
  *
@@ -1192,6 +1276,8 @@ export function parsePassageText(
         state,
         sugarcubeState
     );
+
+    parseCustomStyles(passageText, textIndex, state, sugarcubeState);
 
     parseBareVariables(passageText, textIndex, state, sugarcubeState);
 

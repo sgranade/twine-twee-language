@@ -6,14 +6,15 @@ import { SemanticTokensLegend } from "vscode-languageserver";
 export const ETokenType = {
     class: 0,
     property: 1,
-    function: 2,
-    parameter: 3,
-    variable: 4,
-    comment: 5,
-    keyword: 6,
-    string: 7,
-    number: 8,
-    operator: 9,
+    decorator: 2,
+    function: 3,
+    parameter: 4,
+    variable: 5,
+    comment: 6,
+    keyword: 7,
+    string: 8,
+    number: 9,
+    operator: 10,
 } as const;
 export type TokenType = (typeof ETokenType)[keyof typeof ETokenType];
 

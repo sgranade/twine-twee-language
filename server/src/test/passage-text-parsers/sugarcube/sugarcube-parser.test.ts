@@ -3091,6 +3091,174 @@ describe("SugarCube Parser", () => {
         });
     });
 
+    describe("custom styles", () => {
+        it("should create semantic tokens for inline CSS style lists", () => {
+            const header = ":: Passage\n";
+            const passage = "@@color: red; Text@@\n";
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                uri: "fake-uri",
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            const parser = uut.getSugarCubeParser(undefined);
+
+            parser?.parsePassageText(passage, header.length, state);
+            const result = callbacks.tokens;
+
+            expect(result).to.eql([
+                {
+                    line: 1,
+                    char: 0,
+                    length: 2,
+                    tokenType: ETokenType.decorator,
+                    tokenModifiers: [],
+                },
+                {
+                    line: 1,
+                    char: 2,
+                    length: 5,
+                    tokenType: ETokenType.property,
+                    tokenModifiers: [],
+                },
+                {
+                    line: 1,
+                    char: 9,
+                    length: 3,
+                    tokenType: ETokenType.string,
+                    tokenModifiers: [],
+                },
+                {
+                    line: 1,
+                    char: 18,
+                    length: 2,
+                    tokenType: ETokenType.decorator,
+                    tokenModifiers: [],
+                },
+            ]);
+        });
+
+        it("should create semantic tokens for inline class and ID lists", () => {
+            const header = ":: Passage\n";
+            const passage = "@@#alfa;.bravo#charlie .delta; Text@@\n";
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                uri: "fake-uri",
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            const parser = uut.getSugarCubeParser(undefined);
+
+            parser?.parsePassageText(passage, header.length, state);
+            const result = callbacks.tokens;
+
+            expect(result).to.eql([
+                {
+                    line: 1,
+                    char: 0,
+                    length: 2,
+                    tokenType: ETokenType.decorator,
+                    tokenModifiers: [],
+                },
+                {
+                    line: 1,
+                    char: 2,
+                    length: 5,
+                    tokenType: ETokenType.class,
+                    tokenModifiers: [],
+                },
+                {
+                    line: 1,
+                    char: 8,
+                    length: 6,
+                    tokenType: ETokenType.class,
+                    tokenModifiers: [],
+                },
+                {
+                    line: 1,
+                    char: 14,
+                    length: 8,
+                    tokenType: ETokenType.class,
+                    tokenModifiers: [],
+                },
+                {
+                    line: 1,
+                    char: 23,
+                    length: 6,
+                    tokenType: ETokenType.class,
+                    tokenModifiers: [],
+                },
+                {
+                    line: 1,
+                    char: 35,
+                    length: 2,
+                    tokenType: ETokenType.decorator,
+                    tokenModifiers: [],
+                },
+            ]);
+        });
+
+        it("should create semantic tokens for block style lists", () => {
+            const header = ":: Passage\n";
+            const passage = "@@#alfa;.bravo;color: red;\nText@@\n";
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                uri: "fake-uri",
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            const parser = uut.getSugarCubeParser(undefined);
+
+            parser?.parsePassageText(passage, header.length, state);
+            const result = callbacks.tokens;
+
+            expect(result).to.eql([
+                {
+                    line: 1,
+                    char: 0,
+                    length: 2,
+                    tokenType: ETokenType.decorator,
+                    tokenModifiers: [],
+                },
+                {
+                    line: 1,
+                    char: 2,
+                    length: 5,
+                    tokenType: ETokenType.class,
+                    tokenModifiers: [],
+                },
+                {
+                    line: 1,
+                    char: 8,
+                    length: 6,
+                    tokenType: ETokenType.class,
+                    tokenModifiers: [],
+                },
+                {
+                    line: 1,
+                    char: 15,
+                    length: 5,
+                    tokenType: ETokenType.property,
+                    tokenModifiers: [],
+                },
+                {
+                    line: 1,
+                    char: 22,
+                    length: 3,
+                    tokenType: ETokenType.string,
+                    tokenModifiers: [],
+                },
+                {
+                    line: 2,
+                    char: 4,
+                    length: 2,
+                    tokenType: ETokenType.decorator,
+                    tokenModifiers: [],
+                },
+            ]);
+        });
+    });
+
     describe("errors", () => {
         describe("special passages", () => {
             it("should warn on a StoryDisplayTitle passage before version 2.31.0", () => {
