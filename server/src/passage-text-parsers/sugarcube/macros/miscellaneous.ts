@@ -86,6 +86,6 @@ export const widgetMacro: MacroInfo = {
                 )
             );
         }
-        return false; // Keep on parsin'
+        return false; // Keep on parsin', as we didn't really parse any arguments
     },
 };

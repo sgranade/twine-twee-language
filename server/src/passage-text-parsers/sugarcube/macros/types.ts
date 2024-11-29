@@ -1,5 +1,6 @@
 import { ParsingState } from "../../../parser";
 import { StoryFormatParsingState } from "../..";
+import { MacroLocationInfo } from "../sugarcube-parser";
 import { createVariableAndPropertyReferences } from "../sugarcube-utils";
 import { tokenizeTwineScriptExpression } from "../sc2/sc2-twinescript";
 import { Parameters } from "../sc2/t3lt-parameters";
@@ -117,6 +118,18 @@ export interface MacroInfo {
         state: ParsingState,
         sugarcubeState: StoryFormatParsingState
     ) => boolean;
+    /**
+     * Parses a container macro's child macros.
+     *
+     * @param children Child macros inside the container.
+     * @param state Parsing state.
+     * @param sugarcubeState SugarCube-specific parsing state.
+     */
+    parseChildren?: (
+        children: MacroLocationInfo[],
+        state: ParsingState,
+        sugarcubeState: StoryFormatParsingState
+    ) => void;
 }
 
 /**

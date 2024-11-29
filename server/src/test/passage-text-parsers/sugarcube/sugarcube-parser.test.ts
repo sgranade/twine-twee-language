@@ -5,6 +5,7 @@ import { DiagnosticSeverity, Location, Range } from "vscode-languageserver";
 
 import { TwineSymbolKind } from "../../../project-index";
 import { ETokenModifier, ETokenType } from "../../../semantic-tokens";
+import { MacroLocationInfo } from "../../../passage-text-parsers/sugarcube/sugarcube-parser";
 import { OSugarCubeSymbolKind } from "../../../passage-text-parsers/sugarcube/types";
 import { MockCallbacks, buildParsingState, buildPassage } from "../../builders";
 import {
@@ -1655,6 +1656,75 @@ describe("SugarCube Parser", () => {
             const result = callbacks.references;
 
             expect(result).to.be.empty;
+        });
+
+        it("should pass arguments to a macro's parse function if defined", () => {
+            const header = ":: Passage\n";
+            const passage = "Macro: <<testy arg1 arg2>>";
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                uri: "fake-uri",
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            const parser = uut.getSugarCubeParser(undefined);
+            const macro = buildMacroInfo({
+                name: "testy",
+            });
+            let macroArgs: string | undefined;
+            let macroArgsIndex: number | undefined;
+            macro.parse = (args, argsIndex) => {
+                macroArgs = args;
+                macroArgsIndex = argsIndex;
+                return true;
+            };
+            const mockFunction = ImportMock.mockFunction(
+                macrosModule,
+                "allMacros"
+            ).returns({ testy: macro });
+
+            parser?.parsePassageText(passage, header.length, state);
+            mockFunction.restore();
+
+            expect(macroArgs).to.eql("arg1 arg2");
+            expect(macroArgsIndex).to.equal(26);
+        });
+
+        it("should pass children to a container macro's parseChildren function if defined", () => {
+            const header = ":: Passage\n";
+            const passage = "Macro: <<testy>><<kid>><<kid>><</testy>>";
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                uri: "fake-uri",
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            const parser = uut.getSugarCubeParser(undefined);
+            const testyMacro = buildMacroInfo({
+                name: "testy",
+                container: true,
+            });
+            let macroKids: MacroLocationInfo[] | undefined;
+            testyMacro.parseChildren = (kids) => {
+                macroKids = kids;
+            };
+            const kidMacro = buildMacroInfo({ name: "kid" });
+            kidMacro.parents = ["testy"];
+            const mockFunction = ImportMock.mockFunction(
+                macrosModule,
+                "allMacros"
+            ).returns({
+                testy: testyMacro,
+                kid: kidMacro,
+            });
+
+            parser?.parsePassageText(passage, header.length, state);
+            mockFunction.restore();
+
+            expect(macroKids).to.eql([
+                { name: "kid", fullText: "<<kid>>", at: 27, id: 1 },
+                { name: "kid", fullText: "<<kid>>", at: 34, id: 2 },
+            ]);
         });
 
         describe("built-in macros", () => {

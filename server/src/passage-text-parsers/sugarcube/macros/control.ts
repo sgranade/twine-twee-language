@@ -1,3 +1,12 @@
+import {
+    DiagnosticRelatedInformation,
+    DiagnosticSeverity,
+    Location,
+    Range,
+} from "vscode-languageserver";
+
+import { createDiagnosticFor } from "../../../utilities";
+import { MacroLocationInfo } from "../sugarcube-parser";
 import { MacroInfo, parseArgsAsTwineScriptExpression } from "./types";
 
 export const ifMacro: MacroInfo = {
@@ -8,6 +17,48 @@ export const ifMacro: MacroInfo = {
         "Executes its contents if the given conditional expression evaluates to true. If the condition evaluates to false and an `<<elseif>>` or `<<else>>` exists, then other contents can be executed.",
     since: "2.0.0",
     parse: parseArgsAsTwineScriptExpression,
+    parseChildren(children, state) {
+        // An <<elseif>> after an <<else>> is an error
+        let elseifMacro: MacroLocationInfo | undefined;
+        let elseifIndex: number | undefined;
+        for (const [index, kid] of children.entries()) {
+            if (kid.name === "elseif") {
+                elseifMacro = kid;
+                elseifIndex = index;
+            }
+        }
+        if (elseifMacro !== undefined) {
+            for (let i = elseifIndex! - 1; i >= 0; --i) {
+                if (children[i].name === "else") {
+                    const diagnostic = createDiagnosticFor(
+                        DiagnosticSeverity.Error,
+                        state.textDocument,
+                        elseifMacro.fullText,
+                        elseifMacro.at,
+                        "<<elseif>> can't come after an <<else>>"
+                    );
+                    diagnostic.relatedInformation = [
+                        DiagnosticRelatedInformation.create(
+                            Location.create(
+                                state.textDocument.uri,
+                                Range.create(
+                                    state.textDocument.positionAt(
+                                        children[i].at
+                                    ),
+                                    state.textDocument.positionAt(
+                                        children[i].at +
+                                            children[i].fullText.length
+                                    )
+                                )
+                            ),
+                            "The <<else>> before this <<elseif>>"
+                        ),
+                    ];
+                    state.callbacks.onParseError(diagnostic);
+                }
+            }
+        }
+    },
 };
 
 export const elseifMacro: MacroInfo = {

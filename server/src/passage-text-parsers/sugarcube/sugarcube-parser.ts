@@ -205,11 +205,26 @@ function removeNonParsedText(
 const macroRegex = new RegExp(SC2Patterns.fullMacro, "gm");
 const scriptMacroRegex = new RegExp(SC2Patterns.scriptMacroBlock, "gm");
 
-interface macroLocationInfo {
+/**
+ * Location information about a macro
+ */
+export interface MacroLocationInfo {
+    /**
+     * The macro's name (ex: "if")
+     */
     name: string;
+    /**
+     * The full text of a macro (ex: "<<if $v > 1>>")
+     */
     fullText: string;
+    /**
+     * Index where the full text occurs.
+     */
     at: number;
-    id: number; // To disambiguate macros with the same name
+    /**
+     * Macro ID, to disambiguate macros with the same name
+     */
+    id: number;
 }
 
 /**
@@ -584,8 +599,8 @@ function parseMacros(
     }
 
     let macroId = 0;
-    const unclosedMacros: macroLocationInfo[] = [];
-    const macroChildCount: Record<number, Record<string, number>> = {}; // Map of parent macro ID to child name + count
+    const unclosedMacros: MacroLocationInfo[] = [];
+    const macroChildren: Record<number, MacroLocationInfo[]> = {}; // Map of parent macro ID to list of child macros
     for (const m of passageText.matchAll(macroRegex)) {
         const macroIndex = m.index + 2; // Index of the start of the macro (inside the <<)
 
@@ -706,7 +721,22 @@ function parseMacros(
                     let openingMacroFound = false;
                     for (let i = unclosedMacros.length - 1; i >= 0; --i) {
                         if (unclosedMacros[i].name === macroInfo.name) {
-                            delete macroChildCount[unclosedMacros[i].id];
+                            // If the macro has a container parser, pass it the kids.
+                            if (macroInfo.parseChildren !== undefined) {
+                                const children =
+                                    macroChildren[unclosedMacros[i].id] ?? [];
+                                // Shift the kids' locations to be relative to
+                                // the document instead of the passage text
+                                for (const child of children) {
+                                    child.at += textIndex;
+                                }
+                                macroInfo.parseChildren(
+                                    children,
+                                    state,
+                                    sugarcubeState
+                                );
+                            }
+                            delete macroChildren[unclosedMacros[i].id];
                             openingMacroFound = true;
                             unclosedMacros.splice(i, 1);
                             break;
@@ -737,7 +767,7 @@ function parseMacros(
                 const parentNames = macroInfo.parents.map((p) =>
                     MacroParent.is(p) ? p.name : p
                 );
-                let parentMacroInfo: macroLocationInfo | undefined;
+                let parentMacroInfo: MacroLocationInfo | undefined;
                 for (let i = unclosedMacros.length - 1; i >= 0; --i) {
                     if (parentNames.includes(unclosedMacros[i].name)) {
                         parentMacroInfo = unclosedMacros[i];
@@ -745,25 +775,26 @@ function parseMacros(
                     }
                 }
                 if (parentMacroInfo !== undefined) {
-                    // Record the number of times the child has appeared if there's a limit
+                    // Record the child and check the number of times it's appeared (if there's a limit)
+                    if (macroChildren[parentMacroInfo.id] === undefined) {
+                        macroChildren[parentMacroInfo.id] = [];
+                    }
+                    macroChildren[parentMacroInfo.id].push({
+                        name: macroInfo.name,
+                        at: m.index,
+                        fullText: m[0],
+                        id: macroId++,
+                    });
                     const macroParent = macroInfo.parents.find(
                         (p) =>
                             MacroParent.is(p) && p.name === parentMacroInfo.name
                     );
                     if (MacroParent.is(macroParent)) {
-                        if (macroChildCount[parentMacroInfo.id] === undefined) {
-                            macroChildCount[parentMacroInfo.id] = {};
-                        }
-                        macroChildCount[parentMacroInfo.id][macroInfo.name] =
-                            (macroChildCount[parentMacroInfo.id][
-                                macroInfo.name
-                            ] ?? 0) + 1;
                         // Make sure we don't have too many of the same kind of child macro
-                        if (
-                            macroChildCount[parentMacroInfo.id][
-                                macroInfo.name
-                            ] > macroParent.max
-                        ) {
+                        const childCount = macroChildren[
+                            parentMacroInfo.id
+                        ].filter((info) => info.name === macroInfo.name).length;
+                        if (childCount > macroParent.max) {
                             logErrorFor(
                                 m[0],
                                 m.index + textIndex,
