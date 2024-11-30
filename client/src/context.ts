@@ -8,6 +8,8 @@ type ContextEvent =
     | "buildStarts"
     | "buildEnds"
     | "buildSuccessful"
+    | "indexingStarts"
+    | "indexingEnds"
     | "runStarts"
     | "runEnds";
 

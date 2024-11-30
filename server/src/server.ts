@@ -152,6 +152,8 @@ namespace Heartbeat {
      * Index all Twee files in an opened project, as reported by the client.
      */
     async function indexAllTweeFiles() {
+        await connection.sendNotification(CustomMessages.IndexingStarted);
+
         // Remove all indexed files that aren't in our document store,
         // as we've not opened them and aren't tracking them, and thus
         // only fast-indexed them
@@ -247,6 +249,7 @@ namespace Heartbeat {
             connection.console.error(`Client couldn't find Twee files: ${err}`);
         }
 
+        connection.sendNotification(CustomMessages.IndexingComplete);
         workspaceIndexRequested = false;
     }
 

@@ -6,6 +6,7 @@ Changes to the extension.
 
 ### Added
 
+-   The extension now shows when the project is being indexed.
 -   SugarCube: Widgets defined by the `<<widget>>` macro are now parsed and recognized as macros.
 -   SugarCube: Passages with `<<widget>>` macros now give a warning if they don't have a `widget` tag.
 -   SugarCube: The `data-passage` and `data-setter` [special HTML attributes ](http://www.motoslave.net/sugarcube/2/docs/#markup-html-svg-attribute-special) are now parsed.

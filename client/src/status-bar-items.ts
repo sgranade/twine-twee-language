@@ -6,6 +6,7 @@ import { gameRunning } from "./game-view";
 
 export const enum StatusBarItemIDs {
     Building = "twine_building",
+    Indexing = "twine_indexing",
     Run = "twine_run",
     Reload = "twine_reload",
 }
@@ -60,6 +61,19 @@ export function createStatusBarItems(context: vscode.ExtensionContext) {
     reloadStatusBarItem.command = CustomCommands.ReloadGame;
     reloadStatusBarItem.hide();
     statusBarItems[StatusBarItemIDs.Reload] = reloadStatusBarItem;
+
+    // Notification while the game is being indexed
+    const indexingStatusBarItem = vscode.window.createStatusBarItem(
+        StatusBarItemIDs.Building,
+        vscode.StatusBarAlignment.Left,
+        2
+    );
+    indexingStatusBarItem.name = "Twine Indexing";
+    indexingStatusBarItem.text = "$(sync~spin) Indexing Twine project";
+    indexingStatusBarItem.hide();
+    statusBarItems[StatusBarItemIDs.Indexing] = indexingStatusBarItem;
+    addListener("indexingStarts", () => indexingStatusBarItem.show());
+    addListener("indexingEnds", () => indexingStatusBarItem.hide());
 
     addListener("runStarts", () => {
         runStatusBarItem.hide();

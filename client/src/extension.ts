@@ -26,6 +26,7 @@ import {
     StoryFormat,
 } from "./client-server";
 import { Configuration, CustomCommands } from "./constants";
+import { signalContextEvent } from "./context";
 import { reloadRunningGame, viewCompiledGame } from "./game-view";
 import {
     cacheStoryFormat,
@@ -283,6 +284,12 @@ export function activate(context: vscode.ExtensionContext) {
     notifications.addNotificationHandler(
         CustomMessages.UpdatedSugarCubeMacroList,
         async (e) => await onUpdatedSugarCube2MacroInfo(e[0])
+    );
+    notifications.addNotificationHandler(CustomMessages.IndexingStarted, () =>
+        signalContextEvent("indexingStarts")
+    );
+    notifications.addNotificationHandler(CustomMessages.IndexingComplete, () =>
+        signalContextEvent("indexingEnds")
     );
 
     // Handle configuration changes

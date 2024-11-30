@@ -8,6 +8,8 @@ import { RequestType, RequestType0, URI } from "vscode-languageclient";
 
 export enum CustomMessages {
     RequestReindex = "twee3/requestReindex",
+    IndexingStarted = "twee3/indexingStarted",
+    IndexingComplete = "twee3/indexingComplete",
     UpdatedStoryFormat = "twee3/storyformat",
     UpdatedStoryTitle = "twee3/storytitle",
     UpdatedSugarCubeMacroList = "twee3/sugarcube/macrolist",
