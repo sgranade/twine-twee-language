@@ -6,10 +6,11 @@ Changes to the extension.
 
 ### Added
 
+-   SugarCube: Widgets defined by the `<<widget>>` macro are now parsed and recognized as macros.
+-   SugarCube: Passages with `<<widget>>` macros now give a warning if they don't have a `widget` tag.
 -   SugarCube: The `data-passage` and `data-setter` [special HTML attributes ](http://www.motoslave.net/sugarcube/2/docs/#markup-html-svg-attribute-special) are now parsed.
 -   SugarCube: [Attribute directives](http://www.motoslave.net/sugarcube/2/docs/#markup-html-svg-attribute-directive) are now parsed.
 -   SugarCube [Custom styles](https://www.motoslave.net/sugarcube/2/docs/#markup-custom-style) are now parsed.
--   SugarCube: Passages with `<<widget>>` macros now give a warning if they don't have a `widget` tag.
 -   SugarCube: `<<elseif>>` after an `<<else>>` is now flagged as an error.
 -   SugarCube: Receiver values (like those to the `<<checkbox>>` macro) are now warned as an error if they're not a string or back-ticked expression.
 

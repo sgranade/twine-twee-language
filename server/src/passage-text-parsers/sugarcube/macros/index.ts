@@ -163,11 +163,21 @@ export {
 };
 
 /**
- * Get all SugarCube macros.
+ * Get all known SugarCube macros.
+ *
+ * This includes custom macros defined by T3LT macro def files.
  * @returns Macros.
  */
 export function allMacros(): Readonly<Record<string, MacroInfo>> {
     return { ...macros, ...getAllCustomMacros() };
+}
+
+/**
+ * Get all built-in SugarCube macros.
+ * @returns Macros.
+ */
+export function allBuiltInMacros(): Readonly<Record<string, MacroInfo>> {
+    return { ...macros };
 }
 
 /**

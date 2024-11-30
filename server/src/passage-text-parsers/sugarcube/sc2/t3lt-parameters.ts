@@ -55,6 +55,34 @@ export function parseEnums(baseString: string, enums: EnumRecord): string {
  */
 
 /**
+ * Try to detect an arg type from the contents.
+ *
+ * Used when an argument is parsed as a "text" type.
+ *
+ * @param arg Argument to detect the type from.
+ * @returns Arg type as a string.
+ */
+export function detectArgType(arg: string): string {
+    let t3ltArgType = "bareword";
+
+    if (arg === "true") {
+        t3ltArgType = "true";
+    } else if (arg === "false") {
+        t3ltArgType = "false";
+    } else if (arg === "null") {
+        t3ltArgType = "null";
+    } else if (arg === "NaN") {
+        t3ltArgType = "NaN";
+    } else if (/^\d+$/.test(arg)) {
+        t3ltArgType = "number";
+    } else if (/^(["']).*\1$/.test(arg)) {
+        t3ltArgType = "string";
+    }
+
+    return t3ltArgType;
+}
+
+/**
  * Type of macro argument.
  * SRG: changed to strings so we can return them combined with parameter types as overall argument types
  * when validating macro arguments.

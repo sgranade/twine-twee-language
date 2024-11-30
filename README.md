@@ -41,7 +41,9 @@ A VS Code extension for [Twine] (using the [Twee3] format) and the [Chapbook] an
     -   Autocomplete (names only)
     -   Hover information
     -   Highlight references to macros
-    -   Support for custom macros (uses the [T3LT custom macro format])
+    -   Support for custom macros
+        -   Automatically recognizes macros defined using the `<<widget>>` macro
+        -   Supports [T3LT custom macro format] information files for non-widget macros
 
 ## Installation
 

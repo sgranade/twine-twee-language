@@ -163,6 +163,76 @@ describe("SugarCube Completions", () => {
             );
         });
 
+        it("should suggest defined macros (widgets) after a <<", () => {
+            const doc = TextDocument.create(
+                "fake-uri",
+                "",
+                0,
+                ":: Passage\nLet's try <<te"
+            );
+            const position = Position.create(1, 12);
+            const index = new Index();
+            index.setDefinitions("other-uri", [
+                {
+                    contents: "testy",
+                    location: Location.create(
+                        "other-uri",
+                        Range.create(5, 6, 7, 8)
+                    ),
+                    kind: OSugarCubeSymbolKind.KnownMacro,
+                },
+            ]);
+            const mockFunction = ImportMock.mockFunction(
+                macrosModule,
+                "allMacros"
+            ).returns({});
+            const parser = uut.getSugarCubeParser(undefined);
+
+            const results = parser?.generateCompletions(doc, position, index);
+            mockFunction.restore();
+
+            expect(results?.items[0].label).to.eql("testy");
+            expect(results?.itemDefaults?.editRange).to.eql(
+                Range.create(1, 12, 1, 14)
+            );
+        });
+
+        it("should suggest macro names after a << with no duplication between known macros and widgets", () => {
+            const doc = TextDocument.create(
+                "fake-uri",
+                "",
+                0,
+                ":: Passage\nLet's try <<te"
+            );
+            const position = Position.create(1, 12);
+            const index = new Index();
+            index.setDefinitions("other-uri", [
+                {
+                    contents: "testy",
+                    location: Location.create(
+                        "other-uri",
+                        Range.create(5, 6, 7, 8)
+                    ),
+                    kind: OSugarCubeSymbolKind.KnownMacro,
+                },
+            ]);
+            const macro = buildMacroInfo({ name: "testy" });
+            const mockFunction = ImportMock.mockFunction(
+                macrosModule,
+                "allMacros"
+            ).returns({ testy: macro });
+            const parser = uut.getSugarCubeParser(undefined);
+
+            const results = parser?.generateCompletions(doc, position, index);
+            mockFunction.restore();
+
+            expect(results?.items.length).to.equal(1);
+            expect(results?.items[0].label).to.eql("testy");
+            expect(results?.itemDefaults?.editRange).to.eql(
+                Range.create(1, 12, 1, 14)
+            );
+        });
+
         it("should only replace macro names after a << up to any space or non-word character", () => {
             const doc = TextDocument.create(
                 "fake-uri",

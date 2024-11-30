@@ -16,6 +16,7 @@ import { buildMacroInfo } from "./macro-builders";
 import * as uut from "../../../../passage-text-parsers/sugarcube/macros";
 import { buildStoryFormatParsingState } from "../../builders";
 import { MacroLocationInfo } from "../../../../passage-text-parsers/sugarcube/sugarcube-parser";
+import { OSugarCubeSymbolKind } from "../../../../passage-text-parsers/sugarcube/types";
 
 describe("SugarCube Macros", () => {
     describe("argument parsing", () => {
@@ -35,6 +36,68 @@ describe("SugarCube Macros", () => {
 
     describe("built-in macros", () => {
         describe("widget", () => {
+            it("should capture a macro definition symbol", () => {
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: "0123456789\n123456789\n123456",
+                    callbacks: callbacks,
+                });
+                state.currentPassage = buildPassage({
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(1, 2, 3, 4)
+                    ),
+                });
+                const storyFormatState = buildStoryFormatParsingState();
+                const macro = uut.allMacros()["widget"];
+
+                macro.parse!("testy", 12, state, storyFormatState);
+                const result = callbacks.definitions;
+
+                expect(result).to.eql([
+                    {
+                        contents: "testy",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(1, 1, 1, 6)
+                        ),
+                        kind: OSugarCubeSymbolKind.KnownMacro,
+                        container: false,
+                    },
+                ]);
+            });
+
+            it("should capture a macro definition symbol with a container flag for a container", () => {
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: "0123456789\n123456789\n123456",
+                    callbacks: callbacks,
+                });
+                state.currentPassage = buildPassage({
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(1, 2, 3, 4)
+                    ),
+                });
+                const storyFormatState = buildStoryFormatParsingState();
+                const macro = uut.allMacros()["widget"];
+
+                macro.parse!("testy  container", 12, state, storyFormatState);
+                const result = callbacks.definitions;
+
+                expect(result).to.eql([
+                    {
+                        contents: "testy",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(1, 1, 1, 6)
+                        ),
+                        kind: OSugarCubeSymbolKind.KnownMacro,
+                        container: true,
+                    },
+                ]);
+            });
+
             it("should warn on passages with a <<widget>> macro but no widget tag", () => {
                 const callbacks = new MockCallbacks();
                 const state = buildParsingState({

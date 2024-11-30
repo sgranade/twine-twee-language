@@ -1,4 +1,4 @@
-import { TwineSymbolKind } from "../../project-index";
+import { ProjSymbol, TwineSymbolKind } from "../../project-index";
 
 /**
  * Kind of a SugarCube symbol.
@@ -11,3 +11,13 @@ export const OSugarCubeSymbolKind = {
 };
 export type SugarCubeSymbolKind =
     (typeof OSugarCubeSymbolKind)[keyof typeof OSugarCubeSymbolKind];
+
+/**
+ * A SugarCube symbol, which corresponds to a modifier, insert, or variable.
+ */
+export interface SugarCubeSymbol extends ProjSymbol {
+    /**
+     * Whether the symbol corresponds to a container macro.
+     */
+    container?: boolean;
+}

@@ -9,9 +9,10 @@ import {
 } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
-import { ProjectIndex } from "../../project-index";
-import { OSugarCubeSymbolKind } from "./types";
 import { allMacros } from "./macros";
+import { ProjectIndex } from "../../project-index";
+import { OSugarCubeSymbolKind, SugarCubeSymbol } from "./types";
+import { getSugarCubeDefinitions } from "./sugarcube-parser";
 
 /**
  * Generate completions for variables and properties.
@@ -146,13 +147,15 @@ function generateMacroContainerCloseCompletions(
  * @param text Text from the start of the macro (inside the <<) to the end of the line.
  * @param textOffset Offset for the start of the text in the document.
  * @param completionPointOffset Where the completion occurs *relative to the start of the text string*.
+ * @param index Project index.
  * @returns Completions list.
  */
 function generateMacroNameCompletions(
     document: TextDocument,
     text: string,
     textOffset: number,
-    completionPointOffset: number
+    completionPointOffset: number,
+    index: ProjectIndex
 ): CompletionList | null {
     const completions: CompletionItem[] = [];
 
@@ -186,6 +189,7 @@ function generateMacroNameCompletions(
         }
     }
 
+    // Add known macros
     completions.push(
         ...Object.values(allMacros())
             .filter((info) => info.name.startsWith(partialMacroName))
@@ -215,8 +219,44 @@ function generateMacroNameCompletions(
                 return completionItem;
             })
     );
+
+    // Add macro definitions
+    completions.push(
+        ...getSugarCubeDefinitions(OSugarCubeSymbolKind.KnownMacro, index)
+            .filter((def) => def.contents.startsWith(partialMacroName))
+            .map((def) => {
+                const completionItem: CompletionItem = {
+                    label: def.contents,
+                    kind: CompletionItemKind.Function,
+                };
+                if (
+                    (def as SugarCubeSymbol).container &&
+                    containerMacroReplacementRange !== undefined
+                ) {
+                    completionItem.insertTextFormat = InsertTextFormat.Snippet;
+                    // Add a closing container macro.
+                    completionItem.textEdit = TextEdit.replace(
+                        containerMacroReplacementRange,
+                        `${def.contents}>>\${0}<</${def.contents}>>`
+                    );
+                }
+                return completionItem;
+            })
+    );
+
     if (completions.length > 0) {
-        const completionList = CompletionList.create(completions);
+        // Get rid of duplicates in case of overlaps between known macros (via T3LT
+        // definition files) and macro definitions (from <<widget>> macros)
+        const seenCompletions: Set<string> = new Set();
+        const completionList = CompletionList.create(
+            completions.filter((c) => {
+                if (seenCompletions.has(c.label)) {
+                    return false;
+                }
+                seenCompletions.add(c.label);
+                return true;
+            })
+        );
         completionList.itemDefaults = {
             editRange: Range.create(
                 document.positionAt(textOffset),
@@ -262,7 +302,8 @@ export function generateCompletions(
                 document,
                 line.slice(i + 1),
                 lineOffset + i + 1,
-                completionRelativeOffset - (i + 1)
+                completionRelativeOffset - (i + 1),
+                index
             );
         }
         // Once we run out of word characters or periods, bail

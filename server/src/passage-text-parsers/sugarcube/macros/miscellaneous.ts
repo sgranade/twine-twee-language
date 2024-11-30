@@ -1,4 +1,9 @@
 import { Diagnostic, DiagnosticSeverity } from "vscode-languageserver";
+
+import { createLocationFor } from "../../../parser";
+import { ETokenModifier, ETokenType } from "../../../semantic-tokens";
+import { capturePreSemanticTokenFor } from "../..";
+import { OSugarCubeSymbolKind, SugarCubeSymbol } from "../types";
 import { MacroInfo } from "./types";
 
 export const doneMacro: MacroInfo = {
@@ -68,7 +73,7 @@ export const widgetMacro: MacroInfo = {
     description:
         "Creates a new widget macro (henceforth, widget) with the given name. Widgets allow you to create macros by using the standard macros and markup that you use normally within your story. All widgets may access arguments passed to them via the `_args` special variable. Block widgets may access the contents they enclose via the `_contents` special variable.",
     since: "2.0.0",
-    parse(_args, _argsIndex, state) {
+    parse(args, argsIndex, state, sugarcubeState) {
         // Widgets should be defined in passages with the widget tag
         if (
             state.currentPassage !== undefined &&
@@ -86,6 +91,38 @@ export const widgetMacro: MacroInfo = {
                 )
             );
         }
-        return false; // Keep on parsin', as we didn't really parse any arguments
+
+        if (args) {
+            // eslint-disable-next-line prefer-const
+            let [widgetName, container] = args.split(/\s+/);
+            const isContainer = container === "container";
+            if (widgetName) {
+                capturePreSemanticTokenFor(
+                    widgetName,
+                    argsIndex,
+                    ETokenType.string,
+                    [ETokenModifier.declaration],
+                    sugarcubeState
+                );
+
+                // Remove the quote marks if they exist
+                if (/^(['"]).*\1$/.test(widgetName)) {
+                    widgetName = widgetName.slice(1, -1);
+                    argsIndex++;
+                }
+                state.callbacks.onSymbolDefinition({
+                    contents: widgetName,
+                    location: createLocationFor(
+                        widgetName,
+                        argsIndex,
+                        state.textDocument
+                    ),
+                    kind: OSugarCubeSymbolKind.KnownMacro,
+                    container: isContainer,
+                } as SugarCubeSymbol);
+            }
+        }
+
+        return false; // Keep on parsin', as we didn't full parse all arguments
     },
 };

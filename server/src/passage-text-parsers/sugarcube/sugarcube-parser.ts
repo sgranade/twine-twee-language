@@ -13,11 +13,12 @@ import {
     findAndParseHtml,
     parsePassageReference,
 } from "../../parser";
+import { ProjectIndex, ProjSymbol } from "../../project-index";
 import { ETokenModifier, ETokenType } from "../../semantic-tokens";
 import { eraseMatches, versionCompare } from "../../utilities";
 import { allMacros, MacroInfo, MacroParent } from "./macros";
 import { createVariableAndPropertyReferences } from "./sugarcube-utils";
-import { OSugarCubeSymbolKind } from "./types";
+import { OSugarCubeSymbolKind, SugarCubeSymbolKind } from "./types";
 import {
     MacroParse,
     parseSugarCubePassageRefOrTwinescriptExpr,
@@ -32,6 +33,7 @@ import {
 import {
     Arg as T3LTArg,
     ArgType as T3LTArgType,
+    detectArgType,
     macroArgumentTokenToT3LTArg,
     parseMacroParameters,
 } from "./sc2/t3lt-parameters";
@@ -51,14 +53,22 @@ Object.values(allMacros()).map((macro) => {
 });
 
 /**
- * Passage tags that correspond to a media passage.
+ * Get SugarCube-specific symbol definitions across all indexed documents.
+ *
+ * @param kind Kind of SugarCube symbol definitions to return.
+ * @param index Project index.
+ * @returns List of definitions.
  */
-const mediaPassageTags = new Set([
-    "Twine.audio",
-    "Twine.image",
-    "Twine.video",
-    "Twine.vtt",
-]);
+export function getSugarCubeDefinitions(
+    kind: SugarCubeSymbolKind,
+    index: ProjectIndex
+): ProjSymbol[] {
+    const symbols: ProjSymbol[] = [];
+    for (const uri of index.getIndexedUris()) {
+        symbols.push(...(index.getDefinitions(uri, kind) ?? []));
+    }
+    return symbols;
+}
 
 /**
  * Regex to match bare SugarCube 2 variables.
@@ -332,7 +342,8 @@ function parseMacroArgs(
 
         // Validate arguments, capture references and semantic tokens, and log errors
         const validationInfo = macroInfo.parsedArguments.validate(t3ltArgs);
-        for (const [t3ltArgNdxStr, t3ltArgFormatType] of Object.entries(
+        // eslint-disable-next-line prefer-const
+        for (let [t3ltArgNdxStr, t3ltArgFormatType] of Object.entries(
             validationInfo.info.argFormatTypes
         )) {
             const t3ltArgNdx = Number(t3ltArgNdxStr);
@@ -340,6 +351,11 @@ function parseMacroArgs(
             const sc2Token = sc2ArgumentTokens[t3ltArgToSC2Token[t3ltArgNdx]];
             // t3ltArgFormatType is one of either the T3LT macro ArgType enum values or
             // the macro parameter types, all of which are defined in `t3lt-parameters.ts`
+
+            // If the format type is "text", see if we can figure out what it is and transform it
+            if (t3ltArgFormatType === "text") {
+                t3ltArgFormatType = detectArgType(sc2Token.text);
+            }
             if (
                 t3ltArgFormatType === "null" ||
                 t3ltArgFormatType === "undefined" ||
@@ -498,6 +514,7 @@ function parseMacroArgs(
                 );
             }
         }
+
         for (const error of validationInfo.info.errors) {
             const errorToken =
                 sc2ArgumentTokens[t3ltArgToSC2Token[error.index] ?? 0];
@@ -1116,6 +1133,16 @@ function checkForSpecialPassages(state: ParsingState): boolean {
     // We do no additional parsing for StoryInterface passages, as it's treated as raw HTML
     return state.currentPassage?.name.contents === "StoryInterface";
 }
+
+/**
+ * Passage tags that correspond to a media passage.
+ */
+const mediaPassageTags = new Set([
+    "Twine.audio",
+    "Twine.image",
+    "Twine.video",
+    "Twine.vtt",
+]);
 
 /**
  * Check a passage's tags and generate any needed embedded documents
