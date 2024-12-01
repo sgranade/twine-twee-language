@@ -1841,6 +1841,14 @@ describe("SugarCube Parser", () => {
 
                 expect(result).to.eql([
                     {
+                        contents: "script",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(1, 9, 1, 15)
+                        ),
+                        kind: OSugarCubeSymbolKind.KnownMacro,
+                    },
+                    {
                         contents: "$items",
                         location: Location.create(
                             "fake-uri",
@@ -1855,14 +1863,6 @@ describe("SugarCube Parser", () => {
                             Range.create(3, 2, 3, 6)
                         ),
                         kind: OSugarCubeSymbolKind.Variable,
-                    },
-                    {
-                        contents: "script",
-                        location: Location.create(
-                            "fake-uri",
-                            Range.create(1, 9, 1, 15)
-                        ),
-                        kind: OSugarCubeSymbolKind.KnownMacro,
                     },
                 ]);
             });

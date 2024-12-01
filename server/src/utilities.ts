@@ -101,24 +101,26 @@ export function eraseMatches(
     r: RegExp,
     c?: (m: RegExpExecArray | null) => void
 ): string {
+    // For speed, erase the matches by collecting substrings to join at the end
+    const substrs: string[] = [];
+    let ndx = 0;
+
     // Unroll these two for speed, since we call this a lot
     if (c !== undefined) {
         for (const m of s.matchAll(r)) {
             c(m);
-            s =
-                s.slice(0, m.index) +
-                " ".repeat(m[0].length) +
-                s.slice(m.index + m[0].length);
+            substrs.push(s.slice(ndx, m.index), " ".repeat(m[0].length));
+            ndx = m.index + m[0].length;
         }
     } else {
         for (const m of s.matchAll(r)) {
-            s =
-                s.slice(0, m.index) +
-                " ".repeat(m[0].length) +
-                s.slice(m.index + m[0].length);
+            substrs.push(s.slice(ndx, m.index), " ".repeat(m[0].length));
+            ndx = m.index + m[0].length;
         }
     }
-    return s;
+    substrs.push(s.slice(ndx));
+
+    return substrs.join("");
 }
 
 const paddingAndTextRegex = /^(\s*)(.*?)(\s*)$/s;

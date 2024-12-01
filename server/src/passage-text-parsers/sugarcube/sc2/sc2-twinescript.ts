@@ -96,6 +96,8 @@ export function desugar(str: string): DesugarResult {
         positionMapping: [],
     };
 
+    const desugaredSubstrs: string[] = [];
+
     // Replace all sugar constructs with their JavaScript equivalent
     // using position-preserving substitution.
     let sliceStart = 0;
@@ -116,11 +118,12 @@ export function desugar(str: string): DesugarResult {
             });
             runningDelta += replacement.length - m[0].length;
         }
-        result.desugared += str.slice(sliceStart, m.index) + replacement;
+        desugaredSubstrs.push(str.slice(sliceStart, m.index), replacement);
         sliceStart = m.index + m[0].length;
     }
-    result.desugared += str.slice(sliceStart);
+    desugaredSubstrs.push(str.slice(sliceStart));
 
+    result.desugared = desugaredSubstrs.join("");
     return result;
 }
 

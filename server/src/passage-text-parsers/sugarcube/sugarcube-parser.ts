@@ -626,6 +626,53 @@ function parseMacroArgs(
 }
 
 /**
+ *
+ * @param makeMacroRef Whether to make a macro reference.
+ * @param macroName Name of the macro.
+ * @param macroNameWithEnd Name of the macro in the text (which can include "end").
+ * @param macroIndex Index of the macro's location in the document.
+ * @param macroInfo Information about the macro, if known.
+ * @param state Parsing state.
+ * @param sugarcubeState SugarCube-specific parsing state.
+ */
+function captureMacroRefAndTokens(
+    makeMacroRef: boolean,
+    macroName: string,
+    macroNameWithEnd: string,
+    macroIndex: number,
+    macroInfo: MacroInfo | undefined,
+    state: ParsingState,
+    sugarcubeState: StoryFormatParsingState
+) {
+    if (makeMacroRef) {
+        state.callbacks.onSymbolReference(
+            createSymbolFor(
+                macroName,
+                macroIndex,
+                macroInfo !== undefined
+                    ? OSugarCubeSymbolKind.KnownMacro
+                    : OSugarCubeSymbolKind.UnknownMacro,
+                state.textDocument
+            )
+        );
+    }
+
+    // Capture semantic tokens for the macro itself
+    const deprecated =
+        state.storyFormat?.formatVersion !== undefined &&
+        macroInfo?.deprecated !== undefined &&
+        versionCompare(state.storyFormat.formatVersion, macroInfo.deprecated) <=
+            0;
+    capturePreSemanticTokenFor(
+        macroNameWithEnd,
+        macroIndex,
+        ETokenType.function,
+        deprecated ? [ETokenModifier.deprecated] : [],
+        sugarcubeState
+    );
+}
+
+/**
  * Parse SugarCube macros.
  *
  * @param passageText Passage text to parse.
@@ -640,44 +687,64 @@ function parseMacros(
     state: ParsingState,
     sugarcubeState: StoryFormatParsingState
 ): string {
+    // To erase the macros from the passage text, we'll carve it into substrings
+    // that we concatenate at the end for speed
+    const macrolessStrings: string[] = [];
+    let lastIndex = 0;
     const knownMacros = allMacros();
 
     // Special case the <<script>> container, as its contents are treated as raw JavaScript/TwineScript
-    for (const m of passageText.matchAll(scriptMacroRegex)) {
-        if (m.groups !== undefined) {
-            const isTwinescript =
-                (m.groups.language ?? "").toLowerCase() === "twinescript";
-            const open = m.groups.open ?? "";
-            const contents = m.groups.contents ?? "";
-            const contentsIndex = m.index + open.length;
-            if (isTwinescript) {
-                createVariableAndPropertyReferences(
-                    tokenizeTwineScriptExpression(
-                        contents,
-                        contentsIndex + textIndex,
-                        state.textDocument,
-                        sugarcubeState
-                    ),
-                    state
-                );
-            } else {
-                // Tokenize as a JavaScript program but don't capture vars
-                tokenizeJavaScript(
-                    true,
+    passageText = eraseMatches(passageText, scriptMacroRegex, (m) => {
+        if (m === null) return;
+
+        // Capture a reference to and tokens for the opening script macro
+        captureMacroRefAndTokens(
+            true,
+            "script",
+            "script",
+            m.index + 2 + textIndex,
+            knownMacros["script"],
+            state,
+            sugarcubeState
+        );
+        // and tokens for the closing script macro
+        captureMacroRefAndTokens(
+            false,
+            "script",
+            "script",
+            m.index + m[0].length - 2 - 6 + textIndex,
+            knownMacros["script"],
+            state,
+            sugarcubeState
+        );
+
+        if (!m.groups) return;
+        const isTwinescript =
+            (m.groups.language ?? "").toLowerCase() === "twinescript";
+        const open = m.groups.open ?? "";
+        const contents = m.groups.contents ?? "";
+        const contentsIndex = m.index + open.length;
+        if (isTwinescript) {
+            createVariableAndPropertyReferences(
+                tokenizeTwineScriptExpression(
                     contents,
                     contentsIndex + textIndex,
                     state.textDocument,
                     sugarcubeState
-                );
-            }
-
-            // Get rid of the <<script>> contents in the passage text that we'll return
-            passageText =
-                passageText.slice(0, contentsIndex) +
-                " ".repeat(contents.length) +
-                passageText.slice(contentsIndex + contents.length);
+                ),
+                state
+            );
+        } else {
+            // Tokenize as a JavaScript program but don't capture vars
+            tokenizeJavaScript(
+                true,
+                contents,
+                contentsIndex + textIndex,
+                state.textDocument,
+                sugarcubeState
+            );
         }
-    }
+    });
 
     let macroId = 0;
     const unclosedMacros: MacroLocationInfo[] = [];
@@ -733,32 +800,13 @@ function parseMacros(
         if (macroEnd === "/" || endVariant) isOpenMacro = false; // Note if we know this is a closing macro
 
         // Capture a reference to the macro
-        if (isOpenMacro) {
-            state.callbacks.onSymbolReference(
-                createSymbolFor(
-                    name,
-                    textIndex + macroIndex,
-                    macroInfo !== undefined
-                        ? OSugarCubeSymbolKind.KnownMacro
-                        : OSugarCubeSymbolKind.UnknownMacro,
-                    state.textDocument
-                )
-            );
-        }
-
-        // Capture semantic tokens for the macro itself
-        const deprecated =
-            state.storyFormat?.formatVersion !== undefined &&
-            macroInfo?.deprecated !== undefined &&
-            versionCompare(
-                state.storyFormat.formatVersion,
-                macroInfo.deprecated
-            ) <= 0;
-        capturePreSemanticTokenFor(
+        captureMacroRefAndTokens(
+            isOpenMacro,
+            name,
             (macroEnd ?? "") + macroName,
             textIndex + macroIndex,
-            ETokenType.function,
-            deprecated ? [ETokenModifier.deprecated] : [],
+            macroInfo,
+            state,
             sugarcubeState
         );
 
@@ -917,11 +965,12 @@ function parseMacros(
             );
         }
 
-        // Erase the macro from the string so we don't double parse its contents
-        passageText =
-            passageText.slice(0, m.index) +
-            " ".repeat(m[0].length) +
-            passageText.slice(m.index + m[0].length);
+        // Collect substrings with the macro erased so we don't double-parse its contents
+        macrolessStrings.push(
+            passageText.slice(lastIndex, m.index),
+            " ".repeat(m[0].length)
+        );
+        lastIndex = m.index + m[0].length;
     }
 
     // If we have any lingering open tags, they're missing their close tags
@@ -934,7 +983,10 @@ function parseMacros(
         );
     }
 
-    return passageText;
+    // Include all text after the last macro
+    macrolessStrings.push(passageText.slice(lastIndex));
+
+    return macrolessStrings.join("");
 }
 
 const htmlTagRegex = new RegExp(SC2Patterns.htmlTag, "gm");
