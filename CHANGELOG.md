@@ -4,6 +4,8 @@ Changes to the extension.
 
 ## [1.1.0] - 2024 12 01
 
+### Added
+
 - The extension now shows on the status bar when the project is being indexed.
 - SugarCube: Widgets defined by the `<<widget>>` macro are now parsed and recognized as macros.
 - SugarCube: The `data-passage` and `data-setter` [special HTML attributes ](http://www.motoslave.net/sugarcube/2/docs/#markup-html-svg-attribute-special) are now parsed.
