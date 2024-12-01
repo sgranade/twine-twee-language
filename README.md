@@ -8,42 +8,42 @@ A VS Code extension for [Twine] (using the [Twee3] format) and the [Chapbook] an
 
 ### Twee
 
--   Autocomplete (Twine links, `StoryData` contents, CSS stylesheets, HTML)
--   Syntax highlighting
--   Error highlighting
--   Go to passage definition
--   Highlight references to passages in links
--   Build your game to a releasable HTML file.
--   Run your game in VS Code.
+- Autocomplete (Twine links, `StoryData` contents, CSS stylesheets, HTML)
+- Syntax highlighting
+- Error highlighting
+- Go to passage definition
+- Highlight references to passages in links
+- Build your game to a releasable HTML file.
+- Run your game in VS Code.
 
 ### Chapbook
 
--   Autocomplete
--   Syntax highlighting
--   Error highlighting
--   Highlight variable references
--   Support for inserts and modifiers
-    -   Autocomplete (both names and arguments)
-    -   Hover information
-    -   Argument validation
-    -   Support for custom inserts and modifiers (requires [extra information][custom chapbook functions])
-        -   Find everywhere the custom insert/modifier is used
-        -   Go to the custom insert/modifier's definition
-        -   Argument validation
+- Autocomplete
+- Syntax highlighting
+- Error highlighting
+- Highlight variable references
+- Support for inserts and modifiers
+    - Autocomplete (both names and arguments)
+    - Hover information
+    - Argument validation
+    - Support for custom inserts and modifiers (requires [extra information][custom chapbook functions])
+        - Find everywhere the custom insert/modifier is used
+        - Go to the custom insert/modifier's definition
+        - Argument validation
 
 ### SugarCube
 
--   Autocomplete
--   Syntax highlighting
--   Error highlighting
--   Highlight variable references
--   Support for macros
-    -   Autocomplete (names only)
-    -   Hover information
-    -   Highlight references to macros
-    -   Support for custom macros
-        -   Automatically recognizes macros defined using the `<<widget>>` macro
-        -   Supports [T3LT custom macro format] information files for non-widget macros
+- Autocomplete
+- Syntax highlighting
+- Error highlighting
+- Highlight variable references
+- Support for macros
+    - Autocomplete (names only)
+    - Hover information
+    - Highlight references to macros
+    - Support for custom macros
+        - Automatically recognizes macros defined using the `<<widget>>` macro
+        - Supports [T3LT custom macro format] information files for non-widget macros
 
 ## Installation
 

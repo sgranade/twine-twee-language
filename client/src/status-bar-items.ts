@@ -26,7 +26,7 @@ export function createStatusBarItems(context: vscode.ExtensionContext) {
         8
     );
     buildingStatusBarItem.name = "Twine Building";
-    buildingStatusBarItem.text = "$(sync~spin) Building Twine game";
+    buildingStatusBarItem.text = "$(sync~spin) Building Twine game...";
     buildingStatusBarItem.hide();
     statusBarItems[StatusBarItemIDs.Building] = buildingStatusBarItem;
     addListener("buildStarts", () => buildingStatusBarItem.show());
@@ -69,7 +69,7 @@ export function createStatusBarItems(context: vscode.ExtensionContext) {
         2
     );
     indexingStatusBarItem.name = "Twine Indexing";
-    indexingStatusBarItem.text = "$(sync~spin) Indexing Twine project";
+    indexingStatusBarItem.text = "$(sync~spin) Indexing Twine project...";
     indexingStatusBarItem.hide();
     statusBarItems[StatusBarItemIDs.Indexing] = indexingStatusBarItem;
     addListener("indexingStarts", () => indexingStatusBarItem.show());
