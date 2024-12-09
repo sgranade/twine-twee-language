@@ -29,13 +29,14 @@ export function createStatusBarItems(context: vscode.ExtensionContext) {
     buildingStatusBarItem.text = "$(sync~spin) Building Twine game...";
     buildingStatusBarItem.hide();
     statusBarItems[StatusBarItemIDs.Building] = buildingStatusBarItem;
+
     addListener("buildStarts", () => buildingStatusBarItem.show());
     addListener("buildEnds", () => buildingStatusBarItem.hide());
 
     const runStatusBarItem = vscode.window.createStatusBarItem(
-        StatusBarItemIDs.Building,
+        StatusBarItemIDs.Run,
         vscode.StatusBarAlignment.Left,
-        20
+        15
     );
     runStatusBarItem.name = "Run Twine Game";
     runStatusBarItem.text = "$(debug-start) Run Twine Game";
@@ -51,9 +52,9 @@ export function createStatusBarItems(context: vscode.ExtensionContext) {
     });
 
     const reloadStatusBarItem = vscode.window.createStatusBarItem(
-        StatusBarItemIDs.Building,
+        StatusBarItemIDs.Reload,
         vscode.StatusBarAlignment.Left,
-        20
+        15
     );
     reloadStatusBarItem.name = "Reload Twine Game";
     reloadStatusBarItem.text = "$(debug-rerun) Reload Twine Game";
@@ -64,7 +65,7 @@ export function createStatusBarItems(context: vscode.ExtensionContext) {
 
     // Notification while the game is being indexed
     const indexingStatusBarItem = vscode.window.createStatusBarItem(
-        StatusBarItemIDs.Building,
+        StatusBarItemIDs.Indexing,
         vscode.StatusBarAlignment.Left,
         2
     );
@@ -72,6 +73,7 @@ export function createStatusBarItems(context: vscode.ExtensionContext) {
     indexingStatusBarItem.text = "$(sync~spin) Indexing Twine project...";
     indexingStatusBarItem.hide();
     statusBarItems[StatusBarItemIDs.Indexing] = indexingStatusBarItem;
+
     addListener("indexingStarts", () => indexingStatusBarItem.show());
     addListener("indexingEnds", () => indexingStatusBarItem.hide());
 

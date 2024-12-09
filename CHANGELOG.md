@@ -2,6 +2,12 @@
 
 Changes to the extension.
 
+## Unreleased
+
+### Fixed
+
+- "Indexing Twine Project..." status bar item no longer hides the "Run Twine Game" item when the former appears.
+
 ## [1.1.0] - 2024 12 01
 
 ### Added
