@@ -578,7 +578,7 @@ function parseMacroArgs(
                 return isVar;
             });
             props = props.filter(
-                (p) => p.scope && startIsVarRegexp.test(p.scope)
+                (p) => p.prefix && startIsVarRegexp.test(p.prefix)
             );
 
             createVariableAndPropertyReferences([vars, props], state);

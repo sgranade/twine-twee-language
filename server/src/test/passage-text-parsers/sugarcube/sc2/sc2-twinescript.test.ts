@@ -320,7 +320,7 @@ describe("SugarCube TwineScript", () => {
                         "fake-uri",
                         Range.create(1, 7, 1, 16)
                     ),
-                    scope: "$varbl",
+                    prefix: "$varbl",
                 },
                 {
                     contents: "rootprop2",
@@ -328,7 +328,7 @@ describe("SugarCube TwineScript", () => {
                         "fake-uri",
                         Range.create(1, 17, 1, 26)
                     ),
-                    scope: "$varbl.rootprop1",
+                    prefix: "$varbl.rootprop1",
                 },
             ]);
         });

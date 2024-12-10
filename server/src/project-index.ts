@@ -121,6 +121,12 @@ export interface ProjectIndex {
      */
     setSemanticTokens(uri: string, tokens: SemanticToken[]): void;
     /**
+     * Set a document's list of folding ranges.
+     * @param uri URI of the document whose index is to be updated.
+     * @param ranges Folding ranges in the document.
+     */
+    setFoldingRanges(uri: string, ranges: Range[]): void;
+    /**
      * Set a document's list of errors that occured during parsing.
      * @param uri URI of the document whose index is to be updated.
      * @param errors New list of errors.
@@ -170,6 +176,11 @@ export interface ProjectIndex {
      * @param uri Document URI.
      */
     getSemanticTokens(uri: string): readonly SemanticToken[];
+    /**
+     * Get a document's folding ranges.
+     * @param uri Document URI.
+     */
+    getFoldingRanges(uri: string): readonly Range[];
     /**
      * Get a document's parse errors.
      * @param uri Document URI.
@@ -268,6 +279,7 @@ export class Index implements ProjectIndex {
     private _references: Record<string, RepositoryPerKind<References>> = {};
     private _embeddedDocuments: Record<string, EmbeddedDocument[]> = {};
     private _semanticTokens: Record<string, SemanticToken[]> = {};
+    private _foldingRanges: Record<string, Range[]> = {};
     private _parseErrors: Record<string, Diagnostic[]> = {};
 
     setStoryTitle(title: string, uri: string): void {
@@ -301,6 +313,9 @@ export class Index implements ProjectIndex {
     }
     setSemanticTokens(uri: string, tokens: SemanticToken[]): void {
         this._semanticTokens[uri] = [...tokens];
+    }
+    setFoldingRanges(uri: string, ranges: Range[]): void {
+        this._foldingRanges[uri] = [...ranges];
     }
     setParseErrors(uri: string, errors: Diagnostic[]): void {
         this._parseErrors[uri] = [...errors];
@@ -339,6 +354,9 @@ export class Index implements ProjectIndex {
     }
     getSemanticTokens(uri: string): readonly SemanticToken[] {
         return this._semanticTokens[uri] ?? [];
+    }
+    getFoldingRanges(uri: string): readonly Range[] {
+        return this._foldingRanges[uri] ?? [];
     }
     getParseErrors(uri: string): readonly Diagnostic[] {
         return this._parseErrors[uri] ?? [];

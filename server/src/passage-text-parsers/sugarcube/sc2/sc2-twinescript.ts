@@ -284,11 +284,11 @@ export function tokenizeTwineScriptExpression(
 
         // If we have a property, we need to replace the desugared variable
         // with its sugared value
-        if (JSPropertyLabel.is(v) && v.scope !== undefined) {
-            const rootVar = v.scope.split(".")[0];
+        if (JSPropertyLabel.is(v) && v.prefix !== undefined) {
+            const rootVar = v.prefix.split(".")[0];
             const sugaredVar = seenUnsugaredVars[rootVar];
             if (sugaredVar !== undefined) {
-                v.scope = v.scope.replace(rootVar, sugaredVar);
+                v.prefix = v.prefix.replace(rootVar, sugaredVar);
             }
         }
 

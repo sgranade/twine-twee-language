@@ -24,7 +24,7 @@ export function createVariableAndPropertyReferences(
         // If there's a scope, add it to the name, b/c we save properties in their
         // full object context (ex: `var.prop.subprop`).
         const contents =
-            p.scope !== undefined ? `${p.scope}.${p.contents}` : p.contents;
+            p.prefix !== undefined ? `${p.prefix}.${p.contents}` : p.contents;
         state.callbacks.onSymbolReference({
             contents: contents,
             location: p.location,

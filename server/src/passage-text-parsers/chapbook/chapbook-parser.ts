@@ -1,6 +1,6 @@
 import * as acorn from "acorn";
 import * as acornWalk from "acorn-walk";
-import { Diagnostic, DiagnosticSeverity } from "vscode-languageserver";
+import { Diagnostic, DiagnosticSeverity, Range } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { StoryFormatParsingState, capturePreSemanticTokenFor } from "..";
@@ -226,10 +226,10 @@ function createVariableAndPropertyReferences(
         ? OChapbookSymbolKind.PropertySet
         : OChapbookSymbolKind.Property;
     for (const p of varsAndProps[1]) {
-        // If there's a scope, add it to the name, b/c we save properties in their
+        // If there's a prefix, add it to the name, b/c we save properties in their
         // full object context (ex: `var.prop.subprop`).
         const contents =
-            p.scope !== undefined ? `${p.scope}.${p.contents}` : p.contents;
+            p.prefix !== undefined ? `${p.prefix}.${p.contents}` : p.contents;
         state.callbacks.onSymbolReference({
             contents: contents,
             location: p.location,
@@ -1898,6 +1898,7 @@ function parseModifier(
  * @param section The text section.
  * @param sectionIndex Index in the document where the text section begins (zero-based).
  * @param state Parsing state.
+ * @param chapbookState Chapbook-specific parsing state.
  */
 function parseTextSection(
     section: string,
@@ -1909,9 +1910,22 @@ function parseTextSection(
     // starting with no modifier
     chapbookState.modifierKind = ModifierKind.None;
     modifierRegex.lastIndex = 0;
-    let previousModifierEndIndex = 0;
+    let previousModifierStartIndex = 0,
+        previousModifierEndIndex = 0;
 
     for (const m of section.matchAll(modifierRegex)) {
+        // If there was a previous index, capture a folding range for it
+        if (previousModifierEndIndex > 0) {
+            state.callbacks.onFoldingRange(
+                Range.create(
+                    state.textDocument.positionAt(
+                        previousModifierStartIndex + sectionIndex
+                    ),
+                    state.textDocument.positionAt(m.index - 1 + sectionIndex)
+                )
+            );
+        }
+
         // Parse the text from just after the previous modifier to just before the current one
         parseTextSubsection(
             section.slice(previousModifierEndIndex, m.index),
@@ -1984,6 +1998,7 @@ function parseTextSection(
             );
         }
 
+        previousModifierStartIndex = m.index;
         previousModifierEndIndex = m.index + m[0].length;
         // Skip the end line terminator(s)
         if (section[previousModifierEndIndex] === "\n")
@@ -1994,6 +2009,25 @@ function parseTextSection(
         ) {
             previousModifierEndIndex += 2;
         }
+    }
+
+    // Capture a final folding range, if there was a modifier
+    if (previousModifierEndIndex > 0) {
+        // If there's an ending \r?\n, back up before it
+        let finalIndexDelta = 0;
+        if (section[section.length - 1] === "\n") {
+            finalIndexDelta = section[section.length - 2] === "\r" ? -2 : -1;
+        }
+        state.callbacks.onFoldingRange(
+            Range.create(
+                state.textDocument.positionAt(
+                    previousModifierStartIndex + sectionIndex
+                ),
+                state.textDocument.positionAt(
+                    section.length + finalIndexDelta + sectionIndex
+                )
+            )
+        );
     }
 
     // Parse the text remaining after the final modifier

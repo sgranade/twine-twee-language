@@ -256,6 +256,29 @@ describe("Project Index", () => {
         });
     });
 
+    describe("Folding Ranges", () => {
+        it("should return an empty array for an unindexed file", () => {
+            const index = new uut.Index();
+
+            const result = index.getFoldingRanges("nopers");
+
+            expect(result).to.be.empty;
+        });
+
+        it("should return ranges for indexed files", () => {
+            const fakeRanges = [
+                Range.create(1, 2, 3, 4),
+                Range.create(5, 6, 7, 8),
+            ];
+            const index = new uut.Index();
+            index.setFoldingRanges("fake-uri", fakeRanges);
+
+            const result = index.getFoldingRanges("fake-uri");
+
+            expect(result).to.eql(fakeRanges);
+        });
+    });
+
     describe("Parse Errors", () => {
         it("should return an empty array for missing files", () => {
             const index = new uut.Index();

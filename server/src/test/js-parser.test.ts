@@ -551,7 +551,7 @@ describe("JS Parser", () => {
                     "fake-uri",
                     Range.create(1, 7, 1, 16)
                 ),
-                scope: "var1",
+                prefix: "var1",
             },
             {
                 contents: "rootprop2",
@@ -559,7 +559,7 @@ describe("JS Parser", () => {
                     "fake-uri",
                     Range.create(1, 17, 1, 26)
                 ),
-                scope: "var1.rootprop1",
+                prefix: "var1.rootprop1",
             },
         ]);
     });
@@ -591,7 +591,7 @@ describe("JS Parser", () => {
                     "fake-uri",
                     Range.create(1, 7, 1, 16)
                 ),
-                scope: "var1",
+                prefix: "var1",
             },
             {
                 contents: "rootprop2",
@@ -599,7 +599,7 @@ describe("JS Parser", () => {
                     "fake-uri",
                     Range.create(1, 17, 1, 26)
                 ),
-                scope: "var1.rootprop1",
+                prefix: "var1.rootprop1",
             },
         ]);
     });

@@ -52,18 +52,12 @@ export function generateFoldingRanges(
     uri: string,
     projectIndex: ProjectIndex
 ): FoldingRange[] | null {
-    const passages = projectIndex.getPassages(uri);
-    if (passages === undefined) {
+    const ranges = projectIndex.getFoldingRanges(uri);
+    if (ranges.length) {
+        return ranges.map((r) => FoldingRange.create(r.start.line, r.end.line));
+    } else {
         return null;
     }
-    const ranges = passages.map((passage) => {
-        return FoldingRange.create(
-            passage.scope.start.line || passage.name.location.range.start.line,
-            passage.scope.end.line || passage.name.location.range.end.line
-        );
-    });
-
-    return ranges;
 }
 
 /**

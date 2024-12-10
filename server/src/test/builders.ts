@@ -59,6 +59,7 @@ export class MockCallbacks implements ParserCallbacks {
     public storyDataRange?: Range;
     public embeddedDocuments: EmbeddedDocument[] = [];
     public tokens: SemanticToken[] = [];
+    public ranges: Range[] = [];
     public errors: Diagnostic[] = [];
 
     onPassage(passage: Passage): void {
@@ -83,6 +84,9 @@ export class MockCallbacks implements ParserCallbacks {
     }
     onSemanticToken(token: SemanticToken): void {
         this.tokens.push(token);
+    }
+    onFoldingRange(range: Range): void {
+        this.ranges.push(range);
     }
     onParseError(error: Diagnostic): void {
         this.errors.push(error);

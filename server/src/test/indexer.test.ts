@@ -304,6 +304,22 @@ describe("Indexer", () => {
             expect(result.range).to.eql(Range.create(1, 0, 2, 0));
         });
 
+        it("should add folding ranges to the index", () => {
+            const doc = buildDocument({
+                uri: "test-uri",
+                content: "::Passage 1\nYup\n\n::Passage 2\nYupyup",
+            });
+            const index = new Index();
+
+            uut.updateProjectIndex(doc, ParseLevel.Full, index);
+            const result = index.getFoldingRanges("test-uri");
+
+            expect(result).to.eql([
+                Range.create(0, 0, 2, 0),
+                Range.create(3, 0, 4, 6),
+            ]);
+        });
+
         it("should add parse errors to the index", () => {
             const doc = buildDocument({
                 uri: "test-uri",

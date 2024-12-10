@@ -33,10 +33,10 @@ interface astUnprocessedToken {
  */
 export interface JSPropertyLabel extends Label {
     /**
-     * The property's scope, if known. A reference for `subprop` from `var.prop.subprop` will
-     * have a scope of `var.prop`.
+     * The property's prefix, if known. A reference for `subprop` from `var.prop.subprop` will
+     * have a prefix of `var.prop`.
      */
-    scope?: string;
+    prefix?: string;
 }
 export namespace JSPropertyLabel {
     /**
@@ -45,7 +45,7 @@ export namespace JSPropertyLabel {
     export function is(val: unknown): val is JSPropertyLabel {
         if (typeof val !== "object" || Array.isArray(val) || val === null)
             return false;
-        return (val as JSPropertyLabel).scope !== undefined;
+        return (val as JSPropertyLabel).prefix !== undefined;
     }
 }
 
@@ -343,7 +343,7 @@ export function tokenizeJavaScript(
                         offset + token.at,
                         document
                     ),
-                    scope: token.scope,
+                    prefix: token.scope,
                 });
             }
             capturePreSemanticTokenFor(

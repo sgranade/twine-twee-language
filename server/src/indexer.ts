@@ -27,6 +27,7 @@ class IndexingState {
     references: ProjSymbol[] = [];
     parseErrors: Diagnostic[] = [];
     semanticTokens: SemanticToken[] = [];
+    foldingRanges: Range[] = [];
     embeddedDocuments: EmbeddedDocument[] = [];
 
     constructor(textDocument: TextDocument) {
@@ -102,6 +103,9 @@ export function updateProjectIndex(
         onSemanticToken: function (token: SemanticToken): void {
             indexingState.semanticTokens.push(token);
         },
+        onFoldingRange: function (range: Range): void {
+            indexingState.foldingRanges.push(range);
+        },
         onParseError: function (error: Diagnostic): void {
             indexingState.parseErrors.push(error);
         },
@@ -134,5 +138,6 @@ export function updateProjectIndex(
     index.setReferences(uri, references);
     index.setEmbeddedDocuments(uri, indexingState.embeddedDocuments);
     index.setSemanticTokens(uri, indexingState.semanticTokens);
+    index.setFoldingRanges(uri, indexingState.foldingRanges);
     index.setParseErrors(uri, indexingState.parseErrors);
 }

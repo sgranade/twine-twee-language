@@ -739,6 +739,58 @@ describe("Chapbook Parser", () => {
                     });
                 });
 
+                it("should capture folding ranges for modifiers", () => {
+                    const header = ":: Passage\n";
+                    const passage =
+                        "[mock-mod]\nContent\n[continue]\nMore stuff";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        uri: "fake-uri",
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
+                    const mockFunction = ImportMock.mockFunction(
+                        modifiersModule,
+                        "all"
+                    ).returns([]);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    mockFunction.restore();
+                    const result = callbacks.ranges;
+
+                    expect(result).to.eql([
+                        Range.create(1, 0, 2, 7),
+                        Range.create(3, 0, 4, 10),
+                    ]);
+                });
+
+                it("should capture folding ranges for modifiers that don't include a final \\r\\n", () => {
+                    const header = ":: Passage\n";
+                    const passage =
+                        "[mock-mod]\nContent\n[continue]\nMore stuff\r\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        uri: "fake-uri",
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
+                    const mockFunction = ImportMock.mockFunction(
+                        modifiersModule,
+                        "all"
+                    ).returns([]);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    mockFunction.restore();
+                    const result = callbacks.ranges;
+
+                    expect(result).to.eql([
+                        Range.create(1, 0, 2, 7),
+                        Range.create(3, 0, 4, 10),
+                    ]);
+                });
+
                 it("should send the full text to the matching modifier", () => {
                     const header = ":: Passage\n";
                     const passage = "[mock-mod stuff that follows!]\nContent\n";

@@ -48,6 +48,23 @@ describe("Server Twine Parser", () => {
                 expect(callbacks.passages.length).to.equal(2);
             });
 
+            it("should create a folding range on a passage", () => {
+                const callbacks = new MockCallbacks();
+                const doc = TextDocument.create(
+                    "fake-uri",
+                    "",
+                    0,
+                    ":: Passage 1\nP1 contents\n\n:: Passage 2\nP2 contents"
+                );
+
+                uut.parse(doc, callbacks, uut.ParseLevel.Full);
+
+                expect(callbacks.ranges).to.eql([
+                    Range.create(0, 0, 2, 0),
+                    Range.create(3, 0, 4, 11),
+                ]);
+            });
+
             it("should call back with the passage's name", () => {
                 const callbacks = new MockCallbacks();
                 const doc = TextDocument.create(

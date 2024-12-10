@@ -4,6 +4,10 @@ Changes to the extension.
 
 ## Unreleased
 
+### Added
+
+- Chapbook: Added folding ranges for modifiers.
+
 ### Fixed
 
 - "Indexing Twine Project..." status bar item no longer hides the "Run Twine Game" item when the former appears.
@@ -16,7 +20,7 @@ Changes to the extension.
 - SugarCube: Widgets defined by the `<<widget>>` macro are now parsed and recognized as macros.
 - SugarCube: The `data-passage` and `data-setter` [special HTML attributes ](http://www.motoslave.net/sugarcube/2/docs/#markup-html-svg-attribute-special) are now parsed.
 - SugarCube: [Attribute directives](http://www.motoslave.net/sugarcube/2/docs/#markup-html-svg-attribute-directive) are now parsed.
-- SugarCube [Custom styles](https://www.motoslave.net/sugarcube/2/docs/#markup-custom-style) are now parsed.
+- SugarCube: [Custom styles](https://www.motoslave.net/sugarcube/2/docs/#markup-custom-style) are now parsed.
 
 ### Changed
 

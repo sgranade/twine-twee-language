@@ -114,6 +114,7 @@ export interface ParserCallbacks {
     onStoryData(data: StoryData, range: Range): void;
     onEmbeddedDocument(document: EmbeddedDocument): void;
     onSemanticToken(token: SemanticToken): void;
+    onFoldingRange(range: Range): void;
     onParseError(error: Diagnostic): void;
 }
 
@@ -938,6 +939,7 @@ function parseTwee3(state: ParsingState): void {
     for (const [passage1, passage2] of pairwise(passages)) {
         findAndParsePassageContents(text, passage1, passage2, state);
         state.callbacks.onPassage(passage1);
+        state.callbacks.onFoldingRange(passage1.scope);
     }
 
     // Handle the final passage, if any
@@ -945,6 +947,7 @@ function parseTwee3(state: ParsingState): void {
     if (lastPassage !== undefined) {
         findAndParsePassageContents(text, lastPassage, undefined, state);
         state.callbacks.onPassage(lastPassage);
+        state.callbacks.onFoldingRange(lastPassage.scope);
     }
 }
 

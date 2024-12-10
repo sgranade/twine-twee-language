@@ -97,27 +97,12 @@ describe("Structure", () => {
             expect(result).to.be.null;
         });
 
-        it("should generate folding ranges for passages", () => {
+        it("should generate folding ranges for an indexed file", () => {
             const index = new Index();
-            const passages = [
-                buildPassage({
-                    label: "Passage 1",
-                    location: Location.create(
-                        "test-uri",
-                        Range.create(0, 0, 0, 12)
-                    ),
-                    scope: Range.create(0, 0, 7, 17),
-                }),
-                buildPassage({
-                    label: "Passage 2",
-                    location: Location.create(
-                        "test-uri",
-                        Range.create(8, 0, 8, 9)
-                    ),
-                    scope: Range.create(8, 0, 9, 2),
-                }),
-            ];
-            index.setPassages("test-uri", passages);
+            index.setFoldingRanges("test-uri", [
+                Range.create(0, 0, 7, 17),
+                Range.create(8, 0, 9, 2),
+            ]);
 
             const result = uut.generateFoldingRanges("test-uri", index);
 
