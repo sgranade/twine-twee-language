@@ -5,6 +5,7 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { buildPassage } from "./builders";
 
+import { DecorationRange, DecorationType } from "../client-server";
 import { EmbeddedDocument } from "../embedded-languages";
 import * as uut from "../project-index";
 import { SemanticToken } from "../semantic-tokens";
@@ -274,6 +275,29 @@ describe("Project Index", () => {
             index.setFoldingRanges("fake-uri", fakeRanges);
 
             const result = index.getFoldingRanges("fake-uri");
+
+            expect(result).to.eql(fakeRanges);
+        });
+    });
+
+    describe("Decoration Ranges", () => {
+        it("should return an empty array for an unindexed file", () => {
+            const index = new uut.Index();
+
+            const result = index.getDecorationRanges("nopers");
+
+            expect(result).to.be.empty;
+        });
+
+        it("should return ranges for indexed files", () => {
+            const fakeRanges = [
+                { type: 1, range: Range.create(1, 2, 3, 4) },
+                { type: 1, range: Range.create(5, 6, 7, 8) },
+            ];
+            const index = new uut.Index();
+            index.setDecorationRanges("fake-uri", fakeRanges);
+
+            const result = index.getDecorationRanges("fake-uri");
 
             expect(result).to.eql(fakeRanges);
         });
@@ -1341,6 +1365,34 @@ describe("Project Index", () => {
 
             index.removeDocument("fake-uri");
             const result = index.getSemanticTokens("fake-uri");
+
+            expect(result).to.be.empty;
+        });
+
+        it("should remove folding ranges for a deleted document", () => {
+            const fakeRanges = [
+                Range.create(1, 2, 3, 4),
+                Range.create(5, 6, 7, 8),
+            ];
+            const index = new uut.Index();
+            index.setFoldingRanges("fake-uri", fakeRanges);
+
+            index.removeDocument("fake-uri");
+            const result = index.getFoldingRanges("fake-uri");
+
+            expect(result).to.be.empty;
+        });
+
+        it("should remove decoration ranges for a deleted document", () => {
+            const fakeRanges = [
+                { type: 1, range: Range.create(1, 2, 3, 4) },
+                { type: 1, range: Range.create(5, 6, 7, 8) },
+            ];
+            const index = new uut.Index();
+            index.setDecorationRanges("fake-uri", fakeRanges);
+
+            index.removeDocument("fake-uri");
+            const result = index.getFoldingRanges("fake-uri");
 
             expect(result).to.be.empty;
         });

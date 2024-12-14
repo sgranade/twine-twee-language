@@ -1,6 +1,7 @@
 import { Diagnostic, Range } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
+import { DecorationRange } from "../client-server";
 import { EmbeddedDocument } from "../embedded-languages";
 import { Passage, StoryData, ProjSymbol } from "../project-index";
 import { ParseLevel, ParserCallbacks, ParsingState } from "../parser";
@@ -59,7 +60,8 @@ export class MockCallbacks implements ParserCallbacks {
     public storyDataRange?: Range;
     public embeddedDocuments: EmbeddedDocument[] = [];
     public tokens: SemanticToken[] = [];
-    public ranges: Range[] = [];
+    public foldingRanges: Range[] = [];
+    public decorationRanges: DecorationRange[] = [];
     public errors: Diagnostic[] = [];
 
     onPassage(passage: Passage): void {
@@ -86,7 +88,10 @@ export class MockCallbacks implements ParserCallbacks {
         this.tokens.push(token);
     }
     onFoldingRange(range: Range): void {
-        this.ranges.push(range);
+        this.foldingRanges.push(range);
+    }
+    onDecorationRange(range: DecorationRange): void {
+        this.decorationRanges.push(range);
     }
     onParseError(error: Diagnostic): void {
         this.errors.push(error);

@@ -6,6 +6,7 @@ import { DiagnosticSeverity, Location, Range } from "vscode-languageserver";
 import { buildInsertInfo } from "./inserts/insert-builders";
 import { buildModifierInfo } from "./modifiers/modifier-builders";
 import { MockCallbacks, buildParsingState } from "../../builders";
+import { DecorationType } from "../../../client-server";
 import { ParseLevel } from "../../../parser";
 import { TwineSymbolKind } from "../../../project-index";
 import { ETokenModifier, ETokenType } from "../../../semantic-tokens";
@@ -486,14 +487,14 @@ describe("Chapbook Parser", () => {
                         line: 1,
                         char: 2,
                         length: 4,
-                        tokenType: ETokenType.function,
+                        tokenType: ETokenType.macro,
                         tokenModifiers: [],
                     });
                     expect(mod2Token).to.eql({
                         line: 1,
                         char: 9,
                         length: 4,
-                        tokenType: ETokenType.function,
+                        tokenType: ETokenType.macro,
                         tokenModifiers: [],
                     });
                     expect(mod2Param1).to.eql({
@@ -567,7 +568,7 @@ describe("Chapbook Parser", () => {
                         line: 1,
                         char: 1,
                         length: 4,
-                        tokenType: ETokenType.function,
+                        tokenType: ETokenType.macro,
                         tokenModifiers: [ETokenModifier.deprecated],
                     });
                 });
@@ -742,7 +743,7 @@ describe("Chapbook Parser", () => {
                 it("should capture folding ranges for modifiers", () => {
                     const header = ":: Passage\n";
                     const passage =
-                        "[mock-mod]\nContent\n[continue]\nMore stuff";
+                        "[mock-mod]\r\nContent\r\n[othermod]\nMore stuff";
                     const callbacks = new MockCallbacks();
                     const state = buildParsingState({
                         uri: "fake-uri",
@@ -757,7 +758,7 @@ describe("Chapbook Parser", () => {
 
                     parser?.parsePassageText(passage, header.length, state);
                     mockFunction.restore();
-                    const result = callbacks.ranges;
+                    const result = callbacks.foldingRanges;
 
                     expect(result).to.eql([
                         Range.create(1, 0, 2, 7),
@@ -768,7 +769,7 @@ describe("Chapbook Parser", () => {
                 it("should capture folding ranges for modifiers that don't include a final \\r\\n", () => {
                     const header = ":: Passage\n";
                     const passage =
-                        "[mock-mod]\nContent\n[continue]\nMore stuff\r\n";
+                        "[mock-mod]\nContent\n[othermod]\nMore stuff\r\n";
                     const callbacks = new MockCallbacks();
                     const state = buildParsingState({
                         uri: "fake-uri",
@@ -783,11 +784,56 @@ describe("Chapbook Parser", () => {
 
                     parser?.parsePassageText(passage, header.length, state);
                     mockFunction.restore();
-                    const result = callbacks.ranges;
+                    const result = callbacks.foldingRanges;
 
                     expect(result).to.eql([
                         Range.create(1, 0, 2, 7),
                         Range.create(3, 0, 4, 10),
+                    ]);
+                });
+
+                it("should not capture folding ranges for a [cont] modifier", () => {
+                    const header = ":: Passage\n";
+                    const passage =
+                        "[mock-mod]\nContent\n[continue]\nMore stuff";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        uri: "fake-uri",
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    const result = callbacks.foldingRanges;
+
+                    expect(result).to.eql([Range.create(1, 0, 2, 7)]);
+                });
+
+                it("should capture decoration ranges for modifiers that aren't [cont] or [note]", () => {
+                    const header = ":: Passage\n";
+                    const passage =
+                        "[mock-mod]\nContent\n[othermod]\nContent\n[continue]\nMore stuff\n[note]\nAnd more\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        uri: "fake-uri",
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    const result = callbacks.decorationRanges;
+
+                    expect(result).to.eql([
+                        {
+                            type: DecorationType.ChapbookModifierContent,
+                            range: Range.create(2, 0, 2, 7),
+                        },
+                        {
+                            type: DecorationType.ChapbookModifierContent,
+                            range: Range.create(4, 0, 4, 7),
+                        },
                     ]);
                 });
 

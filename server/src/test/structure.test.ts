@@ -9,10 +9,10 @@ import {
 } from "vscode-languageserver";
 
 import { Index } from "../project-index";
+import { SemanticToken } from "../semantic-tokens";
 import { buildPassage } from "./builders";
 
 import * as uut from "../structure";
-import { SemanticToken } from "../semantic-tokens";
 
 describe("Structure", () => {
     describe("Symbols", () => {
@@ -109,6 +109,32 @@ describe("Structure", () => {
             expect(result).to.eql([
                 FoldingRange.create(0, 7),
                 FoldingRange.create(8, 9),
+            ]);
+        });
+    });
+
+    describe("Decoration Ranges", () => {
+        it("should return an empty array for un-indexed files", () => {
+            const index = new Index();
+            index.setPassages("test-uri", []);
+
+            const result = uut.generateDecorationRanges("other-uri", index);
+
+            expect(result).to.be.empty;
+        });
+
+        it("should generate decoration ranges for an indexed file", () => {
+            const index = new Index();
+            index.setDecorationRanges("test-uri", [
+                { type: 1, range: Range.create(0, 0, 7, 17) },
+                { type: 1, range: Range.create(8, 0, 9, 2) },
+            ]);
+
+            const result = uut.generateDecorationRanges("test-uri", index);
+
+            expect(result).to.eql([
+                { type: 1, range: Range.create(0, 0, 7, 17) },
+                { type: 1, range: Range.create(8, 0, 9, 2) },
             ]);
         });
     });

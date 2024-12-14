@@ -1,6 +1,6 @@
 // For interfaces and constants that need to be the same on client and server side
 
-import { RequestType, RequestType0, URI } from "vscode-languageclient";
+import { Range, RequestType, RequestType0, URI } from "vscode-languageclient";
 
 /**
  * Messages
@@ -10,6 +10,8 @@ export enum CustomMessages {
     RequestReindex = "twee3/requestReindex",
     IndexingStarted = "twee3/indexingStarted",
     IndexingComplete = "twee3/indexingComplete",
+    RequestDecorationRanges = "twee3/requestDecorationRanges",
+    DecorationRanges = "twee3/decorationRanges",
     UpdatedStoryFormat = "twee3/storyformat",
     UpdatedStoryTitle = "twee3/storytitle",
     UpdatedSugarCubeMacroList = "twee3/sugarcube/macrolist",
@@ -30,6 +32,29 @@ export interface SC2MacroInfo {
     name: string;
     isContainer: boolean;
     isChild: boolean;
+}
+
+/**
+ * Decoration range information sent via the DecorationRanges message.
+ */
+export interface DecorationRangeInfo {
+    uri: string;
+    ranges: readonly DecorationRange[];
+}
+
+/**
+ * Type of decoration ranges the server reports.
+ */
+export enum DecorationType {
+    ChapbookModifierContent = 1,
+}
+
+/**
+ * A range in the document that a client can optionally decorate.
+ */
+export interface DecorationRange {
+    range: Range;
+    type: DecorationType;
 }
 
 /**
@@ -70,7 +95,7 @@ export const ReadFileRequest: RequestType<
 /**
  * Body of a macro (i.e. its arguments). Taken from SugarCube 2 `parserlib.js`
  */
-const macroBody = [
+export const sc2MacroBody = [
     `(?<macroBody>(?:`,
     `(?:/\\*[^*]*\\*+(?:[^/*][^*]*\\*+)*/)|`,
     `(?://.*\\n)|`,
@@ -84,18 +109,18 @@ const macroBody = [
 /**
  * Self-close portion of a macro (e.g. <<testy/>>)
  */
-const macroSelfClose = `(?<macroSelfClose>/)`;
+export const sc2MacroSelfClose = `(?<macroSelfClose>/)`;
 /**
  * Prefix that indicates a closing macro (e.g. <</testy>> or <<endtesty>>).
  */
-const macroEnd = `(?<macroEnd>/|end)`;
+export const sc2MacroEnd = `(?<macroEnd>/|end)`;
 /**
  * Create a regex pattern to find an opening SugarCube 2 container macro, like `<<silently>>`.
  * @param name Container macro's name.
  * @returns String containing the regex pattern.
  */
 export function createSC2OpenContainerMacroPattern(name: string) {
-    return `<<(${name})(?:\\s+${macroBody})?>>`;
+    return `<<(${name})(?:\\s+${sc2MacroBody})?>>`;
 }
 /**
  * Create a regex pattern to find a closing SugarCube 2 container macro, like `<</silently>>`.
@@ -103,5 +128,5 @@ export function createSC2OpenContainerMacroPattern(name: string) {
  * @returns String containing the regex pattern.
  */
 export function createSC2CloseContainerMacroPattern(name: string) {
-    return `(?:<<(${name})(?:\\s*)${macroBody}${macroSelfClose}>>)|(?:<<${macroEnd}(${name})>>)`;
+    return `(?:<<(${name})(?:\\s*)${sc2MacroBody}${sc2MacroSelfClose}>>)|(?:<<${sc2MacroEnd}(${name})>>)`;
 }

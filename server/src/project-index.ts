@@ -1,6 +1,6 @@
 import { Diagnostic, Location, Position, Range } from "vscode-languageserver";
 
-import { StoryFormat } from "./client-server";
+import { DecorationRange, StoryFormat } from "./client-server";
 import { EmbeddedDocument } from "./embedded-languages";
 import { SemanticToken } from "./semantic-tokens";
 import { positionInRange } from "./utilities";
@@ -30,7 +30,7 @@ export interface ProjSymbol extends Label, Kind {}
  */
 export enum TwineSymbolKind {
     Passage = 1,
-    _end, // So story-format parsers can de-conflict their values
+    _end, // So story format parsers can de-conflict their values
 }
 
 /**
@@ -127,6 +127,12 @@ export interface ProjectIndex {
      */
     setFoldingRanges(uri: string, ranges: Range[]): void;
     /**
+     * Set a document's list of decoration ranges.
+     * @param uri URI of the document whose index is to be updated.
+     * @param ranges Decoration ranges in the document.
+     */
+    setDecorationRanges(uri: string, ranges: DecorationRange[]): void;
+    /**
      * Set a document's list of errors that occured during parsing.
      * @param uri URI of the document whose index is to be updated.
      * @param errors New list of errors.
@@ -181,6 +187,11 @@ export interface ProjectIndex {
      * @param uri Document URI.
      */
     getFoldingRanges(uri: string): readonly Range[];
+    /**
+     * Get a document's decoration ranges.
+     * @param uri Document URI.
+     */
+    getDecorationRanges(uri: string): readonly DecorationRange[];
     /**
      * Get a document's parse errors.
      * @param uri Document URI.
@@ -280,6 +291,7 @@ export class Index implements ProjectIndex {
     private _embeddedDocuments: Record<string, EmbeddedDocument[]> = {};
     private _semanticTokens: Record<string, SemanticToken[]> = {};
     private _foldingRanges: Record<string, Range[]> = {};
+    private _decorationRanges: Record<string, DecorationRange[]> = {};
     private _parseErrors: Record<string, Diagnostic[]> = {};
 
     setStoryTitle(title: string, uri: string): void {
@@ -316,6 +328,9 @@ export class Index implements ProjectIndex {
     }
     setFoldingRanges(uri: string, ranges: Range[]): void {
         this._foldingRanges[uri] = [...ranges];
+    }
+    setDecorationRanges(uri: string, ranges: DecorationRange[]): void {
+        this._decorationRanges[uri] = [...ranges];
     }
     setParseErrors(uri: string, errors: Diagnostic[]): void {
         this._parseErrors[uri] = [...errors];
@@ -357,6 +372,9 @@ export class Index implements ProjectIndex {
     }
     getFoldingRanges(uri: string): readonly Range[] {
         return this._foldingRanges[uri] ?? [];
+    }
+    getDecorationRanges(uri: string): readonly DecorationRange[] {
+        return this._decorationRanges[uri] ?? [];
     }
     getParseErrors(uri: string): readonly Diagnostic[] {
         return this._parseErrors[uri] ?? [];
@@ -546,6 +564,8 @@ export class Index implements ProjectIndex {
         delete this._references[uri];
         delete this._embeddedDocuments[uri];
         delete this._semanticTokens[uri];
+        delete this._foldingRanges[uri];
+        delete this._decorationRanges[uri];
         delete this._parseErrors[uri];
         if (uri === this._storyTitleUri) {
             this._storyTitle = undefined;

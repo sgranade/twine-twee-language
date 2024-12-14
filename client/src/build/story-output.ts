@@ -1,4 +1,5 @@
 import { CLIENT_VERSION } from "../version";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { TweeParseError } from "./twee-parser";
 import { Passage, Story } from "./types";
 import { escapeAttrEntities, escapeHtmlEntities } from "./utilities";

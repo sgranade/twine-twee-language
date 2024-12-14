@@ -31,6 +31,7 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 
 import {
     CustomMessages,
+    DecorationRangeInfo,
     FindFilesRequest,
     FindTweeFilesRequest,
     ReadFileRequest,
@@ -49,6 +50,7 @@ import {
     defaultDiagnosticsOptions,
 } from "./server-options";
 import {
+    generateDecorationRanges,
     generateFoldingRanges,
     generateSemanticTokens,
     generateSymbols,
@@ -412,9 +414,12 @@ connection.onDidChangeConfiguration(async () => {
 });
 
 documents.onDidChangeContent(async (change) => {
-    // Parse, and request a re-index if the story format changes
+    // Parse w/re-indexing if the story format changes
     await parseTextDocument(change.document, ParseLevel.Full, undefined, true);
+    // Validate
     await validateTextDocument(change.document, undefined);
+    // Update decoration ranges
+    sendDecorationRanges(change.document.uri);
 });
 
 // documents.onDidClose;
@@ -434,9 +439,12 @@ connection.onDidChangeWatchedFiles((_change) => {
 });
 
 documents.onDidOpen(async (change) => {
-    // Parse, and request a re-index if the story format changes
+    // Parse w/re-indexing if the story format changes
     await parseTextDocument(change.document, ParseLevel.Full, undefined, true);
+    // Validate
     await validateTextDocument(change.document, undefined);
+    // Update decoration ranges
+    sendDecorationRanges(change.document.uri);
 });
 
 connection.onDocumentSymbol(
@@ -463,6 +471,10 @@ connection.onHover(
 
 connection.onNotification(CustomMessages.RequestReindex, () => {
     Heartbeat.indexWorkspace();
+});
+
+connection.onNotification(CustomMessages.RequestDecorationRanges, (uri) => {
+    sendDecorationRanges(uri);
 });
 
 connection.onPrepareRename((params: PrepareRenameParams): Range | undefined => {
@@ -556,7 +568,6 @@ async function getSettings(): Promise<ServerSettings> {
  * @param parseLevel What level of parsing to do.
  * @param diagnosticsOptions Diagnostic options.
  * @param reindexOnStoryFormatChange If true and the story format changes, re-index all project files.
- * @returns True if the story format changed; false otherwise.
  */
 async function parseTextDocument(
     document: TextDocument,
@@ -632,6 +643,14 @@ function onStoryFormatChange(format: StoryFormat) {
  */
 function onStoryTitleChange(title: string) {
     connection.sendNotification(CustomMessages.UpdatedStoryTitle, title);
+}
+
+function sendDecorationRanges(uri: string) {
+    const rangeInfo: DecorationRangeInfo = {
+        uri: uri,
+        ranges: generateDecorationRanges(uri, projectIndex),
+    };
+    connection.sendNotification(CustomMessages.DecorationRanges, rangeInfo);
 }
 
 /**

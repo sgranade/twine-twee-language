@@ -4,6 +4,7 @@ import { Diagnostic, DiagnosticSeverity, Range } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { StoryFormatParsingState, capturePreSemanticTokenFor } from "..";
+import { DecorationType } from "../../client-server";
 import { EmbeddedDocument } from "../../embedded-languages";
 import {
     JSPropertyLabel,
@@ -161,6 +162,7 @@ export enum ModifierKind {
     Javascript,
     Css,
     Note,
+    Continue,
     Other,
 }
 
@@ -1805,7 +1807,7 @@ function parseModifier(
         // (This needs to be done before setting tokens)
         modifier.parse(modifierText, state, chapbookState);
 
-        // Tokenize the first token as a function, unless the modifier is a note.
+        // Tokenize the first token as a macro, unless the modifier is a note.
         // Also capture whether or not the modifier is deprecated.
         const deprecated =
             state.storyFormat?.formatVersion !== undefined &&
@@ -1817,9 +1819,9 @@ function parseModifier(
         capturePreSemanticTokenFor(
             modifierTokens.name.text,
             modifierTokens.name.at,
-            chapbookState.modifierKind == ModifierKind.Note
+            chapbookState.modifierKind === ModifierKind.Note
                 ? ETokenType.comment
-                : ETokenType.function,
+                : ETokenType.macro,
             deprecated ? [ETokenModifier.deprecated] : [],
             chapbookState
         );
@@ -1892,6 +1894,63 @@ function parseModifier(
     }
 }
 
+const nonFoldedModifiers = [ModifierKind.Continue];
+const nonDecoratedModifiers = [ModifierKind.Continue, ModifierKind.Note];
+
+/**
+ * Capture the folding and decoration ranges for a modifier.
+ *
+ * @param section The text section.
+ * @param sectionIndex Index in the document where the text section begins (zero-based).
+ * @param modifierStartIndex Index in section where the modifier starts.
+ * @param modifierEndIndex Index in section where the modifier ends.
+ * @param state Parsing state.
+ * @param chapbookState Chapbook-specific parsing state.
+ * @returns
+ */
+function captureModifierRanges(
+    section: string,
+    sectionIndex: number,
+    modifierStartIndex: number,
+    modifierEndIndex: number,
+    state: ParsingState,
+    chapbookState: ChapbookParsingState
+): void {
+    // Back up before any final runs of \r?\n
+    for (
+        ;
+        modifierEndIndex > modifierStartIndex &&
+        section[modifierEndIndex - 1] === "\n";
+        modifierEndIndex -= section[modifierEndIndex - 2] === "\r" ? 2 : 1
+    );
+    if (modifierEndIndex === modifierStartIndex) {
+        return;
+    }
+
+    const range = Range.create(
+        state.textDocument.positionAt(modifierStartIndex + sectionIndex),
+        state.textDocument.positionAt(modifierEndIndex + sectionIndex)
+    );
+    if (!nonFoldedModifiers.includes(chapbookState.modifierKind)) {
+        state.callbacks.onFoldingRange(range);
+    }
+    if (
+        !nonDecoratedModifiers.includes(chapbookState.modifierKind) &&
+        range.end.line > range.start.line
+    ) {
+        // Modifier content starts after its first line
+        state.callbacks.onDecorationRange({
+            type: DecorationType.ChapbookModifierContent,
+            range: Range.create(
+                range.start.line + 1,
+                0,
+                range.end.line,
+                range.end.character
+            ),
+        });
+    }
+}
+
 /**
  * Parse the text section of a Chapbook passage.
  *
@@ -1910,19 +1969,19 @@ function parseTextSection(
     // starting with no modifier
     chapbookState.modifierKind = ModifierKind.None;
     modifierRegex.lastIndex = 0;
-    let previousModifierStartIndex = 0,
+    let previousModifierStartIndex = 0, // Where the [modifier] starts
         previousModifierEndIndex = 0;
 
     for (const m of section.matchAll(modifierRegex)) {
-        // If there was a previous index, capture a folding range for it
+        // If there was a previous modifier that wasn't [continue], capture folding and decoration ranges for it
         if (previousModifierEndIndex > 0) {
-            state.callbacks.onFoldingRange(
-                Range.create(
-                    state.textDocument.positionAt(
-                        previousModifierStartIndex + sectionIndex
-                    ),
-                    state.textDocument.positionAt(m.index - 1 + sectionIndex)
-                )
+            captureModifierRanges(
+                section,
+                sectionIndex,
+                previousModifierStartIndex,
+                m.index,
+                state,
+                chapbookState
             );
         }
 
@@ -2011,22 +2070,15 @@ function parseTextSection(
         }
     }
 
-    // Capture a final folding range, if there was a modifier
+    // Capture a final folding range, if there was an active modifier
     if (previousModifierEndIndex > 0) {
-        // If there's an ending \r?\n, back up before it
-        let finalIndexDelta = 0;
-        if (section[section.length - 1] === "\n") {
-            finalIndexDelta = section[section.length - 2] === "\r" ? -2 : -1;
-        }
-        state.callbacks.onFoldingRange(
-            Range.create(
-                state.textDocument.positionAt(
-                    previousModifierStartIndex + sectionIndex
-                ),
-                state.textDocument.positionAt(
-                    section.length + finalIndexDelta + sectionIndex
-                )
-            )
+        captureModifierRanges(
+            section,
+            sectionIndex,
+            previousModifierStartIndex,
+            section.length,
+            state,
+            chapbookState
         );
     }
 

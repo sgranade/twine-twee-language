@@ -1,8 +1,15 @@
 /**
  * Adapted from SugarCube's `patterns.js` and twee3-language-tools `macros.ts`.
  *
- * Any changes to this file also need to be reflected in the two `client-server.ts` files.
+ * Some portions of this are defined in `client-server.ts` because the client needs them
+ * to do some client-side parsing.
  */
+
+import {
+    sc2MacroBody,
+    sc2MacroEnd,
+    sc2MacroSelfClose,
+} from "../../../client-server";
 
 /**
  * \s character class without a line terminator.
@@ -119,33 +126,15 @@ export const scriptMacroBlock = [
             `(?:(?<open>${open})(?<contents>(?:.|\r?\n)*?)${close})`
     )
     .join("|");
-/**
- * Body of a macro (i.e. its arguments). Taken from SugarCube 2 `parserlib.js`
- */
-const macroBody = [
-    `(?<macroBody>(?:`,
-    `(?:/\\*[^*]*\\*+(?:[^/*][^*]*\\*+)*/)|`,
-    `(?://.*\\n)|`,
-    `(?:\`(?:\\\\.|[^\`\\\\])*?\`)|`,
-    `(?:"(?:\\\\.|[^"\\\\\\n])*?")|`,
-    `(?:'(?:\\\\.|[^'\\\\\\n])*?')|`,
-    `(?:\\[(?:[<>]?[Ii][Mm][Gg])?\\[[^\\r\\n]*?\\]\\]+)|[^>]|`,
-    `(?:>(?!>))`,
-    `)*?)`,
-].join("");
-/**
- * Self-close portion of a macro (e.g. <<testy/>>)
- */
-const macroSelfClose = `(?<macroSelfClose>/)`;
-/**
- * Prefix that indicates a closing macro (e.g. <</testy>> or <<endtesty>>).
- */
-const macroEnd = `(?<macroEnd>/|end)`;
+
+// Most of the macro regexes are in `client-server.ts` because the client
+// needs access to them
+
 /**
  * A macro name.
  */
-const macroNamePattern = `[A-Za-z][\\w-]*|[=-]`;
+const sc2MacroNamePattern = `[A-Za-z][\\w-]*|[=-]`;
 /**
  * Pattern for a full macro. Taken from twee3-language-tools, `macros.ts`
  */
-export const fullMacro = `<<${macroEnd}?(?<macroName>${macroNamePattern})(?<preMacroBodySpace>\\s*)${macroBody}${macroSelfClose}?>>`;
+export const fullMacro = `<<${sc2MacroEnd}?(?<macroName>${sc2MacroNamePattern})(?<preMacroBodySpace>\\s*)${sc2MacroBody}${sc2MacroSelfClose}?>>`;

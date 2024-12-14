@@ -8,6 +8,11 @@ Changes to the extension.
 
 - Chapbook: Added folding ranges for modifiers.
 
+### Changed
+
+- Chapbook: Modifiers now have a different syntax highlighting color than inserts so they're easier to distinguish.
+- Chapbook: Modifier contents are now decorated in the editor to make them more visually distinctive when editing them.
+
 ### Fixed
 
 - "Indexing Twine Project..." status bar item no longer hides the "Run Twine Game" item when the former appears.

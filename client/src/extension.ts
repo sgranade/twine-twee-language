@@ -27,6 +27,7 @@ import {
 } from "./client-server";
 import { Configuration, CustomCommands } from "./constants";
 import { signalContextEvent } from "./context";
+import { setEditorDecorationRanges, updateDecoration } from "./decorations";
 import { reloadRunningGame, viewCompiledGame } from "./game-view";
 import {
     cacheStoryFormat,
@@ -285,6 +286,19 @@ export function activate(context: vscode.ExtensionContext) {
         CustomMessages.UpdatedSugarCubeMacroList,
         async (e) => await onUpdatedSugarCube2MacroInfo(e[0])
     );
+    notifications.addNotificationHandler(
+        CustomMessages.DecorationRanges,
+        (e) => {
+            if (
+                vscode.window.activeTextEditor &&
+                vscode.window.activeTextEditor.document.uri.toString() ===
+                    e[0].uri
+            ) {
+                setEditorDecorationRanges(e[0].ranges);
+                updateDecoration(vscode.window.activeTextEditor);
+            }
+        }
+    );
     notifications.addNotificationHandler(CustomMessages.IndexingStarted, () =>
         signalContextEvent("indexingStarts")
     );
@@ -306,13 +320,27 @@ export function activate(context: vscode.ExtensionContext) {
         })
     );
 
-    // Adjust document languages on edit if needed
+    // Adjust document languages and decorations on editor change if needed
     context.subscriptions.push(
         vscode.window.onDidChangeActiveTextEditor(
             async (e: vscode.TextEditor | undefined) => {
                 if (e !== undefined) {
+                    setEditorDecorationRanges([]);
                     await updateTweeDocumentLanguage(e.document);
+                    client.sendNotification(
+                        CustomMessages.RequestDecorationRanges,
+                        e.document.uri.toString()
+                    );
                 }
+            }
+        )
+    );
+
+    // Adjust decorations on text editor selection change
+    context.subscriptions.push(
+        vscode.window.onDidChangeTextEditorSelection(
+            (e: vscode.TextEditorSelectionChangeEvent) => {
+                updateDecoration(e.textEditor);
             }
         )
     );

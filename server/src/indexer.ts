@@ -1,6 +1,7 @@
 import { Diagnostic, DiagnosticSeverity, Range } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
+import { DecorationRange } from "./client-server";
 import { EmbeddedDocument } from "./embedded-languages";
 import {
     Passage,
@@ -28,6 +29,7 @@ class IndexingState {
     parseErrors: Diagnostic[] = [];
     semanticTokens: SemanticToken[] = [];
     foldingRanges: Range[] = [];
+    decorationRanges: DecorationRange[] = [];
     embeddedDocuments: EmbeddedDocument[] = [];
 
     constructor(textDocument: TextDocument) {
@@ -106,6 +108,9 @@ export function updateProjectIndex(
         onFoldingRange: function (range: Range): void {
             indexingState.foldingRanges.push(range);
         },
+        onDecorationRange: function (range: DecorationRange): void {
+            indexingState.decorationRanges.push(range);
+        },
         onParseError: function (error: Diagnostic): void {
             indexingState.parseErrors.push(error);
         },
@@ -139,5 +144,6 @@ export function updateProjectIndex(
     index.setEmbeddedDocuments(uri, indexingState.embeddedDocuments);
     index.setSemanticTokens(uri, indexingState.semanticTokens);
     index.setFoldingRanges(uri, indexingState.foldingRanges);
+    index.setDecorationRanges(uri, indexingState.decorationRanges);
     index.setParseErrors(uri, indexingState.parseErrors);
 }

@@ -108,7 +108,7 @@ interface T3LTMacroInfo {
     name?: string;
     description?: string;
     container?: boolean;
-    children?: string | Object[];
+    children?: string | object[];
     parents?: string[];
     deprecated?: boolean;
     parameters?: string[];

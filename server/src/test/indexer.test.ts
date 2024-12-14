@@ -9,11 +9,12 @@ import {
 } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
+import { DecorationRange, DecorationType } from "../client-server";
+import { ParseLevel, ParsingState } from "../parser";
 import { Index } from "../project-index";
 import { buildPassage } from "./builders";
 
 import * as ptpModule from "../passage-text-parsers";
-import { ParseLevel, ParsingState } from "../parser";
 import * as uut from "../indexer";
 
 function buildDocument({
@@ -317,6 +318,46 @@ describe("Indexer", () => {
             expect(result).to.eql([
                 Range.create(0, 0, 2, 0),
                 Range.create(3, 0, 4, 6),
+            ]);
+        });
+
+        it("should add decoration ranges to the index", () => {
+            const doc = buildDocument({
+                uri: "test-uri",
+                content: "::Passage 1\nYup\n\n",
+            });
+            const index = new Index();
+            // Because decoration ranges only show up in passage contents, we
+            // need to mock the passage text parser to create a reference
+            const mockFunction = ImportMock.mockFunction(
+                ptpModule,
+                "getStoryFormatParser"
+            ).callsFake(() => {
+                return {
+                    id: "FakeFormat",
+                    parsePassageText: (
+                        passageText: string,
+                        textIndex: number,
+                        state: ParsingState
+                    ) => {
+                        if (passageText === "Yup\n\n")
+                            state.callbacks.onDecorationRange({
+                                type: DecorationType.ChapbookModifierContent,
+                                range: Range.create(1, 2, 3, 4),
+                            });
+                    },
+                };
+            });
+
+            uut.updateProjectIndex(doc, ParseLevel.Full, index);
+            mockFunction.restore();
+            const result = index.getDecorationRanges("test-uri");
+
+            expect(result).to.eql([
+                {
+                    type: DecorationType.ChapbookModifierContent,
+                    range: Range.create(1, 2, 3, 4),
+                },
             ]);
         });
 

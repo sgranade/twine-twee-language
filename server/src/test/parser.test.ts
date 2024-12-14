@@ -59,7 +59,7 @@ describe("Server Twine Parser", () => {
 
                 uut.parse(doc, callbacks, uut.ParseLevel.Full);
 
-                expect(callbacks.ranges).to.eql([
+                expect(callbacks.foldingRanges).to.eql([
                     Range.create(0, 0, 2, 0),
                     Range.create(3, 0, 4, 11),
                 ]);

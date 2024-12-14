@@ -1,3 +1,4 @@
+import { ModifierKind } from "../chapbook-parser";
 import { ModifierInfo } from "./types";
 
 export const cont: ModifierInfo = {
@@ -6,5 +7,7 @@ export const cont: ModifierInfo = {
     description: "Clears all previously active modifiers.",
     match: /^continued?|cont('d)?$/i,
     completions: ["continue"],
-    parse: () => {},
+    parse(text, state, chapbookState) {
+        chapbookState.modifierKind = ModifierKind.Continue;
+    },
 };

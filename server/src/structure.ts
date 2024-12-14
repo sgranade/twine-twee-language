@@ -7,6 +7,7 @@ import {
 } from "vscode-languageserver";
 
 import { ProjectIndex } from "./project-index";
+import { DecorationRange } from "./client-server";
 
 /**
  * Generate symbols for a document.
@@ -58,6 +59,20 @@ export function generateFoldingRanges(
     } else {
         return null;
     }
+}
+
+/**
+ * Generate decoration ranges for a document.
+ *
+ * @param uri URI of the file to generate decoration ranges for.
+ * @param projectIndex Project's index.
+ * @returns Decoration ranges for that file, or null if the file isn't in the index.
+ */
+export function generateDecorationRanges(
+    uri: string,
+    projectIndex: ProjectIndex
+): readonly DecorationRange[] {
+    return projectIndex.getDecorationRanges(uri);
 }
 
 /**

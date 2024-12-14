@@ -6,7 +6,7 @@ import {
 } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
-import { StoryFormat } from "./client-server";
+import { DecorationRange, StoryFormat } from "./client-server";
 import {
     EmbeddedDocument,
     headerMetadataJSONUri,
@@ -115,6 +115,7 @@ export interface ParserCallbacks {
     onEmbeddedDocument(document: EmbeddedDocument): void;
     onSemanticToken(token: SemanticToken): void;
     onFoldingRange(range: Range): void;
+    onDecorationRange(range: DecorationRange): void;
     onParseError(error: Diagnostic): void;
 }
 

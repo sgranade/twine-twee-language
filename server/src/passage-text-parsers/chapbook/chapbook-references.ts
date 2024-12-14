@@ -6,8 +6,7 @@ import { OChapbookSymbolKind } from "./types";
 export function getReferencesToSymbolAt(
     documentUri: string,
     position: Position,
-    index: ProjectIndex,
-    includeDeclaration: boolean
+    index: ProjectIndex
 ): Location[] | undefined {
     // Because we track variable references separately from variable-being-set locations,
     // when getting references to one of those (like a variable), we have to add in
