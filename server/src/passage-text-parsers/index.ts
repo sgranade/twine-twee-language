@@ -95,6 +95,10 @@ export interface StoryFormatParser {
     /**
      * Get references to a symbol by a position in a document.
      *
+     * Story formats can define this if they need to handle references differently than
+     * the project index does by default, such as if they track variable-setting references
+     * differently than variable-reading references.
+     *
      * @param documentUri URI to the document to get references at.
      * @param position Position in the document to find the references from.
      * @param index Twine project index.

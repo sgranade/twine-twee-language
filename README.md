@@ -12,9 +12,10 @@ A VS Code extension for [Twine] (using the [Twee3] format) and the [Chapbook] an
 - Syntax highlighting
 - Error highlighting
 - Go to passage definition
+- Rename passages
 - Highlight references to passages in links
-- Build your game to a releasable HTML file.
-- Run your game in VS Code.
+- Build your game to a releasable HTML file
+- Run your game in VS Code
 
 ### Chapbook
 
@@ -22,6 +23,7 @@ A VS Code extension for [Twine] (using the [Twee3] format) and the [Chapbook] an
 - Syntax highlighting
 - Error highlighting
 - Highlight variable references
+- Rename variables
 - Support for inserts and modifiers
     - Autocomplete (both names and arguments)
     - Hover information
@@ -37,6 +39,7 @@ A VS Code extension for [Twine] (using the [Twee3] format) and the [Chapbook] an
 - Syntax highlighting
 - Error highlighting
 - Highlight variable references
+- Rename variables
 - Support for macros
     - Autocomplete (names only)
     - Hover information

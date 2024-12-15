@@ -9,20 +9,15 @@ export function getReferencesToSymbolAt(
     index: ProjectIndex,
     includeDeclaration: boolean
 ): Location[] | undefined {
-    // First: check the index
-    const indexReferences = index.getReferencesToSymbolAt(
-        uri,
-        position,
-        includeDeclaration
-    );
+    // Check the story format's references, followed by the default index
+    const refLocations =
+        getStoryFormatParser(
+            index.getStoryData()?.storyFormat
+        )?.getReferencesToSymbolAt(uri, position, index, includeDeclaration) ||
+        index.getReferencesToSymbolAt(uri, position, includeDeclaration)
+            ?.locations;
 
-    // Second: check the story format
-    const formatReferences = getStoryFormatParser(
-        index.getStoryData()?.storyFormat
-    )?.getReferencesToSymbolAt(uri, position, index, includeDeclaration);
+    if (refLocations === undefined) return undefined;
 
-    if (indexReferences === undefined && formatReferences === undefined)
-        return undefined;
-
-    return [...(indexReferences?.locations ?? []), ...(formatReferences ?? [])];
+    return [...(refLocations ?? [])];
 }

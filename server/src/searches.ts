@@ -7,6 +7,7 @@ import {
 
 import { ProjectIndex } from "./project-index";
 import { positionInRange } from "./utilities";
+import { getReferencesToSymbolAt } from "./passage-text-parsers/chapbook/chapbook-references";
 
 /**
  * Prepare for a rename request by seeing if a renamable symbol is at the location.
@@ -53,18 +54,20 @@ export function generateRenames(
     newName: string,
     index: ProjectIndex
 ): WorkspaceEdit | null {
-    const referencesToChange = index.getReferencesToSymbolAt(
+    // Get locations of symbols to change
+    const locationsToChange = getReferencesToSymbolAt(
         uri,
         position,
+        index,
         true
     );
-    if (referencesToChange === undefined) {
+    if (locationsToChange === undefined) {
         return null;
     }
 
     const changes: Map<string, TextEdit[]> = new Map();
 
-    for (const location of referencesToChange.locations) {
+    for (const location of locationsToChange) {
         const change = TextEdit.replace(location.range, newName);
         let edits = changes.get(location.uri);
         if (edits === undefined) {

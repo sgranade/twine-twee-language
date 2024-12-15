@@ -417,7 +417,7 @@ export class Index implements ProjectIndex {
             };
         }
 
-        // Check our other defintions
+        // Check our other definitions
         const definitionsPerKind = this._definitions[uri] ?? {};
         for (const defs of Object.values(definitionsPerKind)) {
             const match = defs.find((def) =>
