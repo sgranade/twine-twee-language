@@ -260,7 +260,7 @@ describe("Chapbook Completions", () => {
             );
         });
 
-        it("should suggest modifiers within [...; here]", () => {
+        it("should suggest modifiers within [...; ^here]", () => {
             const doc = TextDocument.create(
                 "fake-uri",
                 "",
@@ -275,13 +275,53 @@ describe("Chapbook Completions", () => {
                     scope: Range.create(0, 0, 2, 0),
                 }),
             ]);
+            const modifier = buildModifierInfo({ name: "mod", match: /^mod/i });
+            modifier.completions = ["mod"];
+            const mockFunction = ImportMock.mockFunction(
+                modifiersModule,
+                "all"
+            ).returns([modifier]);
             const parser = uut.getChapbookParser(undefined);
 
             const results = parser?.generateCompletions(doc, position, index);
+            mockFunction.restore();
 
             expect(results?.itemDefaults?.editRange).to.eql(
                 Range.create(1, 12, 1, 16)
             );
+            expect(results?.items[0].textEditText).to.equal("mod");
+        });
+
+        it("should suggest modifiers within [...; here^]", () => {
+            const doc = TextDocument.create(
+                "fake-uri",
+                "",
+                0,
+                ":: Passage\n[ not here; here] not here"
+            );
+            const position = Position.create(1, 16);
+            const index = new Index();
+            index.setPassages("fake-uri", [
+                buildPassage({
+                    label: "passage",
+                    scope: Range.create(0, 0, 2, 0),
+                }),
+            ]);
+            const modifier = buildModifierInfo({ name: "mod", match: /^mod/i });
+            modifier.completions = ["mod"];
+            const mockFunction = ImportMock.mockFunction(
+                modifiersModule,
+                "all"
+            ).returns([modifier]);
+            const parser = uut.getChapbookParser(undefined);
+
+            const results = parser?.generateCompletions(doc, position, index);
+            mockFunction.restore();
+
+            expect(results?.itemDefaults?.editRange).to.eql(
+                Range.create(1, 12, 1, 16)
+            );
+            expect(results?.items[0].textEditText).to.equal("mod");
         });
 
         it("should suggest a built-in modifier's required first argument's placeholder after a [ and the modifier name", () => {

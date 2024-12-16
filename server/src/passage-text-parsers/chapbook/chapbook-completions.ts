@@ -152,7 +152,12 @@ function generateModifierCompletions(
 
     let modifierText = text.slice(modifierContentStart, modifierContentEnd);
     // Skip only the spaces on the left
-    for (i = 0; i < modifierText.length && modifierText[i] === " "; ++i);
+    let hasLeadingSpace = false;
+    for (
+        i = 0;
+        i < modifierText.length && modifierText[i] === " ";
+        ++i, hasLeadingSpace = true
+    );
     if (i < modifierText.length) {
         modifierText = modifierText.substring(i);
         modifierContentStart += i;
@@ -219,8 +224,8 @@ function generateModifierCompletions(
         else if (modifier.name !== undefined)
             modifierCompletions.push(modifier.name);
     }
-    // If we're at a semicolon, put a space before each modifier's name
-    const leadingSpace = atSemicolon ? " " : "";
+    // If we're at a semicolon and there's no leading space, put a space before each modifier's name
+    const leadingSpace = atSemicolon && !hasLeadingSpace ? " " : "";
     const completionList = CompletionList.create(
         modifierCompletions.map((c) => {
             return {
