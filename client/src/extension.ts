@@ -325,7 +325,6 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.window.onDidChangeActiveTextEditor(
             async (e: vscode.TextEditor | undefined) => {
                 if (e !== undefined) {
-                    setEditorDecorationRanges([]);
                     await updateTweeDocumentLanguage(e.document);
                     client.sendNotification(
                         CustomMessages.RequestDecorationRanges,

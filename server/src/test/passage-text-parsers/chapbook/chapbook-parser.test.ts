@@ -828,11 +828,11 @@ describe("Chapbook Parser", () => {
                     expect(result).to.eql([
                         {
                             type: DecorationType.ChapbookModifierContent,
-                            range: Range.create(2, 0, 2, 7),
+                            range: Range.create(2, 0, 2, 9999),
                         },
                         {
                             type: DecorationType.ChapbookModifierContent,
-                            range: Range.create(4, 0, 4, 7),
+                            range: Range.create(4, 0, 4, 9999),
                         },
                     ]);
                 });

@@ -1938,15 +1938,14 @@ function captureModifierRanges(
         !nonDecoratedModifiers.includes(chapbookState.modifierKind) &&
         range.end.line > range.start.line
     ) {
-        // Modifier content starts after its first line
+        // Modifier content starts after its first line.
+        // Since the decoration encompasses the whole line, make the end character
+        // super large. Otherwise, as the user types at the end of the line, the
+        // decoration will vanish since the cursor won't be within this range until
+        // the ranges update.
         state.callbacks.onDecorationRange({
             type: DecorationType.ChapbookModifierContent,
-            range: Range.create(
-                range.start.line + 1,
-                0,
-                range.end.line,
-                range.end.character
-            ),
+            range: Range.create(range.start.line + 1, 0, range.end.line, 9999),
         });
     }
 }
