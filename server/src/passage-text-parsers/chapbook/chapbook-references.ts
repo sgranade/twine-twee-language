@@ -3,6 +3,13 @@ import { Location, Position } from "vscode-languageserver";
 import { ProjectIndex } from "../../project-index";
 import { OChapbookSymbolKind } from "./types";
 
+const linkedTypes = {
+    [OChapbookSymbolKind.Variable]: OChapbookSymbolKind.VariableSet,
+    [OChapbookSymbolKind.VariableSet]: OChapbookSymbolKind.Variable,
+    [OChapbookSymbolKind.Property]: OChapbookSymbolKind.PropertySet,
+    [OChapbookSymbolKind.PropertySet]: OChapbookSymbolKind.Property,
+};
+
 export function getReferencesToSymbolAt(
     documentUri: string,
     position: Position,
@@ -20,15 +27,12 @@ export function getReferencesToSymbolAt(
     const kind = refs?.kind;
     if (
         refs === undefined ||
-        (kind !== OChapbookSymbolKind.Variable &&
-            kind !== OChapbookSymbolKind.VariableSet)
+        kind === undefined ||
+        !Object.keys(linkedTypes).includes(kind.toString())
     )
         return refs?.locations;
 
-    const otherKind =
-        kind === OChapbookSymbolKind.Variable
-            ? OChapbookSymbolKind.VariableSet
-            : OChapbookSymbolKind.Variable;
+    const otherKind = linkedTypes[kind];
     const locations: Location[] = refs.locations;
     for (const uri of index.getIndexedUris()) {
         for (const otherRef of index.getReferences(uri, otherKind) ?? []) {

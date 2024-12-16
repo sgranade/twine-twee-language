@@ -16,7 +16,7 @@ Changes to the extension.
 ### Fixed
 
 - "Indexing Twine Project..." status bar item no longer hides the "Run Twine Game" item when the former appears.
-- Chapbook: Fixed bug where renaming variables didn't rename all variables.
+- Chapbook: Fixed bug where renaming variables and properties didn't rename all variables or properties.
 
 ## [1.1.0] - 2024 12 01
 
