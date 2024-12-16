@@ -10,11 +10,11 @@ export const link: InsertInfo = {
     match: /^link\s+to/i,
     firstArgument: {
         required: ArgumentRequirement.required,
-        placeholder: "'passage name or URL'",
+        placeholder: '"passage name or URL"',
         type: ValueType.urlOrPassage,
     },
     requiredProps: {},
-    optionalProps: { label: "'label'" },
+    optionalProps: { label: '"label"' },
     completions: ["link to"],
     parse(args, state, chapbookState) {
         // If the first arg isn't a URL, then it's a passage

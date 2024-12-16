@@ -9,10 +9,10 @@ export const embedUnsplashImage: InsertInfo = {
     match: /^embed\s+unsplash(\s+image)?/i,
     firstArgument: {
         required: ArgumentRequirement.required,
-        placeholder: "'url'",
+        placeholder: '"url"',
     },
     requiredProps: {},
-    optionalProps: { alt: "'alternate text'" },
+    optionalProps: { alt: '"alternate text"' },
     completions: ["embed Unsplash"],
     parse: () => {},
 };

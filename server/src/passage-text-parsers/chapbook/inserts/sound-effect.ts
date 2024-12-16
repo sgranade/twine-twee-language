@@ -9,7 +9,7 @@ export const soundEffect: InsertInfo = {
     match: /^sound\s+effect/i,
     firstArgument: {
         required: ArgumentRequirement.required,
-        placeholder: "'sound name'",
+        placeholder: '"sound name"',
     },
     requiredProps: {},
     optionalProps: {

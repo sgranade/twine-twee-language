@@ -10,12 +10,12 @@ export const revealLink: InsertInfo = {
     match: /^reveal\s+link/i,
     firstArgument: {
         required: ArgumentRequirement.required,
-        placeholder: "'label'",
+        placeholder: '"label"',
     },
     requiredProps: {},
     optionalProps: {
-        text: "'revealed text'",
-        passage: { placeholder: "'passage name'", type: ValueType.passage },
+        text: '"revealed text"',
+        passage: { placeholder: '"passage name"', type: ValueType.passage },
     },
     completions: ["reveal link"],
     parse(args, state) {

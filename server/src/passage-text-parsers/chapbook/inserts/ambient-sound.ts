@@ -9,7 +9,7 @@ export const ambientSound: InsertInfo = {
     match: /^ambient\s+sound/i,
     firstArgument: {
         required: ArgumentRequirement.required,
-        placeholder: "'sound name'",
+        placeholder: '"sound name"',
     },
     requiredProps: {},
     optionalProps: {

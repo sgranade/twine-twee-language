@@ -9,10 +9,10 @@ export const embedFlickrImage: InsertInfo = {
     match: /^embed\s+flickr(\s+image)?/i,
     firstArgument: {
         required: ArgumentRequirement.required,
-        placeholder: "'embed code'",
+        placeholder: '"embed code"',
     },
     requiredProps: {},
-    optionalProps: { alt: "'alternate text'" },
+    optionalProps: { alt: '"alternate text"' },
     completions: ["embed Flickr"],
     parse: () => {},
 };

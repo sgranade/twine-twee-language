@@ -9,9 +9,9 @@ export const cyclingLink: InsertInfo = {
     match: /^cycling\s+link(\s+for)?/i,
     firstArgument: {
         required: ArgumentRequirement.optional,
-        placeholder: "'variableName'",
+        placeholder: '"variableName"',
     },
-    requiredProps: { choices: "['one', 'two', 'three']" },
+    requiredProps: { choices: '["one", "two", "three"]' },
     optionalProps: {},
     completions: ["cycling link"],
     parse: () => {},

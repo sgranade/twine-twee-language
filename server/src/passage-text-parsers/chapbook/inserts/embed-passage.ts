@@ -10,7 +10,7 @@ export const embedPassage: InsertInfo = {
     match: /^embed\s+passage(\s+named)?/i,
     firstArgument: {
         required: ArgumentRequirement.required,
-        placeholder: "'passage name'",
+        placeholder: '"passage name"',
         type: ValueType.passage,
     },
     requiredProps: {},

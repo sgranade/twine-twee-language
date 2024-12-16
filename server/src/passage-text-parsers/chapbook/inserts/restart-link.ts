@@ -9,7 +9,7 @@ export const restartLink: InsertInfo = {
     match: /^restart\s+link/i,
     firstArgument: { required: ArgumentRequirement.ignored },
     requiredProps: {},
-    optionalProps: { label: "'label'" },
+    optionalProps: { label: '"label"' },
     completions: ["restart link"],
     parse: () => {},
 };

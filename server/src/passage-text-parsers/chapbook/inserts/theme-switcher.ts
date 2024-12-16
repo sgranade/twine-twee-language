@@ -11,8 +11,8 @@ export const themeSwitcher: InsertInfo = {
     firstArgument: { required: ArgumentRequirement.ignored },
     requiredProps: {},
     optionalProps: {
-        darkLabel: { placeholder: "'label'" },
-        lightLabel: { placeholder: "'label'" },
+        darkLabel: { placeholder: '"label"' },
+        lightLabel: { placeholder: '"label"' },
     },
     completions: ["theme switcher"],
     parse: () => {},

@@ -9,9 +9,9 @@ export const dropdownMenu: InsertInfo = {
     match: /^dropdown\s+menu(\s+for)?/i,
     firstArgument: {
         required: ArgumentRequirement.optional,
-        placeholder: "'variableName'",
+        placeholder: '"variableName"',
     },
-    requiredProps: { choices: "['one', 'two', 'three']" },
+    requiredProps: { choices: '["one", "two", "three"]' },
     optionalProps: {},
     completions: ["dropdown menu"],
     parse: () => {},

@@ -8,7 +8,7 @@ export const embedYouTubeVideo: InsertInfo = {
     match: /^embed\s+youtube(\s+video)?/i,
     firstArgument: {
         required: ArgumentRequirement.required,
-        placeholder: "'url'",
+        placeholder: '"url"',
     },
     requiredProps: {},
     optionalProps: { autoplay: "true", loop: "true" },

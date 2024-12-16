@@ -9,10 +9,10 @@ export const embedImage: InsertInfo = {
     match: /^embed\s+image/i,
     firstArgument: {
         required: ArgumentRequirement.required,
-        placeholder: "'url'",
+        placeholder: '"url"',
     },
     requiredProps: {},
-    optionalProps: { alt: "'alternate text'" },
+    optionalProps: { alt: '"alternate text"' },
     completions: ["embed image"],
     parse: () => {},
 };

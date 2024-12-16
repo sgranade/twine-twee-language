@@ -9,7 +9,7 @@ export const textInput: InsertInfo = {
     match: /^text\s+input(\s+for)?/i,
     firstArgument: {
         required: ArgumentRequirement.optional,
-        placeholder: "'variable name'",
+        placeholder: '"variable name"',
     },
     requiredProps: {},
     optionalProps: { required: "false" },

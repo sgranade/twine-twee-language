@@ -9,7 +9,7 @@ export const backLink: InsertInfo = {
     match: /^back\s+link/i,
     firstArgument: { required: ArgumentRequirement.ignored },
     requiredProps: {},
-    optionalProps: { label: "'Back'" },
+    optionalProps: { label: '"Back"' },
     completions: ["back link"],
     parse: () => {},
 };
