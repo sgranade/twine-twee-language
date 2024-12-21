@@ -54,10 +54,8 @@ function generateVariableAndPropertyCompletions(
               );
     for (const uri of index.getIndexedUris()) {
         if (context !== undefined) {
-            // Get all properties whose contents match the full context
+            // Get all set properties whose contents match the full context
             const allPropRefs = [
-                ...(index.getReferences(uri, OChapbookSymbolKind.Property) ??
-                    []),
                 ...(index.getReferences(uri, OChapbookSymbolKind.PropertySet) ??
                     []),
             ];
@@ -69,10 +67,8 @@ function generateVariableAndPropertyCompletions(
                     ) ?? [])
             );
         } else {
-            // Get all variables
+            // Get all set variables
             const allVarRefs = [
-                ...(index.getReferences(uri, OChapbookSymbolKind.Variable) ??
-                    []),
                 ...(index.getReferences(uri, OChapbookSymbolKind.VariableSet) ??
                     []),
             ];

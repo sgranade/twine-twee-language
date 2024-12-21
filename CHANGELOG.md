@@ -10,6 +10,7 @@ Changes to the extension.
 
 ### Changed
 
+- Chapbook: Variable and property auto-completions now only include variables and properties set in a vars section.
 - Chapbook: Modifiers now have a different syntax highlighting color than inserts so they're easier to distinguish.
 - Chapbook: Modifier contents are now decorated in the editor to make them more visually distinctive when editing them.
 

@@ -58,9 +58,8 @@ describe("Chapbook Completions", () => {
 
             const results = parser?.generateCompletions(doc, position, index);
 
-            expect(results?.items.length).to.equal(2);
-            expect(results?.items[0]?.label).to.eql("var1");
-            expect(results?.items[1]?.label).to.eql("anotherVar");
+            expect(results?.items.length).to.equal(1);
+            expect(results?.items[0]?.label).to.eql("anotherVar");
         });
 
         it("should suggest properties (both set and otherwise) that follow a variable in the vars section", () => {
@@ -118,9 +117,8 @@ describe("Chapbook Completions", () => {
 
             const results = parser?.generateCompletions(doc, position, index);
 
-            expect(results?.items.length).to.equal(2);
-            expect(results?.items[0]?.label).to.eql("otherprop");
-            expect(results?.items[1]?.label).to.eql("anotherprop");
+            expect(results?.items.length).to.equal(1);
+            expect(results?.items[0]?.label).to.eql("anotherprop");
         });
     });
 
@@ -429,7 +427,7 @@ describe("Chapbook Completions", () => {
                     locations: [
                         Location.create("fake-uri", Range.create(1, 2, 3, 4)),
                     ],
-                    kind: OChapbookSymbolKind.Variable,
+                    kind: OChapbookSymbolKind.VariableSet,
                 },
             ]);
             const modifier = buildModifierInfo({ name: "mod", match: /^mod/i });
@@ -489,7 +487,7 @@ describe("Chapbook Completions", () => {
                             Range.create(9, 10, 11, 12)
                         ),
                     ],
-                    kind: OChapbookSymbolKind.Property,
+                    kind: OChapbookSymbolKind.PropertySet,
                 },
             ]);
             const modifier = buildModifierInfo({ name: "mod", match: /^mod/i });
@@ -760,7 +758,7 @@ describe("Chapbook Completions", () => {
             expect(results?.items[0]?.label).to.eql("custom insert");
         });
 
-        it("should suggest variables after a { with no other contents in the insert", () => {
+        it("should suggest set variables after a { with no other contents in the insert", () => {
             const doc = TextDocument.create(
                 "fake-uri",
                 "",
@@ -781,6 +779,13 @@ describe("Chapbook Completions", () => {
                     locations: [
                         Location.create("fake-uri", Range.create(1, 2, 3, 4)),
                     ],
+                    kind: OChapbookSymbolKind.VariableSet,
+                },
+                {
+                    contents: "var2",
+                    locations: [
+                        Location.create("fake-uri", Range.create(5, 6, 7, 8)),
+                    ],
                     kind: OChapbookSymbolKind.Variable,
                 },
             ]);
@@ -799,7 +804,7 @@ describe("Chapbook Completions", () => {
             );
         });
 
-        it("should suggest properties after a { and variable. with no other contents in the insert", () => {
+        it("should suggest set properties after a { and var. with no other contents in the insert", () => {
             const doc = TextDocument.create(
                 "fake-uri",
                 "",
@@ -828,6 +833,16 @@ describe("Chapbook Completions", () => {
                         Location.create(
                             "fake-uri",
                             Range.create(9, 10, 11, 12)
+                        ),
+                    ],
+                    kind: OChapbookSymbolKind.PropertySet,
+                },
+                {
+                    contents: "var1.fakeprop",
+                    locations: [
+                        Location.create(
+                            "fake-uri",
+                            Range.create(13, 14, 15, 16)
                         ),
                     ],
                     kind: OChapbookSymbolKind.Property,
@@ -1659,7 +1674,7 @@ describe("Chapbook Completions", () => {
                     locations: [
                         Location.create("fake-uri", Range.create(1, 2, 3, 4)),
                     ],
-                    kind: OChapbookSymbolKind.Variable,
+                    kind: OChapbookSymbolKind.VariableSet,
                 },
             ]);
             const insert = buildInsertInfo({
@@ -1715,7 +1730,7 @@ describe("Chapbook Completions", () => {
                             Range.create(9, 10, 11, 12)
                         ),
                     ],
-                    kind: OChapbookSymbolKind.Property,
+                    kind: OChapbookSymbolKind.PropertySet,
                 },
             ]);
             const insert = buildInsertInfo({
@@ -2220,7 +2235,7 @@ describe("Chapbook Completions", () => {
                     locations: [
                         Location.create("fake-uri", Range.create(1, 2, 3, 4)),
                     ],
-                    kind: OChapbookSymbolKind.Variable,
+                    kind: OChapbookSymbolKind.VariableSet,
                 },
             ]);
             const insert = buildInsertInfo({
