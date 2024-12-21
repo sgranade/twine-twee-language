@@ -2,7 +2,7 @@
 
 Changes to the extension.
 
-## Unreleased
+## [1.1.1] - 2024 12 21
 
 ### Added
 

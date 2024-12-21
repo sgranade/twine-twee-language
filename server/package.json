@@ -1,30 +1,27 @@
 {
-	"name": "twine-twee-language",
-	"description": "Twine (Twee 3) language server in node.",
-	"version": "1.1.0",
-	"author": "Stephen Granade",
-	"license": "MIT",
-	"engines": {
-		"node": "*"
-	},
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/sgranade/twine-twee-language"
-	},
-	"dependencies": {
-		"acorn": "^8.11.3",
-		"acorn-loose": "^8.4.0",
-		"acorn-walk": "^8.3.2",
-		"uuid": "^9.0.1",
-		"vscode-css-languageservice": "^6.2.14",
-		"vscode-html-languageservice": "^5.2.0",
-		"vscode-json-languageservice": "^5.3.11",
-		"vscode-languageserver": "^9.0.1",
-		"vscode-languageserver-textdocument": "^1.0.11",
-		"yaml": "^2.6.0"
-	},
-	"scripts": {},
-	"devDependencies": {
-		"@types/uuid": "^9.0.8"
-	}
+    "name": "twine-twee-language",
+    "description": "Twine (Twee 3) language server in node.",
+    "version": "1.1.0",
+    "author": "Stephen Granade",
+    "license": "MIT",
+    "engines": {
+        "node": "*"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/sgranade/twine-twee-language"
+    },
+    "dependencies": {
+        "acorn": "^8.11.3",
+        "acorn-loose": "^8.4.0",
+        "acorn-walk": "^8.3.2",
+        "uuid": "^11.0.3",
+        "vscode-css-languageservice": "^6.2.14",
+        "vscode-html-languageservice": "^5.2.0",
+        "vscode-json-languageservice": "^5.3.11",
+        "vscode-languageserver": "^9.0.1",
+        "vscode-languageserver-textdocument": "^1.0.11",
+        "yaml": "^2.6.0"
+    },
+    "scripts": {}
 }
