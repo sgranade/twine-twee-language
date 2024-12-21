@@ -1,301 +1,301 @@
 {
-	"name": "twine-twee-language",
-	"displayName": "Twine (Twee 3)",
-	"description": "Twine (Twee 3) language support for VS Code, including Chapbook and SugarCube story formats.",
-	"author": {
-		"name": "Stephen Granade",
-		"email": "stephen@granades.com",
-		"url": "https://github.com/sgranade"
-	},
-	"license": "MIT",
-	"version": "1.1.0",
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/sgranade/twine-twee-language"
-	},
-	"publisher": "StephenGranade",
-	"categories": [
-		"Programming Languages",
-		"Linters",
-		"Snippets"
-	],
-	"keywords": [
-		"Twine",
-		"Twee",
-		"Chapbook",
-		"SugarCube",
-		"cyoa",
-		"interactive fiction"
-	],
-	"engines": {
-		"vscode": "^1.75.0"
-	},
-	"icon": "images/icon.png",
-	"capabilities": {
-		"untrustedWorkspaces": {
-			"supported": true
-		},
-		"virtualWorkspaces": {
-			"supported": false,
-			"description": "Only works with local file paths."
-		}
-	},
-	"activationEvents": [
-		"workspaceContains:**/*.{tw,twee}"
-	],
-	"main": "./dist/client/src/extension",
-	"contributes": {
-		"languages": [
-			{
-				"id": "twee3",
-				"aliases": [
-					"Twee3",
-					"twee3",
-					"tw"
-				],
-				"extensions": [
-					".tw",
-					".twee"
-				],
-				"configuration": "./syntaxes/twee3.language-configuration.json"
-			},
-			{
-				"id": "twee3-chapbook-2",
-				"aliases": [
-					"Twee3-Chapbook-2"
-				],
-				"extensions": [
-					".tw",
-					".twee"
-				],
-				"configuration": "./syntaxes/twee3.language-configuration.json"
-			},
-			{
-				"id": "twee3-sugarcube-2",
-				"aliases": [
-					"Twee3-SugarCube-2"
-				],
-				"extensions": [
-					".tw",
-					".twee"
-				],
-				"configuration": "./syntaxes/twee3.sugarcube-2.language-configuration.json"
-			}
-		],
-		"grammars": [
-			{
-				"language": "twee3",
-				"scopeName": "source.twee3",
-				"path": "./syntaxes/twee3.tmLanguage.json",
-				"embeddedLanguages": {
-					"source.json.twee3": "json",
-					"source.js.twee3": "javascript",
-					"source.css.twee3": "css",
-					"source.html.twee3": "html"
-				}
-			},
-			{
-				"language": "twee3-chapbook-2",
-				"scopeName": "source.twee3.chapbook-2",
-				"path": "./syntaxes/twee3.chapbook-2.tmLanguage.json",
-				"embeddedLanguages": {
-					"source.json.twee3": "json",
-					"source.yaml.twee3": "yaml",
-					"source.js.twee3": "javascript",
-					"source.css.twee3": "css",
-					"source.html.twee3": "html"
-				}
-			},
-			{
-				"language": "twee3-sugarcube-2",
-				"scopeName": "source.twee3.sugarcube-2",
-				"path": "./syntaxes/twee3.sugarcube-2.tmLanguage.json",
-				"embeddedLanguages": {
-					"source.json.twee3": "json",
-					"source.yaml.twee3": "yaml",
-					"source.js.twee3": "javascript",
-					"source.css.twee3": "css",
-					"source.html.twee3": "html"
-				}
-			}
-		],
-		"commands": [
-			{
-				"command": "twineTweeLanguage.buildGame",
-				"title": "Build Game",
-				"category": "Twine (Twee 3) Language",
-				"enablement": "isWorkspaceTrusted"
-			},
-			{
-				"command": "twineTweeLanguage.buildGameTest",
-				"title": "Build Game (Test Mode)",
-				"category": "Twine (Twee 3) Language",
-				"enablement": "isWorkspaceTrusted"
-			},
-			{
-				"command": "twineTweeLanguage.runGame",
-				"title": "Run Game",
-				"category": "Twine (Twee 3) Language",
-				"enablement": "isWorkspaceTrusted"
-			},
-			{
-				"command": "twineTweeLanguage.reloadGame",
-				"title": "Reload Game",
-				"category": "Twine (Twee 3) Language",
-				"enablement": "isWorkspaceTrusted"
-			},
-			{
-				"command": "twineTweeLanguage.downloadStoryFormat",
-				"title": "Download Story Format",
-				"category": "Twine (Twee 3) Language",
-				"enablement": "isWorkspaceTrusted"
-			}
-		],
-		"menus": {
-			"commandPalette": [
-				{
-					"command": "twineTweeLanguage.buildGame",
-					"when": "!twineTweeLanguage.building"
-				},
-				{
-					"command": "twineTweeLanguage.buildGameTest",
-					"when": "!twineTweeLanguage.building"
-				},
-				{
-					"command": "twineTweeLanguage.runGame"
-				},
-				{
-					"command": "twineTweeLanguage.reloadGame",
-					"when": "twineTweeLanguage.running"
-				},
-				{
-					"command": "twineTweeLanguage.downloadStoryFormat"
-				}
-			]
-		},
-		"configuration": {
-			"title": "Twine (Twee 3) Language",
-			"properties": {
-				"twineTweeLanguage.project.create": {
-					"type": "boolean",
-					"default": true,
-					"order": 1,
-					"description": "Offer to create a project directory structure."
-				},
-				"twineTweeLanguage.project.downloadStoryFormat": {
-					"type": "boolean",
-					"default": true,
-					"order": 2,
-					"markdownDescription": "Offer to download the Twine story format used in a project. (Currently only supports [Chapbook](https://klembot.github.io/chapbook/) and [SugarCube 2](https://motoslave.net/sugarcube/2/).)"
-				},
-				"twineTweeLanguage.project.storyFilesDirectory": {
-					"type": "string",
-					"default": "src",
-					"order": 3,
-					"markdownDescription": "Directory with game source files (relative to the workspace). Files in this directory and all of its subdirectories will be compiled. Supports [all Tweego-supported files](http://www.motoslave.net/tweego/docs/#usage-supported-files) except for `.tw2`, `.twee2`, `.htm`, and `.html`."
-				},
-				"twineTweeLanguage.project.storyFormatsDirectory": {
-					"type": "string",
-					"default": ".storyformats",
-					"order": 4,
-					"description": "Directory relative to the root level of the project where Twine story formats are stored."
-				},
-				"twineTweeLanguage.build.outputFile": {
-					"type": "string",
-					"default": "",
-					"order": 5,
-					"markdownDescription": "Name to give the game when turned into an HTML file, such as `story.html`. If blank, the game's filename will be its name from the `StoryTitle` passage, with spaces replaced by hyphens."
-				},
-				"twineTweeLanguage.build.runningGameUpdate": {
-					"type": "string",
-					"default": "live reload",
-					"enum": [
-						"live reload",
-						"restart",
-						"no update"
-					],
-					"enumDescriptions": [
-						"Reload the game without restarting it.",
-						"Reload the game and restart it.",
-						"Don't reload the game."
-					],
-					"order": 6,
-					"markdownDescription": "What to do with a running game after building a new version."
-				},
-				"twineTweeLanguage.build.buildDirectory": {
-					"type": "string",
-					"default": "build",
-					"order": 7,
-					"markdownDescription": "Directory to put the output `.html` file in (relative to the workspace)."
-				},
-				"twineTweeLanguage.build.includeDirectory": {
-					"type": "string",
-					"default": "include",
-					"order": 8,
-					"markdownDescription": "Directory with non-game files to add to the build directory (relative to the workspace). Files in this directory and all of its subdirectories will be added as-is to the build directory. If blank, no files will be included. Useful for images, fonts, and other files you don't want to bundle directly into the compiled `.html` file."
-				},
-				"twineTweeLanguage.twee-3.warnings.unknownMacro": {
-					"type": "boolean",
-					"default": "true",
-					"order": 9,
-					"description": "Warn about unrecognized macros (in SugarCube) or inserts and modifiers (in Chapbook)."
-				},
-				"twineTweeLanguage.twee-3.warnings.unknownPassage": {
-					"type": "boolean",
-					"default": "true",
-					"order": 10,
-					"markdownDescription": "Warn about references to unrecognized passages, such as in `[[passage]]` links."
-				}
-			}
-		},
-		"taskDefinitions": [
-			{
-				"type": "twine",
-				"required": [
-					"flags"
-				],
-				"properties": {
-					"flags": {
-						"type": "array",
-						"description": "Flags to the Twine build process."
-					}
-				}
-			}
-		]
-	},
-	"scripts": {
-		"vscode:prepublish": "npm run package",
-		"compile": "npm-run-all check-types prebuild esbuild",
-		"prebuild": "node -p \"'export const CLIENT_VERSION = ' + JSON.stringify(require('./package.json').version) + ';'\" > client/src/version.ts",
-		"esbuild": "node esbuild.js",
-		"check-types": "tsc -b --noEmit",
-		"watch": "npm-run-all -p watch:*",
-		"watch:esbuild": "npm run prebuild && node esbuild.js --watch",
-		"watch:tsc": "tsc -b --noEmit --watch",
-		"package": "npm-run-all check-types prebuild \"esbuild -- --production\"",
-		"test": "nyc mocha",
-		"coverage": "nyc report --reporter=text-lcov > coverage.lcov",
-		"lint": "eslint ./client/src ./server/src",
-		"postinstall": "cd client && npm install && cd ../server && npm install && cd .."
-	},
-	"devDependencies": {
-		"@eslint/js": "^9.3.0",
-		"@types/chai": "^4.3.10",
-		"@types/eslint__js": "^8.42.3",
-		"@types/mocha": "^10.0.6",
-		"@types/node": "^20.9.2",
-		"@types/sinon": "^17.0.3",
-		"chai": "^4.5.0",
-		"esbuild": "^0.24.0",
-		"eslint": "^9.14.0",
-		"mocha": "^11.0.1",
-		"npm-run-all": "^4.1.5",
-		"nyc": "^17.0.0",
-		"prettier": "^3.3.3",
-		"sinon": "^19.0.2",
-		"ts-mock-imports": "^1.3.8",
-		"ts-node": "^10.9.2",
-		"typescript": "^5.4.5",
-		"typescript-eslint": "^8.0.0-alpha.10"
-	}
+    "name": "twine-twee-language",
+    "displayName": "Twine (Twee 3)",
+    "description": "Twine (Twee 3) language support for VS Code, including Chapbook and SugarCube story formats.",
+    "author": {
+        "name": "Stephen Granade",
+        "email": "stephen@granades.com",
+        "url": "https://github.com/sgranade"
+    },
+    "license": "MIT",
+    "version": "1.1.1",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/sgranade/twine-twee-language"
+    },
+    "publisher": "StephenGranade",
+    "categories": [
+        "Programming Languages",
+        "Linters",
+        "Snippets"
+    ],
+    "keywords": [
+        "Twine",
+        "Twee",
+        "Chapbook",
+        "SugarCube",
+        "cyoa",
+        "interactive fiction"
+    ],
+    "engines": {
+        "vscode": "^1.75.0"
+    },
+    "icon": "images/icon.png",
+    "capabilities": {
+        "untrustedWorkspaces": {
+            "supported": true
+        },
+        "virtualWorkspaces": {
+            "supported": false,
+            "description": "Only works with local file paths."
+        }
+    },
+    "activationEvents": [
+        "workspaceContains:**/*.{tw,twee}"
+    ],
+    "main": "./dist/client/src/extension",
+    "contributes": {
+        "languages": [
+            {
+                "id": "twee3",
+                "aliases": [
+                    "Twee3",
+                    "twee3",
+                    "tw"
+                ],
+                "extensions": [
+                    ".tw",
+                    ".twee"
+                ],
+                "configuration": "./syntaxes/twee3.language-configuration.json"
+            },
+            {
+                "id": "twee3-chapbook-2",
+                "aliases": [
+                    "Twee3-Chapbook-2"
+                ],
+                "extensions": [
+                    ".tw",
+                    ".twee"
+                ],
+                "configuration": "./syntaxes/twee3.language-configuration.json"
+            },
+            {
+                "id": "twee3-sugarcube-2",
+                "aliases": [
+                    "Twee3-SugarCube-2"
+                ],
+                "extensions": [
+                    ".tw",
+                    ".twee"
+                ],
+                "configuration": "./syntaxes/twee3.sugarcube-2.language-configuration.json"
+            }
+        ],
+        "grammars": [
+            {
+                "language": "twee3",
+                "scopeName": "source.twee3",
+                "path": "./syntaxes/twee3.tmLanguage.json",
+                "embeddedLanguages": {
+                    "source.json.twee3": "json",
+                    "source.js.twee3": "javascript",
+                    "source.css.twee3": "css",
+                    "source.html.twee3": "html"
+                }
+            },
+            {
+                "language": "twee3-chapbook-2",
+                "scopeName": "source.twee3.chapbook-2",
+                "path": "./syntaxes/twee3.chapbook-2.tmLanguage.json",
+                "embeddedLanguages": {
+                    "source.json.twee3": "json",
+                    "source.yaml.twee3": "yaml",
+                    "source.js.twee3": "javascript",
+                    "source.css.twee3": "css",
+                    "source.html.twee3": "html"
+                }
+            },
+            {
+                "language": "twee3-sugarcube-2",
+                "scopeName": "source.twee3.sugarcube-2",
+                "path": "./syntaxes/twee3.sugarcube-2.tmLanguage.json",
+                "embeddedLanguages": {
+                    "source.json.twee3": "json",
+                    "source.yaml.twee3": "yaml",
+                    "source.js.twee3": "javascript",
+                    "source.css.twee3": "css",
+                    "source.html.twee3": "html"
+                }
+            }
+        ],
+        "commands": [
+            {
+                "command": "twineTweeLanguage.buildGame",
+                "title": "Build Game",
+                "category": "Twine (Twee 3) Language",
+                "enablement": "isWorkspaceTrusted"
+            },
+            {
+                "command": "twineTweeLanguage.buildGameTest",
+                "title": "Build Game (Test Mode)",
+                "category": "Twine (Twee 3) Language",
+                "enablement": "isWorkspaceTrusted"
+            },
+            {
+                "command": "twineTweeLanguage.runGame",
+                "title": "Run Game",
+                "category": "Twine (Twee 3) Language",
+                "enablement": "isWorkspaceTrusted"
+            },
+            {
+                "command": "twineTweeLanguage.reloadGame",
+                "title": "Reload Game",
+                "category": "Twine (Twee 3) Language",
+                "enablement": "isWorkspaceTrusted"
+            },
+            {
+                "command": "twineTweeLanguage.downloadStoryFormat",
+                "title": "Download Story Format",
+                "category": "Twine (Twee 3) Language",
+                "enablement": "isWorkspaceTrusted"
+            }
+        ],
+        "menus": {
+            "commandPalette": [
+                {
+                    "command": "twineTweeLanguage.buildGame",
+                    "when": "!twineTweeLanguage.building"
+                },
+                {
+                    "command": "twineTweeLanguage.buildGameTest",
+                    "when": "!twineTweeLanguage.building"
+                },
+                {
+                    "command": "twineTweeLanguage.runGame"
+                },
+                {
+                    "command": "twineTweeLanguage.reloadGame",
+                    "when": "twineTweeLanguage.running"
+                },
+                {
+                    "command": "twineTweeLanguage.downloadStoryFormat"
+                }
+            ]
+        },
+        "configuration": {
+            "title": "Twine (Twee 3) Language",
+            "properties": {
+                "twineTweeLanguage.project.create": {
+                    "type": "boolean",
+                    "default": true,
+                    "order": 1,
+                    "description": "Offer to create a project directory structure."
+                },
+                "twineTweeLanguage.project.downloadStoryFormat": {
+                    "type": "boolean",
+                    "default": true,
+                    "order": 2,
+                    "markdownDescription": "Offer to download the Twine story format used in a project. (Currently only supports [Chapbook](https://klembot.github.io/chapbook/) and [SugarCube 2](https://motoslave.net/sugarcube/2/).)"
+                },
+                "twineTweeLanguage.project.storyFilesDirectory": {
+                    "type": "string",
+                    "default": "src",
+                    "order": 3,
+                    "markdownDescription": "Directory with game source files (relative to the workspace). Files in this directory and all of its subdirectories will be compiled. Supports [all Tweego-supported files](http://www.motoslave.net/tweego/docs/#usage-supported-files) except for `.tw2`, `.twee2`, `.htm`, and `.html`."
+                },
+                "twineTweeLanguage.project.storyFormatsDirectory": {
+                    "type": "string",
+                    "default": ".storyformats",
+                    "order": 4,
+                    "description": "Directory relative to the root level of the project where Twine story formats are stored."
+                },
+                "twineTweeLanguage.build.outputFile": {
+                    "type": "string",
+                    "default": "",
+                    "order": 5,
+                    "markdownDescription": "Name to give the game when turned into an HTML file, such as `story.html`. If blank, the game's filename will be its name from the `StoryTitle` passage, with spaces replaced by hyphens."
+                },
+                "twineTweeLanguage.build.runningGameUpdate": {
+                    "type": "string",
+                    "default": "live reload",
+                    "enum": [
+                        "live reload",
+                        "restart",
+                        "no update"
+                    ],
+                    "enumDescriptions": [
+                        "Reload the game without restarting it.",
+                        "Reload the game and restart it.",
+                        "Don't reload the game."
+                    ],
+                    "order": 6,
+                    "markdownDescription": "What to do with a running game after building a new version."
+                },
+                "twineTweeLanguage.build.buildDirectory": {
+                    "type": "string",
+                    "default": "build",
+                    "order": 7,
+                    "markdownDescription": "Directory to put the output `.html` file in (relative to the workspace)."
+                },
+                "twineTweeLanguage.build.includeDirectory": {
+                    "type": "string",
+                    "default": "include",
+                    "order": 8,
+                    "markdownDescription": "Directory with non-game files to add to the build directory (relative to the workspace). Files in this directory and all of its subdirectories will be added as-is to the build directory. If blank, no files will be included. Useful for images, fonts, and other files you don't want to bundle directly into the compiled `.html` file."
+                },
+                "twineTweeLanguage.twee-3.warnings.unknownMacro": {
+                    "type": "boolean",
+                    "default": "true",
+                    "order": 9,
+                    "description": "Warn about unrecognized macros (in SugarCube) or inserts and modifiers (in Chapbook)."
+                },
+                "twineTweeLanguage.twee-3.warnings.unknownPassage": {
+                    "type": "boolean",
+                    "default": "true",
+                    "order": 10,
+                    "markdownDescription": "Warn about references to unrecognized passages, such as in `[[passage]]` links."
+                }
+            }
+        },
+        "taskDefinitions": [
+            {
+                "type": "twine",
+                "required": [
+                    "flags"
+                ],
+                "properties": {
+                    "flags": {
+                        "type": "array",
+                        "description": "Flags to the Twine build process."
+                    }
+                }
+            }
+        ]
+    },
+    "scripts": {
+        "vscode:prepublish": "npm run package",
+        "compile": "npm-run-all check-types prebuild esbuild",
+        "prebuild": "node -p \"'export const CLIENT_VERSION = ' + JSON.stringify(require('./package.json').version) + ';'\" > client/src/version.ts",
+        "esbuild": "node esbuild.js",
+        "check-types": "tsc -b --noEmit",
+        "watch": "npm-run-all -p watch:*",
+        "watch:esbuild": "npm run prebuild && node esbuild.js --watch",
+        "watch:tsc": "tsc -b --noEmit --watch",
+        "package": "npm-run-all check-types prebuild \"esbuild -- --production\"",
+        "test": "nyc mocha",
+        "coverage": "nyc report --reporter=text-lcov > coverage.lcov",
+        "lint": "eslint ./client/src ./server/src",
+        "postinstall": "cd client && npm install && cd ../server && npm install && cd .."
+    },
+    "devDependencies": {
+        "@eslint/js": "^9.3.0",
+        "@types/chai": "^4.3.10",
+        "@types/eslint__js": "^8.42.3",
+        "@types/mocha": "^10.0.6",
+        "@types/node": "^20.9.2",
+        "@types/sinon": "^17.0.3",
+        "chai": "^4.5.0",
+        "esbuild": "^0.24.0",
+        "eslint": "^9.14.0",
+        "mocha": "^11.0.1",
+        "npm-run-all": "^4.1.5",
+        "nyc": "^17.0.0",
+        "prettier": "^3.3.3",
+        "sinon": "^19.0.2",
+        "ts-mock-imports": "^1.3.8",
+        "ts-node": "^10.9.2",
+        "typescript": "^5.4.5",
+        "typescript-eslint": "^8.0.0-alpha.10"
+    }
 }
