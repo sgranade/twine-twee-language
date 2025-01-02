@@ -118,7 +118,7 @@ export function parseSugarCubeTwineLink(
             );
         }
     } else if (error !== undefined) {
-        logErrorFor(error.text, error.at, error.message, state);
+        logErrorFor(error.text, error.at + textIndex, error.message, state);
     }
 
     return markupData;
