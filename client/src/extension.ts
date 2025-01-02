@@ -231,7 +231,7 @@ const storyFilesGlob = (): string => {
         Configuration.BaseSection,
         Configuration.StoryFilesDirectory
     );
-    if (!dir.endsWith("/")) {
+    if (dir !== "" && !dir.endsWith("/")) {
         dir += "/";
     }
     return dir + "**/**.{tw,twee}";

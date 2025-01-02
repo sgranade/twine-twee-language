@@ -6,6 +6,7 @@ Changes to the extension.
 
 ### Fixed
 
+- Source code at the root level of a project is now indexed properly.
 - SugarCube: Lexing errors are now logged against the correct text.
 
 ## [1.1.1] - 2024 12 21
