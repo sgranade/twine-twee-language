@@ -28,10 +28,10 @@ function validatePassages(
     const passageNames = index.getPassageNames();
 
     for (const passage of documentPassages ?? []) {
-        if (
-            passageNames.indexOf(passage.name.contents) !=
-            passageNames.lastIndexOf(passage.name.contents)
-        ) {
+        // Since passage names are sorted, we can see if the first
+        // instance of a passage's name is followed by another
+        const ndx = passageNames.indexOf(passage.name.contents);
+        if (ndx !== -1 && passageNames[ndx + 1] === passage.name.contents) {
             const matchingPassages = index.getPassage(passage.name.contents);
             let otherPassage = matchingPassages[0];
             if (

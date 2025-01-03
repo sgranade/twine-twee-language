@@ -1109,7 +1109,7 @@ describe("Project Index", () => {
             expect(result).to.eql(["F1 P1", "F1 P2", "F2 P1", "F2 P2"]);
         });
 
-        it("should return passage names with duplicates", () => {
+        it("should return passage names with duplicates and in sort order", () => {
             const passages1 = [
                 buildPassage({ label: "F1 P1" }),
                 buildPassage({ label: "spoiler" }),
@@ -1124,7 +1124,7 @@ describe("Project Index", () => {
 
             const result = index.getPassageNames();
 
-            expect(result).to.eql(["F1 P1", "spoiler", "spoiler", "F2 P2"]);
+            expect(result).to.eql(["F1 P1", "F2 P2", "spoiler", "spoiler"]);
         });
     });
 

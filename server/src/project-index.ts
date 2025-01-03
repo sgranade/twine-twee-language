@@ -257,7 +257,7 @@ export interface ProjectIndex {
      */
     getPassageAt(uri: string, position: Position): Passage | undefined;
     /**
-     * Get all passage names in the index.
+     * Get all passage names in the index in alphabetically- sorted order.
      *
      * There may be duplicated names if multiple passages share the same name.
      */
@@ -294,6 +294,9 @@ export class Index implements ProjectIndex {
     private _decorationRanges: Record<string, DecorationRange[]> = {};
     private _parseErrors: Record<string, Diagnostic[]> = {};
 
+    // Cache of passage names
+    private _cachedPassageNames: string[] | undefined = undefined;
+
     setStoryTitle(title: string, uri: string): void {
         this._storyTitle = title;
         this._storyTitleUri = uri;
@@ -304,6 +307,7 @@ export class Index implements ProjectIndex {
     }
     setPassages(uri: string, newPassages: Passage[]): void {
         this._passages[uri] = [...newPassages];
+        this._cachedPassageNames = undefined;
     }
     _setPerKind<T extends Kind>(toAdd: T[]): RepositoryPerKind<T> {
         const repo: RepositoryPerKind<T> = {};
@@ -536,14 +540,19 @@ export class Index implements ProjectIndex {
         }
         return undefined;
     }
-    getPassageNames(): readonly string[] {
-        const s = [];
-
-        for (const passages of Object.values(this._passages)) {
-            s.push(...passages.map((p) => p.name.contents));
+    getPassageNames(): string[] {
+        // Since passage name generation can take significant time
+        // for large projects, cache the results
+        if (this._cachedPassageNames === undefined) {
+            this._cachedPassageNames = [];
+            for (const passages of Object.values(this._passages)) {
+                this._cachedPassageNames.push(
+                    ...passages.map((p) => p.name.contents)
+                );
+            }
+            this._cachedPassageNames.sort();
         }
-
-        return s;
+        return this._cachedPassageNames;
     }
 
     getIndexedUris(): readonly string[] {
@@ -573,5 +582,6 @@ export class Index implements ProjectIndex {
         if (uri === this._storyDataUri) {
             this._storyData = undefined;
         }
+        this._cachedPassageNames = undefined;
     }
 }
