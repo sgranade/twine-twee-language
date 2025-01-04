@@ -511,31 +511,21 @@ function parseMacroArgs(
             const errorToken =
                 sc2ArgumentTokens[t3ltArgToSC2Token[error.index] ?? 0];
             if (errorToken === undefined) {
-                logErrorFor(args ?? "", argsIndex, error.error.message, state);
+                logErrorFor(args ?? "", argsIndex, error.error, state);
             } else {
-                logErrorFor(
-                    errorToken.text,
-                    errorToken.at,
-                    error.error.message,
-                    state
-                );
+                logErrorFor(errorToken.text, errorToken.at, error.error, state);
             }
         }
         for (const warning of validationInfo.info.warnings) {
             const warningToken =
                 sc2ArgumentTokens[t3ltArgToSC2Token[warning.index] ?? 0];
             if (warningToken === undefined) {
-                logErrorFor(
-                    args ?? "",
-                    argsIndex,
-                    warning.warning.message,
-                    state
-                );
+                logErrorFor(args ?? "", argsIndex, warning.warning, state);
             } else {
                 logErrorFor(
                     warningToken.text,
                     warningToken.at,
-                    warning.warning.message,
+                    warning.warning,
                     state
                 );
             }

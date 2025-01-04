@@ -786,7 +786,8 @@ interface ValidateInformation {
  * An error for a specific argument.
  */
 interface ArgumentError {
-    error: Error;
+    // SRG: convert from Error() to reduce object creation & speed up parsing
+    error: string;
     // Index into arguments
     index: number;
 }
@@ -794,7 +795,8 @@ interface ArgumentError {
  * A warning for a specific argument.
  */
 interface ArgumentWarning {
-    warning: Warning;
+    // SRG: convert from Warning() to reduce object creation & speed up parsing
+    warning: string;
     // Index into arguments
     index: number;
 }
@@ -890,7 +892,7 @@ class Variant {
             return {
                 errors: [
                     {
-                        error: new Error(text),
+                        error: text,
                         index: argIndex,
                     },
                 ],
@@ -1175,7 +1177,7 @@ class Variant {
                         rank: 0,
                         errors: [
                             {
-                                error: result,
+                                error: result.message,
                                 index: argIndex,
                             },
                         ],
@@ -1191,7 +1193,7 @@ class Variant {
                         correctRank,
                         [
                             {
-                                warning: result,
+                                warning: result.message,
                                 index: argIndex,
                             },
                         ]
