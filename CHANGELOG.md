@@ -8,6 +8,7 @@ Changes to the extension.
 
 - Source code at the root level of a project is now indexed properly.
 - SugarCube: Lexing errors are now logged against the correct text.
+- SugarCube: Macros like `<<link>>` that accept link markup no longer cause spurious errors.
 
 ## [1.1.1] - 2024 12 21
 

@@ -4053,6 +4053,65 @@ describe("SugarCube Parser", () => {
                         );
                         expect(result.range).to.eql(Range.create(1, 19, 1, 25));
                     });
+
+                    it("should not error on link values", () => {
+                        const header = ":: Passage\n";
+                        const passage =
+                            "Let's go: <<a [[Passage Name<-Display text][$testy to 7]]>>\n";
+                        const callbacks = new MockCallbacks();
+                        const state = buildParsingState({
+                            content: header + passage,
+                            callbacks: callbacks,
+                        });
+                        const parser = uut.getSugarCubeParser(undefined);
+                        const macro = buildMacroInfoWithArgs({
+                            name: "a",
+                            args: ["link"],
+                        });
+                        const mockFunction = ImportMock.mockFunction(
+                            macrosModule,
+                            "allMacros"
+                        ).returns({ a: macro });
+
+                        parser?.parsePassageText(passage, header.length, state);
+                        mockFunction.restore();
+                        const results = callbacks.errors;
+
+                        expect(results).to.be.empty;
+                    });
+
+                    it("should error on linkNoSetter values with a setter", () => {
+                        const header = ":: Passage\n";
+                        const passage =
+                            "Let's go: <<a [[Passage Name<-Display text][$testy to 7]]>>\n";
+                        const callbacks = new MockCallbacks();
+                        const state = buildParsingState({
+                            content: header + passage,
+                            callbacks: callbacks,
+                        });
+                        const parser = uut.getSugarCubeParser(undefined);
+                        const macro = buildMacroInfoWithArgs({
+                            name: "a",
+                            args: ["linkNoSetter"],
+                        });
+                        const mockFunction = ImportMock.mockFunction(
+                            macrosModule,
+                            "allMacros"
+                        ).returns({ a: macro });
+
+                        parser?.parsePassageText(passage, header.length, state);
+                        mockFunction.restore();
+                        const [result] = callbacks.errors;
+
+                        expect(callbacks.errors.length).to.equal(1);
+                        expect(result.severity).to.eql(
+                            DiagnosticSeverity.Error
+                        );
+                        expect(result.message).to.include(
+                            "Argument is a link, but does not allow setter syntax"
+                        );
+                        expect(result.range).to.eql(Range.create(1, 14, 1, 57));
+                    });
                 });
             });
         });

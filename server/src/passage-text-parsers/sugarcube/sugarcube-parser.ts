@@ -411,16 +411,8 @@ function parseMacroArgs(
                 t3ltArgFormatType === "link" ||
                 t3ltArgFormatType === "linkNoSetter"
             ) {
-                // Twine wiki link
-                // For simplicity, re-parse it using our utility function so we
-                // get all of the semantic tokens and references correct
-                parseSugarCubeTwineLink(
-                    sc2Token.text,
-                    2,
-                    sc2Token.at,
-                    state,
-                    sugarcubeState
-                );
+                // Twine wiki link. We've already captured all semantic tokens and
+                // passage refs above in the call to macroArgumentTokenToT3LTArg()
             } else if (t3ltArgFormatType === "receiver") {
                 // A "$var" in quotes
                 if (t3ltArg.type === T3LTArgType.String) {

@@ -13,10 +13,11 @@ import {
 } from "../../../builders";
 import { buildMacroInfo } from "./macro-builders";
 
-import * as uut from "../../../../passage-text-parsers/sugarcube/macros";
 import { buildStoryFormatParsingState } from "../../builders";
 import { MacroLocationInfo } from "../../../../passage-text-parsers/sugarcube/sugarcube-parser";
 import { OSugarCubeSymbolKind } from "../../../../passage-text-parsers/sugarcube/types";
+
+import * as uut from "../../../../passage-text-parsers/sugarcube/macros";
 
 describe("SugarCube Macros", () => {
     describe("argument parsing", () => {
