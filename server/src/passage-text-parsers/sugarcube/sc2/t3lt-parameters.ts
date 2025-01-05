@@ -398,12 +398,12 @@ function makeSimpleParameterType(
 
     return {
         name,
-        validate(info: ArgumentInfo): Error | null {
+        validate(info: ArgumentInfo): ValidateResult {
             if (validateType(info.arg.type)) {
                 // Success.
-                return null;
+                return [null, false];
             } else {
-                return new Error(errorMessage);
+                return [errorMessage, true];
             }
         },
     };
@@ -468,26 +468,28 @@ const parameterTypes: ParameterType[] = [
     ),
     {
         name: ["receiver"],
-        validate(info: ArgumentInfo): Error | Warning | null {
+        validate(info: ArgumentInfo): ValidateResult {
             if (info.arg.type === ArgType.String) {
                 const text = info.arg.text;
                 if (text[0] === "_" || text[0] === "$") {
                     if (text.length === 1) {
-                        return new Error(
-                            "Variable receiver had sigil but did not have an actual name"
-                        );
+                        return [
+                            "Variable receiver had sigil but did not have an actual name",
+                            true,
+                        ];
                     } else {
-                        return null;
+                        return [null, false];
                     }
                 } else {
                     // TODO: We could maybe have a quick-fix for this.
-                    return new Error(
+                    return [
                         "Text given to variable receiver did not have a sigil. Did you mean to write $" +
                             text +
                             " or _" +
                             text +
-                            "?"
-                    );
+                            "?",
+                        true,
+                    ];
                 }
             } else if (
                 info.arg.type === ArgType.Expression ||
@@ -495,51 +497,54 @@ const parameterTypes: ParameterType[] = [
                 info.arg.type === ArgType.Variable
             ) {
                 // We just have to assume that they're correct
-                return null;
+                return [null, false];
             } else {
-                return new Error(
-                    "Argument is not a potentially valid variable receiver"
-                );
+                return [
+                    "Argument is not a potentially valid variable receiver",
+                    true,
+                ];
             }
         },
     },
     {
         name: ["linkNoSetter"],
-        validate(info: ArgumentInfo): Error | Warning | null {
+        validate(info: ArgumentInfo): ValidateResult {
             if (info.arg.type !== ArgType.Link) {
-                return new Error("Argument is not a link");
+                return ["Argument is not a link", true];
             }
 
             if (info.arg.setter) {
-                return new Warning(
-                    "Argument is a link, but does not allow setter syntax"
-                );
+                return [
+                    "Argument is a link, but does not allow setter syntax",
+                    false,
+                ];
             }
 
             // Success
-            return null;
+            return [null, false];
         },
     },
     {
         name: ["imageNoSetter"],
-        validate(info: ArgumentInfo): Error | Warning | null {
+        validate(info: ArgumentInfo): ValidateResult {
             if (info.arg.type !== ArgType.Image) {
-                return new Error("Argument is not an image");
+                return ["Argument is not an image", true];
             }
 
             if (info.arg.setter) {
-                return new Warning(
-                    "Argument is an image, but does not allow setter syntax"
-                );
+                return [
+                    "Argument is an image, but does not allow setter syntax",
+                    false,
+                ];
             }
 
             // Success
-            return null;
+            return [null, false];
         },
     },
     {
         name: ["passage"],
-        validate(info: ArgumentInfo): Error | Warning | null {
+        validate(info: ArgumentInfo): ValidateResult {
             // The passage, if it is undefined then we can't check it at runtime.
             let passageName: string | undefined = undefined;
             if (info.arg.type === ArgType.Bareword) {
@@ -554,10 +559,10 @@ const parameterTypes: ParameterType[] = [
 
             if (passageName !== undefined) {
                 passageName = passageName.replace(/\\/g, "");
-                return null;
+                return [null, false];
             } else {
                 // Based on SugarCube's Story.has, we don't allow booleans, null, objects, etc.
-                return new Error("Argument is not an acceptable passage");
+                return ["Argument is not an acceptable passage", true];
             }
         },
     },
@@ -576,6 +581,12 @@ function findParameterType(name: string): null | ParameterType {
     }
     return null;
 }
+// SRG added so we don't have to create Error and Warning objects,
+// which slows down parsing large projects. First element is
+// the error/warning message, or null if there's no error/warning.
+// Second is a boolean: true if the result is an error, false if
+// it's a warning
+type ValidateResult = [string | null, boolean];
 interface ParameterType {
     /**
      * Names that this parameter type goes by.
@@ -586,7 +597,8 @@ interface ParameterType {
      * Returns `null` if there was no errors
      * otherwise returns an Error or Warning instance.
      */
-    validate: (info: ArgumentInfo) => Error | Warning | null;
+    // SRG: changed to ValidateResult
+    validate: (info: ArgumentInfo) => ValidateResult;
 }
 
 /**
@@ -1163,43 +1175,45 @@ class Variant {
                     );
                 }
 
-                const result = type.validate({
+                const [resultMsg, isError] = type.validate({
                     arg,
                     index: argIndex,
                     arguments: args,
                 });
 
-                if (result instanceof Error) {
-                    // Failure
-                    return {
-                        argIndex,
-                        argFormatTypes: argFormatTypes,
-                        rank: 0,
-                        errors: [
-                            {
-                                error: result.message,
-                                index: argIndex,
-                            },
-                        ],
-                        warnings: [],
-                        status: Status.Failure,
-                    };
-                } else if (result instanceof Warning) {
-                    // Success but we received a warning.
-                    // TODO: Slightly decrease the rank due to warning?
-                    return makeSuccess(
-                        argIndex + 1,
-                        argFormatTypes,
-                        correctRank,
-                        [
-                            {
-                                warning: result.message,
-                                index: argIndex,
-                            },
-                        ]
-                    );
+                if (resultMsg !== null) {
+                    if (isError) {
+                        // Failure -- Error
+                        return {
+                            argIndex,
+                            argFormatTypes: argFormatTypes,
+                            rank: 0,
+                            errors: [
+                                {
+                                    error: resultMsg,
+                                    index: argIndex,
+                                },
+                            ],
+                            warnings: [],
+                            status: Status.Failure,
+                        };
+                    } else {
+                        // Success but we received a warning.
+                        // TODO: Slightly decrease the rank due to warning?
+                        return makeSuccess(
+                            argIndex + 1,
+                            argFormatTypes,
+                            correctRank,
+                            [
+                                {
+                                    warning: resultMsg,
+                                    index: argIndex,
+                                },
+                            ]
+                        );
+                    }
                 } else {
-                    // Success. (result === null)
+                    // Success. (result[0] === null)
                     return makeSuccess(
                         argIndex + 1,
                         argFormatTypes,
