@@ -734,14 +734,11 @@ function parseMacros(
     for (const m of passageText.matchAll(macroRegex)) {
         const macroIndex = m.index + 2; // Index of the start of the macro (inside the <<)
 
-        // macroName: name of the macro
-        // macroBody: the body of the macro (e.g. its arguments)
-        // macroEnd: "end" or "/" at the start of the macro (e.g. <</if>>)
-        // macroSelfClose: "/" at the end of the macro
-        const { macroName, preMacroBodySpace, macroBody, macroEnd } =
-            m.groups as {
-                [key: string]: string;
-            };
+        // macroEnd: "end" or "/" at the start of the macro (e.g. <</if>>) (group 1)
+        // macroName: name of the macro (group 2)
+        // preMacroBodySpace: Optional spaces before the macro's body (group 3)
+        // macroBody: the body of the macro (e.g. its arguments) (group 4)
+        const [, macroEnd, macroName, preMacroBodySpace, macroBody] = m;
 
         const macroBodyIndex =
             macroIndex +

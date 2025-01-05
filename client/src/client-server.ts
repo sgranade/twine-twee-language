@@ -96,7 +96,7 @@ export const ReadFileRequest: RequestType<
  * Body of a macro (i.e. its arguments). Taken from SugarCube 2 `parserlib.js`
  */
 export const sc2MacroBody = [
-    `(?<macroBody>(?:`,
+    `((?:`,
     `(?:/\\*[^*]*\\*+(?:[^/*][^*]*\\*+)*/)|`,
     `(?://.*\\n)|`,
     `(?:\`(?:\\\\.|[^\`\\\\])*?\`)|`,
@@ -109,11 +109,11 @@ export const sc2MacroBody = [
 /**
  * Self-close portion of a macro (e.g. <<testy/>>)
  */
-export const sc2MacroSelfClose = `(?<macroSelfClose>/)`;
+export const sc2MacroSelfClose = `(/)`;
 /**
  * Prefix that indicates a closing macro (e.g. <</testy>> or <<endtesty>>).
  */
-export const sc2MacroEnd = `(?<macroEnd>/|end)`;
+export const sc2MacroEnd = `(/|end)`;
 /**
  * Create a regex pattern to find an opening SugarCube 2 container macro, like `<<silently>>`.
  * @param name Container macro's name.

@@ -137,4 +137,4 @@ const sc2MacroNamePattern = `[A-Za-z][\\w-]*|[=-]`;
 /**
  * Pattern for a full macro. Taken from twee3-language-tools, `macros.ts`
  */
-export const fullMacro = `<<${sc2MacroEnd}?(?<macroName>${sc2MacroNamePattern})(?<preMacroBodySpace>\\s*)${sc2MacroBody}${sc2MacroSelfClose}?>>`;
+export const fullMacro = `<<${sc2MacroEnd}?(${sc2MacroNamePattern})(\\s*)${sc2MacroBody}${sc2MacroSelfClose}?>>`;
