@@ -2,7 +2,6 @@ import {
     Diagnostic,
     DiagnosticRelatedInformation,
     DiagnosticSeverity,
-    Location,
 } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
@@ -33,7 +32,7 @@ function generateMacroDiagnostics(
         OSugarCubeSymbolKind.KnownMacro,
         index
     );
-    const definedMacroNames = new Set([...allMacroDefs.map((d) => d.contents)]);
+    const definedMacroNames = allMacroDefs.map((d) => d.contents);
 
     // Check for bad macro (widget) definitions
     const localMacroDefs = index.getDefinitions(
@@ -41,15 +40,6 @@ function generateMacroDiagnostics(
         OSugarCubeSymbolKind.KnownMacro
     );
     if (localMacroDefs?.length) {
-        // Count up our macro definitions per macro
-        const macroDefLocs: Record<string, Location[]> = {};
-        for (const macroDef of allMacroDefs) {
-            if (macroDefLocs[macroDef.contents] === undefined) {
-                macroDefLocs[macroDef.contents] = [];
-            }
-            macroDefLocs[macroDef.contents].push(macroDef.location);
-        }
-
         for (const macroDef of localMacroDefs) {
             // See if we have the same name as a built-in macro
             if (builtInMacros[macroDef.contents] !== undefined) {
@@ -62,34 +52,37 @@ function generateMacroDiagnostics(
                         "Twine"
                     )
                 );
-            } else if ((macroDefLocs[macroDef.contents] || []).length > 1) {
-                // Otherwise see if we got defined twice
-                const diagnostic = Diagnostic.create(
-                    macroDef.location.range,
-                    `Widget "${macroDef.contents}" can't be defined more than once`,
-                    DiagnosticSeverity.Error,
-                    undefined,
-                    "Twine"
-                );
-                // See if we can find the other location where it's been defined
-                for (const loc of macroDefLocs[macroDef.contents] || []) {
+            } else {
+                // See if we got defined twice
+                const ndx1 = definedMacroNames.indexOf(macroDef.contents);
+                const ndx2 = definedMacroNames.lastIndexOf(macroDef.contents);
+                if (ndx1 !== ndx2) {
+                    const diagnostic = Diagnostic.create(
+                        macroDef.location.range,
+                        `Widget "${macroDef.contents}" can't be defined more than once`,
+                        DiagnosticSeverity.Error,
+                        undefined,
+                        "Twine"
+                    );
+                    // Find the other location where it's been defined
+                    let loc = allMacroDefs[ndx1].location;
                     if (
-                        loc.uri !== macroDef.location.uri ||
-                        loc.range.start.line !==
-                            macroDef.location.range.start.line ||
-                        loc.range.start.character !==
+                        loc.uri === macroDef.location.uri &&
+                        loc.range.start.line ===
+                            macroDef.location.range.start.line &&
+                        loc.range.start.character ===
                             macroDef.location.range.start.character
                     ) {
-                        diagnostic.relatedInformation = [
-                            DiagnosticRelatedInformation.create(
-                                loc,
-                                `Other definition of "${macroDef.contents}"`
-                            ),
-                        ];
-                        break;
+                        loc = allMacroDefs[ndx2].location;
                     }
+                    diagnostic.relatedInformation = [
+                        DiagnosticRelatedInformation.create(
+                            loc,
+                            `Other definition of "${macroDef.contents}"`
+                        ),
+                    ];
+                    diagnostics.push(diagnostic);
                 }
-                diagnostics.push(diagnostic);
             }
         }
     }
@@ -102,7 +95,7 @@ function generateMacroDiagnostics(
         ) ?? []) {
             if (
                 macros[macroRef.contents] === undefined &&
-                !definedMacroNames.has(macroRef.contents)
+                definedMacroNames.indexOf(macroRef.contents) === -1
             ) {
                 diagnostics.push(
                     ...macroRef.locations.map((loc) =>
