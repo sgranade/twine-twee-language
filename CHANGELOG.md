@@ -2,7 +2,11 @@
 
 Changes to the extension.
 
-## Unreleased
+## [1.1.2] - 2025 01 12
+
+### Changed
+
+- Reworked parsing routines to improve performance on large projects.
 
 ### Fixed
 

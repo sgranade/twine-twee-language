@@ -1,7 +1,7 @@
 {
     "name": "twine-twee-language",
     "description": "Twine (Twee 3) language server in node.",
-    "version": "1.1.1",
+    "version": "1.1.2",
     "author": "Stephen Granade",
     "license": "MIT",
     "engines": {
