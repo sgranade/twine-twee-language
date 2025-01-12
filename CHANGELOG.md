@@ -10,6 +10,7 @@ Changes to the extension.
 - SugarCube: Lexing errors are now logged against the correct text.
 - SugarCube: Macros like `<<link>>` that accept link markup no longer cause spurious errors.
 - SugarCube: Macros like `<<for>>` that take array or object containers are now parsed properly.
+- SugarCube: `<<case>>` macros now accept `undefined` as a value.
 
 ## [1.1.1] - 2024 12 21
 

@@ -133,7 +133,7 @@ export const caseMacro: MacroInfo = {
     description:
         "Executes its contents if the value of the parent `<<switch>>` macro evaluates to one of the `<<case>>` values.",
     since: "2.7.2",
-    arguments: ["(text|var) &+ ...text|var"],
+    arguments: ["(text|var|number|undefined) &+ ...text|var|number|undefined"],
 };
 
 export const defaultMacro: MacroInfo = {
