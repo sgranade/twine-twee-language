@@ -588,6 +588,17 @@ function parseMacroArgs(
             // macro's possible parameters, then we parse the square bracket items
             // to capture their semantic tokens and passage references.
             parseSugarCubeTwineLink(arg.text, 0, arg.at, state, sugarcubeState);
+        } else if (arg.type === MacroParse.Item.Container) {
+            // Array or object
+            createVariableAndPropertyReferences(
+                tokenizeTwineScriptExpression(
+                    arg.text,
+                    arg.at,
+                    state.textDocument,
+                    sugarcubeState
+                ),
+                state
+            );
         }
     }
 

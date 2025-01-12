@@ -330,7 +330,8 @@ export interface ArgumentToken extends Token {
  * All token positions are relative to sourceIndex.
  *
  * Adapted from `parseMacroArgs()` in `parserlib.js` from SugarCube by way of
- * `arguments.ts` from Twee3-Language-Tools.
+ * `arguments.ts` from Twee3-Language-Tools, with the addition of parsing
+ * arrays and objects.
  *
  * @param source Raw string of arguments passed to a macro.
  * @param sourceIndex Index into the larger document where source occurs (zero-based).
@@ -488,9 +489,10 @@ export namespace MacroParse {
     export enum Item {
         Error,
         Bareword,
-        Expression,
+        Expression, // `expression` in backticks
         String,
-        SquareBracket,
+        SquareBracket, // [[passage]]
+        Container, // one-line array [] or JS object {}
     }
 
     // Lexing functions.
@@ -511,6 +513,41 @@ export namespace MacroParse {
                 return EOF;
             } else if (next === endQuote) {
                 break;
+            }
+        }
+
+        return lexer.pos;
+    }
+
+    // SRG added to consume a one-line array [] or JS object {}
+    function slurpBracket(
+        lexer: Lexer<Item>,
+        startBracket: string
+    ): EOFT | number {
+        const endBracket = startBracket === "{" ? "}" : "]";
+        let depth = 1;
+        for (;;) {
+            const next = lexer.next();
+            if (next === "\\") {
+                const ch = lexer.next();
+
+                if (ch !== EOF && ch !== "\n") {
+                    continue;
+                }
+                return EOF;
+            } else if (next === EOF) {
+                return EOF;
+            } else if (next === "'" || next === '"' || next === "`") {
+                // Get rid of quotes
+                if (slurpQuote(lexer, next) === EOF) {
+                    return EOF;
+                }
+            } else if (next === startBracket) {
+                ++depth;
+            } else if (next === endBracket) {
+                if (--depth === 0) {
+                    break;
+                }
             }
         }
 
@@ -538,6 +575,9 @@ export namespace MacroParse {
                 return lexSingleQuote;
             case "[":
                 return lexSquareBracket;
+            // SRG: added to handle JS objects
+            case "{":
+                return lexJSObject;
             default:
                 return lexBareword;
         }
@@ -582,7 +622,13 @@ export namespace MacroParse {
         }
 
         if (!lexer.accept("[")) {
-            return lexer.error(Item.Error, `malformed ${what} markup`);
+            // SRG accept single brackets as arrays
+            if (slurpBracket(lexer, "[") === EOF) {
+                return lexer.error(Item.Error, `malformed ${what} markup`);
+            } else {
+                lexer.emit(Item.Container);
+                return lexSpace;
+            }
         }
 
         lexer.depth = 2; // account for both initial left square brackets
@@ -638,6 +684,15 @@ export namespace MacroParse {
         lexer.pos = offset === EOF ? lexer.source.length : lexer.pos + offset;
         lexer.emit(Item.Bareword);
         return offset === EOF ? null : lexSpace;
+    }
+
+    function lexJSObject(lexer: Lexer<Item>): LexerState<Item> | null {
+        if (slurpBracket(lexer, "{") === EOF) {
+            return lexer.error(Item.Error, "unterminated object");
+        }
+
+        lexer.emit(Item.Container);
+        return lexSpace;
     }
 }
 

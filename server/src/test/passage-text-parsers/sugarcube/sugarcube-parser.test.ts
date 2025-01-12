@@ -1872,7 +1872,7 @@ describe("SugarCube Parser", () => {
             it("should produce semantic tokens for argument values of unknown macros", () => {
                 const header = ":: Passage\n";
                 const passage =
-                    "Let's go: <<a 'string' $var1 to true `'str' + $testy`>>\n";
+                    "Let's go: <<a 'string' $var1 to true `'str' + $testy` [$var2, $var3] {'one': $var4}>>\n";
                 const callbacks = new MockCallbacks();
                 const state = buildParsingState({
                     content: header + passage,
@@ -1940,13 +1940,34 @@ describe("SugarCube Parser", () => {
                         tokenType: ETokenType.variable,
                         tokenModifiers: [],
                     },
+                    {
+                        line: 1,
+                        char: 55,
+                        length: 5,
+                        tokenType: ETokenType.variable,
+                        tokenModifiers: [],
+                    },
+                    {
+                        line: 1,
+                        char: 62,
+                        length: 5,
+                        tokenType: ETokenType.variable,
+                        tokenModifiers: [],
+                    },
+                    {
+                        line: 1,
+                        char: 77,
+                        length: 5,
+                        tokenType: ETokenType.variable,
+                        tokenModifiers: [],
+                    },
                 ]);
             });
 
             it("should capture variable references for argument values of unknown macros", () => {
                 const header = ":: Passage\n";
                 const passage =
-                    "Let's go: <<a $var1 to _var2 `'str' + $testy`>>\n";
+                    "Let's go: <<a $var1 to _var2 `'str' + $testy` [$var2, _var3] {'one': $var4}>>\n";
                 const callbacks = new MockCallbacks();
                 const state = buildParsingState({
                     content: header + passage,
@@ -1979,6 +2000,30 @@ describe("SugarCube Parser", () => {
                         location: Location.create(
                             "fake-uri",
                             Range.create(1, 38, 1, 44)
+                        ),
+                        kind: OSugarCubeSymbolKind.Variable,
+                    },
+                    {
+                        contents: "$var2",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(1, 47, 1, 52)
+                        ),
+                        kind: OSugarCubeSymbolKind.Variable,
+                    },
+                    {
+                        contents: "_var3",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(1, 54, 1, 59)
+                        ),
+                        kind: OSugarCubeSymbolKind.Variable,
+                    },
+                    {
+                        contents: "$var4",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(1, 69, 1, 74)
                         ),
                         kind: OSugarCubeSymbolKind.Variable,
                     },
@@ -3859,6 +3904,38 @@ describe("SugarCube Parser", () => {
                     expect(result.range).to.eql(Range.create(1, 14, 1, 27));
                 });
 
+                it("should not error on an array argument", () => {
+                    const header = ":: Passage\n";
+                    const passage = "Let's go: <<a [1, 2, 3]>>\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getSugarCubeParser(undefined);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    const result = callbacks.errors;
+
+                    expect(result).to.be.empty;
+                });
+
+                it("should not error on an object argument", () => {
+                    const header = ":: Passage\n";
+                    const passage = "Let's go: <<a {1: 2, 3: 4}>>\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getSugarCubeParser(undefined);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    const result = callbacks.errors;
+
+                    expect(result).to.be.empty;
+                });
+
                 it("should raise a warning for no arguments to a macro that expects them", () => {
                     const header = ":: Passage\n";
                     const passage = "Let's go: <<a>>\n";
@@ -3932,6 +4009,32 @@ describe("SugarCube Parser", () => {
                     const result = callbacks.errors;
 
                     expect(result).to.be.empty;
+                });
+
+                it("should not error on link values", () => {
+                    const header = ":: Passage\n";
+                    const passage =
+                        "Let's go: <<a [[Passage Name<-Display text][$testy to 7]]>>\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getSugarCubeParser(undefined);
+                    const macro = buildMacroInfoWithArgs({
+                        name: "a",
+                        args: ["link"],
+                    });
+                    const mockFunction = ImportMock.mockFunction(
+                        macrosModule,
+                        "allMacros"
+                    ).returns({ a: macro });
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    mockFunction.restore();
+                    const results = callbacks.errors;
+
+                    expect(results).to.be.empty;
                 });
 
                 it("should raise an error for a non-boolean argument to a macro that takes a boolean", () => {
@@ -4021,97 +4124,91 @@ describe("SugarCube Parser", () => {
                     expect(result.range).to.eql(Range.create(1, 22, 1, 28));
                 });
 
-                describe("T3LT macro arguments", () => {
-                    it("should error on a receiver value that's not a string", () => {
-                        const header = ":: Passage\n";
-                        const passage = "Let's go: <<a bare $testy>>\n";
-                        const callbacks = new MockCallbacks();
-                        const state = buildParsingState({
-                            content: header + passage,
-                            callbacks: callbacks,
-                        });
-                        const parser = uut.getSugarCubeParser(undefined);
-                        const macro = buildMacroInfoWithArgs({
-                            name: "a",
-                            args: ["bareword &+ receiver"],
-                        });
-                        const mockFunction = ImportMock.mockFunction(
-                            macrosModule,
-                            "allMacros"
-                        ).returns({ a: macro });
-
-                        parser?.parsePassageText(passage, header.length, state);
-                        mockFunction.restore();
-                        const [result] = callbacks.errors;
-
-                        expect(callbacks.errors.length).to.equal(1);
-                        expect(result.severity).to.eql(
-                            DiagnosticSeverity.Warning
-                        );
-                        expect(result.message).to.include(
-                            "Do you mean for this receiver value to be a bare variable?"
-                        );
-                        expect(result.range).to.eql(Range.create(1, 19, 1, 25));
+                it("should warn on a receiver value that's not a string", () => {
+                    const header = ":: Passage\n";
+                    const passage = "Let's go: <<a bare $testy>>\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
                     });
-
-                    it("should not error on link values", () => {
-                        const header = ":: Passage\n";
-                        const passage =
-                            "Let's go: <<a [[Passage Name<-Display text][$testy to 7]]>>\n";
-                        const callbacks = new MockCallbacks();
-                        const state = buildParsingState({
-                            content: header + passage,
-                            callbacks: callbacks,
-                        });
-                        const parser = uut.getSugarCubeParser(undefined);
-                        const macro = buildMacroInfoWithArgs({
-                            name: "a",
-                            args: ["link"],
-                        });
-                        const mockFunction = ImportMock.mockFunction(
-                            macrosModule,
-                            "allMacros"
-                        ).returns({ a: macro });
-
-                        parser?.parsePassageText(passage, header.length, state);
-                        mockFunction.restore();
-                        const results = callbacks.errors;
-
-                        expect(results).to.be.empty;
+                    const parser = uut.getSugarCubeParser(undefined);
+                    const macro = buildMacroInfoWithArgs({
+                        name: "a",
+                        args: ["bareword &+ receiver"],
                     });
+                    const mockFunction = ImportMock.mockFunction(
+                        macrosModule,
+                        "allMacros"
+                    ).returns({ a: macro });
 
-                    it("should error on linkNoSetter values with a setter", () => {
-                        const header = ":: Passage\n";
-                        const passage =
-                            "Let's go: <<a [[Passage Name<-Display text][$testy to 7]]>>\n";
-                        const callbacks = new MockCallbacks();
-                        const state = buildParsingState({
-                            content: header + passage,
-                            callbacks: callbacks,
-                        });
-                        const parser = uut.getSugarCubeParser(undefined);
-                        const macro = buildMacroInfoWithArgs({
-                            name: "a",
-                            args: ["linkNoSetter"],
-                        });
-                        const mockFunction = ImportMock.mockFunction(
-                            macrosModule,
-                            "allMacros"
-                        ).returns({ a: macro });
+                    parser?.parsePassageText(passage, header.length, state);
+                    mockFunction.restore();
+                    const [result] = callbacks.errors;
 
-                        parser?.parsePassageText(passage, header.length, state);
-                        mockFunction.restore();
-                        const [result] = callbacks.errors;
+                    expect(callbacks.errors.length).to.equal(1);
+                    expect(result.severity).to.eql(DiagnosticSeverity.Warning);
+                    expect(result.message).to.include(
+                        "Do you mean for this receiver value to be a bare variable?"
+                    );
+                    expect(result.range).to.eql(Range.create(1, 19, 1, 25));
+                });
 
-                        expect(callbacks.errors.length).to.equal(1);
-                        expect(result.severity).to.eql(
-                            DiagnosticSeverity.Error
-                        );
-                        expect(result.message).to.include(
-                            "Argument is a link, but does not allow setter syntax"
-                        );
-                        expect(result.range).to.eql(Range.create(1, 14, 1, 57));
+                it("should not error on link values", () => {
+                    const header = ":: Passage\n";
+                    const passage =
+                        "Let's go: <<a [[Passage Name<-Display text][$testy to 7]]>>\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
                     });
+                    const parser = uut.getSugarCubeParser(undefined);
+                    const macro = buildMacroInfoWithArgs({
+                        name: "a",
+                        args: ["link"],
+                    });
+                    const mockFunction = ImportMock.mockFunction(
+                        macrosModule,
+                        "allMacros"
+                    ).returns({ a: macro });
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    mockFunction.restore();
+                    const results = callbacks.errors;
+
+                    expect(results).to.be.empty;
+                });
+
+                it("should error on linkNoSetter values with a setter", () => {
+                    const header = ":: Passage\n";
+                    const passage =
+                        "Let's go: <<a [[Passage Name<-Display text][$testy to 7]]>>\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getSugarCubeParser(undefined);
+                    const macro = buildMacroInfoWithArgs({
+                        name: "a",
+                        args: ["linkNoSetter"],
+                    });
+                    const mockFunction = ImportMock.mockFunction(
+                        macrosModule,
+                        "allMacros"
+                    ).returns({ a: macro });
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    mockFunction.restore();
+                    const [result] = callbacks.errors;
+
+                    expect(callbacks.errors.length).to.equal(1);
+                    expect(result.severity).to.eql(DiagnosticSeverity.Error);
+                    expect(result.message).to.include(
+                        "Argument is a link, but does not allow setter syntax"
+                    );
+                    expect(result.range).to.eql(Range.create(1, 14, 1, 57));
                 });
             });
         });
