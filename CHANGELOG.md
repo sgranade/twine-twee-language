@@ -2,6 +2,13 @@
 
 Changes to the extension.
 
+## Unreleased
+
+### Fixed
+
+- Build system can now build games whose source code is at the root level of the project.
+- Fixed bug that caused issues if any files had no extension.
+
 ## [1.1.2] - 2025 01 12
 
 ### Changed

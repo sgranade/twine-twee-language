@@ -179,7 +179,7 @@ const supportedExtensions = new RegExp(
  */
 export function canAddFileToStory(basename: string): boolean {
     const { ext } = filenameParts(basename);
-    return supportedExtensions.test(ext.toLowerCase());
+    return supportedExtensions.test(ext?.toLowerCase() || "");
 }
 
 /**

@@ -367,7 +367,9 @@ export async function build(
             )
         );
         const allFiles = (
-            await workspaceProvider.findFiles(`${storyFilesDirectory}/**`)
+            await workspaceProvider.findFiles(
+                storyFilesDirectory !== "" ? `${storyFilesDirectory}/**` : "**"
+            )
         )
             .filter((f) => canAddFileToStory(UriUtils.basename(f)))
             .sort(); // Sort to match Tweego order
