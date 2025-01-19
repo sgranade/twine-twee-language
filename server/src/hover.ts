@@ -13,6 +13,7 @@ export async function generateHover(
 ): Promise<Hover | null | undefined> {
     const offset = document.offsetAt(position);
     let passageDocument: EmbeddedDocument | undefined;
+    const deferredEmbeddedDocuments: EmbeddedDocument[] = [];
 
     // Embedded documents get to create their own completions
     for (const embeddedDocument of index.getEmbeddedDocuments(document.uri) ||
@@ -20,6 +21,8 @@ export async function generateHover(
         if (positionInRange(position, embeddedDocument.range)) {
             if (embeddedDocument.isPassage) {
                 passageDocument = embeddedDocument;
+            } else if (embeddedDocument.deferToStoryFormat) {
+                deferredEmbeddedDocuments.push(embeddedDocument);
             } else {
                 const hover = await doHover(document, embeddedDocument, offset);
 
@@ -43,7 +46,12 @@ export async function generateHover(
     if (storyFormat !== undefined) {
         const parser = getStoryFormatParser(storyFormat);
         if (parser !== undefined) {
-            const hover = parser.generateHover(document, position, index);
+            const hover = parser.generateHover(
+                document,
+                position,
+                deferredEmbeddedDocuments,
+                index
+            );
             if (hover !== null) return hover;
         }
     }

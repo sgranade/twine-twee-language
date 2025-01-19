@@ -9,10 +9,11 @@ import {
 } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
-import { allMacros } from "./macros";
+import { EmbeddedDocument } from "../../embedded-languages";
 import { ProjectIndex } from "../../project-index";
-import { OSugarCubeSymbolKind, SugarCubeSymbol } from "./types";
+import { allMacros } from "./macros";
 import { getSugarCubeDefinitions } from "./sugarcube-parser";
+import { OSugarCubeSymbolKind, SugarCubeSymbol } from "./types";
 
 /**
  * Generate completions for variables and properties.
@@ -272,6 +273,7 @@ function generateMacroNameCompletions(
 export function generateCompletions(
     document: TextDocument,
     position: Position,
+    deferredEmbeddedDocuments: EmbeddedDocument[],
     index: ProjectIndex
 ): CompletionList | null {
     const lineStartPosition = Position.create(position.line, 0);

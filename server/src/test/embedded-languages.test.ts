@@ -42,6 +42,7 @@ describe("Embedded Languages", () => {
                 ),
                 range: Range.create(1, 0, 2, 6),
                 isPassage: false,
+                deferToStoryFormat: false,
             });
         });
 
@@ -80,6 +81,7 @@ describe("Embedded Languages", () => {
                 ),
                 range: Range.create(1, 0, 2, 6),
                 isPassage: false,
+                deferToStoryFormat: false,
             });
         });
     });

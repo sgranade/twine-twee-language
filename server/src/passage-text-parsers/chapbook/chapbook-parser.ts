@@ -1611,15 +1611,28 @@ function parseTextSubsection(
 ): void {
     if (chapbookState.modifierKind === ModifierKind.Javascript) {
         findEngineExtensions(subsection, subsectionIndex, state);
-        // We'll tokenize the contents as a program, but not capture variable and
-        // property references, as they mostly won't be set in Chapbook
-        // vars sections and thus would cause a lot of spurious warnings
+        // We don't have a language server for JS, so we create an embedded document
+        // for it that gets passed to our completions and hover functions, but we also
+        // separately tokenize it. We don't capture variable and property references,
+        // though, as they mostly won't be set in Chapbook vars sections and thus would
+        // cause a lot of spurious warnings.
         tokenizeJavaScript(
             true,
             subsection,
             subsectionIndex,
             state.textDocument,
             chapbookState
+        );
+        state.callbacks.onEmbeddedDocument(
+            EmbeddedDocument.create(
+                "script",
+                "javascript",
+                subsection,
+                subsectionIndex,
+                state.textDocument,
+                false,
+                true
+            )
         );
     } else if (chapbookState.modifierKind === ModifierKind.Css) {
         state.callbacks.onEmbeddedDocument(

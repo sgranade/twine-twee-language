@@ -1246,6 +1246,32 @@ describe("Chapbook Parser", () => {
                     expect(result.document.languageId).to.eql("css");
                     expect(result.range).to.eql(Range.create(3, 0, 5, 0));
                 });
+
+                it("should set a deferred embedded document for a JavaScript modifier", () => {
+                    const header = ":: Passage\n";
+                    const passage =
+                        "Content before\n" +
+                        "[mod; jAvAScrIpT ]\n" +
+                        "let one = 2;\nconst three = 4;\n" +
+                        "[continue]\nNot JavaScript.\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    // The first embedded document is the entire passage
+                    const [, result] = callbacks.embeddedDocuments;
+
+                    expect(result.document.getText()).to.eql(
+                        "let one = 2;\nconst three = 4;\n"
+                    );
+                    expect(result.document.languageId).to.eql("javascript");
+                    expect(result.range).to.eql(Range.create(3, 0, 5, 0));
+                    expect(result.deferToStoryFormat).to.be.true;
+                });
             });
         });
 

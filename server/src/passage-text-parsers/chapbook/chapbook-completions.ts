@@ -9,6 +9,7 @@ import {
 } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
+import { EmbeddedDocument } from "../../embedded-languages";
 import { ProjectIndex } from "../../project-index";
 import { removeAndCountPadding } from "../../utilities";
 import {
@@ -606,6 +607,7 @@ function generateInsertCompletions(
 export function generateCompletions(
     document: TextDocument,
     position: Position,
+    deferredEmbeddedDocuments: EmbeddedDocument[],
     index: ProjectIndex
 ): CompletionList | null {
     const offset = document.offsetAt(position);
@@ -633,6 +635,15 @@ export function generateCompletions(
             passageTextOffset,
             index
         );
+    }
+
+    // If we're in a JavaScript embedded document, that's due
+    // to a [JavaScript] modifier, and we shouldn't try to create
+    // any modifier or insert completions
+    for (const embeddedDocument of deferredEmbeddedDocuments) {
+        if (embeddedDocument.document.languageId === "javascript") {
+            return null;
+        }
     }
 
     // See if we're inside a modifier or insert

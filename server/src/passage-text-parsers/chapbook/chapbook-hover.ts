@@ -1,6 +1,7 @@
 import { Hover, MarkupKind, Position } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
+import { EmbeddedDocument } from "../../embedded-languages";
 import { ProjectIndex } from "../../project-index";
 import { getChapbookDefinitions } from "./chapbook-parser";
 import { ChapbookFunctionInfo, OChapbookSymbolKind } from "./types";
@@ -29,6 +30,7 @@ function generateDescription(
 export function generateHover(
     document: TextDocument,
     position: Position,
+    deferredEmbeddedDocuments: EmbeddedDocument[],
     index: ProjectIndex
 ): Hover | null {
     // See if we have any references to an insert or modifier. If so,

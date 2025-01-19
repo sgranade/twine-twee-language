@@ -40,7 +40,12 @@ describe("SugarCube Completions", () => {
             ]);
             const parser = uut.getSugarCubeParser(undefined);
 
-            const results = parser?.generateCompletions(doc, position, index);
+            const results = parser?.generateCompletions(
+                doc,
+                position,
+                [],
+                index
+            );
 
             expect(results?.items.length).to.equal(1);
             expect(results?.items[0]?.label).to.eql("$var1");
@@ -76,7 +81,12 @@ describe("SugarCube Completions", () => {
             ]);
             const parser = uut.getSugarCubeParser(undefined);
 
-            const results = parser?.generateCompletions(doc, position, index);
+            const results = parser?.generateCompletions(
+                doc,
+                position,
+                [],
+                index
+            );
 
             expect(results?.items.length).to.equal(1);
             expect(results?.items[0]?.label).to.eql("_var2");
@@ -129,7 +139,12 @@ describe("SugarCube Completions", () => {
             ]);
             const parser = uut.getSugarCubeParser(undefined);
 
-            const results = parser?.generateCompletions(doc, position, index);
+            const results = parser?.generateCompletions(
+                doc,
+                position,
+                [],
+                index
+            );
 
             expect(results?.items.length).to.equal(2);
             expect(results?.items[0]?.label).to.eql("otherprop");
@@ -154,7 +169,12 @@ describe("SugarCube Completions", () => {
             ).returns({ testy: macro });
             const parser = uut.getSugarCubeParser(undefined);
 
-            const results = parser?.generateCompletions(doc, position, index);
+            const results = parser?.generateCompletions(
+                doc,
+                position,
+                [],
+                index
+            );
             mockFunction.restore();
 
             expect(results?.items[0].label).to.eql("testy");
@@ -188,7 +208,12 @@ describe("SugarCube Completions", () => {
             ).returns({});
             const parser = uut.getSugarCubeParser(undefined);
 
-            const results = parser?.generateCompletions(doc, position, index);
+            const results = parser?.generateCompletions(
+                doc,
+                position,
+                [],
+                index
+            );
             mockFunction.restore();
 
             expect(results?.items[0].label).to.eql("testy");
@@ -223,7 +248,12 @@ describe("SugarCube Completions", () => {
             ).returns({ testy: macro });
             const parser = uut.getSugarCubeParser(undefined);
 
-            const results = parser?.generateCompletions(doc, position, index);
+            const results = parser?.generateCompletions(
+                doc,
+                position,
+                [],
+                index
+            );
             mockFunction.restore();
 
             expect(results?.items.length).to.equal(1);
@@ -249,7 +279,12 @@ describe("SugarCube Completions", () => {
             ).returns({ testy: macro });
             const parser = uut.getSugarCubeParser(undefined);
 
-            const results = parser?.generateCompletions(doc, position, index);
+            const results = parser?.generateCompletions(
+                doc,
+                position,
+                [],
+                index
+            );
             mockFunction.restore();
 
             expect(results?.items[0].label).to.eql("testy");
@@ -275,7 +310,12 @@ describe("SugarCube Completions", () => {
             ).returns({ testy: macro });
             const parser = uut.getSugarCubeParser(undefined);
 
-            const results = parser?.generateCompletions(doc, position, index);
+            const results = parser?.generateCompletions(
+                doc,
+                position,
+                [],
+                index
+            );
             mockFunction.restore();
 
             expect(results?.items[0].label).to.eql("testy");
@@ -307,7 +347,12 @@ describe("SugarCube Completions", () => {
             ).returns({ testy: macro });
             const parser = uut.getSugarCubeParser(undefined);
 
-            const results = parser?.generateCompletions(doc, position, index);
+            const results = parser?.generateCompletions(
+                doc,
+                position,
+                [],
+                index
+            );
             mockFunction.restore();
 
             expect(results?.items[0].label).to.eql("testy");
@@ -339,7 +384,12 @@ describe("SugarCube Completions", () => {
             ).returns({ testy: macro });
             const parser = uut.getSugarCubeParser(undefined);
 
-            const results = parser?.generateCompletions(doc, position, index);
+            const results = parser?.generateCompletions(
+                doc,
+                position,
+                [],
+                index
+            );
             mockFunction.restore();
 
             expect(results?.items[0].label).to.eql("testy");
@@ -371,7 +421,12 @@ describe("SugarCube Completions", () => {
             ).returns({ testy: macro });
             const parser = uut.getSugarCubeParser(undefined);
 
-            const results = parser?.generateCompletions(doc, position, index);
+            const results = parser?.generateCompletions(
+                doc,
+                position,
+                [],
+                index
+            );
             mockFunction.restore();
 
             expect(results?.items[0].label).to.eql("testy");
@@ -400,7 +455,12 @@ describe("SugarCube Completions", () => {
             ).returns({ testy: macro });
             const parser = uut.getSugarCubeParser(undefined);
 
-            const results = parser?.generateCompletions(doc, position, index);
+            const results = parser?.generateCompletions(
+                doc,
+                position,
+                [],
+                index
+            );
             mockFunction.restore();
 
             expect(results?.items[0].label).to.eql("testy");
@@ -429,7 +489,12 @@ describe("SugarCube Completions", () => {
             ).returns({ testy: macro });
             const parser = uut.getSugarCubeParser(undefined);
 
-            const results = parser?.generateCompletions(doc, position, index);
+            const results = parser?.generateCompletions(
+                doc,
+                position,
+                [],
+                index
+            );
             mockFunction.restore();
 
             expect(results?.items[0].label).to.eql("testy");
@@ -454,7 +519,12 @@ describe("SugarCube Completions", () => {
             ).returns({ testy: macro });
             const parser = uut.getSugarCubeParser(undefined);
 
-            const results = parser?.generateCompletions(doc, position, index);
+            const results = parser?.generateCompletions(
+                doc,
+                position,
+                [],
+                index
+            );
             mockFunction.restore();
 
             expect(results?.items[0].label).to.eql("<</testy>>");

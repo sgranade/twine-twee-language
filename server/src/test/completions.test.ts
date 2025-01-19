@@ -118,6 +118,54 @@ describe("Completions", () => {
             });
         });
 
+        it("should not let deferred-to-story-format documents create their own completions", async () => {
+            const doc = TextDocument.create(
+                "fake-uri",
+                "",
+                0,
+                "0123456789\n123456789\n123456789"
+            );
+            const position = Position.create(1, 9);
+            const index = new Index();
+            index.setEmbeddedDocuments("fake-uri", [
+                embeddedLanguagesModule.EmbeddedDocument.create(
+                    "inner-uri",
+                    "javascript",
+                    "embedded doc",
+                    17,
+                    doc,
+                    undefined,
+                    true
+                ),
+            ]);
+            const mockFunction = ImportMock.mockFunction(
+                embeddedLanguagesModule,
+                "doComplete"
+            ).callsFake(
+                async (
+                    parentDoc: TextDocument,
+                    embeddedDoc: embeddedLanguagesModule.EmbeddedDocument
+                ) => {
+                    if (embeddedDoc.document.uri === "inner-uri") {
+                        return CompletionList.create([
+                            CompletionItem.create("my completion!"),
+                        ]);
+                    }
+                    return null;
+                }
+            );
+
+            const result = await uut.generateCompletions(
+                doc,
+                position,
+                index,
+                true
+            );
+            mockFunction.restore();
+
+            expect(result).to.be.null;
+        });
+
         describe("StoryData JSON", () => {
             it("should add an IFID value when completing the ifid property", async () => {
                 const doc = TextDocument.create(
@@ -561,6 +609,65 @@ describe("Completions", () => {
                 return {
                     id: "FakeFormat",
                     generateCompletions: () => completionList,
+                };
+            });
+
+            const result = await uut.generateCompletions(
+                doc,
+                position,
+                index,
+                true
+            );
+            mockFunction.restore();
+
+            expect(result).to.eql(completionList);
+        });
+
+        it("should pass deferred embedded documents to story formats' generateCompletions method", async () => {
+            const doc = TextDocument.create("fake-uri", "", 0, "words");
+            const position = Position.create(0, 4);
+            const index = new Index();
+            index.setStoryData(
+                {
+                    ifid: "mock-ifid",
+                    storyFormat: { format: "FakeFormat" },
+                },
+                "fake-uri"
+            );
+            index.setEmbeddedDocuments("fake-uri", [
+                embeddedLanguagesModule.EmbeddedDocument.create(
+                    "inner-uri",
+                    "javascript",
+                    "words",
+                    0,
+                    doc,
+                    false,
+                    true
+                ),
+            ]);
+            const completionList = CompletionList.create([
+                { label: "story completion" },
+            ]);
+            const mockFunction = ImportMock.mockFunction(
+                ptpModule,
+                "getStoryFormatParser"
+            ).callsFake(() => {
+                return {
+                    id: "FakeFormat",
+                    generateCompletions: (
+                        doc: TextDocument,
+                        pos: Position,
+                        deferred: embeddedLanguagesModule.EmbeddedDocument[],
+                        index: Index
+                    ) => {
+                        if (
+                            deferred.length !== 1 ||
+                            deferred[0].deferToStoryFormat !== true
+                        ) {
+                            return null;
+                        }
+                        return completionList;
+                    },
                 };
             });
 

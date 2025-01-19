@@ -34,7 +34,12 @@ describe("SugarCube Hover", () => {
             "allMacros"
         ).returns({ mockro: macro });
 
-        const result = parser?.generateHover(doc, Position.create(1, 3), index);
+        const result = parser?.generateHover(
+            doc,
+            Position.create(1, 3),
+            [],
+            index
+        );
         mockFunction.restore();
 
         expect(result).to.eql({
@@ -71,7 +76,12 @@ describe("SugarCube Hover", () => {
             "allMacroEnums"
         ).returns({ enum: "replaced" });
 
-        const result = parser?.generateHover(doc, Position.create(1, 3), index);
+        const result = parser?.generateHover(
+            doc,
+            Position.create(1, 3),
+            [],
+            index
+        );
         mockFunction1.restore();
         mockFunction2.restore();
 
@@ -106,7 +116,12 @@ describe("SugarCube Hover", () => {
             "allMacros"
         ).returns({ mockro: macro });
 
-        const result = parser?.generateHover(doc, Position.create(1, 3), index);
+        const result = parser?.generateHover(
+            doc,
+            Position.create(1, 3),
+            [],
+            index
+        );
         mockFunction.restore();
 
         expect(result).to.eql({
@@ -139,7 +154,12 @@ describe("SugarCube Hover", () => {
             "allMacros"
         ).returns({ mockro: macro });
 
-        const result = parser?.generateHover(doc, Position.create(1, 3), index);
+        const result = parser?.generateHover(
+            doc,
+            Position.create(1, 3),
+            [],
+            index
+        );
         mockFunction.restore();
 
         expect(result).to.be.null;

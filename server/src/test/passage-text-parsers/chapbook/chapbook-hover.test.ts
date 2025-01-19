@@ -39,7 +39,12 @@ describe("Chapbook Hover", () => {
             "all"
         ).returns([modifier]);
 
-        const result = parser?.generateHover(doc, Position.create(1, 3), index);
+        const result = parser?.generateHover(
+            doc,
+            Position.create(1, 3),
+            [],
+            index
+        );
         mockFunction.restore();
 
         expect(result).to.eql({
@@ -73,7 +78,12 @@ describe("Chapbook Hover", () => {
             "all"
         ).returns([modifier]);
 
-        const result = parser?.generateHover(doc, Position.create(1, 3), index);
+        const result = parser?.generateHover(
+            doc,
+            Position.create(1, 3),
+            [],
+            index
+        );
         mockFunction.restore();
 
         expect(result).to.eql({
@@ -114,7 +124,12 @@ describe("Chapbook Hover", () => {
             "all"
         ).returns([]);
 
-        const result = parser?.generateHover(doc, Position.create(1, 3), index);
+        const result = parser?.generateHover(
+            doc,
+            Position.create(1, 3),
+            [],
+            index
+        );
         mockFunction.restore();
 
         expect(result).to.eql({
@@ -156,7 +171,12 @@ describe("Chapbook Hover", () => {
             "all"
         ).returns([]);
 
-        const result = parser?.generateHover(doc, Position.create(1, 3), index);
+        const result = parser?.generateHover(
+            doc,
+            Position.create(1, 3),
+            [],
+            index
+        );
         mockFunction.restore();
 
         expect(result).to.eql({
@@ -196,7 +216,12 @@ describe("Chapbook Hover", () => {
             "all"
         ).returns([]);
 
-        const result = parser?.generateHover(doc, Position.create(1, 3), index);
+        const result = parser?.generateHover(
+            doc,
+            Position.create(1, 3),
+            [],
+            index
+        );
         mockFunction.restore();
 
         expect(result).to.be.null;
@@ -224,7 +249,12 @@ describe("Chapbook Hover", () => {
             "all"
         ).returns([insert]);
 
-        const result = parser?.generateHover(doc, Position.create(1, 3), index);
+        const result = parser?.generateHover(
+            doc,
+            Position.create(1, 3),
+            [],
+            index
+        );
         mockFunction.restore();
 
         expect(result).to.eql({
@@ -258,7 +288,12 @@ describe("Chapbook Hover", () => {
             "all"
         ).returns([insert]);
 
-        const result = parser?.generateHover(doc, Position.create(1, 3), index);
+        const result = parser?.generateHover(
+            doc,
+            Position.create(1, 3),
+            [],
+            index
+        );
         mockFunction.restore();
 
         expect(result).to.eql({
@@ -299,7 +334,12 @@ describe("Chapbook Hover", () => {
             "all"
         ).returns([]);
 
-        const result = parser?.generateHover(doc, Position.create(1, 3), index);
+        const result = parser?.generateHover(
+            doc,
+            Position.create(1, 3),
+            [],
+            index
+        );
         mockFunction.restore();
 
         expect(result).to.eql({
@@ -341,7 +381,12 @@ describe("Chapbook Hover", () => {
             "all"
         ).returns([]);
 
-        const result = parser?.generateHover(doc, Position.create(1, 3), index);
+        const result = parser?.generateHover(
+            doc,
+            Position.create(1, 3),
+            [],
+            index
+        );
         mockFunction.restore();
 
         expect(result).to.eql({
@@ -382,7 +427,12 @@ describe("Chapbook Hover", () => {
             "all"
         ).returns([]);
 
-        const result = parser?.generateHover(doc, Position.create(1, 3), index);
+        const result = parser?.generateHover(
+            doc,
+            Position.create(1, 3),
+            [],
+            index
+        );
         mockFunction.restore();
 
         expect(result).to.be.null;

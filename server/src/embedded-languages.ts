@@ -20,7 +20,8 @@ import { headerMetadataSchema, storyDataSchema } from "./language";
 export interface EmbeddedDocument {
     document: TextDocument; // Raw document
     range: Range; // Range in the parent that the embedded document encompasses
-    isPassage: boolean; // Does the embedded document encompass an entire Twine passage? (This affects completions, hover info, &c.)
+    isPassage: boolean; // Does the embedded document encompass an entire Twine passage? (This affects completions and hover info)
+    deferToStoryFormat: boolean; // Should the embedded document be passed to any story formats for completions and hover info?
 }
 export namespace EmbeddedDocument {
     /**
@@ -31,7 +32,8 @@ export namespace EmbeddedDocument {
      * @param content The document's content.
      * @param offset Where the embedded document begins inside its parent (zero-based).
      * @param parent Parent document the embedded document lives inside.
-     * @param isPassage If the document corresponds to an entire Twine passage (which affects completions, hover info, &c.)
+     * @param isPassage If the document corresponds to an entire Twine passage (which affects completions and hover info)
+     * @param deferToStoryFormat If the document should be passed to any story formats for completions and hover info instead of being automatically handled
      * @returns A new embedded document.
      */
     export function create(
@@ -40,9 +42,9 @@ export namespace EmbeddedDocument {
         content: string,
         offset: number,
         parent: TextDocument,
-        isPassage?: boolean
+        isPassage?: boolean,
+        deferToStoryFormat?: boolean
     ): EmbeddedDocument {
-        if (isPassage === undefined) isPassage = false;
         return {
             document: TextDocument.create(
                 uri,
@@ -54,7 +56,8 @@ export namespace EmbeddedDocument {
                 parent.positionAt(offset),
                 parent.positionAt(offset + content.length)
             ),
-            isPassage: isPassage,
+            isPassage: isPassage || false,
+            deferToStoryFormat: deferToStoryFormat || false,
         };
     }
 }

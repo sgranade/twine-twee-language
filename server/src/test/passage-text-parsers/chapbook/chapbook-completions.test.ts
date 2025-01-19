@@ -4,7 +4,10 @@ import { ImportMock } from "ts-mock-imports";
 import { Location, Position, Range, TextEdit } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
+import { buildInsertInfo } from "./inserts/insert-builders";
+import { buildModifierInfo } from "./modifiers/modifier-builders";
 import { buildPassage } from "../../builders";
+import { EmbeddedDocument } from "../../../embedded-languages";
 import { Index } from "../../../project-index";
 import {
     ChapbookSymbol,
@@ -14,8 +17,6 @@ import {
     ArgumentRequirement,
     ValueType,
 } from "../../../passage-text-parsers/chapbook/types";
-import { buildInsertInfo } from "./inserts/insert-builders";
-import { buildModifierInfo } from "./modifiers/modifier-builders";
 import * as insertsModule from "../../../passage-text-parsers/chapbook/inserts";
 import * as modifiersModule from "../../../passage-text-parsers/chapbook/modifiers";
 
@@ -30,7 +31,7 @@ describe("Chapbook Completions", () => {
                 0,
                 ":: Passage\nv\n--\nContent"
             );
-            const position = Position.create(1, 1);
+            const pos = Position.create(1, 1);
             const index = new Index();
             index.setPassages("fake-uri", [
                 buildPassage({
@@ -56,7 +57,7 @@ describe("Chapbook Completions", () => {
             ]);
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateCompletions(doc, position, index);
+            const results = parser?.generateCompletions(doc, pos, [], index);
 
             expect(results?.items.length).to.equal(1);
             expect(results?.items[0]?.label).to.eql("anotherVar");
@@ -69,7 +70,7 @@ describe("Chapbook Completions", () => {
                 0,
                 ":: Passage\nvar1.\n--\nContent"
             );
-            const position = Position.create(1, 5);
+            const pos = Position.create(1, 5);
             const index = new Index();
             index.setPassages("fake-uri", [
                 buildPassage({
@@ -115,7 +116,7 @@ describe("Chapbook Completions", () => {
             ]);
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateCompletions(doc, position, index);
+            const results = parser?.generateCompletions(doc, pos, [], index);
 
             expect(results?.items.length).to.equal(1);
             expect(results?.items[0]?.label).to.eql("anotherprop");
@@ -130,7 +131,7 @@ describe("Chapbook Completions", () => {
                 0,
                 ":: Passage\n[ here "
             );
-            const position = Position.create(1, 4);
+            const pos = Position.create(1, 4);
             const index = new Index();
             index.setPassages("fake-uri", [
                 buildPassage({
@@ -140,7 +141,7 @@ describe("Chapbook Completions", () => {
             ]);
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateCompletions(doc, position, index);
+            const results = parser?.generateCompletions(doc, pos, [], index);
 
             expect(results?.itemDefaults?.editRange).to.eql(
                 Range.create(1, 2, 1, 7)
@@ -154,7 +155,7 @@ describe("Chapbook Completions", () => {
                 0,
                 ":: Passage\n[ here "
             );
-            const position = Position.create(1, 4);
+            const pos = Position.create(1, 4);
             const index = new Index();
             index.setPassages("fake-uri", [
                 buildPassage({
@@ -180,7 +181,7 @@ describe("Chapbook Completions", () => {
                 "all"
             ).returns([]);
 
-            const results = parser?.generateCompletions(doc, position, index);
+            const results = parser?.generateCompletions(doc, pos, [], index);
             mockFunction.restore();
 
             expect(results?.items[0]?.label).to.eql("custom modifier");
@@ -193,7 +194,7 @@ describe("Chapbook Completions", () => {
                 0,
                 ":: Passage\n[ here; not here "
             );
-            const position = Position.create(1, 4);
+            const pos = Position.create(1, 4);
             const index = new Index();
             index.setPassages("fake-uri", [
                 buildPassage({
@@ -203,7 +204,7 @@ describe("Chapbook Completions", () => {
             ]);
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateCompletions(doc, position, index);
+            const results = parser?.generateCompletions(doc, pos, [], index);
 
             expect(results?.itemDefaults?.editRange).to.eql(
                 Range.create(1, 2, 1, 6)
@@ -217,7 +218,7 @@ describe("Chapbook Completions", () => {
                 0,
                 ":: Passage\n[ not here; here \nnot here"
             );
-            const position = Position.create(1, 12);
+            const pos = Position.create(1, 12);
             const index = new Index();
             index.setPassages("fake-uri", [
                 buildPassage({
@@ -227,7 +228,7 @@ describe("Chapbook Completions", () => {
             ]);
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateCompletions(doc, position, index);
+            const results = parser?.generateCompletions(doc, pos, [], index);
 
             expect(results?.itemDefaults?.editRange).to.eql(
                 Range.create(1, 12, 1, 17)
@@ -241,7 +242,7 @@ describe("Chapbook Completions", () => {
                 0,
                 ":: Passage\n[ here ] not here"
             );
-            const position = Position.create(1, 4);
+            const pos = Position.create(1, 4);
             const index = new Index();
             index.setPassages("fake-uri", [
                 buildPassage({
@@ -251,7 +252,7 @@ describe("Chapbook Completions", () => {
             ]);
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateCompletions(doc, position, index);
+            const results = parser?.generateCompletions(doc, pos, [], index);
 
             expect(results?.itemDefaults?.editRange).to.eql(
                 Range.create(1, 2, 1, 7)
@@ -265,7 +266,7 @@ describe("Chapbook Completions", () => {
                 0,
                 ":: Passage\n[ not here; here] not here"
             );
-            const position = Position.create(1, 12);
+            const pos = Position.create(1, 12);
             const index = new Index();
             index.setPassages("fake-uri", [
                 buildPassage({
@@ -281,7 +282,7 @@ describe("Chapbook Completions", () => {
             ).returns([modifier]);
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateCompletions(doc, position, index);
+            const results = parser?.generateCompletions(doc, pos, [], index);
             mockFunction.restore();
 
             expect(results?.itemDefaults?.editRange).to.eql(
@@ -297,7 +298,7 @@ describe("Chapbook Completions", () => {
                 0,
                 ":: Passage\n[ not here; here] not here"
             );
-            const position = Position.create(1, 16);
+            const pos = Position.create(1, 16);
             const index = new Index();
             index.setPassages("fake-uri", [
                 buildPassage({
@@ -313,7 +314,7 @@ describe("Chapbook Completions", () => {
             ).returns([modifier]);
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateCompletions(doc, position, index);
+            const results = parser?.generateCompletions(doc, pos, [], index);
             mockFunction.restore();
 
             expect(results?.itemDefaults?.editRange).to.eql(
@@ -329,7 +330,7 @@ describe("Chapbook Completions", () => {
                 0,
                 ":: Passage\n[ mod "
             );
-            const position = Position.create(1, 6);
+            const pos = Position.create(1, 6);
             const index = new Index();
             index.setPassages("fake-uri", [
                 buildPassage({
@@ -349,7 +350,7 @@ describe("Chapbook Completions", () => {
             ).returns([modifier]);
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateCompletions(doc, position, index);
+            const results = parser?.generateCompletions(doc, pos, [], index);
             mockFunction.restore();
 
             expect(results?.items[0].textEditText).to.eql("mod '${1:URL}'");
@@ -365,7 +366,7 @@ describe("Chapbook Completions", () => {
                 0,
                 ":: Passage\n[ custom mod "
             );
-            const position = Position.create(1, 4);
+            const pos = Position.create(1, 4);
             const index = new Index();
             index.setPassages("fake-uri", [
                 buildPassage({
@@ -395,7 +396,7 @@ describe("Chapbook Completions", () => {
                 "all"
             ).returns([]);
 
-            const results = parser?.generateCompletions(doc, position, index);
+            const results = parser?.generateCompletions(doc, pos, [], index);
             mockFunction.restore();
 
             expect(results?.items[0].textEditText).to.eql(
@@ -413,7 +414,7 @@ describe("Chapbook Completions", () => {
                 0,
                 ":: Passage\n[ mod "
             );
-            const position = Position.create(1, 6);
+            const pos = Position.create(1, 6);
             const index = new Index();
             index.setPassages("fake-uri", [
                 buildPassage({
@@ -442,7 +443,7 @@ describe("Chapbook Completions", () => {
             ).returns([modifier]);
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateCompletions(doc, position, index);
+            const results = parser?.generateCompletions(doc, pos, [], index);
             mockFunction.restore();
 
             expect(results?.items.length).to.equal(1);
@@ -456,7 +457,7 @@ describe("Chapbook Completions", () => {
                 0,
                 ":: Passage\n[ mod var1."
             );
-            const position = Position.create(1, 11);
+            const pos = Position.create(1, 11);
             const index = new Index();
             index.setPassages("fake-uri", [
                 buildPassage({
@@ -502,7 +503,7 @@ describe("Chapbook Completions", () => {
             ).returns([modifier]);
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateCompletions(doc, position, index);
+            const results = parser?.generateCompletions(doc, pos, [], index);
             mockFunction.restore();
 
             expect(results?.items.length).to.equal(1);
@@ -516,7 +517,7 @@ describe("Chapbook Completions", () => {
                 0,
                 ":: Passage\n[ mod "
             );
-            const position = Position.create(1, 6);
+            const pos = Position.create(1, 6);
             const index = new Index();
             index.setPassages("fake-uri", [
                 buildPassage({
@@ -536,7 +537,7 @@ describe("Chapbook Completions", () => {
             ).returns([modifier]);
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateCompletions(doc, position, index);
+            const results = parser?.generateCompletions(doc, pos, [], index);
             mockFunction.restore();
 
             expect(results?.items[0].label).to.eql("I'm a passage!");
@@ -553,7 +554,7 @@ describe("Chapbook Completions", () => {
                 0,
                 ":: Passage\n[ custom mod "
             );
-            const position = Position.create(1, 12);
+            const pos = Position.create(1, 12);
             const index = new Index();
             index.setPassages("fake-uri", [
                 buildPassage({
@@ -582,7 +583,7 @@ describe("Chapbook Completions", () => {
                 "all"
             ).returns([]);
 
-            const results = parser?.generateCompletions(doc, position, index);
+            const results = parser?.generateCompletions(doc, pos, [], index);
             mockFunction.restore();
 
             expect(results?.items[0].label).to.eql("I'm a passage!");
@@ -599,7 +600,7 @@ describe("Chapbook Completions", () => {
                 0,
                 ":: Passage\n[ mod "
             );
-            const position = Position.create(1, 6);
+            const pos = Position.create(1, 6);
             const index = new Index();
             index.setPassages("fake-uri", [
                 buildPassage({
@@ -619,7 +620,7 @@ describe("Chapbook Completions", () => {
             ).returns([modifier]);
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateCompletions(doc, position, index);
+            const results = parser?.generateCompletions(doc, pos, [], index);
             mockFunction.restore();
 
             expect(results?.items[0].label).to.eql("I'm a passage!");
@@ -636,7 +637,7 @@ describe("Chapbook Completions", () => {
                 0,
                 ":: Passage\n[ custom mod "
             );
-            const position = Position.create(1, 12);
+            const pos = Position.create(1, 12);
             const index = new Index();
             index.setPassages("fake-uri", [
                 buildPassage({
@@ -665,7 +666,7 @@ describe("Chapbook Completions", () => {
                 "all"
             ).returns([]);
 
-            const results = parser?.generateCompletions(doc, position, index);
+            const results = parser?.generateCompletions(doc, pos, [], index);
             mockFunction.restore();
 
             expect(results?.items[0].label).to.eql("I'm a passage!");
@@ -684,7 +685,7 @@ describe("Chapbook Completions", () => {
                 0,
                 ":: Passage\nLet's try {te"
             );
-            const position = Position.create(1, 12);
+            const pos = Position.create(1, 12);
             const index = new Index();
             index.setPassages("fake-uri", [
                 buildPassage({
@@ -711,7 +712,7 @@ describe("Chapbook Completions", () => {
             ).returns([insert]);
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateCompletions(doc, position, index);
+            const results = parser?.generateCompletions(doc, pos, [], index);
             mockFunction.restore();
 
             expect(results?.items[0].label).to.eql("test insert");
@@ -727,7 +728,7 @@ describe("Chapbook Completions", () => {
                 0,
                 ":: Passage\nLet's try {te"
             );
-            const position = Position.create(1, 12);
+            const pos = Position.create(1, 12);
             const index = new Index();
             index.setPassages("fake-uri", [
                 buildPassage({
@@ -752,10 +753,62 @@ describe("Chapbook Completions", () => {
             ).returns([]);
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateCompletions(doc, position, index);
+            const results = parser?.generateCompletions(doc, pos, [], index);
             mockFunction.restore();
 
             expect(results?.items[0]?.label).to.eql("custom insert");
+        });
+
+        it("should suggest no insert names after a { in a [JavaScript] modifier", () => {
+            const doc = TextDocument.create(
+                "fake-uri",
+                "",
+                0,
+                ":: Passage\n[JavaScript]\nLet's try {te"
+            );
+            const pos = Position.create(2, 12);
+            const scriptEmbeddedDocument = EmbeddedDocument.create(
+                "script",
+                "javascript",
+                "Let's try {te",
+                24,
+                doc,
+                false,
+                true
+            );
+            const index = new Index();
+            index.setPassages("fake-uri", [
+                buildPassage({
+                    label: "passage",
+                    scope: Range.create(0, 0, 3, 0),
+                }),
+            ]);
+            index.setDefinitions("source-uri", [
+                {
+                    contents: "custom insert",
+                    location: Location.create(
+                        "source-uri",
+                        Range.create(5, 6, 7, 8)
+                    ),
+                    kind: OChapbookSymbolKind.CustomInsert,
+                    match: /custom\s+insert/i,
+                } as ChapbookSymbol,
+            ]);
+            const mockFunction = ImportMock.mockFunction(
+                insertsModule,
+                "all"
+            ).returns([]);
+            const parser = uut.getChapbookParser(undefined);
+
+            const results = parser?.generateCompletions(
+                doc,
+                pos,
+                [scriptEmbeddedDocument],
+                index
+            );
+            mockFunction.restore();
+
+            expect(results).to.be.null;
         });
 
         it("should suggest set variables after a { with no other contents in the insert", () => {
@@ -765,7 +818,7 @@ describe("Chapbook Completions", () => {
                 0,
                 ":: Passage\nLet's try {va"
             );
-            const position = Position.create(1, 12);
+            const pos = Position.create(1, 12);
             const index = new Index();
             index.setPassages("fake-uri", [
                 buildPassage({
@@ -795,7 +848,7 @@ describe("Chapbook Completions", () => {
             ).returns([]);
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateCompletions(doc, position, index);
+            const results = parser?.generateCompletions(doc, pos, [], index);
             mockFunction.restore();
 
             expect(results?.items[0].label).to.eql("var1");
@@ -811,7 +864,7 @@ describe("Chapbook Completions", () => {
                 0,
                 ":: Passage\nLet's try {var1.o"
             );
-            const position = Position.create(1, 17);
+            const pos = Position.create(1, 17);
             const index = new Index();
             index.setPassages("fake-uri", [
                 buildPassage({
@@ -854,7 +907,7 @@ describe("Chapbook Completions", () => {
             ).returns([]);
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateCompletions(doc, position, index);
+            const results = parser?.generateCompletions(doc, pos, [], index);
             mockFunction.restore();
 
             expect(results?.items[0].label).to.eql("otherprop");
@@ -870,7 +923,7 @@ describe("Chapbook Completions", () => {
                 0,
                 ":: Passage\nLet's try {va nope"
             );
-            const position = Position.create(1, 12);
+            const pos = Position.create(1, 12);
             const index = new Index();
             index.setPassages("fake-uri", [
                 buildPassage({
@@ -893,7 +946,7 @@ describe("Chapbook Completions", () => {
             ).returns([]);
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateCompletions(doc, position, index);
+            const results = parser?.generateCompletions(doc, pos, [], index);
             mockFunction.restore();
 
             expect(results?.items).to.be.empty;
@@ -906,7 +959,7 @@ describe("Chapbook Completions", () => {
                 0,
                 ":: Passage\nLet's try {te nope"
             );
-            const position = Position.create(1, 12);
+            const pos = Position.create(1, 12);
             const index = new Index();
             index.setPassages("fake-uri", [
                 buildPassage({
@@ -933,7 +986,7 @@ describe("Chapbook Completions", () => {
             ).returns([insert]);
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateCompletions(doc, position, index);
+            const results = parser?.generateCompletions(doc, pos, [], index);
             mockFunction.restore();
 
             expect(results?.items[0].label).to.eql("test insert");
@@ -949,7 +1002,7 @@ describe("Chapbook Completions", () => {
                 0,
                 ":: Passage\nLet's try {te, prop: 'yep'"
             );
-            const position = Position.create(1, 12);
+            const pos = Position.create(1, 12);
             const index = new Index();
             index.setPassages("fake-uri", [
                 buildPassage({
@@ -976,7 +1029,7 @@ describe("Chapbook Completions", () => {
             ).returns([insert]);
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateCompletions(doc, position, index);
+            const results = parser?.generateCompletions(doc, pos, [], index);
             mockFunction.restore();
 
             expect(results?.items[0].label).to.eql("test insert");
@@ -992,7 +1045,7 @@ describe("Chapbook Completions", () => {
                 0,
                 ":: Passage\nLet's try {te: 'first arg'"
             );
-            const position = Position.create(1, 12);
+            const pos = Position.create(1, 12);
             const index = new Index();
             index.setPassages("fake-uri", [
                 buildPassage({
@@ -1019,7 +1072,7 @@ describe("Chapbook Completions", () => {
             ).returns([insert]);
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateCompletions(doc, position, index);
+            const results = parser?.generateCompletions(doc, pos, [], index);
             mockFunction.restore();
 
             expect(results?.items[0].label).to.eql("test insert");
@@ -1036,7 +1089,7 @@ describe("Chapbook Completions", () => {
                 0,
                 ":: Passage\nLet's try {te: 'first arg'"
             );
-            const position = Position.create(1, 12);
+            const pos = Position.create(1, 12);
             const index = new Index();
             index.setPassages("fake-uri", [
                 buildPassage({
@@ -1061,7 +1114,7 @@ describe("Chapbook Completions", () => {
             ).returns([]);
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateCompletions(doc, position, index);
+            const results = parser?.generateCompletions(doc, pos, [], index);
             mockFunction.restore();
 
             expect(results?.items[0].label).to.eql("custom insert");
@@ -1078,7 +1131,7 @@ describe("Chapbook Completions", () => {
                 0,
                 ":: Passage\nLet's try {te"
             );
-            const position = Position.create(1, 12);
+            const pos = Position.create(1, 12);
             const index = new Index();
             index.setPassages("fake-uri", [
                 buildPassage({
@@ -1105,7 +1158,7 @@ describe("Chapbook Completions", () => {
             ).returns([insert]);
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateCompletions(doc, position, index);
+            const results = parser?.generateCompletions(doc, pos, [], index);
             mockFunction.restore();
 
             expect(results?.items[0].textEditText).to.eql(
@@ -1123,7 +1176,7 @@ describe("Chapbook Completions", () => {
                 0,
                 ":: Passage\nLet's try {te"
             );
-            const position = Position.create(1, 12);
+            const pos = Position.create(1, 12);
             const index = new Index();
             index.setPassages("fake-uri", [
                 buildPassage({
@@ -1157,7 +1210,7 @@ describe("Chapbook Completions", () => {
             ).returns([]);
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateCompletions(doc, position, index);
+            const results = parser?.generateCompletions(doc, pos, [], index);
             mockFunction.restore();
 
             expect(results?.items[0].textEditText).to.eql(
@@ -1175,7 +1228,7 @@ describe("Chapbook Completions", () => {
                 0,
                 ":: Passage\nLet's try {te ,"
             );
-            const position = Position.create(1, 12);
+            const pos = Position.create(1, 12);
             const index = new Index();
             index.setPassages("fake-uri", [
                 buildPassage({
@@ -1202,7 +1255,7 @@ describe("Chapbook Completions", () => {
             ).returns([insert]);
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateCompletions(doc, position, index);
+            const results = parser?.generateCompletions(doc, pos, [], index);
             mockFunction.restore();
 
             expect(results?.items[0].textEditText).to.eql(
@@ -1220,7 +1273,7 @@ describe("Chapbook Completions", () => {
                 0,
                 ":: Passage\nLet's try {te ,"
             );
-            const position = Position.create(1, 12);
+            const pos = Position.create(1, 12);
             const index = new Index();
             index.setPassages("fake-uri", [
                 buildPassage({
@@ -1254,7 +1307,7 @@ describe("Chapbook Completions", () => {
             ).returns([]);
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateCompletions(doc, position, index);
+            const results = parser?.generateCompletions(doc, pos, [], index);
             mockFunction.restore();
 
             expect(results?.items[0].textEditText).to.eql(
@@ -1272,7 +1325,7 @@ describe("Chapbook Completions", () => {
                 0,
                 ":: Passage\nLet's try {te ,"
             );
-            const position = Position.create(1, 12);
+            const pos = Position.create(1, 12);
             const index = new Index();
             index.setPassages("fake-uri", [
                 buildPassage({
@@ -1295,7 +1348,7 @@ describe("Chapbook Completions", () => {
             ).returns([insert]);
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateCompletions(doc, position, index);
+            const results = parser?.generateCompletions(doc, pos, [], index);
             mockFunction.restore();
 
             expect(results?.items[0].textEditText).to.eql(
@@ -1313,7 +1366,7 @@ describe("Chapbook Completions", () => {
                 0,
                 ":: Passage\nLet's try {te ,"
             );
-            const position = Position.create(1, 12);
+            const pos = Position.create(1, 12);
             const index = new Index();
             index.setPassages("fake-uri", [
                 buildPassage({
@@ -1349,7 +1402,7 @@ describe("Chapbook Completions", () => {
             ).returns([]);
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateCompletions(doc, position, index);
+            const results = parser?.generateCompletions(doc, pos, [], index);
             mockFunction.restore();
 
             expect(results?.items[0].textEditText).to.eql(
@@ -1367,7 +1420,7 @@ describe("Chapbook Completions", () => {
                 0,
                 ":: Passage\nLet's try {te "
             );
-            const position = Position.create(1, 12);
+            const pos = Position.create(1, 12);
             const index = new Index();
             index.setPassages("fake-uri", [
                 buildPassage({
@@ -1391,7 +1444,7 @@ describe("Chapbook Completions", () => {
             ).returns([insert]);
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateCompletions(doc, position, index);
+            const results = parser?.generateCompletions(doc, pos, [], index);
             mockFunction.restore();
 
             expect(results?.items[0].textEditText).to.eql(
@@ -1409,7 +1462,7 @@ describe("Chapbook Completions", () => {
                 0,
                 ":: Passage\nLet's try {te "
             );
-            const position = Position.create(1, 12);
+            const pos = Position.create(1, 12);
             const index = new Index();
             index.setPassages("fake-uri", [
                 buildPassage({
@@ -1455,7 +1508,7 @@ describe("Chapbook Completions", () => {
             ).returns([]);
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateCompletions(doc, position, index);
+            const results = parser?.generateCompletions(doc, pos, [], index);
             mockFunction.restore();
 
             expect(results?.items[0].textEditText).to.eql(
@@ -1473,7 +1526,7 @@ describe("Chapbook Completions", () => {
                 0,
                 ":: Passage\nLet's try {te ,"
             );
-            const position = Position.create(1, 12);
+            const pos = Position.create(1, 12);
             const index = new Index();
             index.setPassages("fake-uri", [
                 buildPassage({
@@ -1496,7 +1549,7 @@ describe("Chapbook Completions", () => {
             ).returns([insert]);
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateCompletions(doc, position, index);
+            const results = parser?.generateCompletions(doc, pos, [], index);
             mockFunction.restore();
 
             expect(results?.items[0].textEditText).to.eql(
@@ -1514,7 +1567,7 @@ describe("Chapbook Completions", () => {
                 0,
                 ":: Passage\nLet's try {te ,"
             );
-            const position = Position.create(1, 12);
+            const pos = Position.create(1, 12);
             const index = new Index();
             index.setPassages("fake-uri", [
                 buildPassage({
@@ -1555,7 +1608,7 @@ describe("Chapbook Completions", () => {
             ).returns([]);
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateCompletions(doc, position, index);
+            const results = parser?.generateCompletions(doc, pos, [], index);
             mockFunction.restore();
 
             expect(results?.items[0].textEditText).to.eql(
@@ -1573,7 +1626,7 @@ describe("Chapbook Completions", () => {
                 0,
                 ":: Passage\nLet's try {te :"
             );
-            const position = Position.create(1, 12);
+            const pos = Position.create(1, 12);
             const index = new Index();
             index.setPassages("fake-uri", [
                 buildPassage({
@@ -1596,7 +1649,7 @@ describe("Chapbook Completions", () => {
             ).returns([insert]);
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateCompletions(doc, position, index);
+            const results = parser?.generateCompletions(doc, pos, [], index);
             mockFunction.restore();
 
             expect(results?.items[0].textEditText).to.eql("test insert");
@@ -1612,7 +1665,7 @@ describe("Chapbook Completions", () => {
                 0,
                 ":: Passage\nLet's try {te :"
             );
-            const position = Position.create(1, 12);
+            const pos = Position.create(1, 12);
             const index = new Index();
             index.setPassages("fake-uri", [
                 buildPassage({
@@ -1644,7 +1697,7 @@ describe("Chapbook Completions", () => {
             ).returns([]);
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateCompletions(doc, position, index);
+            const results = parser?.generateCompletions(doc, pos, [], index);
             mockFunction.restore();
 
             expect(results?.items[0].textEditText).to.eql("custom insert");
@@ -1660,7 +1713,7 @@ describe("Chapbook Completions", () => {
                 0,
                 ":: Passage\nLet's try {test insert: }"
             );
-            const position = Position.create(1, 24);
+            const pos = Position.create(1, 24);
             const index = new Index();
             index.setPassages("fake-uri", [
                 buildPassage({
@@ -1692,7 +1745,7 @@ describe("Chapbook Completions", () => {
             ).returns([insert]);
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateCompletions(doc, position, index);
+            const results = parser?.generateCompletions(doc, pos, [], index);
             mockFunction.restore();
 
             expect(results?.items.length).to.equal(1);
@@ -1706,7 +1759,7 @@ describe("Chapbook Completions", () => {
                 0,
                 ":: Passage\nLet's try {test insert: var1.}"
             );
-            const position = Position.create(1, 29);
+            const pos = Position.create(1, 29);
             const index = new Index();
             index.setPassages("fake-uri", [
                 buildPassage({
@@ -1748,7 +1801,7 @@ describe("Chapbook Completions", () => {
             ).returns([insert]);
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateCompletions(doc, position, index);
+            const results = parser?.generateCompletions(doc, pos, [], index);
             mockFunction.restore();
 
             expect(results?.items.length).to.equal(1);
@@ -1762,7 +1815,7 @@ describe("Chapbook Completions", () => {
                 0,
                 ":: Passage\nLet's try {test insert: }"
             );
-            const position = Position.create(1, 24);
+            const pos = Position.create(1, 24);
             const index = new Index();
             index.setPassages("fake-uri", [
                 buildPassage({
@@ -1785,7 +1838,7 @@ describe("Chapbook Completions", () => {
             ).returns([insert]);
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateCompletions(doc, position, index);
+            const results = parser?.generateCompletions(doc, pos, [], index);
             mockFunction.restore();
 
             expect(results?.items[0].label).to.eql("I'm a passage!");
@@ -1802,7 +1855,7 @@ describe("Chapbook Completions", () => {
                 0,
                 ":: Passage\nLet's try {custom insert: }"
             );
-            const position = Position.create(1, 26);
+            const pos = Position.create(1, 26);
             const index = new Index();
             index.setPassages("fake-uri", [
                 buildPassage({
@@ -1832,7 +1885,7 @@ describe("Chapbook Completions", () => {
             ).returns([]);
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateCompletions(doc, position, index);
+            const results = parser?.generateCompletions(doc, pos, [], index);
             mockFunction.restore();
 
             expect(results?.items[0].label).to.eql("I'm a passage!");
@@ -1849,7 +1902,7 @@ describe("Chapbook Completions", () => {
                 0,
                 ":: Passage\nLet's try {test insert: }"
             );
-            const position = Position.create(1, 24);
+            const pos = Position.create(1, 24);
             const index = new Index();
             index.setPassages("fake-uri", [
                 buildPassage({
@@ -1872,7 +1925,7 @@ describe("Chapbook Completions", () => {
             ).returns([insert]);
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateCompletions(doc, position, index);
+            const results = parser?.generateCompletions(doc, pos, [], index);
             mockFunction.restore();
 
             expect(results?.items[0].label).to.eql("passage");
@@ -1889,7 +1942,7 @@ describe("Chapbook Completions", () => {
                 0,
                 ":: Passage\nLet's try {custom insert: }"
             );
-            const position = Position.create(1, 26);
+            const pos = Position.create(1, 26);
             const index = new Index();
             index.setPassages("fake-uri", [
                 buildPassage({
@@ -1919,7 +1972,7 @@ describe("Chapbook Completions", () => {
             ).returns([]);
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateCompletions(doc, position, index);
+            const results = parser?.generateCompletions(doc, pos, [], index);
             mockFunction.restore();
 
             expect(results?.items[0].label).to.eql("I'm a passage!");
@@ -1936,7 +1989,7 @@ describe("Chapbook Completions", () => {
                 0,
                 ":: I'm a passage!\nLet's try {test insert: 'placeholder' }"
             );
-            const position = Position.create(1, 27);
+            const pos = Position.create(1, 27);
             const index = new Index();
             index.setPassages("fake-uri", [
                 buildPassage({
@@ -1959,7 +2012,7 @@ describe("Chapbook Completions", () => {
             ).returns([insert]);
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateCompletions(doc, position, index);
+            const results = parser?.generateCompletions(doc, pos, [], index);
             mockFunction.restore();
 
             expect(results?.items[0].label).to.eql("I'm a passage!");
@@ -1976,7 +2029,7 @@ describe("Chapbook Completions", () => {
                 0,
                 ":: Passage\nLet's try {test insert, "
             );
-            const position = Position.create(1, 23);
+            const pos = Position.create(1, 23);
             const index = new Index();
             index.setPassages("fake-uri", [
                 buildPassage({
@@ -2000,7 +2053,7 @@ describe("Chapbook Completions", () => {
             ).returns([insert]);
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateCompletions(doc, position, index);
+            const results = parser?.generateCompletions(doc, pos, [], index);
             mockFunction.restore();
 
             expect(results?.items[0].label).to.eql("one");
@@ -2019,7 +2072,7 @@ describe("Chapbook Completions", () => {
                 0,
                 ":: Passage\nLet's try {custom insert, "
             );
-            const position = Position.create(1, 25);
+            const pos = Position.create(1, 25);
             const index = new Index();
             index.setPassages("fake-uri", [
                 buildPassage({
@@ -2061,7 +2114,7 @@ describe("Chapbook Completions", () => {
             ).returns([]);
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateCompletions(doc, position, index);
+            const results = parser?.generateCompletions(doc, pos, [], index);
             mockFunction.restore();
 
             expect(results?.items[0].label).to.eql("one");
@@ -2080,7 +2133,7 @@ describe("Chapbook Completions", () => {
                 0,
                 ":: Passage\nLet's try {test insert, :"
             );
-            const position = Position.create(1, 23);
+            const pos = Position.create(1, 23);
             const index = new Index();
             index.setPassages("fake-uri", [
                 buildPassage({
@@ -2104,7 +2157,7 @@ describe("Chapbook Completions", () => {
             ).returns([insert]);
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateCompletions(doc, position, index);
+            const results = parser?.generateCompletions(doc, pos, [], index);
             mockFunction.restore();
 
             expect(results?.items[0].label).to.eql("one");
@@ -2123,7 +2176,7 @@ describe("Chapbook Completions", () => {
                 0,
                 ":: Passage\nLet's try {custom insert, :"
             );
-            const position = Position.create(1, 25);
+            const pos = Position.create(1, 25);
             const index = new Index();
             index.setPassages("fake-uri", [
                 buildPassage({
@@ -2165,7 +2218,7 @@ describe("Chapbook Completions", () => {
             ).returns([]);
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateCompletions(doc, position, index);
+            const results = parser?.generateCompletions(doc, pos, [], index);
             mockFunction.restore();
 
             expect(results?.items[0].label).to.eql("one");
@@ -2184,7 +2237,7 @@ describe("Chapbook Completions", () => {
                 0,
                 ":: Passage\nLet's try {test insert, : 'here'"
             );
-            const position = Position.create(1, 28);
+            const pos = Position.create(1, 28);
             const index = new Index();
             index.setPassages("fake-uri", [
                 buildPassage({
@@ -2208,7 +2261,7 @@ describe("Chapbook Completions", () => {
             ).returns([insert]);
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateCompletions(doc, position, index);
+            const results = parser?.generateCompletions(doc, pos, [], index);
             mockFunction.restore();
 
             expect(results).to.be.null;
@@ -2221,7 +2274,7 @@ describe("Chapbook Completions", () => {
                 0,
                 ":: Passage\nLet's try {test insert, one: 'here',"
             );
-            const position = Position.create(1, 30);
+            const pos = Position.create(1, 30);
             const index = new Index();
             index.setPassages("fake-uri", [
                 buildPassage({
@@ -2259,7 +2312,7 @@ describe("Chapbook Completions", () => {
             ).returns([insert]);
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateCompletions(doc, position, index);
+            const results = parser?.generateCompletions(doc, pos, [], index);
             mockFunction.restore();
 
             expect(results?.items.length).to.equal(1);
@@ -2273,7 +2326,7 @@ describe("Chapbook Completions", () => {
                 0,
                 ":: Passage\nLet's try {test insert, one: 'here',"
             );
-            const position = Position.create(1, 30);
+            const pos = Position.create(1, 30);
             const index = new Index();
             index.setPassages("fake-uri", [
                 buildPassage({
@@ -2302,7 +2355,7 @@ describe("Chapbook Completions", () => {
             ).returns([insert]);
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateCompletions(doc, position, index);
+            const results = parser?.generateCompletions(doc, pos, [], index);
             mockFunction.restore();
 
             expect(results?.items[0].label).to.eql("I'm a passage!");

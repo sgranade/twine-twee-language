@@ -4,6 +4,10 @@ Changes to the extension.
 
 ## Unreleased
 
+### Changed
+
+- Chapbook: Insert completions aren't suggested after `{` in Javascript-modified sections.
+
 ### Fixed
 
 - Build system can now build games whose source code is at the root level of the project.

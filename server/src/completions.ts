@@ -273,15 +273,19 @@ export async function generateCompletions(
 ): Promise<CompletionList | null> {
     const completionOffset = document.offsetAt(position);
     let passageDocument: EmbeddedDocument | undefined;
+    const deferredEmbeddedDocuments: EmbeddedDocument[] = [];
 
     // Embedded documents get to create their own completions
     for (const embeddedDocument of index.getEmbeddedDocuments(document.uri) ||
         []) {
         if (positionInRange(position, embeddedDocument.range)) {
             // If the document corresponds to an entire passage, wait to form completions
-            // from it until after everything else has had its chance
+            // from it until after everything else has had its chance. If it's deferred to
+            // story formats to handle, add it to the list of deferred embedded documents.
             if (embeddedDocument.isPassage) {
                 passageDocument = embeddedDocument;
+            } else if (embeddedDocument.deferToStoryFormat) {
+                deferredEmbeddedDocuments.push(embeddedDocument);
             } else {
                 return await generateEmbeddedDocumentCompletions(
                     embeddedDocument,
@@ -342,7 +346,7 @@ export async function generateCompletions(
             }
         }
 
-        // If we didn't a pipe or -> to the right, suggest passage names
+        // If we didn't have a pipe or -> to the right, suggest passage names
         if (suggestAPassage) {
             if (linkEndOffset === undefined) {
                 linkEndOffset = i;
@@ -381,6 +385,7 @@ export async function generateCompletions(
             let completionList = parser.generateCompletions(
                 document,
                 position,
+                deferredEmbeddedDocuments,
                 index
             );
             if (completionList !== null) {

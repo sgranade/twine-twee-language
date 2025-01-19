@@ -9,6 +9,7 @@ import {
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { StoryFormat } from "../client-server";
+import { EmbeddedDocument } from "../embedded-languages";
 import { ParsingState } from "../parser";
 import { ProjectIndex } from "../project-index";
 import { DiagnosticsOptions } from "../server-options";
@@ -46,12 +47,14 @@ export interface StoryFormatParser {
      *
      * @param document Document to generate completions in.
      * @param position Position in the document to generate completions.
+     * @param deferredEmbeddedDocuments List of embedded documents at the position that the story format is responsible for handling.
      * @param index Twine project index.
      * @returns Completion list, or null for no completions.
      */
     generateCompletions(
         document: TextDocument,
         position: Position,
+        deferredEmbeddedDocuments: EmbeddedDocument[],
         index: ProjectIndex
     ): CompletionList | null;
     /**
@@ -71,12 +74,14 @@ export interface StoryFormatParser {
      *
      * @param document Document to generate hover information for.
      * @param position Position in the document to generate hover information.
+     * @param deferredEmbeddedDocuments List of embedded documents at the position that the story format is responsible for handling.
      * @param index Project index.
      * @returns Hover information, or null for no hover information.
      */
     generateHover(
         document: TextDocument,
         position: Position,
+        deferredEmbeddedDocuments: EmbeddedDocument[],
         index: ProjectIndex
     ): Hover | null;
     /**
