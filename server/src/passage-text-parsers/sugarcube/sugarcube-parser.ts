@@ -1307,7 +1307,12 @@ export function parsePassageText(
     textIndex: number,
     state: ParsingState
 ): void {
-    if (state.parseLevel !== ParseLevel.Full) {
+    // Nothing to do if we're not doing a full parse, or if the passage
+    // is a script passage
+    if (
+        state.parseLevel !== ParseLevel.Full ||
+        state.currentPassage?.isScript
+    ) {
         return;
     }
 

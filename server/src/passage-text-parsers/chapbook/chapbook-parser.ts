@@ -1604,6 +1604,46 @@ function parseInsertOrVariable(
 }
 
 /**
+ * Parse either a script passage or [JavaScript] modifier block as a JavaScript script.
+ *
+ * @param text Text to parse.
+ * @param textIndex Index in the document where the text begins (zero-based).
+ * @param state Parsing state.
+ * @param chapbookState Chapbook-specific parsing state.
+ */
+function parseScript(
+    text: string,
+    textIndex: number,
+    state: ParsingState,
+    chapbookState: ChapbookParsingState
+): void {
+    findEngineExtensions(text, textIndex, state);
+    // We don't have a language server for JS, so we create an embedded document
+    // for it that gets passed to our completions and hover functions, but we also
+    // separately tokenize it. We don't capture variable and property references,
+    // though, as they mostly won't be set in Chapbook vars sections and thus would
+    // cause a lot of spurious warnings.
+    tokenizeJavaScript(
+        true,
+        text,
+        textIndex,
+        state.textDocument,
+        chapbookState
+    );
+    state.callbacks.onEmbeddedDocument(
+        EmbeddedDocument.create(
+            "script",
+            "javascript",
+            text,
+            textIndex,
+            state.textDocument,
+            false,
+            true
+        )
+    );
+}
+
+/**
  * Parse a text subsection of a Chapbook passage text section.
  *
  * The subsection may be controlled by a modifier, whose effects
@@ -1621,30 +1661,7 @@ function parseTextSubsection(
     chapbookState: ChapbookParsingState
 ): void {
     if (chapbookState.modifierKind === ModifierKind.Javascript) {
-        findEngineExtensions(subsection, subsectionIndex, state);
-        // We don't have a language server for JS, so we create an embedded document
-        // for it that gets passed to our completions and hover functions, but we also
-        // separately tokenize it. We don't capture variable and property references,
-        // though, as they mostly won't be set in Chapbook vars sections and thus would
-        // cause a lot of spurious warnings.
-        tokenizeJavaScript(
-            true,
-            subsection,
-            subsectionIndex,
-            state.textDocument,
-            chapbookState
-        );
-        state.callbacks.onEmbeddedDocument(
-            EmbeddedDocument.create(
-                "script",
-                "javascript",
-                subsection,
-                subsectionIndex,
-                state.textDocument,
-                false,
-                true
-            )
-        );
+        parseScript(subsection, subsectionIndex, state, chapbookState);
     } else if (chapbookState.modifierKind === ModifierKind.Css) {
         state.callbacks.onEmbeddedDocument(
             EmbeddedDocument.create(
@@ -2377,36 +2394,41 @@ export function parsePassageText(
         passageTokens: {},
     };
 
-    const passageParts = divideChapbookPassage(passageText);
-    if (passageParts.vars !== undefined) {
-        parseVarsSection(
-            passageParts.vars,
-            textIndex + 0,
+    if (state.currentPassage?.isScript) {
+        // If it's a script passage, parse it as a script instead of Chapbook
+        parseScript(passageText, textIndex, state, chapbookState);
+    } else {
+        const passageParts = divideChapbookPassage(passageText);
+        if (passageParts.vars !== undefined) {
+            parseVarsSection(
+                passageParts.vars,
+                textIndex + 0,
+                state,
+                chapbookState
+            );
+        }
+        // Generate an embedded HTML document for the entire passage
+        state.callbacks.onEmbeddedDocument(
+            EmbeddedDocument.create(
+                (state.currentPassage?.name.contents ?? "placeholder").replace(
+                    " ",
+                    "-"
+                ),
+                "html",
+                passageParts.content,
+                textIndex + passageParts.contentIndex,
+                state.textDocument,
+                true
+            )
+        );
+
+        parseTextSection(
+            passageParts.content,
+            textIndex + passageParts.contentIndex,
             state,
             chapbookState
         );
     }
-    // Generate an embedded HTML document for the entire passage
-    state.callbacks.onEmbeddedDocument(
-        EmbeddedDocument.create(
-            (state.currentPassage?.name.contents ?? "placeholder").replace(
-                " ",
-                "-"
-            ),
-            "html",
-            passageParts.content,
-            textIndex + passageParts.contentIndex,
-            state.textDocument,
-            true
-        )
-    );
-
-    parseTextSection(
-        passageParts.content,
-        textIndex + passageParts.contentIndex,
-        state,
-        chapbookState
-    );
 
     // Submit semantic tokens in document order
     // (taking advantage of object own key enumeration order)

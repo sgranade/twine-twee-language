@@ -33,6 +33,9 @@ export interface StoryFormatParser {
      * for project-wide diagnostics even if they're not doing a full passage contents parse.
      * It's up to the story format to check for that.
      *
+     * Note also that the passage may be a script passage, which we pass in case the story
+     * format needs to process the contents.
+     *
      * @param passageText Text of the passage to parse.
      * @param textIndex Index of the passage in the document (zero-based).
      * @param state Parsing state.

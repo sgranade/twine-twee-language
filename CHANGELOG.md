@@ -12,6 +12,7 @@ Changes to the extension.
 
 - Build system can now build games whose source code is at the root level of the project.
 - Fixed bug that caused issues if any files had no extension.
+- Chapbook and SugarCube now properly handle `[script]` passages.
 - Chapbook: Variables that start with `$` or `_` are now properly parsed.
 - Chapbook: `random.d4` and similar are no longer flagged as unrecognized variables.
 

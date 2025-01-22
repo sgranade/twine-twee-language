@@ -5,7 +5,7 @@ import { DiagnosticSeverity, Location, Range } from "vscode-languageserver";
 
 import { buildInsertInfo } from "./inserts/insert-builders";
 import { buildModifierInfo } from "./modifiers/modifier-builders";
-import { MockCallbacks, buildParsingState } from "../../builders";
+import { MockCallbacks, buildParsingState, buildPassage } from "../../builders";
 import { DecorationType } from "../../../client-server";
 import { ParseLevel } from "../../../parser";
 import { TwineSymbolKind } from "../../../project-index";
@@ -107,6 +107,60 @@ describe("Chapbook Parser", () => {
         parser?.parsePassageText(passage, header.length, state);
 
         expect(callbacks.definitions).to.be.empty;
+    });
+
+    describe("script passages", () => {
+        it("should parse engine extension calls in script passages", () => {
+            const header = ":: Passage [script]\n";
+            const passage =
+                "engine.extend('2.0.1', () => {\nengine.template.inserts.add(\n{match: /hi/}\n);\n});\n";
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                uri: "fake-uri",
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            state.currentPassage = buildPassage({ isScript: true });
+            state.storyFormat = {
+                format: "Chapbook",
+                formatVersion: "2.0.1",
+            };
+            const parser = uut.getChapbookParser(undefined);
+
+            parser?.parsePassageText(passage, header.length, state);
+            const result = callbacks.definitions[0] as ChapbookSymbol;
+
+            expect(callbacks.definitions.length).to.equal(1);
+            expect(ChapbookSymbol.is(result)).to.be.true;
+            expect(result).to.eql({
+                name: "hi",
+                contents: "hi",
+                location: Location.create(
+                    "fake-uri",
+                    Range.create(3, 9, 3, 11)
+                ),
+                kind: OChapbookSymbolKind.CustomInsert,
+                match: /hi/,
+            });
+        });
+
+        it("should not parse vars in script passages", () => {
+            const header = ":: Passage [script]\n";
+            const passage = "\n var1: 17\n--\n";
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                uri: "fake-uri",
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            state.currentPassage = buildPassage({ isScript: true });
+            const parser = uut.getChapbookParser(undefined);
+
+            parser?.parsePassageText(passage, header.length, state);
+            const result = callbacks.references;
+
+            expect(result).to.be.empty;
+        });
     });
 
     describe("vars section", () => {

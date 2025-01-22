@@ -158,6 +158,26 @@ describe("SugarCube Parser", () => {
 
             expect(callbacks.embeddedDocuments).to.be.empty;
         });
+
+        it("should not parse a script passage", () => {
+            const header = ":: Passage [script]\n";
+            const passage = "Some content.\n" + "This is a $bare_variable.\n";
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            state.currentPassage = buildPassage({
+                label: "Passage",
+                isScript: true,
+            });
+            const parser = uut.getSugarCubeParser(undefined);
+
+            parser?.parsePassageText(passage, header.length, state);
+            const result = callbacks.references;
+
+            expect(result).to.be.empty;
+        });
     });
 
     describe("variables", () => {
