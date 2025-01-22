@@ -132,6 +132,28 @@ describe("Chapbook Parser", () => {
             });
         });
 
+        it("should capture a variable set reference for a variable name with a dollar sign", () => {
+            const header = ":: Passage\n";
+            const passage = "\n$var1: 17\n--\n";
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                uri: "fake-uri",
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            const parser = uut.getChapbookParser(undefined);
+
+            parser?.parsePassageText(passage, header.length, state);
+            const result = callbacks.references[0];
+
+            expect(callbacks.references.length).to.equal(1);
+            expect(result).to.eql({
+                contents: "$var1",
+                location: Location.create("fake-uri", Range.create(2, 0, 2, 5)),
+                kind: OChapbookSymbolKind.VariableSet,
+            });
+        });
+
         it("should capture references for a variable name and its property", () => {
             const header = ":: Passage\n";
             const passage = "\n var1.prop: 17\n--\n";

@@ -51,7 +51,7 @@ import {
 const varsSepRegex = /^--(\r?\n|$)/m;
 const conditionRegex = /((\((.+?)\)?)\s*)([^)]*)$/;
 const modifierRegex = /^([ \t]*)\[([^[].+[^\]])\](\s*?)(?:\r?\n|$)/gm;
-const varsLineExtractionRegex = /^([ \t]*?)\b(.*)$/gm;
+const varsLineExtractionRegex = /^([ \t]*)(.*)$/gm;
 const varsLineVarOnlyExtractionRegex =
     /^(\s*)([A-Za-z$_][A-Za-z0-9$_.]*)?.*$/gmu;
 
