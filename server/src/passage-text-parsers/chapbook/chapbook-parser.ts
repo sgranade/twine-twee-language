@@ -2248,7 +2248,7 @@ function parseVarsSection(
             }
         }
 
-        // Make sure the name has no spaces and is a legal JS name
+        // Make sure the name has no spaces
         const spaceMatch = /\s+/.exec(name);
         if (spaceMatch !== null) {
             logErrorFor(
@@ -2258,24 +2258,6 @@ function parseVarsSection(
                 state
             );
             name = name.slice(0, spaceMatch.index);
-        }
-        if (!/^[A-Za-z$_]/u.test(name)) {
-            logErrorFor(
-                name[0],
-                sectionIndex + nameIndex,
-                "Variable names must start with a letter, $, or _",
-                state
-            );
-        }
-        for (const badCharMatch of name
-            .slice(1)
-            .matchAll(/[^A-Za-z0-9$_.]/gu)) {
-            logErrorFor(
-                badCharMatch[0],
-                sectionIndex + nameIndex + 1 + badCharMatch.index,
-                "Must be a letter, digit, $, or _",
-                state
-            );
         }
 
         // Capture the variable name reference as being set by this vars section

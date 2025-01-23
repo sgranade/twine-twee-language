@@ -14,6 +14,7 @@ Changes to the extension.
 - Fixed bug that caused issues if any files had no extension.
 - Chapbook and SugarCube now properly handle `[script]` passages.
 - Chapbook: Variables that start with `$` or `_` are now properly parsed.
+- Chapbook: Removed spurious errors for a range of variable names when set in the vars section.
 - Chapbook: `random.d4` and similar are no longer flagged as unrecognized variables.
 
 ## [1.1.2] - 2025 01 12
