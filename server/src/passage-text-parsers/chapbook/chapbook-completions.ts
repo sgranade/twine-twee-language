@@ -42,6 +42,12 @@ function generateVariableAndPropertyCompletions(
 ): CompletionList | null {
     const completions: string[] = [];
 
+    // Since we get auto-completion suggestions after a quote mark, if we're next to a quote mark,
+    // don't make any suggestions
+    if (text[text.length - 1] === '"') {
+        return null;
+    }
+
     // If there's a period and then variable characters at the end of the string, assume we're being
     // asked to generate properties. Only get ones that match the full context (like var1.prop)
     const m = /(\w+\.(\w+\.)*)(\w*)$/.exec(text);

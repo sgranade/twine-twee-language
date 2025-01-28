@@ -121,6 +121,82 @@ describe("Chapbook Completions", () => {
             expect(results?.items.length).to.equal(1);
             expect(results?.items[0]?.label).to.eql("anotherprop");
         });
+
+        it("should not suggest variables in the vars section inside a string", () => {
+            const doc = TextDocument.create(
+                "fake-uri",
+                "",
+                0,
+                ':: Passage\nvar: ""--\nContent'
+            );
+            const pos = Position.create(1, 6);
+            const index = new Index();
+            index.setPassages("fake-uri", [
+                buildPassage({
+                    label: "passage",
+                    scope: Range.create(0, 0, 4, 0),
+                }),
+            ]);
+            index.setReferences("fake-uri", [
+                {
+                    contents: "var1",
+                    locations: [
+                        Location.create("fake-uri", Range.create(1, 2, 3, 4)),
+                    ],
+                    kind: OChapbookSymbolKind.Variable,
+                },
+                {
+                    contents: "anotherVar",
+                    locations: [
+                        Location.create("fake-uri", Range.create(5, 6, 7, 8)),
+                    ],
+                    kind: OChapbookSymbolKind.VariableSet,
+                },
+            ]);
+            const parser = uut.getChapbookParser(undefined);
+
+            const results = parser?.generateCompletions(doc, pos, [], index);
+
+            expect(results).to.be.null;
+        });
+
+        it("should not suggest variables in the vars section just past a string", () => {
+            const doc = TextDocument.create(
+                "fake-uri",
+                "",
+                0,
+                ':: Passage\nvar: ""--\nContent'
+            );
+            const pos = Position.create(1, 7);
+            const index = new Index();
+            index.setPassages("fake-uri", [
+                buildPassage({
+                    label: "passage",
+                    scope: Range.create(0, 0, 4, 0),
+                }),
+            ]);
+            index.setReferences("fake-uri", [
+                {
+                    contents: "var1",
+                    locations: [
+                        Location.create("fake-uri", Range.create(1, 2, 3, 4)),
+                    ],
+                    kind: OChapbookSymbolKind.Variable,
+                },
+                {
+                    contents: "anotherVar",
+                    locations: [
+                        Location.create("fake-uri", Range.create(5, 6, 7, 8)),
+                    ],
+                    kind: OChapbookSymbolKind.VariableSet,
+                },
+            ]);
+            const parser = uut.getChapbookParser(undefined);
+
+            const results = parser?.generateCompletions(doc, pos, [], index);
+
+            expect(results).to.be.null;
+        });
     });
 
     describe("Modifiers", () => {

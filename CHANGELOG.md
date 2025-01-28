@@ -16,6 +16,7 @@ Changes to the extension.
 - Chapbook: Variables that start with `$` or `_` are now properly parsed.
 - Chapbook: Removed spurious errors for a range of variable names when set in the vars section.
 - Chapbook: `random.d4` and similar are no longer flagged as unrecognized variables.
+- Chapbook: Variables are no longer auto-suggested in strings inside the vars section.
 
 ## [1.1.2] - 2025 01 12
 
