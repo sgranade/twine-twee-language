@@ -4,9 +4,13 @@ Changes to the extension.
 
 ## Unreleased
 
+A collection of Chapbook enhancements/fixes, as well as bringing SugarCube support up to parity with [twee3-language-tools](https://github.com/cyrusfirheir/twee3-language-tools/) v0.32.0.
+
 ### Changed
 
 - Chapbook: Insert completions aren't suggested after `{` in Javascript-modified sections.
+- Chapbook: Variables are no longer auto-suggested in strings inside the vars section.
+- SugarCube: Whitespace is now accepted after a `|` macro parameter variant. (twee3-language-tools issue [#176](https://github.com/cyrusfirheir/twee3-language-tools/issues/176))
 
 ### Fixed
 
@@ -16,7 +20,6 @@ Changes to the extension.
 - Chapbook: Variables that start with `$` or `_` are now properly parsed.
 - Chapbook: Removed spurious errors for a range of variable names when set in the vars section.
 - Chapbook: `random.d4` and similar are no longer flagged as unrecognized variables.
-- Chapbook: Variables are no longer auto-suggested in strings inside the vars section.
 
 ## [1.1.2] - 2025 01 12
 

@@ -2294,7 +2294,7 @@ describe("SugarCube Parser", () => {
                         line: 1,
                         char: 33,
                         length: 6,
-                        tokenType: ETokenType.variable,
+                        tokenType: ETokenType.keyword,
                         tokenModifiers: [],
                     },
                 ]);
