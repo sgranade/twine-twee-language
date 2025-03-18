@@ -2,7 +2,7 @@
 
 Changes to the extension.
 
-## Unreleased
+## [1.1.3] - 2025 03 18
 
 A collection of Chapbook enhancements/fixes, as well as bringing SugarCube support up to parity with [twee3-language-tools](https://github.com/cyrusfirheir/twee3-language-tools/) v0.32.0.
 
