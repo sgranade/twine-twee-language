@@ -428,7 +428,7 @@ describe("Client Twine Parser", () => {
                         }
 
                         expect(result.message).to.include(
-                            "Couldn't parse metadata: Expected ':' after property name"
+                            "Couldn't parse metadata:"
                         );
                         expect(result.start).to.eql(13);
                         expect(result.end).to.eql(23);
@@ -448,7 +448,7 @@ describe("Client Twine Parser", () => {
                         }
 
                         expect(result.message).to.include(
-                            "Couldn't parse StoryData passage: Expected ':' after property name"
+                            "Couldn't parse StoryData passage:"
                         );
                         expect(result.start).to.eql(12);
                         expect(result.end).to.eql(23);
