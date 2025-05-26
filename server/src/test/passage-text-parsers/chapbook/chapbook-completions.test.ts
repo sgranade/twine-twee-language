@@ -435,6 +435,42 @@ describe("Chapbook Completions", () => {
             );
         });
 
+        it("should suggest a built-in modifier's required first argument's placeholder after a [ and the modifier name and before a ;", () => {
+            const doc = TextDocument.create(
+                "fake-uri",
+                "",
+                0,
+                ":: Passage\n[ mod ;"
+            );
+            const pos = Position.create(1, 6);
+            const index = new Index();
+            index.setPassages("fake-uri", [
+                buildPassage({
+                    label: "passage",
+                    scope: Range.create(0, 0, 2, 0),
+                }),
+            ]);
+            const modifier = buildModifierInfo({ name: "mod", match: /^mod/i });
+            modifier.completions = ["mod"];
+            modifier.firstArgument = {
+                required: ArgumentRequirement.required,
+                placeholder: "'URL'",
+            };
+            const mockFunction = ImportMock.mockFunction(
+                modifiersModule,
+                "all"
+            ).returns([modifier]);
+            const parser = uut.getChapbookParser(undefined);
+
+            const results = parser?.generateCompletions(doc, pos, [], index);
+            mockFunction.restore();
+
+            expect(results?.items[0].textEditText).to.eql("mod '${1:URL}'");
+            expect(results?.itemDefaults?.editRange).to.eql(
+                Range.create(1, 2, 1, 6)
+            );
+        });
+
         it("should suggest a custom modifier's required first argument's placeholder after a [ and the modifier name", () => {
             const doc = TextDocument.create(
                 "fake-uri",

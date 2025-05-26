@@ -8,6 +8,10 @@ Changes to the extension.
 
 - Chapbook: Variable section contents are now decorated in the editor to make them more visually distinctive when editing them.
 
+### Fixed
+
+- Chapbook: Modifier completions now work as expected when the cursor is at a semi-colon.
+
 ## [1.1.3] - 2025 03 18
 
 A collection of Chapbook enhancements/fixes, as well as bringing SugarCube support up to parity with [twee3-language-tools](https://github.com/cyrusfirheir/twee3-language-tools/) v0.32.0.

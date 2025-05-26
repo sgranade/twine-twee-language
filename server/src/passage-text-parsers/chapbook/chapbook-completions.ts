@@ -138,7 +138,9 @@ function generateModifierCompletions(
     // to a semicolon
     let atSemicolon = false;
     for (; i > modifierContentStart; i--) {
-        if (text[i] === ";") {
+        // Don't falsely decide that we're at a semicolon when the insertion point
+        // is at a semicolon (as in "[mod ;]" when the cursor's in front of the semicolon)
+        if (text[i] === ";" && i < offset) {
             atSemicolon = true;
             // Move forward ahead of the semicolon
             i++;
