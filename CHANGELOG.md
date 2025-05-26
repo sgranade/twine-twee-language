@@ -2,6 +2,12 @@
 
 Changes to the extension.
 
+## Unreleased
+
+### Added
+
+- Chapbook: Variable section contents are now decorated in the editor to make them more visually distinctive when editing them.
+
 ## [1.1.3] - 2025 03 18
 
 A collection of Chapbook enhancements/fixes, as well as bringing SugarCube support up to parity with [twee3-language-tools](https://github.com/cyrusfirheir/twee3-language-tools/) v0.32.0.
@@ -40,12 +46,12 @@ A collection of Chapbook enhancements/fixes, as well as bringing SugarCube suppo
 ### Added
 
 - Chapbook: Added folding ranges for modifiers.
+- Chapbook: Modifier contents are now decorated in the editor to make them more visually distinctive when editing them.
 
 ### Changed
 
 - Chapbook: Variable and property auto-completions now only include variables and properties set in a vars section.
 - Chapbook: Modifiers now have a different syntax highlighting color than inserts so they're easier to distinguish.
-- Chapbook: Modifier contents are now decorated in the editor to make them more visually distinctive when editing them.
 
 ### Fixed
 
@@ -59,7 +65,7 @@ A collection of Chapbook enhancements/fixes, as well as bringing SugarCube suppo
 
 - The extension now shows on the status bar when the project is being indexed.
 - SugarCube: Widgets defined by the `<<widget>>` macro are now parsed and recognized as macros.
-- SugarCube: The `data-passage` and `data-setter` [special HTML attributes ](http://www.motoslave.net/sugarcube/2/docs/#markup-html-svg-attribute-special) are now parsed.
+- SugarCube: The `data-passage` and `data-setter` [special HTML attributes](http://www.motoslave.net/sugarcube/2/docs/#markup-html-svg-attribute-special) are now parsed.
 - SugarCube: [Attribute directives](http://www.motoslave.net/sugarcube/2/docs/#markup-html-svg-attribute-directive) are now parsed.
 - SugarCube: [Custom styles](https://www.motoslave.net/sugarcube/2/docs/#markup-custom-style) are now parsed.
 

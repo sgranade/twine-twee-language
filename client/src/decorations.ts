@@ -13,11 +13,21 @@ const decorations: Record<DecorationType, vscode.TextEditorDecorationType> = {
             borderSpacing: "0 0 0 10px",
             dark: {
                 backgroundColor: "rgba(0, 0, 150, 0.2)",
-                borderColor: "rgb(150, 150, 150)",
+                borderColor: "rgba(150, 150, 150, 0.5)",
             },
             light: {
                 backgroundColor: "rgba(120, 255, 255, 0.2)",
-                borderColor: "rgb(50, 50, 50)",
+                borderColor: "rgba(50, 50, 50, 0.5)",
+            },
+            isWholeLine: true,
+        }),
+    [DecorationType.ChapbookVarsSection]:
+        vscode.window.createTextEditorDecorationType({
+            dark: {
+                backgroundColor: "rgba(0, 0, 150, 0.2)",
+            },
+            light: {
+                backgroundColor: "rgba(120, 255, 255, 0.2)",
             },
             isWholeLine: true,
         }),
@@ -25,6 +35,7 @@ const decorations: Record<DecorationType, vscode.TextEditorDecorationType> = {
 
 const currentRanges: Record<DecorationType, vscode.Range[]> = {
     [DecorationType.ChapbookModifierContent]: [],
+    [DecorationType.ChapbookVarsSection]: [],
 };
 
 /**

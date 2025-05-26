@@ -2182,6 +2182,29 @@ function parseVarsSection(
     state: ParsingState,
     chapbookState: ChapbookParsingState
 ): void {
+    // Decorate the vars section minus the end \r?\n
+    let varsEndIndex = section.length;
+    for (
+        ;
+        varsEndIndex > 1 && section[varsEndIndex - 1] === "\n";
+        varsEndIndex -= section[varsEndIndex - 2] === "\r" ? 2 : 1
+    );
+    if (varsEndIndex > 0) {
+        const range = Range.create(
+            state.textDocument.positionAt(0 + sectionIndex),
+            state.textDocument.positionAt(varsEndIndex + sectionIndex)
+        );
+        // Since this decorator encompasses the whole line, make the end character
+        // super large. Otherwise, as the user types at the end of the line, the
+        // decoration will vanish since the cursor won't be within this range until
+        // the ranges update.
+        range.end.character = 9999;
+        state.callbacks.onDecorationRange({
+            type: DecorationType.ChapbookVarsSection,
+            range: range,
+        });
+    }
+
     // Parse line by line
     varsLineExtractionRegex.lastIndex = 0;
     for (const m of section.matchAll(varsLineExtractionRegex)) {

@@ -47,6 +47,7 @@ export interface DecorationRangeInfo {
  */
 export enum DecorationType {
     ChapbookModifierContent = 1,
+    ChapbookVarsSection = 2,
 }
 
 /**

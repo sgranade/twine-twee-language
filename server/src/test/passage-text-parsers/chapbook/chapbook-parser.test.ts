@@ -164,6 +164,28 @@ describe("Chapbook Parser", () => {
     });
 
     describe("vars section", () => {
+        it("should capture decoration ranges for the vars section", () => {
+            const header = ":: Passage\n";
+            const passage = "\n var1: 17\n--\n";
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                uri: "fake-uri",
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            const parser = uut.getChapbookParser(undefined);
+
+            parser?.parsePassageText(passage, header.length, state);
+            const result = callbacks.decorationRanges;
+
+            expect(result).to.eql([
+                {
+                    type: DecorationType.ChapbookVarsSection,
+                    range: Range.create(1, 0, 2, 9999),
+                },
+            ]);
+        });
+
         it("should capture a variable set reference for a variable name", () => {
             const header = ":: Passage\n";
             const passage = "\n var1: 17\n--\n";
