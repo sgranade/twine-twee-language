@@ -135,9 +135,9 @@ function webviewifyHtml(rootUri: vscode.Uri, src: string): string {
 
     // Turn src, href, and URL() references into webview URIs
     src = src.replace(
-        /(src|href)="(file:.*?|(?:[\w\-._~/]|%[0-9a-fA-F]{2})*?)"/g,
-        (_substr, attribute, uriOrPath) =>
-            `${attribute}="${uriOrPathToWebviewUri(rootUri, uriOrPath)}`
+        /(src|href)=("|&quot;)(file:.*?|(?:[\w\-._~/]|%[0-9a-fA-F]{2})*?)("|&quot;)/g,
+        (_substr, attribute, openQuote, uriOrPath, closeQuote) =>
+            `${attribute}=${openQuote}${uriOrPathToWebviewUri(rootUri, uriOrPath)}${closeQuote}`
     );
     src = src.replace(
         /url\(("?)((?:[\w\-._~/]|%[0-9a-fA-F]{2})*?)\1\)/g,
