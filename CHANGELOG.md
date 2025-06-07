@@ -10,7 +10,8 @@ Changes to the extension.
 
 ### Fixed
 
-- Chapbook: Modifier completions now work as expected when the cursor is at a semi-colon.
+- Chapbook: Modifier completions now work as expected when the cursor is at a semicolon.
+- SugarCube: Warns if `<<do>>` macro is used before SugarCube 2.37.0.
 
 ## [1.1.3] - 2025 03 18
 

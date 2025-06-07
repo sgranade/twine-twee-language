@@ -25,7 +25,7 @@ export const doMacro: MacroInfo = {
     syntax: "<<do [tag tags] [element tag]>> … <</do>>",
     description:
         "Displays its contents. Listens for `<<redo>>` macro commands upon which it updates its contents.",
-    since: "2.0.0",
+    since: "2.37.0",
 };
 
 export const includeMacro: MacroInfo = {
