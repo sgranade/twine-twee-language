@@ -25,8 +25,8 @@ export const gotoMacro: MacroInfo = {
     since: "2.0.0",
 };
 
-export const repeatdelayMacro: MacroInfo = {
-    name: "repeatdelay",
+export const repeatMacro: MacroInfo = {
+    name: "repeat",
     container: true,
     arguments: ["text |+ 'transition'|'t8n'"],
     syntax: "<<repeat delay [transition|t8n]>> … <</repeat>>",
@@ -38,7 +38,7 @@ export const repeatdelayMacro: MacroInfo = {
 export const stopMacro: MacroInfo = {
     name: "stop",
     arguments: false,
-    parents: ["repeatdelay"],
+    parents: ["repeat"],
     syntax: "<<stop>>",
     description:
         "Used within `<<repeat>>` macros. Terminates the execution of the current `<<repeat>>`.",
