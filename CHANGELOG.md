@@ -2,7 +2,7 @@
 
 Changes to the extension.
 
-## Unreleased
+## [1.1.4] - 2025 06 25
 
 ### Added
 
@@ -12,6 +12,7 @@ Changes to the extension.
 
 - Properly loads local images When running games. (issue #5)
 - Chapbook: Modifier completions now work as expected when the cursor is at a semicolon.
+- SugarCube: Now properly recognizes the `<<repeat>>` macro. (issue #6)
 - SugarCube: Warns if `<<do>>` macro is used before SugarCube 2.37.0.
 
 ## [1.1.3] - 2025 03 18
