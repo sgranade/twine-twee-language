@@ -433,7 +433,7 @@ export async function build(
             const includeRootWorkspaceDir = UriUtils.joinPath(
                 rootUri,
                 includeDir
-            ).toString();
+            ).toString(true);
             for (const includeFileUri of await workspaceProvider.findFiles(
                 includeDir + "/**"
             )) {
@@ -441,7 +441,7 @@ export async function build(
                 // basename. Instead, we need to remove the leading directories up to and
                 // including the include directory in the workspace.
                 let includeFilepath = "ERROR";
-                const includeFileStr = includeFileUri.toString();
+                const includeFileStr = includeFileUri.toString(true);
                 // First see if the included file is in the root workspace's include directory
                 const ndx = includeFileStr.indexOf(includeRootWorkspaceDir);
                 if (ndx !== -1) {

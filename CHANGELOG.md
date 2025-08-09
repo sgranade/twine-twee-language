@@ -2,6 +2,12 @@
 
 Changes to the extension.
 
+## Unreleased
+
+### Fixed
+
+- Build system no longer percent-encodes spaces in included files' filenames. (issue #7)
+
 ## [1.1.4] - 2025 06 25
 
 ### Added
