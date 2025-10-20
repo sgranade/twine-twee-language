@@ -9,7 +9,7 @@ import {
 } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
-import { DecorationRange, DecorationType } from "../client-server";
+import { DecorationType } from "../client-server";
 import { ParseLevel, ParsingState } from "../parser";
 import { Index } from "../project-index";
 import { buildPassage } from "./builders";

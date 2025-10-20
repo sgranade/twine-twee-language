@@ -1754,6 +1754,7 @@ function parseTextSubsection(
                             // Advance start variables for the next match.
                             startText = i + 1;
                             startCurly = subsection.indexOf("{", startText);
+                            i = startCurly;
 
                             if (startCurly === -1) {
                                 // There are no more open curly brackets left to examine.

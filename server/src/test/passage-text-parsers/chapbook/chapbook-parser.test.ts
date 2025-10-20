@@ -1724,6 +1724,39 @@ describe("Chapbook Parser", () => {
                     });
                 });
 
+                it("should produce semantic tokens for two variable inserts with a quote mark between them", () => {
+                    // To make sure our string-and-insert parsing works as expected
+                    const header = ":: Passage\n";
+                    const passage =
+                        "Some content.\n" +
+                        "A variable insert: { varbl  } var'bl 2 {varbl2}.\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    const [insertToken1, insertToken2] = callbacks.tokens;
+
+                    expect(callbacks.tokens.length).to.equal(2);
+                    expect(insertToken1).to.eql({
+                        line: 2,
+                        char: 21,
+                        length: 5,
+                        tokenType: ETokenType.variable,
+                        tokenModifiers: [],
+                    });
+                    expect(insertToken2).to.eql({
+                        line: 2,
+                        char: 40,
+                        length: 6,
+                        tokenType: ETokenType.variable,
+                        tokenModifiers: [],
+                    });
+                });
+
                 it("should produce semantic tokens for a simple insert", () => {
                     const header = ":: Passage\n";
                     const passage =
