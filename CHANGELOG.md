@@ -7,6 +7,7 @@ Changes to the extension.
 ### Fixed
 
 - Build system no longer percent-encodes spaces in included files' filenames. (issue #7)
+- Spaces are now allowed in local image paths when running games.
 - Chapbook: Inserts with a quote mark in the text between them (such as `{var1} ' {var2}`) no longer ignore the second insert.
 
 ## [1.1.4] - 2025 06 25
