@@ -11,15 +11,15 @@ import { ModifierInfo } from "./types";
 export * from "./types";
 
 const builtins: ModifierInfo[] = [
-    after,
-    align,
-    append,
-    ifConditionals,
-    elseConditional,
-    cont,
-    css,
-    javascript,
-    note,
+  after,
+  align,
+  append,
+  ifConditionals,
+  elseConditional,
+  cont,
+  css,
+  javascript,
+  note,
 ];
 
 const inserts = [...builtins];
@@ -29,5 +29,5 @@ const inserts = [...builtins];
  * @returns Modifier parsers.
  */
 export function all(): readonly ModifierInfo[] {
-    return inserts;
+  return inserts;
 }

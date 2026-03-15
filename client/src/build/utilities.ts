@@ -2,11 +2,11 @@
  * Mapping of entities to escaped strings.
  */
 const entitiesEscape = {
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&#39;",
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+  '"': "&quot;",
+  "'": "&#39;",
 };
 
 /**
@@ -23,11 +23,11 @@ const entitiesToEscapeRegex = /[&<>"']/g;
  * @returns Escaped string.
  */
 export function escapeHtmlEntities(src: string): string {
-    if (src.length > 0) {
-        entitiesToEscapeRegex.lastIndex = 0;
-        return src.replace(entitiesToEscapeRegex, (m) => entitiesEscape[m]);
-    }
-    return src;
+  if (src.length > 0) {
+    entitiesToEscapeRegex.lastIndex = 0;
+    return src.replace(entitiesToEscapeRegex, (m) => entitiesEscape[m]);
+  }
+  return src;
 }
 
 /**
@@ -44,9 +44,9 @@ const attrsToEscapeRegex = /[&"']/g;
  * @returns Escaped string.
  */
 export function escapeAttrEntities(src: string): string {
-    if (src.length > 0) {
-        attrsToEscapeRegex.lastIndex = 0;
-        return src.replace(attrsToEscapeRegex, (m) => entitiesEscape[m]);
-    }
-    return src;
+  if (src.length > 0) {
+    attrsToEscapeRegex.lastIndex = 0;
+    return src.replace(attrsToEscapeRegex, (m) => entitiesEscape[m]);
+  }
+  return src;
 }

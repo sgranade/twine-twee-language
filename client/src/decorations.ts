@@ -6,36 +6,36 @@ import { DecorationRange, DecorationType } from "./client-server";
  * Text decorations for each decoration type.
  */
 const decorations: Record<DecorationType, vscode.TextEditorDecorationType> = {
-    [DecorationType.ChapbookModifierContent]:
-        vscode.window.createTextEditorDecorationType({
-            borderWidth: "0 0 0 1px",
-            borderStyle: "solid",
-            borderSpacing: "0 0 0 10px",
-            dark: {
-                backgroundColor: "rgba(0, 0, 150, 0.2)",
-                borderColor: "rgba(150, 150, 150, 0.5)",
-            },
-            light: {
-                backgroundColor: "rgba(120, 255, 255, 0.2)",
-                borderColor: "rgba(50, 50, 50, 0.5)",
-            },
-            isWholeLine: true,
-        }),
-    [DecorationType.ChapbookVarsSection]:
-        vscode.window.createTextEditorDecorationType({
-            dark: {
-                backgroundColor: "rgba(0, 0, 150, 0.2)",
-            },
-            light: {
-                backgroundColor: "rgba(120, 255, 255, 0.2)",
-            },
-            isWholeLine: true,
-        }),
+  [DecorationType.ChapbookModifierContent]:
+    vscode.window.createTextEditorDecorationType({
+      borderWidth: "0 0 0 1px",
+      borderStyle: "solid",
+      borderSpacing: "0 0 0 10px",
+      dark: {
+        backgroundColor: "rgba(0, 0, 150, 0.2)",
+        borderColor: "rgba(150, 150, 150, 0.5)",
+      },
+      light: {
+        backgroundColor: "rgba(120, 255, 255, 0.2)",
+        borderColor: "rgba(50, 50, 50, 0.5)",
+      },
+      isWholeLine: true,
+    }),
+  [DecorationType.ChapbookVarsSection]:
+    vscode.window.createTextEditorDecorationType({
+      dark: {
+        backgroundColor: "rgba(0, 0, 150, 0.2)",
+      },
+      light: {
+        backgroundColor: "rgba(120, 255, 255, 0.2)",
+      },
+      isWholeLine: true,
+    }),
 };
 
 const currentRanges: Record<DecorationType, vscode.Range[]> = {
-    [DecorationType.ChapbookModifierContent]: [],
-    [DecorationType.ChapbookVarsSection]: [],
+  [DecorationType.ChapbookModifierContent]: [],
+  [DecorationType.ChapbookVarsSection]: [],
 };
 
 /**
@@ -44,21 +44,21 @@ const currentRanges: Record<DecorationType, vscode.Range[]> = {
  * @param ranges Decoration ranges for the current editor.
  */
 export function setEditorDecorationRanges(ranges: DecorationRange[]): void {
-    for (const type of Object.keys(DecorationType).filter(
-        (k) => !isNaN(Number(k))
-    )) {
-        currentRanges[type].length = 0;
-    }
-    for (const range of ranges) {
-        currentRanges[range.type].push(
-            new vscode.Range(
-                range.range.start.line,
-                range.range.start.character,
-                range.range.end.line,
-                range.range.end.character
-            )
-        );
-    }
+  for (const type of Object.keys(DecorationType).filter(
+    (k) => !isNaN(Number(k)),
+  )) {
+    currentRanges[type].length = 0;
+  }
+  for (const range of ranges) {
+    currentRanges[range.type].push(
+      new vscode.Range(
+        range.range.start.line,
+        range.range.start.character,
+        range.range.end.line,
+        range.range.end.character,
+      ),
+    );
+  }
 }
 
 /**
@@ -67,12 +67,10 @@ export function setEditorDecorationRanges(ranges: DecorationRange[]): void {
  * @param editor Editor to update the decoration in.
  */
 export function updateDecoration(editor: vscode.TextEditor): void {
-    const cursorPosition = editor.selection.active;
-    // If these searches end up being a bottleneck, consider switching to interval trees
-    for (const [type, ranges] of Object.entries(currentRanges)) {
-        const containingRanges = ranges.filter((r) =>
-            r.contains(cursorPosition)
-        );
-        editor.setDecorations(decorations[type], containingRanges);
-    }
+  const cursorPosition = editor.selection.active;
+  // If these searches end up being a bottleneck, consider switching to interval trees
+  for (const [type, ranges] of Object.entries(currentRanges)) {
+    const containingRanges = ranges.filter((r) => r.contains(cursorPosition));
+    editor.setDecorations(decorations[type], containingRanges);
+  }
 }

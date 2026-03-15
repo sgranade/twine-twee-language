@@ -6,21 +6,21 @@
  */
 
 import {
-    sc2MacroBody,
-    sc2MacroEnd,
-    sc2MacroSelfClose,
+  sc2MacroBody,
+  sc2MacroEnd,
+  sc2MacroSelfClose,
 } from "../../../client-server";
 
 /**
  * \s character class without a line terminator.
  */
 const spaceNoTerminator =
-    "[\\u0020\\f\\t\\v\\u00a0\\u1680\\u180e\\u2000-\\u200a\\u202f\\u205f\\u3000\\ufeff]";
+  "[\\u0020\\f\\t\\v\\u00a0\\u1680\\u180e\\u2000-\\u200a\\u202f\\u205f\\u3000\\ufeff]";
 /**
  * Any letter, which also includes `-` (sure, why not).
  */
 const anyLetter =
-    "[0-9A-Z_a-z\\-\\u00c0-\\u00d6\\u00d8-\\u00f6\\u00f8-\\u00ff\\u0150\\u0170\\u0151\\u0171]";
+  "[0-9A-Z_a-z\\-\\u00c0-\\u00d6\\u00d8-\\u00f6\\u00f8-\\u00ff\\u0150\\u0170\\u0151\\u0171]";
 /**
  * TwineScript variables with a single `$` (with no `$` before it) or `_` sigil.
  * Separate from the `variable` pattern b/c we don't accept `$$var` but do accept `_$var`.
@@ -34,39 +34,39 @@ export const identifier = "[A-Za-z$_][\\w$]*";
  * Blocks that act as a comment block.
  */
 export const commentBlock = [
-    ["/\\*", "\\*/"],
-    ["/%", "%/"],
-    ["<!--", "-->"],
+  ["/\\*", "\\*/"],
+  ["/%", "%/"],
+  ["<!--", "-->"],
 ]
-    .map(([open, close]) => `(?:${open}(?:.|\r?\n)*?${close})`)
-    .join("|");
+  .map(([open, close]) => `(?:${open}(?:.|\r?\n)*?${close})`)
+  .join("|");
 /**
  * Blocks in which no wiki markup will be done.
  * This is mainly important to keep us from interpolating variables or parsing macros.
  */
 export const noWikiBlock = [
-    ["\\{\\{\\{", "\\}\\}\\}"],
-    ['"""', '"""'],
-    ["<nowiki>", "</nowiki>"],
+  ["\\{\\{\\{", "\\}\\}\\}"],
+  ['"""', '"""'],
+  ["<nowiki>", "</nowiki>"],
 ]
-    .map(([open, close]) => `(?:${open}(?:.|\r?\n)*?${close})`)
-    .join("|");
+  .map(([open, close]) => `(?:${open}(?:.|\r?\n)*?${close})`)
+  .join("|");
 /**
  * Verbatim HTML, JS scripts or CSS style blocks.
  * This is also mainly important to keep us from interpolating variables or parsing macros.
  */
 export const htmlScriptStyleBlock = [
-    ["(?!<<)<html>(?!>)", "(?!<<)</html>(?!>)"],
-    ["(?!<<)<script[^>]*>(?!>)", "(?!<<)</script>(?!>)"],
-    ["(?!<<)<style[^>]*>(?!>)", "(?!<<)</style>(?!>)"],
+  ["(?!<<)<html>(?!>)", "(?!<<)</html>(?!>)"],
+  ["(?!<<)<script[^>]*>(?!>)", "(?!<<)</script>(?!>)"],
+  ["(?!<<)<style[^>]*>(?!>)", "(?!<<)</style>(?!>)"],
 ]
-    .map(([open, close]) => `(?:${open}(?:.|\r?\n)*?${close})`)
-    .join("|");
+  .map(([open, close]) => `(?:${open}(?:.|\r?\n)*?${close})`)
+  .join("|");
 /**
  * Acceptable character in a custom HTML element's name.
  */
 const cENChar =
-    "(?:[\\x2D.0-9A-Z_a-z\\xB7\\xC0-\\xD6\\xD8-\\xF6\\xF8-\\u037D\\u037F-\\u1FFF\\u200C\\u200D\\u203F\\u2040\\u2070-\\u218F\\u2C00-\\u2FEF\\u3001-\\uD7FF\\uF900-\\uFDCF\\uFDF0-\\uFFFD]|[\\uD800-\\uDB7F][\\uDC00-\\uDFFF])";
+  "(?:[\\x2D.0-9A-Z_a-z\\xB7\\xC0-\\xD6\\xD8-\\xF6\\xF8-\\u037D\\u037F-\\u1FFF\\u200C\\u200D\\u203F\\u2040\\u2070-\\u218F\\u2C00-\\u2FEF\\u3001-\\uD7FF\\uF900-\\uFDCF\\uFDF0-\\uFFFD]|[\\uD800-\\uDB7F][\\uDC00-\\uDFFF])";
 /**
  * HTML tag.
  *
@@ -119,13 +119,12 @@ export const inlineCss = `${cssStyle}|${conjoinedCssIdsOrClasses}`;
  * Script macro block.
  */
 export const scriptMacroBlock = [
-    ["<<script(?:\\s*(?<language>.*?)\\s*)>>", "<</script>>"],
+  ["<<script(?:\\s*(?<language>.*?)\\s*)>>", "<</script>>"],
 ]
-    .map(
-        ([open, close]) =>
-            `(?:(?<open>${open})(?<contents>(?:.|\r?\n)*?)${close})`
-    )
-    .join("|");
+  .map(
+    ([open, close]) => `(?:(?<open>${open})(?<contents>(?:.|\r?\n)*?)${close})`,
+  )
+  .join("|");
 
 // Most of the macro regexes are in `client-server.ts` because the client
 // needs access to them

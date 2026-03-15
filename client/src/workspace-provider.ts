@@ -5,93 +5,93 @@
 import { URI } from "vscode-uri";
 
 export interface WorkspaceProvider {
+  /**
+   * Find files across all workspace folders in the workspace.
+   *
+   * @param include A glob pattern that defines the files to search for. The glob pattern
+   * will be matched against the file paths of resulting matches relative to their workspace.
+   * @param exclude  A glob pattern that defines files and folders to exclude. The glob pattern
+   * will be matched against the file paths of resulting matches relative to their workspace.
+   * When `undefined`, default file-excludes (e.g. the `files.exclude`-setting
+   * but not `search.exclude`) will apply. When `null`, no excludes will apply.
+   * @param maxResults An upper-bound for the result.
+   * @returns A thenable that resolves to an array of resource identifiers. Will return no results if no
+   * workspace folders are opened.
+   */
+  findFiles(
+    include: string,
+    exclude?: string,
+    maxResults?: number,
+  ): Thenable<URI[]>;
+  /**
+   * Get a workspace configuration item.
+   *
+   * Dots in the identifiers are interpreted as child-access,
+   * like `{ myExt: { setting: { doIt: true }}}` and `getConfiguration('myExt.setting').get('doIt') === true`.
+   *
+   * @param section Dot-separated configuration section identifier.
+   * @param item Dot-separated configuration item identifier.
+   * @returns The configuration item.
+   */
+  getConfigurationItem<T>(section: string, item: string): T;
+  /**
+   * URI of the first entry in the workspace folders.
+   *
+   * Returns undefined if no workspace is open.
+   *
+   * N.B. we don't currently support multiple workspace folders.
+   */
+  rootWorkspaceUri(): URI | undefined;
+  fs: {
     /**
-     * Find files across all workspace folders in the workspace.
+     * Create a new directory (Note, that new files are created via `write`-calls).
      *
-     * @param include A glob pattern that defines the files to search for. The glob pattern
-     * will be matched against the file paths of resulting matches relative to their workspace.
-     * @param exclude  A glob pattern that defines files and folders to exclude. The glob pattern
-     * will be matched against the file paths of resulting matches relative to their workspace.
-     * When `undefined`, default file-excludes (e.g. the `files.exclude`-setting
-     * but not `search.exclude`) will apply. When `null`, no excludes will apply.
-     * @param maxResults An upper-bound for the result.
-     * @returns A thenable that resolves to an array of resource identifiers. Will return no results if no
-     * workspace folders are opened.
+     * *Note* that missing directories are created automatically, e.g this call has
+     * `mkdirp` semantics.
+     *
+     * @param uri The uri of the new folder.
      */
-    findFiles(
-        include: string,
-        exclude?: string,
-        maxResults?: number
-    ): Thenable<URI[]>;
+    createDirectory(uri: URI): Thenable<void>;
     /**
-     * Get a workspace configuration item.
+     * Retrieve all entries of a {@link FileType.Directory directory}.
      *
-     * Dots in the identifiers are interpreted as child-access,
-     * like `{ myExt: { setting: { doIt: true }}}` and `getConfiguration('myExt.setting').get('doIt') === true`.
-     *
-     * @param section Dot-separated configuration section identifier.
-     * @param item Dot-separated configuration item identifier.
-     * @returns The configuration item.
+     * @param uri The uri of the folder.
+     * @returns An array of name/type-tuples or a thenable that resolves to such.
+     * @throws Error (FileNotFound) if the directory isn't found.
      */
-    getConfigurationItem<T>(section: string, item: string): T;
+    readDirectory(uri: URI): Thenable<[string, FileType][]>;
     /**
-     * URI of the first entry in the workspace folders.
+     * Read the entire contents of a file.
      *
-     * Returns undefined if no workspace is open.
-     *
-     * N.B. we don't currently support multiple workspace folders.
+     * @param uri The uri of the file.
+     * @returns An array of bytes or a thenable that resolves to such.
      */
-    rootWorkspaceUri(): URI | undefined;
-    fs: {
+    readFile: (uri: URI) => Thenable<Uint8Array>;
+    /**
+     * Write data to a file, replacing its entire contents.
+     *
+     * @param uri The uri of the file.
+     * @param content The new content of the file.
+     */
+    writeFile: (uri: URI, content: Uint8Array) => Thenable<void>;
+    /**
+     * Copy files or folders.
+     *
+     * @param source The existing file.
+     * @param target The destination location.
+     * @param options Defines if existing files should be overwritten.
+     */
+    copy(
+      source: URI,
+      target: URI,
+      options?: {
         /**
-         * Create a new directory (Note, that new files are created via `write`-calls).
-         *
-         * *Note* that missing directories are created automatically, e.g this call has
-         * `mkdirp` semantics.
-         *
-         * @param uri The uri of the new folder.
+         * Overwrite the file if it does exist.
          */
-        createDirectory(uri: URI): Thenable<void>;
-        /**
-         * Retrieve all entries of a {@link FileType.Directory directory}.
-         *
-         * @param uri The uri of the folder.
-         * @returns An array of name/type-tuples or a thenable that resolves to such.
-         * @throws Error (FileNotFound) if the directory isn't found.
-         */
-        readDirectory(uri: URI): Thenable<[string, FileType][]>;
-        /**
-         * Read the entire contents of a file.
-         *
-         * @param uri The uri of the file.
-         * @returns An array of bytes or a thenable that resolves to such.
-         */
-        readFile: (uri: URI) => Thenable<Uint8Array>;
-        /**
-         * Write data to a file, replacing its entire contents.
-         *
-         * @param uri The uri of the file.
-         * @param content The new content of the file.
-         */
-        writeFile: (uri: URI, content: Uint8Array) => Thenable<void>;
-        /**
-         * Copy files or folders.
-         *
-         * @param source The existing file.
-         * @param target The destination location.
-         * @param options Defines if existing files should be overwritten.
-         */
-        copy(
-            source: URI,
-            target: URI,
-            options?: {
-                /**
-                 * Overwrite the file if it does exist.
-                 */
-                overwrite?: boolean;
-            }
-        ): Thenable<void>;
-    };
+        overwrite?: boolean;
+      },
+    ): Thenable<void>;
+  };
 }
 
 /**
@@ -104,20 +104,20 @@ export interface WorkspaceProvider {
  * `FileType.Directory | FileType.SymbolicLink`.
  */
 export enum FileType {
-    /**
-     * The file type is unknown.
-     */
-    Unknown = 0,
-    /**
-     * A regular file.
-     */
-    File = 1,
-    /**
-     * A directory.
-     */
-    Directory = 2,
-    /**
-     * A symbolic link to a file.
-     */
-    SymbolicLink = 64,
+  /**
+   * The file type is unknown.
+   */
+  Unknown = 0,
+  /**
+   * A regular file.
+   */
+  File = 1,
+  /**
+   * A directory.
+   */
+  Directory = 2,
+  /**
+   * A symbolic link to a file.
+   */
+  SymbolicLink = 64,
 }

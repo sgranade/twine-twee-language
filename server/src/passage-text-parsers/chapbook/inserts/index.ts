@@ -18,22 +18,22 @@ import { InsertInfo } from "./types";
 export * from "./types";
 
 const builtins: InsertInfo[] = [
-    ambientSound,
-    backLink,
-    cyclingLink,
-    dropdownMenu,
-    embedFlickrImage,
-    embedImage,
-    embedPassage,
-    embedUnsplashImage,
-    embedYouTubeVideo,
-    link,
-    noAmbientSound,
-    restartLink,
-    revealLink,
-    soundEffect,
-    textInput,
-    themeSwitcher,
+  ambientSound,
+  backLink,
+  cyclingLink,
+  dropdownMenu,
+  embedFlickrImage,
+  embedImage,
+  embedPassage,
+  embedUnsplashImage,
+  embedYouTubeVideo,
+  link,
+  noAmbientSound,
+  restartLink,
+  revealLink,
+  soundEffect,
+  textInput,
+  themeSwitcher,
 ];
 
 const inserts = [...builtins];
@@ -43,5 +43,5 @@ const inserts = [...builtins];
  * @returns Insert parsers.
  */
 export function all(): readonly InsertInfo[] {
-    return inserts;
+  return inserts;
 }

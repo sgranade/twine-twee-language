@@ -2,17 +2,17 @@ import { ModifierInfo } from "../../../../passage-text-parsers/chapbook/modifier
 import { ArgumentRequirement } from "../../../../passage-text-parsers/chapbook/types";
 
 export function buildModifierInfo({
-    name = "Mock Modifier",
-    description = "Description",
-    match = /^mock modifier/,
-    firstArgRequired = ArgumentRequirement.ignored,
+  name = "Mock Modifier",
+  description = "Description",
+  match = /^mock modifier/,
+  firstArgRequired = ArgumentRequirement.ignored,
 }): ModifierInfo {
-    return {
-        name: name,
-        description: description,
-        match: match,
-        completions: [],
-        firstArgument: { required: firstArgRequired },
-        parse: () => {},
-    };
+  return {
+    name: name,
+    description: description,
+    match: match,
+    completions: [],
+    firstArgument: { required: firstArgRequired },
+    parse: () => {},
+  };
 }

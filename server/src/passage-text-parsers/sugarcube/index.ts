@@ -12,13 +12,13 @@ import { allMacros } from "./macros";
  * @returns List of all macro names.
  */
 export function getSugarCubeMacroInfo(): SC2MacroInfo[] {
-    return Object.values(allMacros()).map((info) => {
-        return {
-            name: info.name,
-            isContainer: !!info.container,
-            isChild: !!(info.parents && info.parents.length > 0),
-        };
-    });
+  return Object.values(allMacros()).map((info) => {
+    return {
+      name: info.name,
+      isContainer: !!info.container,
+      isChild: !!(info.parents && info.parents.length > 0),
+    };
+  });
 }
 
 /**
@@ -28,16 +28,16 @@ export function getSugarCubeMacroInfo(): SC2MacroInfo[] {
  * @returns Parser, or undefined if none is available.
  */
 export function getSugarCubeParser(
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    formatVersion: string | undefined
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  formatVersion: string | undefined,
 ): StoryFormatParser | undefined {
-    return {
-        id: "sugarcube-any",
-        parsePassageText: parsePassageText,
-        generateCompletions: generateCompletions,
-        generateDiagnostics: generateDiagnostics,
-        generateHover: generateHover,
-        getDefinitionAt: () => undefined, // Unneeded -- the index will find all definitions
-        getReferencesToSymbolAt: () => undefined, // Unneeded -- the index will find all references
-    };
+  return {
+    id: "sugarcube-any",
+    parsePassageText: parsePassageText,
+    generateCompletions: generateCompletions,
+    generateDiagnostics: generateDiagnostics,
+    generateHover: generateHover,
+    getDefinitionAt: () => undefined, // Unneeded -- the index will find all definitions
+    getReferencesToSymbolAt: () => undefined, // Unneeded -- the index will find all references
+  };
 }
