@@ -1,8 +1,8 @@
 import {
-  Diagnostic,
-  DiagnosticSeverity,
-  Position,
-  Range,
+    Diagnostic,
+    DiagnosticSeverity,
+    Position,
+    Range,
 } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
@@ -13,13 +13,13 @@ import { TextDocument } from "vscode-languageserver-textdocument";
  * @yields Contents of the iterable as pairs.
  */
 export function* pairwise<T>(itr: Iterable<T>) {
-  let prevEntry;
-  for (const item of itr) {
-    if (prevEntry !== undefined) {
-      yield [prevEntry, item];
+    let prevEntry;
+    for (const item of itr) {
+        if (prevEntry !== undefined) {
+            yield [prevEntry, item];
+        }
+        prevEntry = item;
     }
-    prevEntry = item;
-  }
 }
 
 /**
@@ -30,19 +30,19 @@ export function* pairwise<T>(itr: Iterable<T>) {
  * @returns -1 if ver1 < ver2, 0 if ver1 = ver2, and 1 if ver1 > ver2
  */
 export function versionCompare(ver1: string, ver2: string): number {
-  const ver1Parts = ver1.split(".").map((n) => parseInt(n, 10));
-  const ver2Parts = ver2.split(".").map((n) => parseInt(n, 10));
-  const minLength = Math.min(ver1Parts.length, ver2Parts.length);
-  for (let i = 0; i < minLength; ++i) {
-    if (Number.isNaN(ver1Parts[i])) return -1;
-    if (Number.isNaN(ver2Parts[i])) return 1;
-    if (ver1Parts[i] < ver2Parts[i]) return -1;
-    if (ver1Parts[i] > ver2Parts[i]) return 1;
-  }
-  // If we reach here then the versions are equal as far as we've been able to compare
-  if (ver1Parts.length < ver2Parts.length) return -1;
-  if (ver1Parts.length > ver2Parts.length) return 1;
-  return 0;
+    const ver1Parts = ver1.split(".").map((n) => parseInt(n, 10));
+    const ver2Parts = ver2.split(".").map((n) => parseInt(n, 10));
+    const minLength = Math.min(ver1Parts.length, ver2Parts.length);
+    for (let i = 0; i < minLength; ++i) {
+        if (Number.isNaN(ver1Parts[i])) return -1;
+        if (Number.isNaN(ver2Parts[i])) return 1;
+        if (ver1Parts[i] < ver2Parts[i]) return -1;
+        if (ver1Parts[i] > ver2Parts[i]) return 1;
+    }
+    // If we reach here then the versions are equal as far as we've been able to compare
+    if (ver1Parts.length < ver2Parts.length) return -1;
+    if (ver1Parts.length > ver2Parts.length) return 1;
+    return 0;
 }
 
 /** TYPE NARROWING HELPERS **/
@@ -58,10 +58,10 @@ export function versionCompare(ver1: string, ver2: string): number {
  * @returns True if the object has the property.
  */
 export function hasOwnProperty<T, K extends PropertyKey>(
-  obj: T,
-  prop: K,
+    obj: T,
+    prop: K
 ): obj is T & Record<K, unknown> {
-  return Object.prototype.hasOwnProperty.call(obj, prop);
+    return Object.prototype.hasOwnProperty.call(obj, prop);
 }
 
 /** TEXT AND STRING MANIPULATION **/
@@ -76,16 +76,16 @@ const lineEndRegex = /\r?\n|$/g;
  * @returns Index corresponding to one past the line's end, including any \r\n
  */
 export function nextLineIndex(document: string, startIndex: number): number {
-  let lineEnd: number;
-  lineEndRegex.lastIndex = startIndex;
-  const m = lineEndRegex.exec(document);
-  if (m) {
-    lineEnd = m.index + m[0].length;
-  } else {
-    lineEnd = document.length - 1;
-  }
+    let lineEnd: number;
+    lineEndRegex.lastIndex = startIndex;
+    const m = lineEndRegex.exec(document);
+    if (m) {
+        lineEnd = m.index + m[0].length;
+    } else {
+        lineEnd = document.length - 1;
+    }
 
-  return lineEnd;
+    return lineEnd;
 }
 
 /**
@@ -97,30 +97,30 @@ export function nextLineIndex(document: string, startIndex: number): number {
  * @returns String with all matched text replaced by spaces.
  */
 export function eraseMatches(
-  s: string,
-  r: RegExp,
-  c?: (m: RegExpExecArray | null) => void,
+    s: string,
+    r: RegExp,
+    c?: (m: RegExpExecArray | null) => void
 ): string {
-  // For speed, erase the matches by collecting substrings to join at the end
-  const substrs: string[] = [];
-  let ndx = 0;
+    // For speed, erase the matches by collecting substrings to join at the end
+    const substrs: string[] = [];
+    let ndx = 0;
 
-  // Unroll these two for speed, since we call this a lot
-  if (c !== undefined) {
-    for (const m of s.matchAll(r)) {
-      c(m);
-      substrs.push(s.slice(ndx, m.index), " ".repeat(m[0].length));
-      ndx = m.index + m[0].length;
+    // Unroll these two for speed, since we call this a lot
+    if (c !== undefined) {
+        for (const m of s.matchAll(r)) {
+            c(m);
+            substrs.push(s.slice(ndx, m.index), " ".repeat(m[0].length));
+            ndx = m.index + m[0].length;
+        }
+    } else {
+        for (const m of s.matchAll(r)) {
+            substrs.push(s.slice(ndx, m.index), " ".repeat(m[0].length));
+            ndx = m.index + m[0].length;
+        }
     }
-  } else {
-    for (const m of s.matchAll(r)) {
-      substrs.push(s.slice(ndx, m.index), " ".repeat(m[0].length));
-      ndx = m.index + m[0].length;
-    }
-  }
-  substrs.push(s.slice(ndx));
+    substrs.push(s.slice(ndx));
 
-  return substrs.join("");
+    return substrs.join("");
 }
 
 const paddingAndTextRegex = /^(\s*)(.*?)(\s*)$/s;
@@ -132,11 +132,11 @@ const paddingAndTextRegex = /^(\s*)(.*?)(\s*)$/s;
  * @returns Tuple of the un-padded string and the lengths of removed padding on left and right.
  */
 export function removeAndCountPadding(s: string): [string, number, number] {
-  const m = paddingAndTextRegex.exec(s);
-  if (m === null) {
-    return ["", 0, 0];
-  }
-  return [m[2], m[1].length, m[3].length];
+    const m = paddingAndTextRegex.exec(s);
+    if (m === null) {
+        return ["", 0, 0];
+    }
+    return [m[2], m[1].length, m[3].length];
 }
 
 /**
@@ -149,8 +149,8 @@ export function removeAndCountPadding(s: string): [string, number, number] {
  * @returns Tuple of the un-padded string and the new index value.
  */
 export function skipSpaces(s: string, n: number): [string, number] {
-  const [sTrimmed, leftPad] = removeAndCountPadding(s);
-  return [sTrimmed, n + leftPad];
+    const [sTrimmed, leftPad] = removeAndCountPadding(s);
+    return [sTrimmed, n + leftPad];
 }
 
 const doubleQuoteSearch = /(?<!\\)"/g;
@@ -168,47 +168,50 @@ const parensSearch = /[()]/g;
  * @returns String contained within the delimiters, not including the closing delimiter.
  */
 export function extractToMatchingDelimiter(
-  s: string,
-  openDelimiter: string,
-  closeDelimiter: string,
-  startIndex = 0,
+    s: string,
+    openDelimiter: string,
+    closeDelimiter: string,
+    startIndex = 0
 ): string | undefined {
-  let matchEnd: number | undefined = undefined;
-  let delimiterCount = 0;
-  let m: RegExpExecArray | null;
-  let match: RegExp;
+    let matchEnd: number | undefined = undefined;
+    let delimiterCount = 0;
+    let m: RegExpExecArray | null;
+    let match: RegExp;
 
-  if (closeDelimiter === "}") {
-    match = bracketSearch;
-  } else if (closeDelimiter === '"') {
-    match = doubleQuoteSearch;
-  } else if (closeDelimiter === "'") {
-    match = singleQuoteSearch;
-  } else if (closeDelimiter === ")") {
-    match = parensSearch;
-  } else if (openDelimiter === closeDelimiter) {
-    match = RegExp(`(?<!\\\\)\\${openDelimiter}`, "g");
-  } else {
-    match = RegExp(`(?<!\\\\)(\\${openDelimiter}|\\${closeDelimiter})`, "g");
-  }
-
-  match.lastIndex = startIndex;
-
-  while ((m = match.exec(s))) {
-    if (m[0] === closeDelimiter) {
-      if (delimiterCount) delimiterCount--;
-      else {
-        matchEnd = m.index;
-        break;
-      }
-    } else if (m[0] === openDelimiter) {
-      delimiterCount++;
+    if (closeDelimiter === "}") {
+        match = bracketSearch;
+    } else if (closeDelimiter === '"') {
+        match = doubleQuoteSearch;
+    } else if (closeDelimiter === "'") {
+        match = singleQuoteSearch;
+    } else if (closeDelimiter === ")") {
+        match = parensSearch;
+    } else if (openDelimiter === closeDelimiter) {
+        match = RegExp(`(?<!\\\\)\\${openDelimiter}`, "g");
+    } else {
+        match = RegExp(
+            `(?<!\\\\)(\\${openDelimiter}|\\${closeDelimiter})`,
+            "g"
+        );
     }
-  }
-  if (matchEnd === undefined) {
-    return undefined;
-  }
-  return s.slice(startIndex, matchEnd);
+
+    match.lastIndex = startIndex;
+
+    while ((m = match.exec(s))) {
+        if (m[0] === closeDelimiter) {
+            if (delimiterCount) delimiterCount--;
+            else {
+                matchEnd = m.index;
+                break;
+            }
+        } else if (m[0] === openDelimiter) {
+            delimiterCount++;
+        }
+    }
+    if (matchEnd === undefined) {
+        return undefined;
+    }
+    return s.slice(startIndex, matchEnd);
 }
 
 /** EMBEDDED DOCUMENTS **/
@@ -223,14 +226,14 @@ export function extractToMatchingDelimiter(
  * @returns Position relative to the containing document.
  */
 export function containingPosition(
-  embeddedDocument: TextDocument,
-  embeddedPosition: Position,
-  document: TextDocument,
-  embeddedDocumentOffset: number,
+    embeddedDocument: TextDocument,
+    embeddedPosition: Position,
+    document: TextDocument,
+    embeddedDocumentOffset: number
 ): Position {
-  return document.positionAt(
-    embeddedDocument.offsetAt(embeddedPosition) + embeddedDocumentOffset,
-  );
+    return document.positionAt(
+        embeddedDocument.offsetAt(embeddedPosition) + embeddedDocumentOffset
+    );
 }
 
 /**
@@ -243,25 +246,25 @@ export function containingPosition(
  * @returns Position relative to the containing document.
  */
 export function containingRange(
-  embeddedDocument: TextDocument,
-  embeddedRange: Range,
-  document: TextDocument,
-  embeddedDocumentOffset: number,
+    embeddedDocument: TextDocument,
+    embeddedRange: Range,
+    document: TextDocument,
+    embeddedDocumentOffset: number
 ): Range {
-  return Range.create(
-    containingPosition(
-      embeddedDocument,
-      embeddedRange.start,
-      document,
-      embeddedDocumentOffset,
-    ),
-    containingPosition(
-      embeddedDocument,
-      embeddedRange.end,
-      document,
-      embeddedDocumentOffset,
-    ),
-  );
+    return Range.create(
+        containingPosition(
+            embeddedDocument,
+            embeddedRange.start,
+            document,
+            embeddedDocumentOffset
+        ),
+        containingPosition(
+            embeddedDocument,
+            embeddedRange.end,
+            document,
+            embeddedDocumentOffset
+        )
+    );
 }
 
 /** POSITION AND RANGE UTILITIES **/
@@ -273,13 +276,13 @@ export function containingRange(
  * @returns -1 if pos1 is before pos2, 0 if they're equal, 1 if pos1 is after pos2.
  */
 export function comparePositions(pos1: Position, pos2: Position): number {
-  if (pos1.line == pos2.line && pos1.character == pos2.character) {
-    return 0;
-  }
-  return pos1.line > pos2.line ||
-    (pos1.line == pos2.line && pos1.character > pos2.character)
-    ? 1
-    : -1;
+    if (pos1.line == pos2.line && pos1.character == pos2.character) {
+        return 0;
+    }
+    return pos1.line > pos2.line ||
+        (pos1.line == pos2.line && pos1.character > pos2.character)
+        ? 1
+        : -1;
 }
 
 /**
@@ -288,10 +291,10 @@ export function comparePositions(pos1: Position, pos2: Position): number {
  * @param range Range.
  */
 export function positionInRange(position: Position, range: Range): boolean {
-  return (
-    comparePositions(position, range.start) >= 0 &&
-    comparePositions(position, range.end) <= 0
-  );
+    return (
+        comparePositions(position, range.start) >= 0 &&
+        comparePositions(position, range.end) <= 0
+    );
 }
 
 /** OBJECT CREATION **/
@@ -308,19 +311,22 @@ export function positionInRange(position: Position, range: Range): boolean {
  * @param message Diagnostic message.
  */
 export function createDiagnostic(
-  severity: DiagnosticSeverity,
-  textDocument: TextDocument,
-  start: number,
-  end: number,
-  message: string,
+    severity: DiagnosticSeverity,
+    textDocument: TextDocument,
+    start: number,
+    end: number,
+    message: string
 ): Diagnostic {
-  return Diagnostic.create(
-    Range.create(textDocument.positionAt(start), textDocument.positionAt(end)),
-    message,
-    severity,
-    undefined,
-    "Twine",
-  );
+    return Diagnostic.create(
+        Range.create(
+            textDocument.positionAt(start),
+            textDocument.positionAt(end)
+        ),
+        message,
+        severity,
+        undefined,
+        "Twine"
+    );
 }
 
 /**
@@ -336,17 +342,17 @@ export function createDiagnostic(
  * @returns
  */
 export function createDiagnosticFor(
-  severity: DiagnosticSeverity,
-  textDocument: TextDocument,
-  text: string,
-  at: number,
-  message: string,
+    severity: DiagnosticSeverity,
+    textDocument: TextDocument,
+    text: string,
+    at: number,
+    message: string
 ): Diagnostic {
-  return createDiagnostic(
-    severity,
-    textDocument,
-    at,
-    at + text.length,
-    message,
-  );
+    return createDiagnostic(
+        severity,
+        textDocument,
+        at,
+        at + text.length,
+        message
+    );
 }

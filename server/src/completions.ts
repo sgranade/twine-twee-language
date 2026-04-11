@@ -1,21 +1,21 @@
 import { v4 } from "uuid";
 import {
-  CompletionItem,
-  CompletionItemKind,
-  CompletionList,
-  InsertTextFormat,
-  Position,
-  Range,
-  TextEdit,
+    CompletionItem,
+    CompletionItemKind,
+    CompletionList,
+    InsertTextFormat,
+    Position,
+    Range,
+    TextEdit,
 } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import {
-  EmbeddedDocument,
-  doComplete,
-  parseJSON,
-  storyDataJSONUri,
-  updateEmbeddedDocument,
+    EmbeddedDocument,
+    doComplete,
+    parseJSON,
+    storyDataJSONUri,
+    updateEmbeddedDocument,
 } from "./embedded-languages";
 import { getStoryFormatParser } from "./passage-text-parsers";
 import { ProjectIndex } from "./project-index";
@@ -34,23 +34,23 @@ import { containingRange, positionInRange } from "./utilities";
  * @returns Completion item.
  */
 function createStringCompletion(
-  label: string,
-  range: Range,
-  kind?: CompletionItemKind,
-  documentation?: string,
+    label: string,
+    range: Range,
+    kind?: CompletionItemKind,
+    documentation?: string
 ): CompletionItem {
-  const newText = `"${label}"`;
-  const item = {
-    label: newText,
-    kind: kind,
-    documentation: documentation,
-    insertTextFormat: InsertTextFormat.Snippet,
-    textEdit: {
-      range: range,
-      newText: newText,
-    },
-  };
-  return item;
+    const newText = `"${label}"`;
+    const item = {
+        label: newText,
+        kind: kind,
+        documentation: documentation,
+        insertTextFormat: InsertTextFormat.Snippet,
+        textEdit: {
+            range: range,
+            newText: newText,
+        },
+    };
+    return item;
 }
 
 /**
@@ -63,18 +63,20 @@ function createStringCompletion(
  * @returns Completion items.
  */
 function createStringCompletions(
-  labels: readonly string[],
-  range: Range,
-  kind?: CompletionItemKind,
-  documentation?: string,
+    labels: readonly string[],
+    range: Range,
+    kind?: CompletionItemKind,
+    documentation?: string
 ): CompletionItem[] {
-  const completions: CompletionItem[] = [];
+    const completions: CompletionItem[] = [];
 
-  for (const label of labels) {
-    completions.push(createStringCompletion(label, range, kind, documentation));
-  }
+    for (const label of labels) {
+        completions.push(
+            createStringCompletion(label, range, kind, documentation)
+        );
+    }
 
-  return completions;
+    return completions;
 }
 
 /**
@@ -87,71 +89,71 @@ function createStringCompletions(
  * @returns Completion items.
  */
 function generateStoryDataCompletions(
-  embeddedDocument: EmbeddedDocument,
-  offset: number,
-  index: ProjectIndex,
+    embeddedDocument: EmbeddedDocument,
+    offset: number,
+    index: ProjectIndex
 ): CompletionItem[] {
-  const completions: CompletionItem[] = [];
+    const completions: CompletionItem[] = [];
 
-  const jsonDocument = parseJSON(embeddedDocument.document);
-  const node = jsonDocument.getNodeFromOffset(offset);
-  if (node?.parent?.type === "property") {
-    const nodeRange = Range.create(
-      embeddedDocument.document.positionAt(node.offset),
-      embeddedDocument.document.positionAt(node.offset + node.length),
-    );
+    const jsonDocument = parseJSON(embeddedDocument.document);
+    const node = jsonDocument.getNodeFromOffset(offset);
+    if (node?.parent?.type === "property") {
+        const nodeRange = Range.create(
+            embeddedDocument.document.positionAt(node.offset),
+            embeddedDocument.document.positionAt(node.offset + node.length)
+        );
 
-    // A new IFID value
-    if (node.parent.keyNode.value === "ifid") {
-      completions.push(
-        createStringCompletion(
-          v4().toUpperCase(),
-          nodeRange,
-          CompletionItemKind.Text,
-          "Newly-generated IFID",
-        ),
-      );
+        // A new IFID value
+        if (node.parent.keyNode.value === "ifid") {
+            completions.push(
+                createStringCompletion(
+                    v4().toUpperCase(),
+                    nodeRange,
+                    CompletionItemKind.Text,
+                    "Newly-generated IFID"
+                )
+            );
+        }
+
+        // Story formats
+        if (node.parent.keyNode.value === "format") {
+            completions.push(
+                ...createStringCompletions(
+                    "Chapbook|Harlowe|SugarCube".split("|"),
+                    nodeRange,
+                    CompletionItemKind.Text
+                )
+            );
+        }
+
+        // Start
+        if (node.parent.keyNode.value === "start") {
+            const uniquePassageNames = new Set<string>(index.getPassageNames());
+            completions.push(
+                ...createStringCompletions(
+                    [...uniquePassageNames],
+                    nodeRange,
+                    CompletionItemKind.Class
+                )
+            );
+        }
+
+        // A color value in the tag-colors property
+        if (
+            node.parent.parent?.parent?.type === "property" &&
+            node.parent.parent.parent.keyNode.value === "tag-colors"
+        ) {
+            completions.push(
+                ...createStringCompletions(
+                    "gray|red|orange|yellow|green|blue|purple".split("|"),
+                    nodeRange,
+                    CompletionItemKind.Color
+                )
+            );
+        }
     }
 
-    // Story formats
-    if (node.parent.keyNode.value === "format") {
-      completions.push(
-        ...createStringCompletions(
-          "Chapbook|Harlowe|SugarCube".split("|"),
-          nodeRange,
-          CompletionItemKind.Text,
-        ),
-      );
-    }
-
-    // Start
-    if (node.parent.keyNode.value === "start") {
-      const uniquePassageNames = new Set<string>(index.getPassageNames());
-      completions.push(
-        ...createStringCompletions(
-          [...uniquePassageNames],
-          nodeRange,
-          CompletionItemKind.Class,
-        ),
-      );
-    }
-
-    // A color value in the tag-colors property
-    if (
-      node.parent.parent?.parent?.type === "property" &&
-      node.parent.parent.parent.keyNode.value === "tag-colors"
-    ) {
-      completions.push(
-        ...createStringCompletions(
-          "gray|red|orange|yellow|green|blue|purple".split("|"),
-          nodeRange,
-          CompletionItemKind.Color,
-        ),
-      );
-    }
-  }
-
-  return completions;
+    return completions;
 }
 
 /**
@@ -164,26 +166,26 @@ function generateStoryDataCompletions(
  * @returns List with defaults added to each individual completion item.
  */
 function removeCompletionListItemDefaults(
-  completionList: CompletionList,
+    completionList: CompletionList
 ): CompletionList {
-  const insertTextFormat = completionList.itemDefaults?.insertTextFormat;
-  const editRange = completionList.itemDefaults?.editRange;
-  if (
-    insertTextFormat !== undefined &&
-    editRange !== undefined &&
-    Range.is(editRange)
-  ) {
-    completionList.items = completionList.items.map((item) => {
-      item.insertTextFormat = insertTextFormat;
-      item.textEdit = TextEdit.replace(editRange, item.label);
-      if (item.textEditText !== undefined) {
-        item.label = item.textEditText;
-      }
-      return item;
-    });
-  }
-  completionList.itemDefaults = undefined;
-  return completionList;
+    const insertTextFormat = completionList.itemDefaults?.insertTextFormat;
+    const editRange = completionList.itemDefaults?.editRange;
+    if (
+        insertTextFormat !== undefined &&
+        editRange !== undefined &&
+        Range.is(editRange)
+    ) {
+        completionList.items = completionList.items.map((item) => {
+            item.insertTextFormat = insertTextFormat;
+            item.textEdit = TextEdit.replace(editRange, item.label);
+            if (item.textEditText !== undefined) {
+                item.label = item.textEditText;
+            }
+            return item;
+        });
+    }
+    completionList.itemDefaults = undefined;
+    return completionList;
 }
 
 /**
@@ -196,62 +198,62 @@ function removeCompletionListItemDefaults(
  * @returns Completion list, or null if no completions.
  */
 async function generateEmbeddedDocumentCompletions(
-  embeddedDocument: EmbeddedDocument,
-  document: TextDocument,
-  position: Position,
-  index: ProjectIndex,
+    embeddedDocument: EmbeddedDocument,
+    document: TextDocument,
+    position: Position,
+    index: ProjectIndex
 ): Promise<CompletionList | null> {
-  const completionOffset = document.offsetAt(position);
+    const completionOffset = document.offsetAt(position);
 
-  // Some clients (looking at you, VS Code) ask for completions before
-  // the change propagates to the server, leaving the embedded document
-  // out of sync with the parent, so make sure to update it if needed
-  embeddedDocument = updateEmbeddedDocument(embeddedDocument, document);
+    // Some clients (looking at you, VS Code) ask for completions before
+    // the change propagates to the server, leaving the embedded document
+    // out of sync with the parent, so make sure to update it if needed
+    embeddedDocument = updateEmbeddedDocument(embeddedDocument, document);
 
-  const embeddedDocOffset = document.offsetAt(embeddedDocument.range.start);
-  const completions =
-    (await doComplete(document, embeddedDocument, completionOffset)) ||
-    CompletionList.create([], false);
+    const embeddedDocOffset = document.offsetAt(embeddedDocument.range.start);
+    const completions =
+        (await doComplete(document, embeddedDocument, completionOffset)) ||
+        CompletionList.create([], false);
 
-  // Adjust the completion items for StoryData
-  if (embeddedDocument.document.uri === storyDataJSONUri) {
-    // If one of the completion items is the IFID property, generate a
-    // new IFID value to go with it
-    const ifidItem = completions.items.find(
-      (item) => item.insertText === '"ifid": "$1"',
-    );
-    if (ifidItem !== undefined) {
-      ifidItem.insertText = `"ifid": "${v4().toUpperCase()}"$1`;
-      if (ifidItem.textEdit?.newText !== undefined) {
-        ifidItem.textEdit.newText = ifidItem.insertText;
-      }
-    }
-
-    completions.items.push(
-      ...generateStoryDataCompletions(
-        embeddedDocument,
-        completionOffset - embeddedDocOffset,
-        index,
-      ),
-    );
-  }
-
-  // The completions's positions are relative to the sub-document, so we need
-  // to adjust those to be relative to the parent document
-  if (completions !== null) {
-    for (const item of completions.items) {
-      if (item.textEdit !== undefined && "range" in item.textEdit) {
-        item.textEdit.range = containingRange(
-          embeddedDocument.document,
-          item.textEdit.range,
-          document,
-          embeddedDocOffset,
+    // Adjust the completion items for StoryData
+    if (embeddedDocument.document.uri === storyDataJSONUri) {
+        // If one of the completion items is the IFID property, generate a
+        // new IFID value to go with it
+        const ifidItem = completions.items.find(
+            (item) => item.insertText === '"ifid": "$1"'
         );
-      }
-    }
-  }
+        if (ifidItem !== undefined) {
+            ifidItem.insertText = `"ifid": "${v4().toUpperCase()}"$1`;
+            if (ifidItem.textEdit?.newText !== undefined) {
+                ifidItem.textEdit.newText = ifidItem.insertText;
+            }
+        }
 
-  return completions;
+        completions.items.push(
+            ...generateStoryDataCompletions(
+                embeddedDocument,
+                completionOffset - embeddedDocOffset,
+                index
+            )
+        );
+    }
+
+    // The completions's positions are relative to the sub-document, so we need
+    // to adjust those to be relative to the parent document
+    if (completions !== null) {
+        for (const item of completions.items) {
+            if (item.textEdit !== undefined && "range" in item.textEdit) {
+                item.textEdit.range = containingRange(
+                    embeddedDocument.document,
+                    item.textEdit.range,
+                    document,
+                    embeddedDocOffset
+                );
+            }
+        }
+    }
+
+    return completions;
 }
 
 /**
@@ -264,142 +266,147 @@ async function generateEmbeddedDocumentCompletions(
  * @returns Completion list, or null if no completions.
  */
 export async function generateCompletions(
-  document: TextDocument,
-  position: Position,
-  index: ProjectIndex,
-  hasCompletionListItemDefaults: boolean,
+    document: TextDocument,
+    position: Position,
+    index: ProjectIndex,
+    hasCompletionListItemDefaults: boolean
 ): Promise<CompletionList | null> {
-  const completionOffset = document.offsetAt(position);
-  let passageDocument: EmbeddedDocument | undefined;
-  const deferredEmbeddedDocuments: EmbeddedDocument[] = [];
+    const completionOffset = document.offsetAt(position);
+    let passageDocument: EmbeddedDocument | undefined;
+    const deferredEmbeddedDocuments: EmbeddedDocument[] = [];
 
-  // Embedded documents get to create their own completions
-  for (const embeddedDocument of index.getEmbeddedDocuments(document.uri) ||
-    []) {
-    if (positionInRange(position, embeddedDocument.range)) {
-      // If the document corresponds to an entire passage, wait to form completions
-      // from it until after everything else has had its chance. If it's deferred to
-      // story formats to handle, add it to the list of deferred embedded documents.
-      if (embeddedDocument.isPassage) {
-        passageDocument = embeddedDocument;
-      } else if (embeddedDocument.deferToStoryFormat) {
-        deferredEmbeddedDocuments.push(embeddedDocument);
-      } else {
-        return await generateEmbeddedDocumentCompletions(
-          embeddedDocument,
-          document,
-          position,
-          index,
-        );
-      }
-    }
-  }
-
-  // See if we're potentially inside a Twine link
-  const text = document.getText();
-  let i = completionOffset;
-  let linkBeginOffset: number | undefined;
-  let arrowOrPipeOffset: number | undefined;
-  // Find where the link should begin: [[, -> or |
-  for (; i >= 1; i--) {
-    // Don't go further back than the current line
-    if (text[i] === "\n") break;
-
-    // Go until we find a leading [[, but note if we see a -> or | along the way
-    if (text[i - 1] === "[" && text[i] === "[") {
-      linkBeginOffset = i + 1;
-      break;
-    } else if (text[i] === "|" || (text[i - 1] === "-" && text[i] === ">")) {
-      arrowOrPipeOffset = i + 1;
-    }
-  }
-  if (linkBeginOffset !== undefined) {
-    // If we found an arrow or pipe, that's where the link should begin
-    if (arrowOrPipeOffset !== undefined) {
-      linkBeginOffset = arrowOrPipeOffset;
-    }
-
-    // Find where the link should end: ]], <-, or the end of the line
-    let linkEndOffset: number | undefined;
-    let suggestAPassage = true;
-    for (i = completionOffset; i < text.length; i++) {
-      // Don't go further forward than the current line,
-      // the pipe character, or a ->
-      if (text[i] === "\r" || text[i] === "\n") break;
-      if (text[i] === "|" || (text[i] === "-" && text[i + 1] === ">")) {
-        suggestAPassage = false;
-        break;
-      }
-
-      if (
-        (text[i] === "]" && text[i + 1] === "]") ||
-        (text[i] === "<" && text[i + 1] === "-") ||
-        text[i] === "|"
-      ) {
-        linkEndOffset = i;
-        break;
-      }
-    }
-
-    // If we didn't have a pipe or -> to the right, suggest passage names
-    if (suggestAPassage) {
-      if (linkEndOffset === undefined) {
-        linkEndOffset = i;
-      }
-      const replacementRange = Range.create(
-        document.positionAt(linkBeginOffset),
-        document.positionAt(linkEndOffset),
-      );
-
-      let completionList = CompletionList.create(
-        index.getPassageNames().map((p): CompletionItem => {
-          return {
-            label: p,
-            kind: CompletionItemKind.Class,
-          };
-        }),
-        false,
-      );
-      completionList.itemDefaults = {
-        editRange: replacementRange,
-        insertTextFormat: InsertTextFormat.Snippet,
-      };
-      if (!hasCompletionListItemDefaults) {
-        completionList = removeCompletionListItemDefaults(completionList);
-      }
-      return completionList;
-    }
-  }
-
-  // If there's a story format, let its parser provide optional completions
-  const storyFormat = index.getStoryData()?.storyFormat;
-  if (storyFormat !== undefined) {
-    const parser = getStoryFormatParser(storyFormat);
-    if (parser !== undefined) {
-      let completionList = parser.generateCompletions(
-        document,
-        position,
-        deferredEmbeddedDocuments,
-        index,
-      );
-      if (completionList !== null) {
-        if (!hasCompletionListItemDefaults) {
-          completionList = removeCompletionListItemDefaults(completionList);
+    // Embedded documents get to create their own completions
+    for (const embeddedDocument of index.getEmbeddedDocuments(document.uri) ||
+        []) {
+        if (positionInRange(position, embeddedDocument.range)) {
+            // If the document corresponds to an entire passage, wait to form completions
+            // from it until after everything else has had its chance. If it's deferred to
+            // story formats to handle, add it to the list of deferred embedded documents.
+            if (embeddedDocument.isPassage) {
+                passageDocument = embeddedDocument;
+            } else if (embeddedDocument.deferToStoryFormat) {
+                deferredEmbeddedDocuments.push(embeddedDocument);
+            } else {
+                return await generateEmbeddedDocumentCompletions(
+                    embeddedDocument,
+                    document,
+                    position,
+                    index
+                );
+            }
         }
-        return completionList;
-      }
     }
-  }
 
-  // Finally, let any passage-wide document produce completions
-  if (passageDocument !== undefined) {
-    return await generateEmbeddedDocumentCompletions(
-      passageDocument,
-      document,
-      position,
-      index,
-    );
-  }
+    // See if we're potentially inside a Twine link
+    const text = document.getText();
+    let i = completionOffset;
+    let linkBeginOffset: number | undefined;
+    let arrowOrPipeOffset: number | undefined;
+    // Find where the link should begin: [[, -> or |
+    for (; i >= 1; i--) {
+        // Don't go further back than the current line
+        if (text[i] === "\n") break;
 
-  return null;
+        // Go until we find a leading [[, but note if we see a -> or | along the way
+        if (text[i - 1] === "[" && text[i] === "[") {
+            linkBeginOffset = i + 1;
+            break;
+        } else if (
+            text[i] === "|" ||
+            (text[i - 1] === "-" && text[i] === ">")
+        ) {
+            arrowOrPipeOffset = i + 1;
+        }
+    }
+    if (linkBeginOffset !== undefined) {
+        // If we found an arrow or pipe, that's where the link should begin
+        if (arrowOrPipeOffset !== undefined) {
+            linkBeginOffset = arrowOrPipeOffset;
+        }
+
+        // Find where the link should end: ]], <-, or the end of the line
+        let linkEndOffset: number | undefined;
+        let suggestAPassage = true;
+        for (i = completionOffset; i < text.length; i++) {
+            // Don't go further forward than the current line,
+            // the pipe character, or a ->
+            if (text[i] === "\r" || text[i] === "\n") break;
+            if (text[i] === "|" || (text[i] === "-" && text[i + 1] === ">")) {
+                suggestAPassage = false;
+                break;
+            }
+
+            if (
+                (text[i] === "]" && text[i + 1] === "]") ||
+                (text[i] === "<" && text[i + 1] === "-") ||
+                text[i] === "|"
+            ) {
+                linkEndOffset = i;
+                break;
+            }
+        }
+
+        // If we didn't have a pipe or -> to the right, suggest passage names
+        if (suggestAPassage) {
+            if (linkEndOffset === undefined) {
+                linkEndOffset = i;
+            }
+            const replacementRange = Range.create(
+                document.positionAt(linkBeginOffset),
+                document.positionAt(linkEndOffset)
+            );
+
+            let completionList = CompletionList.create(
+                index.getPassageNames().map((p): CompletionItem => {
+                    return {
+                        label: p,
+                        kind: CompletionItemKind.Class,
+                    };
+                }),
+                false
+            );
+            completionList.itemDefaults = {
+                editRange: replacementRange,
+                insertTextFormat: InsertTextFormat.Snippet,
+            };
+            if (!hasCompletionListItemDefaults) {
+                completionList =
+                    removeCompletionListItemDefaults(completionList);
+            }
+            return completionList;
+        }
+    }
+
+    // If there's a story format, let its parser provide optional completions
+    const storyFormat = index.getStoryData()?.storyFormat;
+    if (storyFormat !== undefined) {
+        const parser = getStoryFormatParser(storyFormat);
+        if (parser !== undefined) {
+            let completionList = parser.generateCompletions(
+                document,
+                position,
+                deferredEmbeddedDocuments,
+                index
+            );
+            if (completionList !== null) {
+                if (!hasCompletionListItemDefaults) {
+                    completionList =
+                        removeCompletionListItemDefaults(completionList);
+                }
+                return completionList;
+            }
+        }
+    }
+
+    // Finally, let any passage-wide document produce completions
+    if (passageDocument !== undefined) {
+        return await generateEmbeddedDocumentCompletions(
+            passageDocument,
+            document,
+            position,
+            index
+        );
+    }
+
+    return null;
 }

@@ -1,7 +1,7 @@
 import {
-  Diagnostic,
-  DiagnosticRelatedInformation,
-  DiagnosticSeverity,
+    Diagnostic,
+    DiagnosticRelatedInformation,
+    DiagnosticSeverity,
 } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
@@ -19,54 +19,54 @@ import { comparePositions, containingRange } from "./utilities";
  * @returns List of diagnostic messages.
  */
 function validatePassages(
-  document: TextDocument,
-  index: ProjectIndex,
+    document: TextDocument,
+    index: ProjectIndex
 ): Diagnostic[] {
-  const diagnostics: Diagnostic[] = [];
+    const diagnostics: Diagnostic[] = [];
 
-  const documentPassages = index.getPassages(document.uri);
-  const passageNames = index.getPassageNames();
+    const documentPassages = index.getPassages(document.uri);
+    const passageNames = index.getPassageNames();
 
-  for (const passage of documentPassages ?? []) {
-    // Since passage names are sorted, we can see if the first
-    // instance of a passage's name is followed by another
-    const ndx = passageNames.indexOf(passage.name.contents);
-    if (ndx !== -1 && passageNames[ndx + 1] === passage.name.contents) {
-      const matchingPassages = index.getPassage(passage.name.contents);
-      let otherPassage = matchingPassages[0];
-      if (
-        otherPassage.name.location.uri === passage.name.location.uri &&
-        comparePositions(
-          otherPassage.name.location.range.start,
-          passage.name.location.range.start,
-        ) === 0 &&
-        comparePositions(
-          otherPassage.name.location.range.end,
-          passage.name.location.range.end,
-        ) === 0 &&
-        matchingPassages.length > 1
-      ) {
-        otherPassage = matchingPassages[1];
-      }
-      diagnostics.push(
-        Diagnostic.create(
-          passage.name.location.range,
-          `Passage "${passage.name.contents}" was defined elsewhere`,
-          DiagnosticSeverity.Warning,
-          undefined,
-          "Twine",
-          [
-            DiagnosticRelatedInformation.create(
-              otherPassage.name.location,
-              `Other creation of passage "${passage.name.contents}"`,
-            ),
-          ],
-        ),
-      );
+    for (const passage of documentPassages ?? []) {
+        // Since passage names are sorted, we can see if the first
+        // instance of a passage's name is followed by another
+        const ndx = passageNames.indexOf(passage.name.contents);
+        if (ndx !== -1 && passageNames[ndx + 1] === passage.name.contents) {
+            const matchingPassages = index.getPassage(passage.name.contents);
+            let otherPassage = matchingPassages[0];
+            if (
+                otherPassage.name.location.uri === passage.name.location.uri &&
+                comparePositions(
+                    otherPassage.name.location.range.start,
+                    passage.name.location.range.start
+                ) === 0 &&
+                comparePositions(
+                    otherPassage.name.location.range.end,
+                    passage.name.location.range.end
+                ) === 0 &&
+                matchingPassages.length > 1
+            ) {
+                otherPassage = matchingPassages[1];
+            }
+            diagnostics.push(
+                Diagnostic.create(
+                    passage.name.location.range,
+                    `Passage "${passage.name.contents}" was defined elsewhere`,
+                    DiagnosticSeverity.Warning,
+                    undefined,
+                    "Twine",
+                    [
+                        DiagnosticRelatedInformation.create(
+                            otherPassage.name.location,
+                            `Other creation of passage "${passage.name.contents}"`
+                        ),
+                    ]
+                )
+            );
+        }
     }
-  }
 
-  return diagnostics;
+    return diagnostics;
 }
 
 /**
@@ -78,34 +78,34 @@ function validatePassages(
  * @returns List of diagnostic messages.
  */
 function validatePassageReferences(
-  document: TextDocument,
-  index: ProjectIndex,
-  diagnosticsOptions: DiagnosticsOptions,
+    document: TextDocument,
+    index: ProjectIndex,
+    diagnosticsOptions: DiagnosticsOptions
 ): Diagnostic[] {
-  const diagnostics: Diagnostic[] = [];
+    const diagnostics: Diagnostic[] = [];
 
-  if (diagnosticsOptions.warnings.unknownPassage) {
-    const references =
-      index.getReferences(document.uri, TwineSymbolKind.Passage) ?? [];
-    const names = index.getPassageNames();
-    for (const ref of references) {
-      if (!names.includes(ref.contents)) {
-        for (const loc of ref.locations) {
-          diagnostics.push(
-            Diagnostic.create(
-              loc.range,
-              `Cannot find passage '${ref.contents}'`,
-              DiagnosticSeverity.Warning,
-              undefined,
-              "Twine",
-            ),
-          );
+    if (diagnosticsOptions.warnings.unknownPassage) {
+        const references =
+            index.getReferences(document.uri, TwineSymbolKind.Passage) ?? [];
+        const names = index.getPassageNames();
+        for (const ref of references) {
+            if (!names.includes(ref.contents)) {
+                for (const loc of ref.locations) {
+                    diagnostics.push(
+                        Diagnostic.create(
+                            loc.range,
+                            `Cannot find passage '${ref.contents}'`,
+                            DiagnosticSeverity.Warning,
+                            undefined,
+                            "Twine"
+                        )
+                    );
+                }
+            }
         }
-      }
     }
-  }
 
-  return diagnostics;
+    return diagnostics;
 }
 
 /**
@@ -117,42 +117,42 @@ function validatePassageReferences(
  * @returns List of diagnostic messages.
  */
 export async function generateDiagnostics(
-  document: TextDocument,
-  index: ProjectIndex,
-  diagnosticsOptions: DiagnosticsOptions,
+    document: TextDocument,
+    index: ProjectIndex,
+    diagnosticsOptions: DiagnosticsOptions
 ): Promise<Diagnostic[]> {
-  // Start with parse errors
-  const diagnostics: Diagnostic[] = [...index.getParseErrors(document.uri)];
+    // Start with parse errors
+    const diagnostics: Diagnostic[] = [...index.getParseErrors(document.uri)];
 
-  // Add diagnostics from embedded documents
-  for (const embeddedDocument of index.getEmbeddedDocuments(document.uri) ||
-    []) {
-    const newDiagnostics = await doValidation(embeddedDocument);
-    for (const diagnostic of newDiagnostics) {
-      diagnostic.range = containingRange(
-        embeddedDocument.document,
-        diagnostic.range,
-        document,
-        document.offsetAt(embeddedDocument.range.start),
-      );
-      diagnostics.push(diagnostic);
+    // Add diagnostics from embedded documents
+    for (const embeddedDocument of index.getEmbeddedDocuments(document.uri) ||
+        []) {
+        const newDiagnostics = await doValidation(embeddedDocument);
+        for (const diagnostic of newDiagnostics) {
+            diagnostic.range = containingRange(
+                embeddedDocument.document,
+                diagnostic.range,
+                document,
+                document.offsetAt(embeddedDocument.range.start)
+            );
+            diagnostics.push(diagnostic);
+        }
     }
-  }
 
-  // Validate passages
-  diagnostics.push(...validatePassages(document, index));
+    // Validate passages
+    diagnostics.push(...validatePassages(document, index));
 
-  // Validate passage references
-  diagnostics.push(
-    ...validatePassageReferences(document, index, diagnosticsOptions),
-  );
+    // Validate passage references
+    diagnostics.push(
+        ...validatePassageReferences(document, index, diagnosticsOptions)
+    );
 
-  // If we have a story format, let it generate its own diagnostics
-  diagnostics.push(
-    ...(getStoryFormatParser(
-      index.getStoryData()?.storyFormat,
-    )?.generateDiagnostics(document, index, diagnosticsOptions) ?? []),
-  );
+    // If we have a story format, let it generate its own diagnostics
+    diagnostics.push(
+        ...(getStoryFormatParser(
+            index.getStoryData()?.storyFormat
+        )?.generateDiagnostics(document, index, diagnosticsOptions) ?? [])
+    );
 
-  return diagnostics;
+    return diagnostics;
 }

@@ -2,9 +2,9 @@ import * as vscode from "vscode";
 import { Utils as UriUtils } from "vscode-uri";
 
 import {
-  Configuration,
-  CustomWhenContext,
-  RunningGameUpdateOptions,
+    Configuration,
+    CustomWhenContext,
+    RunningGameUpdateOptions,
 } from "./constants";
 import { addListener, signalContextEvent } from "./context";
 
@@ -17,15 +17,15 @@ let panelDisposables: vscode.Disposable[] = [];
  * @returns True if the game is running.
  */
 export function gameRunning(): boolean {
-  return panel !== undefined;
+    return panel !== undefined;
 }
 
 /**
  * Commands between the game webview and the extension.
  */
 enum WebviewMessageCommands {
-  Reload = "twine-iframe-requests-reload", // Request from iframe to reload
-  ResetState = "twine-extension-requests-state-reset", // Request from extension to reset story state
+    Reload = "twine-iframe-requests-reload", // Request from iframe to reload
+    ResetState = "twine-extension-requests-state-reset", // Request from extension to reset story state
 }
 
 /**
@@ -36,23 +36,25 @@ enum WebviewMessageCommands {
  * @returns Webview-approved URI.
  */
 function uriOrPathToWebviewUri(rootUri: vscode.Uri, uriOrPath: string): string {
-  try {
-    // If it's already a URI, only change it if it's a file URI
-    const uri = vscode.Uri.parse(uriOrPath, true);
-    if (uri.scheme === "file") {
-      // We'll assume the URI's authority is part of the path
-      uriOrPath = panel.webview
-        .asWebviewUri(vscode.Uri.joinPath(rootUri, uri.authority, uri.path))
-        .toString();
+    try {
+        // If it's already a URI, only change it if it's a file URI
+        const uri = vscode.Uri.parse(uriOrPath, true);
+        if (uri.scheme === "file") {
+            // We'll assume the URI's authority is part of the path
+            uriOrPath = panel.webview
+                .asWebviewUri(
+                    vscode.Uri.joinPath(rootUri, uri.authority, uri.path)
+                )
+                .toString();
+        }
+    } catch {
+        // It's not a URI, so assume it's a raw path
+        uriOrPath = panel.webview
+            .asWebviewUri(vscode.Uri.joinPath(rootUri, uriOrPath))
+            .toString();
     }
-  } catch {
-    // It's not a URI, so assume it's a raw path
-    uriOrPath = panel.webview
-      .asWebviewUri(vscode.Uri.joinPath(rootUri, uriOrPath))
-      .toString();
-  }
 
-  return uriOrPath;
+    return uriOrPath;
 }
 
 /**
@@ -67,29 +69,29 @@ function uriOrPathToWebviewUri(rootUri: vscode.Uri, uriOrPath: string): string {
  * @returns Webviewified HTML.
  */
 function webviewifyHtml(rootUri: vscode.Uri, src: string): string {
-  const cspSource = panel?.webview.cspSource || "";
+    const cspSource = panel?.webview.cspSource || "";
 
-  // Create a content security policy, even though it's super lenient.
-  // (It has to be, since e.g. SugarCube 2 uses `eval()`, sigh.)
-  const securityPolicies = {
-    "default-src": ["'none'"],
-    "font-src": [cspSource, "data:", "https:"],
-    "img-src": [cspSource, "data:", "https:", "'unsafe-inline'"],
-    "script-src": [cspSource, "https:", "'unsafe-inline'", "'unsafe-eval'"],
-    "style-src": [cspSource, "https:", "'unsafe-inline'"],
-  };
-  const securityPoliciesContent = Object.entries(securityPolicies)
-    .map(([k, v]) => `${k} ${v.join(" ")}`)
-    .join("; ");
-  const securityPolicyTag = `<meta http-equiv="Content-Security-Policy" content="${securityPoliciesContent}"/>`;
+    // Create a content security policy, even though it's super lenient.
+    // (It has to be, since e.g. SugarCube 2 uses `eval()`, sigh.)
+    const securityPolicies = {
+        "default-src": ["'none'"],
+        "font-src": [cspSource, "data:", "https:"],
+        "img-src": [cspSource, "data:", "https:", "'unsafe-inline'"],
+        "script-src": [cspSource, "https:", "'unsafe-inline'", "'unsafe-eval'"],
+        "style-src": [cspSource, "https:", "'unsafe-inline'"],
+    };
+    const securityPoliciesContent = Object.entries(securityPolicies)
+        .map(([k, v]) => `${k} ${v.join(" ")}`)
+        .join("; ");
+    const securityPolicyTag = `<meta http-equiv="Content-Security-Policy" content="${securityPoliciesContent}"/>`;
 
-  // Some story formats use `window.location.reload()` to restart. Since that
-  // erases the entire webview, add a function to send a message requesting
-  // reload that can take the place of the reload() call.
-  // Also, SugarCube and Chapbook save state in ways that survives a reload().
-  // Add a function that, when it receives a message from the extension, tries
-  // to reset SugarCube/Chapbook state.
-  const customScriptTag = `
+    // Some story formats use `window.location.reload()` to restart. Since that
+    // erases the entire webview, add a function to send a message requesting
+    // reload that can take the place of the reload() call.
+    // Also, SugarCube and Chapbook save state in ways that survives a reload().
+    // Add a function that, when it receives a message from the extension, tries
+    // to reset SugarCube/Chapbook state.
+    const customScriptTag = `
     <script id="webview-support" type="text/javascript">
     const vscode = acquireVsCodeApi();
     const requestWebviewReload = () => {
@@ -113,46 +115,46 @@ function webviewifyHtml(rootUri: vscode.Uri, src: string): string {
     });
     </script>`;
 
-  src = src.replace(
-    "<head>",
-    `<head>\n${securityPolicyTag}\n${customScriptTag}`,
-  );
+    src = src.replace(
+        "<head>",
+        `<head>\n${securityPolicyTag}\n${customScriptTag}`
+    );
 
-  // Add an invisible timestamp to the end of the body, so we can
-  // update it on a re-run and force the webview to refresh.
-  src = src.replace(
-    "</body>",
-    `<div style='display: none;' id='time-cache'>${new Date().getTime()}</div>\n</body>`,
-  );
+    // Add an invisible timestamp to the end of the body, so we can
+    // update it on a re-run and force the webview to refresh.
+    src = src.replace(
+        "</body>",
+        `<div style='display: none;' id='time-cache'>${new Date().getTime()}</div>\n</body>`
+    );
 
-  // Replace window.location.reload() calls with the above-defined messaging fn
-  src = src.replace(
-    /\bwindow\.location\.reload\(\)/g,
-    "requestWebviewReload();",
-  );
+    // Replace window.location.reload() calls with the above-defined messaging fn
+    src = src.replace(
+        /\bwindow\.location\.reload\(\)/g,
+        "requestWebviewReload();"
+    );
 
-  // Turn src, href, and URL() references into webview URIs
-  src = src.replace(
-    /(src|href)=("|&quot;)(file:.*?|(?:[\w\-._~/ ]|%[0-9a-fA-F]{2})*?)("|&quot;)/g,
-    (_substr, attribute, openQuote, uriOrPath, closeQuote) =>
-      `${attribute}=${openQuote}${uriOrPathToWebviewUri(rootUri, uriOrPath)}${closeQuote}`,
-  );
-  src = src.replace(
-    /url\(("?)((?:[\w\-._~/]|%[0-9a-fA-F]{2})*?)\1\)/g,
-    (_substr, quote, uriOrPath) =>
-      `url(${quote}${uriOrPathToWebviewUri(rootUri, uriOrPath)}${quote})`,
-  );
+    // Turn src, href, and URL() references into webview URIs
+    src = src.replace(
+        /(src|href)=("|&quot;)(file:.*?|(?:[\w\-._~/ ]|%[0-9a-fA-F]{2})*?)("|&quot;)/g,
+        (_substr, attribute, openQuote, uriOrPath, closeQuote) =>
+            `${attribute}=${openQuote}${uriOrPathToWebviewUri(rootUri, uriOrPath)}${closeQuote}`
+    );
+    src = src.replace(
+        /url\(("?)((?:[\w\-._~/]|%[0-9a-fA-F]{2})*?)\1\)/g,
+        (_substr, quote, uriOrPath) =>
+            `url(${quote}${uriOrPathToWebviewUri(rootUri, uriOrPath)}${quote})`
+    );
 
-  return src;
+    return src;
 }
 
 /**
  * Reload a running game from disk and restart it.
  */
 export async function reloadRunningGame() {
-  if (panel !== undefined && gameUri !== undefined) {
-    viewCompiledGame(gameUri, true);
-  }
+    if (panel !== undefined && gameUri !== undefined) {
+        viewCompiledGame(gameUri, true);
+    }
 }
 
 /**
@@ -162,91 +164,95 @@ export async function reloadRunningGame() {
  * @param restart Whether to restart the game or not.
  */
 export async function viewCompiledGame(
-  htmlUri: vscode.Uri,
-  restart: boolean = false,
+    htmlUri: vscode.Uri,
+    restart: boolean = false
 ) {
-  gameUri = htmlUri;
+    gameUri = htmlUri;
 
-  try {
-    if (!panel) {
-      panel = vscode.window.createWebviewPanel(
-        "TwineGameView",
-        "Game",
-        vscode.ViewColumn.Beside,
-        {
-          enableScripts: true,
-          localResourceRoots: [vscode.workspace.workspaceFolders[0].uri], // Limit to our workspace only
-        },
-      );
-      panel.webview.onDidReceiveMessage(
-        (message) => {
-          if (message.command === WebviewMessageCommands.Reload) {
-            // Update the contents to force a reload
-            panel.webview.html = panel.webview.html.replace(
-              /<div style='display: none;' id='time-cache'>.*?<\/div>/g,
-              `<div style='display: none;' id='time-cache'>${new Date().getTime()}</div>`,
+    try {
+        if (!panel) {
+            panel = vscode.window.createWebviewPanel(
+                "TwineGameView",
+                "Game",
+                vscode.ViewColumn.Beside,
+                {
+                    enableScripts: true,
+                    localResourceRoots: [
+                        vscode.workspace.workspaceFolders[0].uri,
+                    ], // Limit to our workspace only
+                }
             );
-          }
-        },
-        undefined,
-        panelDisposables,
-      );
-      signalContextEvent("runStarts");
-      await vscode.commands.executeCommand(
-        "setContext",
-        CustomWhenContext.Running,
-        true,
-      );
-      panel.onDidDispose(() => {
-        panel = undefined;
-        for (const d of panelDisposables) {
-          d.dispose();
+            panel.webview.onDidReceiveMessage(
+                (message) => {
+                    if (message.command === WebviewMessageCommands.Reload) {
+                        // Update the contents to force a reload
+                        panel.webview.html = panel.webview.html.replace(
+                            /<div style='display: none;' id='time-cache'>.*?<\/div>/g,
+                            `<div style='display: none;' id='time-cache'>${new Date().getTime()}</div>`
+                        );
+                    }
+                },
+                undefined,
+                panelDisposables
+            );
+            signalContextEvent("runStarts");
+            await vscode.commands.executeCommand(
+                "setContext",
+                CustomWhenContext.Running,
+                true
+            );
+            panel.onDidDispose(() => {
+                panel = undefined;
+                for (const d of panelDisposables) {
+                    d.dispose();
+                }
+                panelDisposables = [];
+                // When we're disposed, we're no longer running a game
+                signalContextEvent("runEnds");
+                vscode.commands.executeCommand(
+                    "setContext",
+                    CustomWhenContext.Running,
+                    false
+                );
+            });
+            panelDisposables.push(
+                addListener("buildSuccessful", (params) => {
+                    const updateOption = vscode.workspace
+                        .getConfiguration(Configuration.BaseSection)
+                        .get(
+                            Configuration.RunningGameUpdate
+                        ) as RunningGameUpdateOptions;
+                    if (updateOption !== "no update") {
+                        const restart = updateOption === "restart";
+                        viewCompiledGame(params[0], restart);
+                    }
+                })
+            );
         }
-        panelDisposables = [];
-        // When we're disposed, we're no longer running a game
-        signalContextEvent("runEnds");
-        vscode.commands.executeCommand(
-          "setContext",
-          CustomWhenContext.Running,
-          false,
+
+        const htmlContents = webviewifyHtml(
+            UriUtils.dirname(htmlUri),
+            (await vscode.workspace.fs.readFile(htmlUri)).toString()
         );
-      });
-      panelDisposables.push(
-        addListener("buildSuccessful", (params) => {
-          const updateOption = vscode.workspace
-            .getConfiguration(Configuration.BaseSection)
-            .get(Configuration.RunningGameUpdate) as RunningGameUpdateOptions;
-          if (updateOption !== "no update") {
-            const restart = updateOption === "restart";
-            viewCompiledGame(params[0], restart);
-          }
-        }),
-      );
-    }
 
-    const htmlContents = webviewifyHtml(
-      UriUtils.dirname(htmlUri),
-      (await vscode.workspace.fs.readFile(htmlUri)).toString(),
-    );
+        // Get the game's name from the <tw-storydata> tag
+        let gameTitle = "Game";
+        const m = /<tw-storydata [^>]*?name=(["'])(.*?)\1/.exec(htmlContents);
+        if (m) {
+            gameTitle = m[2];
+        }
 
-    // Get the game's name from the <tw-storydata> tag
-    let gameTitle = "Game";
-    const m = /<tw-storydata [^>]*?name=(["'])(.*?)\1/.exec(htmlContents);
-    if (m) {
-      gameTitle = m[2];
+        panel.title = gameTitle;
+        panel.webview.html = htmlContents;
+        if (restart) {
+            await panel?.webview.postMessage({
+                command: WebviewMessageCommands.ResetState,
+            });
+        }
+        panel.reveal();
+    } catch (error) {
+        vscode.window.showErrorMessage(
+            `Could not open the compiled Twine game at ${htmlUri}: ${error.message}`
+        );
     }
-
-    panel.title = gameTitle;
-    panel.webview.html = htmlContents;
-    if (restart) {
-      await panel?.webview.postMessage({
-        command: WebviewMessageCommands.ResetState,
-      });
-    }
-    panel.reveal();
-  } catch (error) {
-    vscode.window.showErrorMessage(
-      `Could not open the compiled Twine game at ${htmlUri}: ${error.message}`,
-    );
-  }
 }

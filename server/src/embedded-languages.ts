@@ -1,13 +1,13 @@
 import {
-  CompletionList,
-  Diagnostic,
-  Hover,
-  Range,
+    CompletionList,
+    Diagnostic,
+    Hover,
+    Range,
 } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import {
-  JSONDocument,
-  getLanguageService as getJSONLanguageService,
+    JSONDocument,
+    getLanguageService as getJSONLanguageService,
 } from "vscode-json-languageservice";
 import { getCSSLanguageService } from "vscode-css-languageservice";
 import { getLanguageService as getHtmlLanguageService } from "vscode-html-languageservice";
@@ -18,43 +18,48 @@ import { headerMetadataSchema, storyDataSchema } from "./language";
  * A document embedded inside another.
  */
 export interface EmbeddedDocument {
-  document: TextDocument; // Raw document
-  range: Range; // Range in the parent that the embedded document encompasses
-  isPassage: boolean; // Does the embedded document encompass an entire Twine passage? (This affects completions and hover info)
-  deferToStoryFormat: boolean; // Should the embedded document be passed to any story formats for completions and hover info?
+    document: TextDocument; // Raw document
+    range: Range; // Range in the parent that the embedded document encompasses
+    isPassage: boolean; // Does the embedded document encompass an entire Twine passage? (This affects completions and hover info)
+    deferToStoryFormat: boolean; // Should the embedded document be passed to any story formats for completions and hover info?
 }
 export namespace EmbeddedDocument {
-  /**
-   * Create a new Embedded Document literal.
-   *
-   * @param uri The document's uri.
-   * @param languageId  The document's language Id.
-   * @param content The document's content.
-   * @param offset Where the embedded document begins inside its parent (zero-based).
-   * @param parent Parent document the embedded document lives inside.
-   * @param isPassage If the document corresponds to an entire Twine passage (which affects completions and hover info)
-   * @param deferToStoryFormat If the document should be passed to any story formats for completions and hover info instead of being automatically handled
-   * @returns A new embedded document.
-   */
-  export function create(
-    uri: string,
-    languageId: string,
-    content: string,
-    offset: number,
-    parent: TextDocument,
-    isPassage?: boolean,
-    deferToStoryFormat?: boolean,
-  ): EmbeddedDocument {
-    return {
-      document: TextDocument.create(uri, languageId, parent.version, content),
-      range: Range.create(
-        parent.positionAt(offset),
-        parent.positionAt(offset + content.length),
-      ),
-      isPassage: isPassage || false,
-      deferToStoryFormat: deferToStoryFormat || false,
-    };
-  }
+    /**
+     * Create a new Embedded Document literal.
+     *
+     * @param uri The document's uri.
+     * @param languageId  The document's language Id.
+     * @param content The document's content.
+     * @param offset Where the embedded document begins inside its parent (zero-based).
+     * @param parent Parent document the embedded document lives inside.
+     * @param isPassage If the document corresponds to an entire Twine passage (which affects completions and hover info)
+     * @param deferToStoryFormat If the document should be passed to any story formats for completions and hover info instead of being automatically handled
+     * @returns A new embedded document.
+     */
+    export function create(
+        uri: string,
+        languageId: string,
+        content: string,
+        offset: number,
+        parent: TextDocument,
+        isPassage?: boolean,
+        deferToStoryFormat?: boolean
+    ): EmbeddedDocument {
+        return {
+            document: TextDocument.create(
+                uri,
+                languageId,
+                parent.version,
+                content
+            ),
+            range: Range.create(
+                parent.positionAt(offset),
+                parent.positionAt(offset + content.length)
+            ),
+            isPassage: isPassage || false,
+            deferToStoryFormat: deferToStoryFormat || false,
+        };
+    }
 }
 
 /**
@@ -70,20 +75,20 @@ export namespace EmbeddedDocument {
  * @returns Updated embedded document.
  */
 export function updateEmbeddedDocument(
-  embeddedDocument: EmbeddedDocument,
-  parent: TextDocument,
+    embeddedDocument: EmbeddedDocument,
+    parent: TextDocument
 ): EmbeddedDocument {
-  if (parent.version > embeddedDocument.document.version) {
-    embeddedDocument = EmbeddedDocument.create(
-      embeddedDocument.document.uri,
-      embeddedDocument.document.languageId,
-      parent.getText(embeddedDocument.range),
-      parent.offsetAt(embeddedDocument.range.start),
-      parent,
-      embeddedDocument.isPassage,
-    );
-  }
-  return embeddedDocument;
+    if (parent.version > embeddedDocument.document.version) {
+        embeddedDocument = EmbeddedDocument.create(
+            embeddedDocument.document.uri,
+            embeddedDocument.document.languageId,
+            parent.getText(embeddedDocument.range),
+            parent.offsetAt(embeddedDocument.range.start),
+            parent,
+            embeddedDocument.isPassage
+        );
+    }
+    return embeddedDocument;
 }
 
 /**
@@ -95,14 +100,16 @@ export function updateEmbeddedDocument(
  * @returns List of completions.
  */
 export async function doComplete(
-  parentDocument: TextDocument,
-  embeddedDocument: EmbeddedDocument,
-  offset: number,
+    parentDocument: TextDocument,
+    embeddedDocument: EmbeddedDocument,
+    offset: number
 ): Promise<CompletionList | null> {
-  const embeddedOffset =
-    offset - parentDocument.offsetAt(embeddedDocument.range.start);
-  const service = getLanguageService(embeddedDocument.document.languageId);
-  return (await service?.doComplete(embeddedDocument, embeddedOffset)) ?? null;
+    const embeddedOffset =
+        offset - parentDocument.offsetAt(embeddedDocument.range.start);
+    const service = getLanguageService(embeddedDocument.document.languageId);
+    return (
+        (await service?.doComplete(embeddedDocument, embeddedOffset)) ?? null
+    );
 }
 
 /**
@@ -114,14 +121,14 @@ export async function doComplete(
  * @returns Hover information.
  */
 export async function doHover(
-  parentDocument: TextDocument,
-  embeddedDocument: EmbeddedDocument,
-  offset: number,
+    parentDocument: TextDocument,
+    embeddedDocument: EmbeddedDocument,
+    offset: number
 ): Promise<Hover | null | undefined> {
-  const embeddedOffset =
-    offset - parentDocument.offsetAt(embeddedDocument.range.start);
-  const service = getLanguageService(embeddedDocument.document.languageId);
-  return await service?.doHover(embeddedDocument, embeddedOffset);
+    const embeddedOffset =
+        offset - parentDocument.offsetAt(embeddedDocument.range.start);
+    const service = getLanguageService(embeddedDocument.document.languageId);
+    return await service?.doHover(embeddedDocument, embeddedOffset);
 }
 
 /**
@@ -131,59 +138,59 @@ export async function doHover(
  * @returns List of diagnostic messages.
  */
 export async function doValidation(
-  embeddedDocument: EmbeddedDocument,
+    embeddedDocument: EmbeddedDocument
 ): Promise<Diagnostic[]> {
-  const service = getLanguageService(embeddedDocument.document.languageId);
-  return service?.doValidation(embeddedDocument) ?? [];
+    const service = getLanguageService(embeddedDocument.document.languageId);
+    return service?.doValidation(embeddedDocument) ?? [];
 }
 
 /**
  * Language service for an embedded language.
  */
 interface LanguageService {
-  /**
-   * Get a list of completions.
-   *
-   * @param embeddedDocument Embedded document.
-   * @param offset Offset in the embedded document where completions are being requested (zero-based).
-   * @returns List of completions.
-   */
-  doComplete: (
-    embeddedDocument: EmbeddedDocument,
-    offset: number,
-  ) => Promise<CompletionList | null>;
-  /**
-   * Get hover information.
-   *
-   * @param embeddedDocument Embedded document.
-   * @param offset Offset in the document where hover info is being requested (zero-based).
-   * @returns Hover information.
-   */
-  doHover: (
-    embeddedDocument: EmbeddedDocument,
-    offset: number,
-  ) => Promise<Hover | null>;
-  /**
-   * Validate an embedded document.
-   *
-   * @param embeddedDocument Embedded document.
-   * @returns List of diagnostic messages.
-   */
-  doValidation: (embeddedDocument: EmbeddedDocument) => Promise<Diagnostic[]>;
+    /**
+     * Get a list of completions.
+     *
+     * @param embeddedDocument Embedded document.
+     * @param offset Offset in the embedded document where completions are being requested (zero-based).
+     * @returns List of completions.
+     */
+    doComplete: (
+        embeddedDocument: EmbeddedDocument,
+        offset: number
+    ) => Promise<CompletionList | null>;
+    /**
+     * Get hover information.
+     *
+     * @param embeddedDocument Embedded document.
+     * @param offset Offset in the document where hover info is being requested (zero-based).
+     * @returns Hover information.
+     */
+    doHover: (
+        embeddedDocument: EmbeddedDocument,
+        offset: number
+    ) => Promise<Hover | null>;
+    /**
+     * Validate an embedded document.
+     *
+     * @param embeddedDocument Embedded document.
+     * @returns List of diagnostic messages.
+     */
+    doValidation: (embeddedDocument: EmbeddedDocument) => Promise<Diagnostic[]>;
 }
 
 function getLanguageService(id: string): LanguageService | undefined {
-  if (id === "json") {
-    return jsonService;
-  }
-  if (id === "css") {
-    return cssService;
-  }
-  if (id === "html") {
-    return htmlService;
-  }
+    if (id === "json") {
+        return jsonService;
+    }
+    if (id === "css") {
+        return cssService;
+    }
+    if (id === "html") {
+        return htmlService;
+    }
 
-  return undefined;
+    return undefined;
 }
 
 /* JSON */
@@ -197,12 +204,12 @@ export const storyDataJSONUri = "file:///storydata.json";
 export const headerMetadataJSONUri = "file:///headermetadata.json";
 
 const jsonLanguageService = getJSONLanguageService({
-  schemaRequestService: (uri) => {
-    const schema = jsonUriToSchema[uri];
-    if (schema !== undefined) return Promise.resolve(schema);
+    schemaRequestService: (uri) => {
+        const schema = jsonUriToSchema[uri];
+        if (schema !== undefined) return Promise.resolve(schema);
 
-    return Promise.reject(`Unabled to load schema at ${uri}`);
-  },
+        return Promise.reject(`Unabled to load schema at ${uri}`);
+    },
 });
 
 /**
@@ -213,25 +220,25 @@ const jsonLanguageService = getJSONLanguageService({
  * @param schema Schema as a string.
  */
 export function addJsonSchema(
-  uri: string,
-  fileRegex: string[],
-  schema: string,
+    uri: string,
+    fileRegex: string[],
+    schema: string
 ) {
-  jsonUriToFileRegex[uri] = fileRegex;
-  jsonUriToSchema[uri] = schema;
+    jsonUriToFileRegex[uri] = fileRegex;
+    jsonUriToSchema[uri] = schema;
 
-  jsonLanguageService.configure({
-    schemas: Object.entries(jsonUriToFileRegex).map(([uri, regexes]) => {
-      return { fileMatch: regexes, uri: uri };
-    }),
-  });
+    jsonLanguageService.configure({
+        schemas: Object.entries(jsonUriToFileRegex).map(([uri, regexes]) => {
+            return { fileMatch: regexes, uri: uri };
+        }),
+    });
 }
 
 addJsonSchema(storyDataSchemaUri, ["*/storydata.json"], storyDataSchema);
 addJsonSchema(
-  headerMetadataSchemaUri,
-  ["*/headermetadata.json"],
-  headerMetadataSchema,
+    headerMetadataSchemaUri,
+    ["*/headermetadata.json"],
+    headerMetadataSchema
 );
 
 /**
@@ -241,35 +248,35 @@ addJsonSchema(
  * @returns Parsed JSON document.
  */
 export function parseJSON(document: TextDocument): JSONDocument {
-  return jsonLanguageService.parseJSONDocument(document);
+    return jsonLanguageService.parseJSONDocument(document);
 }
 
 // TODO right now the language services re-parse on every validation and completion.
 // If this becomes a time suck, consider cacheing the results
 
 const jsonService: LanguageService = {
-  async doComplete(embeddedDocument, offset) {
-    return await jsonLanguageService.doComplete(
-      embeddedDocument.document,
-      embeddedDocument.document.positionAt(offset),
-      parseJSON(embeddedDocument.document),
-    );
-  },
+    async doComplete(embeddedDocument, offset) {
+        return await jsonLanguageService.doComplete(
+            embeddedDocument.document,
+            embeddedDocument.document.positionAt(offset),
+            parseJSON(embeddedDocument.document)
+        );
+    },
 
-  async doHover(embeddedDocument, offset) {
-    return await jsonLanguageService.doHover(
-      embeddedDocument.document,
-      embeddedDocument.document.positionAt(offset),
-      parseJSON(embeddedDocument.document),
-    );
-  },
+    async doHover(embeddedDocument, offset) {
+        return await jsonLanguageService.doHover(
+            embeddedDocument.document,
+            embeddedDocument.document.positionAt(offset),
+            parseJSON(embeddedDocument.document)
+        );
+    },
 
-  async doValidation(embeddedDocument) {
-    return await jsonLanguageService.doValidation(
-      embeddedDocument.document,
-      parseJSON(embeddedDocument.document),
-    );
-  },
+    async doValidation(embeddedDocument) {
+        return await jsonLanguageService.doValidation(
+            embeddedDocument.document,
+            parseJSON(embeddedDocument.document)
+        );
+    },
 };
 
 /* CSS */
@@ -280,37 +287,37 @@ const cssLanguageService = getCSSLanguageService();
 // If this becomes a time suck, consider cacheing the results
 
 const cssService: LanguageService = {
-  async doComplete(embeddedDocument, offset) {
-    const stylesheet = cssLanguageService.parseStylesheet(
-      embeddedDocument.document,
-    );
-    return cssLanguageService.doComplete(
-      embeddedDocument.document,
-      embeddedDocument.document.positionAt(offset),
-      stylesheet,
-    );
-  },
+    async doComplete(embeddedDocument, offset) {
+        const stylesheet = cssLanguageService.parseStylesheet(
+            embeddedDocument.document
+        );
+        return cssLanguageService.doComplete(
+            embeddedDocument.document,
+            embeddedDocument.document.positionAt(offset),
+            stylesheet
+        );
+    },
 
-  async doHover(embeddedDocument, offset) {
-    const stylesheet = cssLanguageService.parseStylesheet(
-      embeddedDocument.document,
-    );
-    return cssLanguageService.doHover(
-      embeddedDocument.document,
-      embeddedDocument.document.positionAt(offset),
-      stylesheet,
-    );
-  },
+    async doHover(embeddedDocument, offset) {
+        const stylesheet = cssLanguageService.parseStylesheet(
+            embeddedDocument.document
+        );
+        return cssLanguageService.doHover(
+            embeddedDocument.document,
+            embeddedDocument.document.positionAt(offset),
+            stylesheet
+        );
+    },
 
-  async doValidation(embeddedDocument) {
-    const stylesheet = cssLanguageService.parseStylesheet(
-      embeddedDocument.document,
-    );
-    return cssLanguageService.doValidation(
-      embeddedDocument.document,
-      stylesheet,
-    );
-  },
+    async doValidation(embeddedDocument) {
+        const stylesheet = cssLanguageService.parseStylesheet(
+            embeddedDocument.document
+        );
+        return cssLanguageService.doValidation(
+            embeddedDocument.document,
+            stylesheet
+        );
+    },
 };
 
 /* HTML */
@@ -321,23 +328,23 @@ const htmlLanguageService = getHtmlLanguageService();
 // If this becomes a time suck, consider cacheing the results
 
 const htmlService: LanguageService = {
-  async doComplete(embeddedDocument, offset) {
-    return htmlLanguageService.doComplete(
-      embeddedDocument.document,
-      embeddedDocument.document.positionAt(offset),
-      htmlLanguageService.parseHTMLDocument(embeddedDocument.document),
-    );
-  },
+    async doComplete(embeddedDocument, offset) {
+        return htmlLanguageService.doComplete(
+            embeddedDocument.document,
+            embeddedDocument.document.positionAt(offset),
+            htmlLanguageService.parseHTMLDocument(embeddedDocument.document)
+        );
+    },
 
-  async doHover(embeddedDocument, offset) {
-    return htmlLanguageService.doHover(
-      embeddedDocument.document,
-      embeddedDocument.document.positionAt(offset),
-      htmlLanguageService.parseHTMLDocument(embeddedDocument.document),
-    );
-  },
+    async doHover(embeddedDocument, offset) {
+        return htmlLanguageService.doHover(
+            embeddedDocument.document,
+            embeddedDocument.document.positionAt(offset),
+            htmlLanguageService.parseHTMLDocument(embeddedDocument.document)
+        );
+    },
 
-  async doValidation() {
-    return [];
-  },
+    async doValidation() {
+        return [];
+    },
 };

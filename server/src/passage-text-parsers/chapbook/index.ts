@@ -13,16 +13,16 @@ import { getReferencesToSymbolAt } from "./chapbook-references";
  * @returns Parser, or undefined if none is available.
  */
 export function getChapbookParser(
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  formatVersion: string | undefined,
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    formatVersion: string | undefined
 ): StoryFormatParser | undefined {
-  return {
-    id: "chapbook-any",
-    parsePassageText: parsePassageText,
-    generateCompletions: generateCompletions,
-    generateDiagnostics: generateDiagnostics,
-    generateHover: generateHover,
-    getDefinitionAt: getDefinitionAt,
-    getReferencesToSymbolAt: getReferencesToSymbolAt,
-  };
+    return {
+        id: "chapbook-any",
+        parsePassageText: parsePassageText,
+        generateCompletions: generateCompletions,
+        generateDiagnostics: generateDiagnostics,
+        generateHover: generateHover,
+        getDefinitionAt: getDefinitionAt,
+        getReferencesToSymbolAt: getReferencesToSymbolAt,
+    };
 }
