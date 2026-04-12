@@ -7,7 +7,7 @@ const annotationDecoration = vscode.window.createTextEditorDecorationType({
     },
     rangeBehavior: vscode.DecorationRangeBehavior.ClosedOpen,
 });
-let editor: vscode.TextEditor;
+let editor: vscode.TextEditor | undefined;
 
 /**
  * Add a single trailing annotation to an editor.
@@ -67,7 +67,7 @@ export function clearAnnotations() {
 export function clearAnnotationOnChangeEvent(
     e: vscode.TextDocumentChangeEvent
 ) {
-    if (e.document.uri.toString() === editor.document.uri.toString()) {
+    if (e.document.uri.toString() === editor?.document.uri.toString()) {
         clearAnnotations();
     }
 }

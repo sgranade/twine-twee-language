@@ -8,7 +8,7 @@ import { parseTwee3 } from "./twee-parser";
  * @returns Media type, or undefined if not known.
  */
 function mediaTypeFromExt(ext: string): string | undefined {
-    let mediaType: string;
+    let mediaType: string | undefined;
 
     // AUDIO NOTES:
     //

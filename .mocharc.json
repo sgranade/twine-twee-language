@@ -1,8 +1,5 @@
 {
-	"extension": ["ts"],
-	"require": "ts-node/register",
-	"spec": [
-		"client/src/test/**/*.test.ts",
-		"server/src/test/**/*.test.ts"
-	]
+    "extension": ["ts"],
+    "require": "ts-node/register/transpile-only",
+    "spec": ["client/src/test/**/*.test.ts", "server/src/test/**/*.test.ts"]
 }

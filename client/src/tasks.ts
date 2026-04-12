@@ -88,7 +88,7 @@ class TwineTaskTerminal implements vscode.Pseudoterminal {
     constructor(private flags: BuildFlags[]) {}
 
     open(): void {
-        if (this.flags.includes("watch")) {
+        if (this.flags.includes("watch") && vscode.workspace.workspaceFolders) {
             this.fileWatcher = vscode.workspace.createFileSystemWatcher(
                 new vscode.RelativePattern(
                     vscode.workspace.workspaceFolders[0],

@@ -1,13 +1,14 @@
 {
 	"compilerOptions": {
+		"module": "commonjs",
 		"target": "es2024",
 		"lib": ["es2024"],
-		"module": "commonjs",
 		"sourceMap": true,
 		"strict": true,
 		"outDir": "out",
-		"rootDir": "src"
+		"rootDir": "src",
+		"types": ["node"],
 	},
 	"include": ["src"],
-	"exclude": ["node_modules", ".vscode-test"]
+	"exclude": ["node_modules", ".vscode-test", "**/*.test.ts"]
 }

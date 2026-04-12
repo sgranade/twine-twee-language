@@ -25,7 +25,10 @@ const entitiesToEscapeRegex = /[&<>"']/g;
 export function escapeHtmlEntities(src: string): string {
     if (src.length > 0) {
         entitiesToEscapeRegex.lastIndex = 0;
-        return src.replace(entitiesToEscapeRegex, (m) => entitiesEscape[m]);
+        return src.replace(
+            entitiesToEscapeRegex,
+            (m) => entitiesEscape[m as keyof typeof entitiesEscape],
+        );
     }
     return src;
 }
@@ -46,7 +49,10 @@ const attrsToEscapeRegex = /[&"']/g;
 export function escapeAttrEntities(src: string): string {
     if (src.length > 0) {
         attrsToEscapeRegex.lastIndex = 0;
-        return src.replace(attrsToEscapeRegex, (m) => entitiesEscape[m]);
+        return src.replace(
+            attrsToEscapeRegex,
+            (m) => entitiesEscape[m as keyof typeof entitiesEscape],
+        );
     }
     return src;
 }

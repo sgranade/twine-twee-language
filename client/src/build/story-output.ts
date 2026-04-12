@@ -21,7 +21,8 @@ function getStoryFormatSource(storyFormatContents: string): string {
         );
     }
     const rawJson = storyFormatContents.slice(start, end + 1);
-    let format: unknown;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let format: any;
     try {
         format = JSON.parse(rawJson);
     } catch (err) {
@@ -33,14 +34,15 @@ function getStoryFormatSource(storyFormatContents: string): string {
             try {
                 format = JSON.parse(rawJson.slice(0, setupEntryIndex) + "}");
             } catch (suberr) {
+                const message =
+                    suberr instanceof Error ? suberr.message : "unknown error";
                 throw new Error(
-                    `Couldn't decode the story format's JSON: ${suberr.message}`
+                    `Couldn't decode the story format's JSON: ${message}`,
                 );
             }
         }
-        throw new Error(
-            `Couldn't decode the story format's JSON: ${err.message}`
-        );
+        const message = err instanceof Error ? err.message : "unknown error";
+        throw new Error(`Couldn't decode the story format's JSON: ${message}`);
     }
     if (typeof format["source"] !== "string") {
         throw new Error(
@@ -143,17 +145,17 @@ function storyToHtml(story: Story, options: Record<string, boolean>): string {
 
     // Build tw-tag elements
     // <tw-tag name="…" color="…"></tw-tag>
-    if (story.storyData.tagColors !== undefined) {
+    if (story.storyData?.tagColors !== undefined) {
         for (const [tag, color] of Object.entries(story.storyData.tagColors)) {
             html += `<tw-tag name="${tag}" color="${color}"></tw-tag>`;
         }
     }
 
     // Build passage elements
-    let startPassageId: number;
+    let startPassageId: number | undefined;
     for (const [ndx, p] of contentPassages.entries()) {
         html += passageToHtml(p, ndx + 1);
-        if (p.name === story.storyData.start) {
+        if (p.name === story.storyData?.start) {
             startPassageId = ndx + 1;
         }
     }
@@ -164,10 +166,12 @@ function storyToHtml(story: Story, options: Record<string, boolean>): string {
     const name = escapeAttrEntities(story.name ?? "");
     const creator = escapeAttrEntities("Twine (Twee 3) Language");
     const creatorVersion = escapeAttrEntities(CLIENT_VERSION);
-    const ifid = escapeAttrEntities(story.storyData.ifid);
-    const format = escapeAttrEntities(story.storyData.storyFormat.format);
+    const ifid = escapeAttrEntities(story.storyData?.ifid || "");
+    const format = escapeAttrEntities(
+        story.storyData?.storyFormat?.format ?? "",
+    );
     const formatVersion = escapeAttrEntities(
-        story.storyData.storyFormat.formatVersion
+        story.storyData?.storyFormat?.formatVersion ?? "",
     );
     const optionsArr: string[] = [];
     for (const [option, val] of Object.entries(options)) {
@@ -175,9 +179,9 @@ function storyToHtml(story: Story, options: Record<string, boolean>): string {
     }
     const optionsStr = escapeAttrEntities(optionsArr.join(" "));
     html =
-        `<!-- UUID://${story.storyData.ifid}// -->` +
+        `<!-- UUID://${story.storyData?.ifid || "none"}// -->` +
         `<tw-storydata name="${name}" startnode="${startPassageId}" creator="${creator}" ` +
-        `creator-version="${creatorVersion}" ifid="${ifid}" zoom="${story.storyData.zoom ?? ""}" ` +
+        `creator-version="${creatorVersion}" ifid="${ifid}" zoom="${story.storyData?.zoom ?? ""}" ` +
         `format="${format}" format-version="${formatVersion}" options="${optionsStr}" hidden>${html}`;
 
     html += "</tw-storydata>";
@@ -204,7 +208,7 @@ export function compileStory(
     // Set the name
     template = template.replace(
         /\{\{STORY_NAME\}\}/g,
-        escapeHtmlEntities(story.name)
+        escapeHtmlEntities(story.name ?? "Untitled Twine Game"),
     );
 
     // Set the story data

@@ -44,9 +44,9 @@ const currentRanges: Record<DecorationType, vscode.Range[]> = {
  * @param ranges Decoration ranges for the current editor.
  */
 export function setEditorDecorationRanges(ranges: DecorationRange[]): void {
-    for (const type of Object.keys(DecorationType).filter(
-        (k) => !isNaN(Number(k))
-    )) {
+    for (const type of Object.keys(
+        decorations,
+    ) as unknown as DecorationType[]) {
         currentRanges[type].length = 0;
     }
     for (const range of ranges) {
@@ -73,6 +73,9 @@ export function updateDecoration(editor: vscode.TextEditor): void {
         const containingRanges = ranges.filter((r) =>
             r.contains(cursorPosition)
         );
-        editor.setDecorations(decorations[type], containingRanges);
+        editor.setDecorations(
+            decorations[type as unknown as DecorationType],
+            containingRanges,
+        );
     }
 }

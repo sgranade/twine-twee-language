@@ -129,7 +129,7 @@ export function storyFormatToTweegoID(
 export function storyFormatToWorkspacePath(
     storyFormat: StoryFormat,
     workspaceProvider: WorkspaceProvider
-): string {
+): string | undefined {
     const tweegoId = storyFormatToTweegoID(storyFormat);
     if (tweegoId === undefined) {
         return undefined;
@@ -289,7 +289,8 @@ async function downloadChapbookFormat(
         }
         // Fall through to try the latest version
     } catch (err) {
-        return new Error(err.message);
+        const message = err instanceof Error ? err.message : "unknown error";
+        return new Error(message);
     }
 
     try {
@@ -311,7 +312,8 @@ async function downloadChapbookFormat(
             }
         }
     } catch (err) {
-        return new Error(err.message);
+        const message = err instanceof Error ? err.message : "unknown error";
+        return new Error(message);
     }
 
     return new Error(`Couldn't find Chapbook ${version} to download`);
@@ -346,7 +348,8 @@ async function downloadSugarCubeFormat(
             }
         }
     } catch (err) {
-        return new Error(err.message);
+        const message = err instanceof Error ? err.message : "unknown error";
+        return new Error(message);
     }
 
     return new Error(`Couldn't find SugarCube ${version} to download`);

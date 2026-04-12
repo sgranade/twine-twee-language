@@ -7,7 +7,9 @@
 	},
 	"prettier.prettierPath": "./node_modules/prettier",
 	"editor.formatOnSave": true,
-	"prettier.tabWidth": 4,
 	"mochaExplorer.files": "test/**/*.ts",
-	"mochaExplorer.require": "ts-node/register"
+	"mochaExplorer.require": "ts-node/register",
+	"mochaExplorer.env": {
+		"TS_NODE_PROJECT": "./tsconfig.test.json"
+	}
 }

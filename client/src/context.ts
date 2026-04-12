@@ -50,7 +50,8 @@ class EventListenerWrapper extends FlaggedDispose {
 class EventListenerManager {
     listenMethods: EventListenerWrapper[] = [];
 
-    handleNotification(manager: EventListenerManager, ...params) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    handleNotification(manager: EventListenerManager, ...params: any[]) {
         manager.listenMethods = manager.listenMethods.filter(
             (v) => !v.disposed
         );
@@ -87,7 +88,8 @@ export function addListener(
  * @param event Event to signal.
  * @param params Parameters to pass to listeners.
  */
-export function signalContextEvent(event: ContextEvent, ...params) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function signalContextEvent(event: ContextEvent, ...params: any[]) {
     const manager = contextListenerManagers[event];
     manager?.handleNotification(manager, params);
 }

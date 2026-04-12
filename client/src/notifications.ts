@@ -35,7 +35,8 @@ class ListenerManager extends DisposeWithFlag {
     listenMethods: ListenerWrapper[] = [];
     disposable?: vscode.Disposable;
 
-    handleNotification(manager: ListenerManager, ...params) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    handleNotification(manager: ListenerManager, ...params: any[]) {
         manager.listenMethods = manager.listenMethods.filter(
             (v) => !v.disposed
         );

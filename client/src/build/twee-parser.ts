@@ -59,8 +59,9 @@ function parseHeaderMetadata(
         if (typeof jsonMetadata["size"] === "string")
             metadata.size = jsonMetadata["size"];
     } catch (err) {
+        const message = err instanceof Error ? err.message : "unknown error";
         throw new TweeParseError(
-            `Couldn't parse metadata: ${err.message}`,
+            `Couldn't parse metadata: ${message}`,
             metadataIndex,
             metadataIndex + rawMetadata.length
         );
@@ -240,8 +241,9 @@ function parseStoryDataPassage(
             }
         }
     } catch (err) {
+        const message = err instanceof Error ? err.message : "unknown error";
         throw new TweeParseError(
-            `Couldn't parse StoryData passage: ${err.message}`,
+            `Couldn't parse StoryData passage: ${message}`,
             textIndex,
             textIndex + passageText.length
         );

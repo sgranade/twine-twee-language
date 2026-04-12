@@ -43,7 +43,7 @@ async function recordDirectoryExistence(
         await workspaceProvider.fs.readDirectory(uri);
         dirsExist[dir] = true;
     } catch (err) {
-        if (err.message.includes("ENOENT")) {
+        if (err instanceof Error && err.message.includes("ENOENT")) {
             dirsExist[dir] = false;
         } else {
             throw err;
@@ -106,7 +106,7 @@ export function getBuildAndStoryUris(
         storyFilename += "html";
     }
     const buildDirUri = UriUtils.joinPath(
-        workspaceProvider.rootWorkspaceUri(),
+        workspaceProvider.rootWorkspaceUri() ?? URI.file("."),
         buildDir
     );
     const storyUri = UriUtils.joinPath(buildDirUri, storyFilename);
@@ -279,16 +279,18 @@ export async function checkForLocalStoryFormat(
             `Could not download ${storyFormat.format} version ${storyFormat.formatVersion ?? "unknown"}: ${format.message}`
         );
     } else {
-        const outUri = vscode.Uri.joinPath(
-            workspaceProvider.rootWorkspaceUri(),
-            storyFormatToWorkspacePath(storyFormat, workspaceProvider) ??
-                "format.js"
-        );
         try {
+            const outUri = vscode.Uri.joinPath(
+                workspaceProvider.rootWorkspaceUri() ?? URI.file("."),
+                storyFormatToWorkspacePath(storyFormat, workspaceProvider) ??
+                    "format.js",
+            );
             await workspaceProvider.fs.writeFile(outUri, Buffer.from(format));
         } catch (error) {
+            const message =
+                error instanceof Error ? error.message : "unknown error";
             vscode.window.showErrorMessage(
-                `Could not write the downloaded ${storyFormat.format} file: ${error.message}`
+                `Could not write the downloaded ${storyFormat.format} file: ${message}`,
             );
         }
     }
@@ -313,7 +315,7 @@ export async function readLocalStoryFormatOrAskToDownload(
         return await readLocalStoryFormat(storyFormat, workspaceProvider);
     } catch (err) {
         // If it's any error other than "file not found", throw
-        if (!err.message.includes("ENOENT")) {
+        if (err instanceof Error && !err.message.includes("ENOENT")) {
             throw err;
         }
 
@@ -342,9 +344,9 @@ export async function build(
         return;
     }
 
-    let currentFileUri: URI; // Current file URI
+    let currentFileUri: URI | undefined; // Current file URI
     try {
-        let storyFormatData: string;
+        let storyFormatData: string | undefined;
 
         // See if we have a cached format
         const cachedStoryFormat = getCachedStoryFormat();
@@ -397,14 +399,14 @@ export async function build(
         // but weirder things have occurred.)
         if (
             cachedStoryFormat === undefined ||
-            story.storyData.storyFormat.format !==
+            story.storyData?.storyFormat?.format !==
                 cachedStoryFormat.format.format ||
             story.storyData.storyFormat.formatVersion !==
                 cachedStoryFormat.format.formatVersion
         ) {
             const maybeStoryFormatData =
                 await readLocalStoryFormatOrAskToDownload(
-                    story.storyData.storyFormat,
+                    story.storyData?.storyFormat ?? { format: "unknown" },
                     workspaceProvider
                 );
             if (maybeStoryFormatData === undefined) {
@@ -415,7 +417,7 @@ export async function build(
         }
 
         // Compile to an HTML string
-        const html = compileStory(story, storyFormatData, options);
+        const html = compileStory(story, storyFormatData ?? "unknown", options);
 
         // Write out the final game
         const outUris = getBuildAndStoryUris(workspaceProvider, story.name);
@@ -467,9 +469,10 @@ export async function build(
         // Tell everyone our build was successful
         signalContextEvent("buildSuccessful", outUris.story);
     } catch (err) {
-        vscode.window.showErrorMessage(`Build failed: ${err.message}`);
+        const message = err instanceof Error ? err.message : "unknown error";
+        vscode.window.showErrorMessage(`Build failed: ${message}`);
         // If we have a Twee parsing error, try to show the document and annotate the error
-        if (err instanceof TweeParseError) {
+        if (err instanceof TweeParseError && currentFileUri) {
             const doc = await vscode.workspace.openTextDocument(currentFileUri);
             const editor = await vscode.window.showTextDocument(doc);
             const { line } = doc.positionAt(err.start);
