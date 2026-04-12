@@ -21,7 +21,6 @@ function getStoryFormatSource(storyFormatContents: string): string {
         );
     }
     const rawJson = storyFormatContents.slice(start, end + 1);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let format: any;
     try {
         format = JSON.parse(rawJson);

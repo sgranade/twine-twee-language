@@ -122,7 +122,6 @@ interface T3LTMacroInfo {
  * @param t3ltMacros T3LT macros.
  * @returns Macro information corresponding to the T3LT macros.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function t3ltMacrosToMacroInfos(t3ltMacros: any): MacroInfo[] {
     const macros: MacroInfo[] = [];
 
@@ -219,7 +218,6 @@ export function tweeConfigFileToMacrosAndEnums(
         errors: [],
     };
     try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         let output: any;
         if (isYaml) {
             output = YAML.parse(str, { merge: true });

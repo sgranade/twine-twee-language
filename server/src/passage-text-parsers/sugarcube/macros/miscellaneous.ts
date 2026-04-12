@@ -93,7 +93,6 @@ export const widgetMacro: MacroInfo = {
         }
 
         if (args) {
-            // eslint-disable-next-line prefer-const
             let [widgetName, container] = args.split(/\s+/);
             const isContainer = container === "container";
             if (widgetName) {

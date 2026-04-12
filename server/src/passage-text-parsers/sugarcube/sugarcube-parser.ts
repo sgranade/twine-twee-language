@@ -342,7 +342,7 @@ function parseMacroArgs(
 
         // Validate arguments, capture references and semantic tokens, and log errors
         const validationInfo = macroInfo.parsedArguments.validate(t3ltArgs);
-        // eslint-disable-next-line prefer-const
+
         for (let [t3ltArgNdxStr, t3ltArgFormatType] of Object.entries(
             validationInfo.info.argFormatTypes,
         )) {

@@ -32,7 +32,6 @@ export class TwineTaskProvider implements vscode.TaskProvider {
     public resolveTask(_task: vscode.Task): vscode.Task | undefined {
         const flags: BuildFlags[] = _task.definition.flags;
         if (flags !== undefined) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const definition = <any>_task.definition;
             return this.getTask(flags, definition);
         }

@@ -663,7 +663,7 @@ export class Parameters {
      * @param variants The variants/'overloads' of the macro's parameters.
      * @throws {Error}
      */
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     constructor(variants: any[]) {
         const result: Variant[] = [];
 

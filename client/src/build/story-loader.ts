@@ -196,7 +196,6 @@ export function addFileToStory(
     contents: Buffer,
     encoding?: BufferEncoding,
 ) {
-    // eslint-disable-next-line prefer-const
     let { stem, ext } = filenameParts(basename);
     if (ext === undefined) {
         return; // No extension
