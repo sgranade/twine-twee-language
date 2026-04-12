@@ -1,9 +1,9 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
-	"lib": ["es2024", "DOM"], // DOM added to get `Performance` type for Sinon
+  	"lib": ["es2024", "DOM"], // DOM added to get `Performance` type for Sinon
     "strict": false,
-    "noImplicitAny": false
+    "noImplicitAny": false,
   },
   "include": ["**/*.test.ts", "**/*.spec.ts"]
 }

@@ -585,7 +585,7 @@ function parsePassageHeader(
     state: ParsingState,
 ): Passage {
     let unparsedHeader = header;
-    let name = "";
+    let name: string;
     let tags: Label[] | undefined;
     let metadata: PassageMetadata | undefined;
     const headerStartIndex = index + 2; // Index where the header string starts. The + 2 is for the leading "::"

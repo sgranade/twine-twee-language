@@ -1,5 +1,4 @@
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-import AdmZip = require("adm-zip");
+import JSZip from "jszip";
 import { URI, Utils } from "vscode-uri";
 
 import { StoryFormat } from "./client-server";
@@ -333,14 +332,14 @@ async function downloadSugarCubeFormat(
     try {
         const responseZipFile = await fetch(url);
         if (responseZipFile.ok) {
-            const zip = new AdmZip(
-                Buffer.from(await responseZipFile.arrayBuffer()),
+            const zip = await JSZip.loadAsync(
+                await responseZipFile.arrayBuffer(),
             );
-            const formatEntry = zip
-                .getEntries()
-                .find((e) => e.entryName.endsWith("format.js"));
-            if (formatEntry !== undefined) {
-                return zip.readAsText(formatEntry);
+            const formatFile = Object.values(zip.files).find((file) =>
+                file.name.endsWith("format.js"),
+            );
+            if (formatFile !== undefined) {
+                return await formatFile.async("text");
             } else {
                 return new Error(
                     `Couldn't find the format.js file in the downloaded SugarCube ${version} zip archive`,

@@ -2,7 +2,7 @@ import "mocha";
 import { expect } from "chai";
 import * as sinon from "sinon";
 import { ImportMock } from "ts-mock-imports";
-import AdmZip = require("adm-zip");
+import JSZip from "jszip";
 import { URI } from "vscode-uri";
 
 import { StoryFormat } from "../client-server";
@@ -577,15 +577,17 @@ describe("Manage Story Formats", () => {
         });
 
         it("should return the SugarCube story format for a version that's found and is in the zip archive", async () => {
-            const zipFile = new AdmZip();
-            zipFile.addFile(
-                "example/format.js",
-                Buffer.from("totally a format"),
-            );
+            const zipFile = new JSZip();
+            zipFile.file("example/format.js", "totally a format");
+            const zipBuffer = await zipFile.generateAsync({
+                type: "nodebuffer",
+            });
             const mockFunction = ImportMock.mockFunction(globalThis, "fetch");
             mockFunction
                 .withArgs(sinon.match(/github.com\/tmedwards\/sugarcube-2/))
-                .returns(Promise.resolve(new Response(zipFile.toBuffer())));
+                .returns(
+                    Promise.resolve(new Response(new Uint8Array(zipBuffer))),
+                );
 
             const result = await uut.downloadStoryFormat({
                 format: "SugarCube",
@@ -597,15 +599,17 @@ describe("Manage Story Formats", () => {
         });
 
         it("should return an error for a SugarCube story format whose zip archive doesn't contain `format.js`", async () => {
-            const zipFile = new AdmZip();
-            zipFile.addFile(
-                "example/misnamedFormat.js",
-                Buffer.from("totally a format"),
-            );
+            const zipFile = new JSZip();
+            zipFile.file("example/misnamedFormat.js", "totally a format");
+            const zipBuffer = await zipFile.generateAsync({
+                type: "nodebuffer",
+            });
             const mockFunction = ImportMock.mockFunction(globalThis, "fetch");
             mockFunction
                 .withArgs(sinon.match(/github.com\/tmedwards\/sugarcube-2/))
-                .returns(Promise.resolve(new Response(zipFile.toBuffer())));
+                .returns(
+                    Promise.resolve(new Response(new Uint8Array(zipBuffer))),
+                );
 
             const result = await uut.downloadStoryFormat({
                 format: "SugarCube",

@@ -1698,6 +1698,7 @@ function parseTextSubsection(
         // Parsing code taken from `render()` in `render-insert.ts` from Chapbook
         // startText is the index of the text before the opening curly bracket;
         // startCurly is the index of the bracket.
+        // eslint-disable-next-line no-useless-assignment
         let startText = 0;
         let startCurly = subsection.indexOf("{");
 

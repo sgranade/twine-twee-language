@@ -80,7 +80,7 @@ function parseHeaderMetadata(
  */
 function parsePassageHeader(header: string, index: number): Passage {
     let unparsedHeader = header;
-    let name = "";
+    let name: string;
     let tags: string[] | undefined;
     let metadata: PassageMetadata | undefined;
     let parsingIndex = index; // Index where we're currently parsing.

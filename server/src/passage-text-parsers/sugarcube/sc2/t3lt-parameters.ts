@@ -195,6 +195,7 @@ interface StringArgument {
 // but are likely just slightly incorrect and so should be counted as at least a partial validity
 // (Ex: Passing a link with a setter to something that takes `linkNoSetter`)
 // Could in the future provide quick fixes?
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 class Warning {
     readonly message: string;
 
@@ -558,7 +559,7 @@ const parameterTypes: ParameterType[] = [
             }
 
             if (passageName !== undefined) {
-                passageName = passageName.replace(/\\/g, "");
+                // passageName = passageName.replace(/\\/g, "");  SRG: this isn't used
                 return [null, false];
             } else {
                 // Based on SugarCube's Story.has, we don't allow booleans, null, objects, etc.

@@ -70,6 +70,7 @@ const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
 const projectIndex = new Index();
 
 let hasConfigurationCapability = false;
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 let hasCompletionListItemDefaults = false;
 let hasDiagnosticRelatedInformationCapability = false;
 let hasPrepareProviderCapability = false;

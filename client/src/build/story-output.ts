@@ -38,11 +38,14 @@ function getStoryFormatSource(storyFormatContents: string): string {
                     suberr instanceof Error ? suberr.message : "unknown error";
                 throw new Error(
                     `Couldn't decode the story format's JSON: ${message}`,
+                    { cause: suberr },
                 );
             }
         }
         const message = err instanceof Error ? err.message : "unknown error";
-        throw new Error(`Couldn't decode the story format's JSON: ${message}`);
+        throw new Error(`Couldn't decode the story format's JSON: ${message}`, {
+            cause: err,
+        });
     }
     if (typeof format["source"] !== "string") {
         throw new Error(

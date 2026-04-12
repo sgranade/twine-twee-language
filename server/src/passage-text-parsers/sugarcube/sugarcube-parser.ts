@@ -162,7 +162,7 @@ function parseCustomStyles(
         // Parse the inline CSS, which has to be contiguous
         let nextIndex = 0; // Where the next match should be for it to be contiguous
         inlineCssRegex.lastIndex = 0;
-        let cssMatch: RegExpExecArray | null = null;
+        let cssMatch: RegExpExecArray | null;
         while (
             (cssMatch = inlineCssRegex.exec(m[1])) !== null &&
             cssMatch.index === nextIndex
