@@ -22,7 +22,7 @@ describe("SugarCube Diagnostics", () => {
                 "fake-uri",
                 "",
                 0,
-                "Let's try <<this>>"
+                "Let's try <<this>>",
             );
             const index = new Index();
             index.setReferences("fake-uri", [
@@ -41,7 +41,7 @@ describe("SugarCube Diagnostics", () => {
             const results = parser?.generateDiagnostics(
                 doc,
                 index,
-                diagnosticOptions
+                diagnosticOptions,
             );
 
             expect(results).to.eql([
@@ -50,7 +50,7 @@ describe("SugarCube Diagnostics", () => {
                     'Macro "this" not recognized',
                     DiagnosticSeverity.Warning,
                     undefined,
-                    "Twine"
+                    "Twine",
                 ),
             ]);
         });
@@ -60,7 +60,7 @@ describe("SugarCube Diagnostics", () => {
                 "fake-uri",
                 "",
                 0,
-                "Let's try <<this>>"
+                "Let's try <<this>>",
             );
             const index = new Index();
             index.setReferences("fake-uri", [
@@ -77,7 +77,7 @@ describe("SugarCube Diagnostics", () => {
                     contents: "this",
                     location: Location.create(
                         "other-uri",
-                        Range.create(5, 6, 7, 8)
+                        Range.create(5, 6, 7, 8),
                     ),
                     kind: OSugarCubeSymbolKind.KnownMacro,
                 },
@@ -89,7 +89,7 @@ describe("SugarCube Diagnostics", () => {
             const results = parser?.generateDiagnostics(
                 doc,
                 index,
-                diagnosticOptions
+                diagnosticOptions,
             );
 
             expect(results).to.be.empty;
@@ -100,7 +100,7 @@ describe("SugarCube Diagnostics", () => {
                 "fake-uri",
                 "",
                 0,
-                "Let's try <<this>>"
+                "Let's try <<this>>",
             );
             const index = new Index();
             index.setReferences("fake-uri", [
@@ -119,7 +119,7 @@ describe("SugarCube Diagnostics", () => {
             const results = parser?.generateDiagnostics(
                 doc,
                 index,
-                diagnosticOptions
+                diagnosticOptions,
             );
 
             expect(results).to.be.empty;
@@ -133,7 +133,7 @@ describe("SugarCube Diagnostics", () => {
                     contents: "if",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(1, 2, 3, 4)
+                        Range.create(1, 2, 3, 4),
                     ),
                     kind: OSugarCubeSymbolKind.KnownMacro,
                 },
@@ -143,7 +143,7 @@ describe("SugarCube Diagnostics", () => {
             const results = parser?.generateDiagnostics(
                 doc,
                 index,
-                defaultDiagnosticsOptions
+                defaultDiagnosticsOptions,
             );
 
             expect(results).to.eql([
@@ -152,7 +152,7 @@ describe("SugarCube Diagnostics", () => {
                     `Widget "if" can't have the same name as a built-in macro`,
                     DiagnosticSeverity.Error,
                     undefined,
-                    "Twine"
+                    "Twine",
                 ),
             ]);
         });
@@ -165,7 +165,7 @@ describe("SugarCube Diagnostics", () => {
                     contents: "testy",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(1, 2, 3, 4)
+                        Range.create(1, 2, 3, 4),
                     ),
                     kind: OSugarCubeSymbolKind.KnownMacro,
                 },
@@ -175,7 +175,7 @@ describe("SugarCube Diagnostics", () => {
                     contents: "testy",
                     location: Location.create(
                         "other-uri",
-                        Range.create(5, 6, 7, 8)
+                        Range.create(5, 6, 7, 8),
                     ),
                     kind: OSugarCubeSymbolKind.KnownMacro,
                 },
@@ -185,7 +185,7 @@ describe("SugarCube Diagnostics", () => {
             const results = parser?.generateDiagnostics(
                 doc,
                 index,
-                defaultDiagnosticsOptions
+                defaultDiagnosticsOptions,
             );
 
             expect(results).to.eql([
@@ -199,11 +199,11 @@ describe("SugarCube Diagnostics", () => {
                         DiagnosticRelatedInformation.create(
                             Location.create(
                                 "other-uri",
-                                Range.create(5, 6, 7, 8)
+                                Range.create(5, 6, 7, 8),
                             ),
-                            `Other definition of "testy"`
+                            `Other definition of "testy"`,
                         ),
-                    ]
+                    ],
                 ),
             ]);
         });

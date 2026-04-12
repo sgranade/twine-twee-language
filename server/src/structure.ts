@@ -18,7 +18,7 @@ import { DecorationRange } from "./client-server";
  */
 export function generateSymbols(
     uri: string,
-    projectIndex: ProjectIndex
+    projectIndex: ProjectIndex,
 ): DocumentSymbol[] | null {
     const passages = projectIndex.getPassages(uri);
     if (passages === undefined) {
@@ -33,8 +33,8 @@ export function generateSymbols(
                     undefined,
                     SymbolKind.Class,
                     passage.scope,
-                    passage.name.location.range
-                )
+                    passage.name.location.range,
+                ),
             );
         }
     }
@@ -51,7 +51,7 @@ export function generateSymbols(
  */
 export function generateFoldingRanges(
     uri: string,
-    projectIndex: ProjectIndex
+    projectIndex: ProjectIndex,
 ): FoldingRange[] | null {
     const ranges = projectIndex.getFoldingRanges(uri);
     if (ranges.length) {
@@ -70,7 +70,7 @@ export function generateFoldingRanges(
  */
 export function generateDecorationRanges(
     uri: string,
-    projectIndex: ProjectIndex
+    projectIndex: ProjectIndex,
 ): readonly DecorationRange[] {
     return projectIndex.getDecorationRanges(uri);
 }
@@ -84,7 +84,7 @@ export function generateDecorationRanges(
  */
 export function generateSemanticTokens(
     uri: string,
-    projectIndex: ProjectIndex
+    projectIndex: ProjectIndex,
 ): SemanticTokens {
     const builder = new SemanticTokensBuilder();
 

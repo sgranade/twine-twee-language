@@ -53,7 +53,7 @@ export class TwineTaskProvider implements vscode.TaskProvider {
 
     private getTask(
         flags: BuildFlags[],
-        definition?: TwineBuildTaskDefinition
+        definition?: TwineBuildTaskDefinition,
     ): vscode.Task {
         if (definition === undefined) {
             definition = {
@@ -70,8 +70,8 @@ export class TwineTaskProvider implements vscode.TaskProvider {
                 async (): Promise<vscode.Pseudoterminal> => {
                     // When the task is executed, set up the pseudoterminal
                     return new TwineTaskTerminal(flags);
-                }
-            )
+                },
+            ),
         );
     }
 }
@@ -92,8 +92,8 @@ class TwineTaskTerminal implements vscode.Pseudoterminal {
             this.fileWatcher = vscode.workspace.createFileSystemWatcher(
                 new vscode.RelativePattern(
                     vscode.workspace.workspaceFolders[0],
-                    "**/*.{twee, tw}"
-                )
+                    "**/*.{twee, tw}",
+                ),
             );
             this.fileWatcher.onDidChange((uri) => this.doBuild(uri));
             this.fileWatcher.onDidCreate((uri) => this.doBuild(uri));
@@ -120,7 +120,7 @@ class TwineTaskTerminal implements vscode.Pseudoterminal {
 
         if (uri !== undefined) {
             this.writeEmitter.fire(
-                `\r\nFile changed: ${UriUtils.basename(uri)}\r\n`
+                `\r\nFile changed: ${UriUtils.basename(uri)}\r\n`,
             );
         }
         try {

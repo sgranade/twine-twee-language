@@ -32,7 +32,7 @@ describe("Structure", () => {
                     label: "Passage 1",
                     location: Location.create(
                         "test-uri",
-                        Range.create(0, 0, 0, 12)
+                        Range.create(0, 0, 0, 12),
                     ),
                     scope: Range.create(0, 0, 7, 17),
                 }),
@@ -40,7 +40,7 @@ describe("Structure", () => {
                     label: "Passage 2",
                     location: Location.create(
                         "test-uri",
-                        Range.create(8, 0, 8, 9)
+                        Range.create(8, 0, 8, 9),
                     ),
                     scope: Range.create(8, 0, 9, 2),
                 }),
@@ -55,14 +55,14 @@ describe("Structure", () => {
                     undefined,
                     SymbolKind.Class,
                     Range.create(0, 0, 7, 17),
-                    Range.create(0, 0, 0, 12)
+                    Range.create(0, 0, 0, 12),
                 ),
                 DocumentSymbol.create(
                     "Passage 2",
                     undefined,
                     SymbolKind.Class,
                     Range.create(8, 0, 9, 2),
-                    Range.create(8, 0, 8, 9)
+                    Range.create(8, 0, 8, 9),
                 ),
             ]);
         });
@@ -74,7 +74,7 @@ describe("Structure", () => {
                     label: "",
                     location: Location.create(
                         "test-uri",
-                        Range.create(0, 0, 0, 3)
+                        Range.create(0, 0, 0, 3),
                     ),
                     scope: Range.create(0, 0, 0, 13),
                 }),

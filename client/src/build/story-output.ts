@@ -17,7 +17,7 @@ function getStoryFormatSource(storyFormatContents: string): string {
     const end = storyFormatContents.lastIndexOf("}");
     if (start === -1 || end === -1) {
         throw new Error(
-            "Couldn't find the JSON part of the story format. Is it a Twine 2 story format?"
+            "Couldn't find the JSON part of the story format. Is it a Twine 2 story format?",
         );
     }
     const rawJson = storyFormatContents.slice(start, end + 1);
@@ -46,7 +46,7 @@ function getStoryFormatSource(storyFormatContents: string): string {
     }
     if (typeof format["source"] !== "string") {
         throw new Error(
-            `Couldn't find the "source" key in the story format. Is it a Twine 2 story format?`
+            `Couldn't find the "source" key in the story format. Is it a Twine 2 story format?`,
         );
     }
 
@@ -201,7 +201,7 @@ function storyToHtml(story: Story, options: Record<string, boolean>): string {
 export function compileStory(
     story: Story,
     storyFormatContents: string,
-    options: Record<string, boolean>
+    options: Record<string, boolean>,
 ): string {
     let template = getStoryFormatSource(storyFormatContents);
 

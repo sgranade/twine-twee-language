@@ -9,7 +9,7 @@ import { all as allInserts } from "./inserts";
 import { all as allModifiers } from "./modifiers";
 
 function generateDescription(
-    item: ChapbookFunctionInfo | undefined
+    item: ChapbookFunctionInfo | undefined,
 ): Hover | null {
     if (item !== undefined && item.description !== undefined) {
         let value = item.description;
@@ -31,7 +31,7 @@ export function generateHover(
     document: TextDocument,
     position: Position,
     deferredEmbeddedDocuments: EmbeddedDocument[],
-    index: ProjectIndex
+    index: ProjectIndex,
 ): Hover | null {
     // See if we have any references to an insert or modifier. If so,
     // return its description (if it exists) as the hover information.
@@ -50,7 +50,7 @@ export function generateHover(
         }
 
         return generateDescription(
-            matchedObjects.find((o) => o.match.test(refs.contents))
+            matchedObjects.find((o) => o.match.test(refs.contents)),
         );
     }
 

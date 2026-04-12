@@ -21,7 +21,7 @@ export interface WorkspaceProvider {
     findFiles(
         include: string,
         exclude?: string,
-        maxResults?: number
+        maxResults?: number,
     ): Thenable<URI[]>;
     /**
      * Get a workspace configuration item.
@@ -89,7 +89,7 @@ export interface WorkspaceProvider {
                  * Overwrite the file if it does exist.
                  */
                 overwrite?: boolean;
-            }
+            },
         ): Thenable<void>;
     };
 }

@@ -25,7 +25,7 @@ describe("Chapbook Diagnostics", () => {
                 "fake-uri",
                 "",
                 0,
-                "Let's try {var1}"
+                "Let's try {var1}",
             );
             const index = new Index();
             index.setReferences("fake-uri", [
@@ -43,7 +43,7 @@ describe("Chapbook Diagnostics", () => {
             const results = parser?.generateDiagnostics(
                 doc,
                 index,
-                diagnosticOptions
+                diagnosticOptions,
             );
 
             expect(results).to.eql([
@@ -52,7 +52,7 @@ describe("Chapbook Diagnostics", () => {
                     "\"var1\" isn't set in any vars section. Make sure you've spelled it correctly.",
                     DiagnosticSeverity.Warning,
                     undefined,
-                    "Twine"
+                    "Twine",
                 ),
             ]);
         });
@@ -62,7 +62,7 @@ describe("Chapbook Diagnostics", () => {
                 "fake-uri",
                 "",
                 0,
-                "Let's try {var1}"
+                "Let's try {var1}",
             );
             const index = new Index();
             index.setReferences("fake-uri", [
@@ -89,7 +89,7 @@ describe("Chapbook Diagnostics", () => {
             const results = parser?.generateDiagnostics(
                 doc,
                 index,
-                diagnosticOptions
+                diagnosticOptions,
             );
 
             expect(results).to.be.empty;
@@ -100,7 +100,7 @@ describe("Chapbook Diagnostics", () => {
                 "fake-uri",
                 "",
                 0,
-                "Let's try {passage.name}"
+                "Let's try {passage.name}",
             );
             const index = new Index();
             index.setReferences("fake-uri", [
@@ -118,7 +118,7 @@ describe("Chapbook Diagnostics", () => {
             const results = parser?.generateDiagnostics(
                 doc,
                 index,
-                diagnosticOptions
+                diagnosticOptions,
             );
 
             expect(results).to.be.empty;
@@ -129,7 +129,7 @@ describe("Chapbook Diagnostics", () => {
                 "fake-uri",
                 "",
                 0,
-                "Let's try {var1.prop}"
+                "Let's try {var1.prop}",
             );
             const index = new Index();
             index.setReferences("fake-uri", [
@@ -163,7 +163,7 @@ describe("Chapbook Diagnostics", () => {
             const results = parser?.generateDiagnostics(
                 doc,
                 index,
-                diagnosticOptions
+                diagnosticOptions,
             );
 
             expect(results).to.eql([
@@ -172,7 +172,7 @@ describe("Chapbook Diagnostics", () => {
                     "\"var1.prop\" isn't set in any vars section. Make sure you've spelled it correctly.",
                     DiagnosticSeverity.Warning,
                     undefined,
-                    "Twine"
+                    "Twine",
                 ),
             ]);
         });
@@ -182,7 +182,7 @@ describe("Chapbook Diagnostics", () => {
                 "fake-uri",
                 "",
                 0,
-                "Let's try {var1.prop}"
+                "Let's try {var1.prop}",
             );
             const index = new Index();
             index.setReferences("fake-uri", [
@@ -214,7 +214,7 @@ describe("Chapbook Diagnostics", () => {
                     locations: [
                         Location.create(
                             "other-uri",
-                            Range.create(9, 10, 11, 12)
+                            Range.create(9, 10, 11, 12),
                         ),
                     ],
                     kind: OChapbookSymbolKind.PropertySet,
@@ -226,7 +226,7 @@ describe("Chapbook Diagnostics", () => {
             const results = parser?.generateDiagnostics(
                 doc,
                 index,
-                diagnosticOptions
+                diagnosticOptions,
             );
 
             expect(results).to.be.empty;
@@ -239,7 +239,7 @@ describe("Chapbook Diagnostics", () => {
                 "fake-uri",
                 "",
                 0,
-                "Let's try {test insert, one: 'here',"
+                "Let's try {test insert, one: 'here',",
             );
             const index = new Index();
             index.setReferences("fake-uri", [
@@ -258,7 +258,7 @@ describe("Chapbook Diagnostics", () => {
             const results = parser?.generateDiagnostics(
                 doc,
                 index,
-                diagnosticOptions
+                diagnosticOptions,
             );
 
             expect(results).to.eql([
@@ -267,7 +267,7 @@ describe("Chapbook Diagnostics", () => {
                     'Insert "custom insert" not recognized',
                     DiagnosticSeverity.Warning,
                     undefined,
-                    "Twine"
+                    "Twine",
                 ),
             ]);
         });
@@ -277,7 +277,7 @@ describe("Chapbook Diagnostics", () => {
                 "fake-uri",
                 "",
                 0,
-                "Let's try {test insert, one: 'here',"
+                "Let's try {test insert, one: 'here',",
             );
             const index = new Index();
             index.setReferences("fake-uri", [
@@ -296,7 +296,7 @@ describe("Chapbook Diagnostics", () => {
             const results = parser?.generateDiagnostics(
                 doc,
                 index,
-                diagnosticOptions
+                diagnosticOptions,
             );
 
             expect(results).to.be.empty;
@@ -307,7 +307,7 @@ describe("Chapbook Diagnostics", () => {
                 "fake-uri",
                 "",
                 0,
-                "Let's try {custom insert, one: 'here',"
+                "Let's try {custom insert, one: 'here',",
             );
             const index = new Index();
             index.setDefinitions("source-uri", [
@@ -315,7 +315,7 @@ describe("Chapbook Diagnostics", () => {
                     contents: "custom\\s+insert",
                     location: Location.create(
                         "source-uri",
-                        Range.create(5, 6, 7, 8)
+                        Range.create(5, 6, 7, 8),
                     ),
                     kind: OChapbookSymbolKind.CustomInsert,
                     match: /custom\s+insert/,
@@ -337,7 +337,7 @@ describe("Chapbook Diagnostics", () => {
             const results = parser?.generateDiagnostics(
                 doc,
                 index,
-                diagnosticOptions
+                diagnosticOptions,
             );
 
             expect(results).to.be.empty;
@@ -348,7 +348,7 @@ describe("Chapbook Diagnostics", () => {
                 "fake-uri",
                 "",
                 0,
-                "Let's try {custom insert "
+                "Let's try {custom insert ",
             );
             const index = new Index();
             index.setDefinitions("source-uri", [
@@ -357,7 +357,7 @@ describe("Chapbook Diagnostics", () => {
                     name: "custom insert",
                     location: Location.create(
                         "source-uri",
-                        Range.create(5, 6, 7, 8)
+                        Range.create(5, 6, 7, 8),
                     ),
                     kind: OChapbookSymbolKind.CustomInsert,
                     match: /custom\s+insert/,
@@ -382,7 +382,7 @@ describe("Chapbook Diagnostics", () => {
             const results = parser?.generateDiagnostics(
                 doc,
                 index,
-                diagnosticOptions
+                diagnosticOptions,
             );
 
             expect(results).to.eql([
@@ -391,7 +391,7 @@ describe("Chapbook Diagnostics", () => {
                     "`custom insert` requires a first argument",
                     DiagnosticSeverity.Error,
                     undefined,
-                    "Twine"
+                    "Twine",
                 ),
             ]);
         });
@@ -401,7 +401,7 @@ describe("Chapbook Diagnostics", () => {
                 "fake-uri",
                 "",
                 0,
-                "Let's try {custom insert: 'nope' "
+                "Let's try {custom insert: 'nope' ",
             );
             const index = new Index();
             index.setDefinitions("source-uri", [
@@ -410,7 +410,7 @@ describe("Chapbook Diagnostics", () => {
                     name: "custom insert",
                     location: Location.create(
                         "source-uri",
-                        Range.create(5, 6, 7, 8)
+                        Range.create(5, 6, 7, 8),
                     ),
                     kind: OChapbookSymbolKind.CustomInsert,
                     match: /custom\s+insert/,
@@ -435,7 +435,7 @@ describe("Chapbook Diagnostics", () => {
             const results = parser?.generateDiagnostics(
                 doc,
                 index,
-                diagnosticOptions
+                diagnosticOptions,
             );
 
             expect(results).to.eql([
@@ -444,7 +444,7 @@ describe("Chapbook Diagnostics", () => {
                     "`custom insert` will ignore this first argument",
                     DiagnosticSeverity.Warning,
                     undefined,
-                    "Twine"
+                    "Twine",
                 ),
             ]);
         });
@@ -454,7 +454,7 @@ describe("Chapbook Diagnostics", () => {
                 "fake-uri",
                 "",
                 0,
-                "Let's try { custom insert } "
+                "Let's try { custom insert } ",
             );
             const index = new Index();
             index.setDefinitions("source-uri", [
@@ -463,7 +463,7 @@ describe("Chapbook Diagnostics", () => {
                     name: "custom insert",
                     location: Location.create(
                         "source-uri",
-                        Range.create(5, 6, 7, 8)
+                        Range.create(5, 6, 7, 8),
                     ),
                     kind: OChapbookSymbolKind.CustomInsert,
                     match: /custom\s+insert/,
@@ -490,7 +490,7 @@ describe("Chapbook Diagnostics", () => {
             const results = parser?.generateDiagnostics(
                 doc,
                 index,
-                diagnosticOptions
+                diagnosticOptions,
             );
 
             expect(results).to.eql([
@@ -499,7 +499,7 @@ describe("Chapbook Diagnostics", () => {
                     "Insert {custom insert} missing expected properties: expected, also",
                     DiagnosticSeverity.Error,
                     undefined,
-                    "Twine"
+                    "Twine",
                 ),
             ]);
         });
@@ -509,7 +509,7 @@ describe("Chapbook Diagnostics", () => {
                 "fake-uri",
                 "",
                 0,
-                "Let's try { custom insert, prop: 'nope' } "
+                "Let's try { custom insert, prop: 'nope' } ",
             );
             const index = new Index();
             index.setDefinitions("source-uri", [
@@ -518,7 +518,7 @@ describe("Chapbook Diagnostics", () => {
                     name: "custom insert",
                     location: Location.create(
                         "source-uri",
-                        Range.create(5, 6, 7, 8)
+                        Range.create(5, 6, 7, 8),
                     ),
                     kind: OChapbookSymbolKind.CustomInsert,
                     match: /custom\s+insert/,
@@ -543,7 +543,7 @@ describe("Chapbook Diagnostics", () => {
             const results = parser?.generateDiagnostics(
                 doc,
                 index,
-                diagnosticOptions
+                diagnosticOptions,
             );
 
             expect(results).to.eql([
@@ -552,7 +552,7 @@ describe("Chapbook Diagnostics", () => {
                     "Insert {custom insert} will ignore this property",
                     DiagnosticSeverity.Warning,
                     undefined,
-                    "Twine"
+                    "Twine",
                 ),
             ]);
         });
@@ -562,7 +562,7 @@ describe("Chapbook Diagnostics", () => {
                 "fake-uri",
                 "",
                 0,
-                "[mod-me]\nI'm modified!"
+                "[mod-me]\nI'm modified!",
             );
             const index = new Index();
             index.setReferences("fake-uri", [
@@ -581,7 +581,7 @@ describe("Chapbook Diagnostics", () => {
             const results = parser?.generateDiagnostics(
                 doc,
                 index,
-                diagnosticOptions
+                diagnosticOptions,
             );
 
             expect(results).to.eql([
@@ -590,7 +590,7 @@ describe("Chapbook Diagnostics", () => {
                     'Modifier "mod-me" not recognized',
                     DiagnosticSeverity.Warning,
                     undefined,
-                    "Twine"
+                    "Twine",
                 ),
             ]);
         });
@@ -600,7 +600,7 @@ describe("Chapbook Diagnostics", () => {
                 "fake-uri",
                 "",
                 0,
-                "[mod-me]\nI'm modified!"
+                "[mod-me]\nI'm modified!",
             );
             const index = new Index();
             index.setReferences("fake-uri", [
@@ -619,7 +619,7 @@ describe("Chapbook Diagnostics", () => {
             const results = parser?.generateDiagnostics(
                 doc,
                 index,
-                diagnosticOptions
+                diagnosticOptions,
             );
 
             expect(results).to.be.empty;
@@ -630,7 +630,7 @@ describe("Chapbook Diagnostics", () => {
                 "fake-uri",
                 "",
                 0,
-                "[mod-me additional parameters]\nI'm modified!"
+                "[mod-me additional parameters]\nI'm modified!",
             );
             const index = new Index();
             index.setDefinitions("source-uri", [
@@ -638,7 +638,7 @@ describe("Chapbook Diagnostics", () => {
                     contents: "mod-me",
                     location: Location.create(
                         "source-uri",
-                        Range.create(5, 6, 7, 8)
+                        Range.create(5, 6, 7, 8),
                     ),
                     kind: OChapbookSymbolKind.CustomModifier,
                     match: /mod-me/,
@@ -660,7 +660,7 @@ describe("Chapbook Diagnostics", () => {
             const results = parser?.generateDiagnostics(
                 doc,
                 index,
-                diagnosticOptions
+                diagnosticOptions,
             );
 
             expect(results).to.be.empty;
@@ -671,7 +671,7 @@ describe("Chapbook Diagnostics", () => {
                 "fake-uri",
                 "",
                 0,
-                "[mod-me]\nI'm modified!"
+                "[mod-me]\nI'm modified!",
             );
             const index = new Index();
             index.setDefinitions("source-uri", [
@@ -680,7 +680,7 @@ describe("Chapbook Diagnostics", () => {
                     contents: "mod-me",
                     location: Location.create(
                         "source-uri",
-                        Range.create(5, 6, 7, 8)
+                        Range.create(5, 6, 7, 8),
                     ),
                     kind: OChapbookSymbolKind.CustomModifier,
                     match: /mod-me/,
@@ -705,7 +705,7 @@ describe("Chapbook Diagnostics", () => {
             const results = parser?.generateDiagnostics(
                 doc,
                 index,
-                diagnosticOptions
+                diagnosticOptions,
             );
 
             expect(results).to.eql([
@@ -714,7 +714,7 @@ describe("Chapbook Diagnostics", () => {
                     "`mod-me` requires a first argument",
                     DiagnosticSeverity.Error,
                     undefined,
-                    "Twine"
+                    "Twine",
                 ),
             ]);
         });
@@ -724,7 +724,7 @@ describe("Chapbook Diagnostics", () => {
                 "fake-uri",
                 "",
                 0,
-                "[mod-me arg]\nI'm modified!"
+                "[mod-me arg]\nI'm modified!",
             );
             const index = new Index();
             index.setDefinitions("source-uri", [
@@ -733,7 +733,7 @@ describe("Chapbook Diagnostics", () => {
                     contents: "mod-me",
                     location: Location.create(
                         "source-uri",
-                        Range.create(5, 6, 7, 8)
+                        Range.create(5, 6, 7, 8),
                     ),
                     kind: OChapbookSymbolKind.CustomModifier,
                     match: /mod-me/,
@@ -758,7 +758,7 @@ describe("Chapbook Diagnostics", () => {
             const results = parser?.generateDiagnostics(
                 doc,
                 index,
-                diagnosticOptions
+                diagnosticOptions,
             );
 
             expect(results).to.eql([
@@ -767,7 +767,7 @@ describe("Chapbook Diagnostics", () => {
                     "`mod-me` will ignore this first argument",
                     DiagnosticSeverity.Warning,
                     undefined,
-                    "Twine"
+                    "Twine",
                 ),
             ]);
         });

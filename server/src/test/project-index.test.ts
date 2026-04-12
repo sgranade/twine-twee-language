@@ -57,7 +57,7 @@ describe("Project Index", () => {
                         format: "Fake Format",
                     },
                 },
-                "fake-uri"
+                "fake-uri",
             );
 
             const result = index.getStoryData();
@@ -76,7 +76,7 @@ describe("Project Index", () => {
                 {
                     ifid: "fake-ifid",
                 },
-                "fake-uri"
+                "fake-uri",
             );
 
             const result = index.getStoryDataUri();
@@ -123,7 +123,7 @@ describe("Project Index", () => {
                     contents: "one",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(1, 2, 3, 4)
+                        Range.create(1, 2, 3, 4),
                     ),
                     kind: 1,
                 },
@@ -131,7 +131,7 @@ describe("Project Index", () => {
                     contents: "two",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(5, 6, 7, 8)
+                        Range.create(5, 6, 7, 8),
                     ),
                     kind: 2,
                 },
@@ -146,7 +146,7 @@ describe("Project Index", () => {
                     contents: "one",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(1, 2, 3, 4)
+                        Range.create(1, 2, 3, 4),
                     ),
                     kind: 1,
                 },
@@ -178,7 +178,7 @@ describe("Project Index", () => {
                         Location.create("fake-uri", Range.create(5, 6, 7, 8)),
                         Location.create(
                             "fake-uri",
-                            Range.create(9, 10, 11, 12)
+                            Range.create(9, 10, 11, 12),
                         ),
                     ],
                     kind: 2,
@@ -217,7 +217,7 @@ describe("Project Index", () => {
                     "json",
                     '{ "prop": 7 }',
                     7,
-                    TextDocument.create("fake-uri", "", 2, "fake-content")
+                    TextDocument.create("fake-uri", "", 2, "fake-content"),
                 ),
             ];
             const index = new uut.Index();
@@ -332,7 +332,7 @@ describe("Project Index", () => {
 
             const result = index.getSymbolDefinitionByName(
                 "nopers",
-                uut.TwineSymbolKind.Passage
+                uut.TwineSymbolKind.Passage,
             );
 
             expect(result).to.be.undefined;
@@ -354,11 +354,11 @@ describe("Project Index", () => {
 
             const result = index.getSymbolDefinitionByName(
                 "Passage 2",
-                uut.TwineSymbolKind.Passage
+                uut.TwineSymbolKind.Passage,
             );
 
             expect(result).to.eql(
-                Location.create("fake-uri", Range.create(1, 1, 2, 2))
+                Location.create("fake-uri", Range.create(1, 1, 2, 2)),
             );
         });
 
@@ -368,7 +368,7 @@ describe("Project Index", () => {
                     contents: "one",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(1, 2, 3, 4)
+                        Range.create(1, 2, 3, 4),
                     ),
                     kind: 12,
                 },
@@ -376,7 +376,7 @@ describe("Project Index", () => {
                     contents: "two",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(5, 6, 7, 8)
+                        Range.create(5, 6, 7, 8),
                     ),
                     kind: 25,
                 },
@@ -387,7 +387,7 @@ describe("Project Index", () => {
             const result = index.getSymbolDefinitionByName("two", 25);
 
             expect(result).to.eql(
-                Location.create("fake-uri", Range.create(5, 6, 7, 8))
+                Location.create("fake-uri", Range.create(5, 6, 7, 8)),
             );
         });
     });
@@ -409,7 +409,7 @@ describe("Project Index", () => {
 
             const result = index.getDefinitionAt(
                 "fake-uri",
-                Position.create(2, 3)
+                Position.create(2, 3),
             );
 
             expect(result).to.be.undefined;
@@ -437,7 +437,7 @@ describe("Project Index", () => {
 
             const result = index.getDefinitionAt(
                 "fake-uri",
-                Position.create(4, 4)
+                Position.create(4, 4),
             );
 
             expect(result).to.eql({
@@ -453,7 +453,7 @@ describe("Project Index", () => {
                     contents: "one",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(1, 2, 3, 4)
+                        Range.create(1, 2, 3, 4),
                     ),
                     kind: 12,
                 },
@@ -461,7 +461,7 @@ describe("Project Index", () => {
                     contents: "two",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(5, 6, 7, 8)
+                        Range.create(5, 6, 7, 8),
                     ),
                     kind: 25,
                 },
@@ -471,7 +471,7 @@ describe("Project Index", () => {
 
             const result = index.getDefinitionAt(
                 "fake-uri",
-                Position.create(6, 4)
+                Position.create(6, 4),
             );
 
             expect(result).to.eql({
@@ -498,7 +498,7 @@ describe("Project Index", () => {
                         Location.create("fake-uri", Range.create(5, 6, 7, 8)),
                         Location.create(
                             "fake-uri",
-                            Range.create(9, 10, 11, 12)
+                            Range.create(9, 10, 11, 12),
                         ),
                     ],
                     kind: 12,
@@ -509,7 +509,7 @@ describe("Project Index", () => {
 
             const result = index.getReferencesAt(
                 "fake-uri",
-                Position.create(10, 2)
+                Position.create(10, 2),
             );
 
             expect(result).to.eql({
@@ -555,7 +555,7 @@ describe("Project Index", () => {
                         Location.create("fake-uri", Range.create(5, 6, 7, 8)),
                         Location.create(
                             "fake-uri",
-                            Range.create(9, 10, 11, 12)
+                            Range.create(9, 10, 11, 12),
                         ),
                     ],
                     kind: uut.TwineSymbolKind.Passage,
@@ -567,7 +567,7 @@ describe("Project Index", () => {
 
             const result = index.getDefinitionBySymbolAt(
                 "fake-uri",
-                Position.create(2, 3)
+                Position.create(2, 3),
             );
 
             expect(result).to.be.undefined;
@@ -604,7 +604,7 @@ describe("Project Index", () => {
                         Location.create("fake-uri", Range.create(5, 6, 7, 8)),
                         Location.create(
                             "fake-uri",
-                            Range.create(9, 10, 11, 12)
+                            Range.create(9, 10, 11, 12),
                         ),
                     ],
                     kind: uut.TwineSymbolKind.Passage,
@@ -616,7 +616,7 @@ describe("Project Index", () => {
 
             const result = index.getDefinitionBySymbolAt(
                 "fake-uri",
-                Position.create(7, 8)
+                Position.create(7, 8),
             );
 
             expect(result).to.eql({
@@ -657,7 +657,7 @@ describe("Project Index", () => {
                         Location.create("fake-uri", Range.create(5, 6, 7, 8)),
                         Location.create(
                             "fake-uri",
-                            Range.create(9, 10, 11, 12)
+                            Range.create(9, 10, 11, 12),
                         ),
                     ],
                     kind: uut.TwineSymbolKind.Passage,
@@ -669,7 +669,7 @@ describe("Project Index", () => {
 
             const result = index.getDefinitionBySymbolAt(
                 "fake-uri",
-                Position.create(1, 8)
+                Position.create(1, 8),
             );
 
             expect(result).to.eql({
@@ -685,7 +685,7 @@ describe("Project Index", () => {
                     contents: "one",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(1, 2, 3, 4)
+                        Range.create(1, 2, 3, 4),
                     ),
                     kind: 17,
                 },
@@ -693,7 +693,7 @@ describe("Project Index", () => {
                     contents: "two",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(5, 6, 7, 8)
+                        Range.create(5, 6, 7, 8),
                     ),
                     kind: 25,
                 },
@@ -703,7 +703,7 @@ describe("Project Index", () => {
 
             const result = index.getDefinitionBySymbolAt(
                 "fake-uri",
-                Position.create(1, 8)
+                Position.create(1, 8),
             );
 
             expect(result).to.eql({
@@ -746,7 +746,7 @@ describe("Project Index", () => {
                         Location.create("fake-uri", Range.create(5, 6, 7, 8)),
                         Location.create(
                             "fake-uri",
-                            Range.create(9, 10, 11, 12)
+                            Range.create(9, 10, 11, 12),
                         ),
                     ],
                     kind: uut.TwineSymbolKind.Passage,
@@ -759,7 +759,7 @@ describe("Project Index", () => {
             const result = index.getReferencesToSymbolAt(
                 "fake-uri",
                 Position.create(2, 3),
-                false
+                false,
             );
 
             expect(result).to.be.undefined;
@@ -796,7 +796,7 @@ describe("Project Index", () => {
                         Location.create("fake-uri", Range.create(5, 6, 7, 8)),
                         Location.create(
                             "fake-uri",
-                            Range.create(9, 10, 11, 12)
+                            Range.create(9, 10, 11, 12),
                         ),
                     ],
                     kind: uut.TwineSymbolKind.Passage,
@@ -809,7 +809,7 @@ describe("Project Index", () => {
             const result = index.getReferencesToSymbolAt(
                 "fake-uri",
                 Position.create(7, 8),
-                false
+                false,
             );
 
             expect(result).to.eql({
@@ -853,7 +853,7 @@ describe("Project Index", () => {
                         Location.create("fake-uri", Range.create(5, 6, 7, 8)),
                         Location.create(
                             "fake-uri",
-                            Range.create(9, 10, 11, 12)
+                            Range.create(9, 10, 11, 12),
                         ),
                     ],
                     kind: uut.TwineSymbolKind.Passage,
@@ -866,7 +866,7 @@ describe("Project Index", () => {
             const result = index.getReferencesToSymbolAt(
                 "fake-uri",
                 Position.create(7, 8),
-                true
+                true,
             );
 
             expect(result).to.eql({
@@ -911,7 +911,7 @@ describe("Project Index", () => {
                         Location.create("fake-uri", Range.create(5, 6, 7, 8)),
                         Location.create(
                             "fake-uri",
-                            Range.create(9, 10, 11, 12)
+                            Range.create(9, 10, 11, 12),
                         ),
                     ],
                     kind: uut.TwineSymbolKind.Passage,
@@ -924,7 +924,7 @@ describe("Project Index", () => {
             const result = index.getReferencesToSymbolAt(
                 "fake-uri",
                 Position.create(1, 8),
-                false
+                false,
             );
 
             expect(result).to.eql({
@@ -967,7 +967,7 @@ describe("Project Index", () => {
                         Location.create("fake-uri", Range.create(5, 6, 7, 8)),
                         Location.create(
                             "fake-uri",
-                            Range.create(9, 10, 11, 12)
+                            Range.create(9, 10, 11, 12),
                         ),
                     ],
                     kind: uut.TwineSymbolKind.Passage,
@@ -980,7 +980,7 @@ describe("Project Index", () => {
             const result = index.getReferencesToSymbolAt(
                 "fake-uri",
                 Position.create(1, 8),
-                true
+                true,
             );
 
             expect(result).to.eql({
@@ -1224,7 +1224,7 @@ describe("Project Index", () => {
                 {
                     ifid: "fake-ifid",
                 },
-                "storydata-uri"
+                "storydata-uri",
             );
 
             index.removeDocument("storydata-uri");
@@ -1239,7 +1239,7 @@ describe("Project Index", () => {
                 {
                     ifid: "fake-ifid",
                 },
-                "storydata-uri"
+                "storydata-uri",
             );
 
             index.removeDocument("other-uri");
@@ -1274,7 +1274,7 @@ describe("Project Index", () => {
                     "json",
                     '{ "prop": 7 }',
                     7,
-                    TextDocument.create("fake-uri", "", 2, "fake-content")
+                    TextDocument.create("fake-uri", "", 2, "fake-content"),
                 ),
             ];
             const index = new uut.Index();
@@ -1292,7 +1292,7 @@ describe("Project Index", () => {
                     contents: "one",
                     location: Location.create(
                         "file1",
-                        Range.create(1, 2, 3, 4)
+                        Range.create(1, 2, 3, 4),
                     ),
                     kind: 1,
                 },
@@ -1302,7 +1302,7 @@ describe("Project Index", () => {
                     contents: "two",
                     location: Location.create(
                         "file2",
-                        Range.create(5, 6, 7, 8)
+                        Range.create(5, 6, 7, 8),
                     ),
                     kind: 1,
                 },

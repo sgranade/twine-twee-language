@@ -15,18 +15,18 @@ describe("Validator", () => {
             const errors = [
                 Diagnostic.create(
                     Range.create(1, 1, 2, 2),
-                    "Your passage names aren't great"
+                    "Your passage names aren't great",
                 ),
                 Diagnostic.create(
                     Range.create(3, 3, 4, 4),
-                    "I question your choice of variables"
+                    "I question your choice of variables",
                 ),
             ];
             const doc = TextDocument.create(
                 "test-uri",
                 "Twine",
                 1.0,
-                "Placeholder content"
+                "Placeholder content",
             );
             const index = new Index();
             index.setParseErrors("test-uri", errors);
@@ -34,7 +34,7 @@ describe("Validator", () => {
             const result = await uut.generateDiagnostics(
                 doc,
                 index,
-                defaultDiagnosticsOptions
+                defaultDiagnosticsOptions,
             );
 
             expect(result).to.eql(errors);
@@ -47,14 +47,14 @@ describe("Validator", () => {
                 "test-uri",
                 "twine",
                 1,
-                '012345678\n0123456{ "test": 17, }'
+                '012345678\n0123456{ "test": 17, }',
             );
             const embeddedDocument = EmbeddedDocument.create(
                 "file:///fake.json",
                 "json",
                 '{ "test": 17, }',
                 17,
-                document
+                document,
             );
             const index = new Index();
             index.setEmbeddedDocuments("test-uri", [embeddedDocument]);
@@ -62,7 +62,7 @@ describe("Validator", () => {
             const result = await uut.generateDiagnostics(
                 document,
                 index,
-                defaultDiagnosticsOptions
+                defaultDiagnosticsOptions,
             );
 
             expect(result.length).to.equal(1);
@@ -74,14 +74,14 @@ describe("Validator", () => {
                 "test-uri",
                 "twine",
                 1,
-                '012345678\n0123456{ "test": 17, }'
+                '012345678\n0123456{ "test": 17, }',
             );
             const embeddedDocument = EmbeddedDocument.create(
                 "file:///fake.json",
                 "json",
                 '{ "test": 17, }',
                 17,
-                document
+                document,
             );
             const index = new Index();
             index.setEmbeddedDocuments("test-uri", [embeddedDocument]);
@@ -89,7 +89,7 @@ describe("Validator", () => {
             const result = await uut.generateDiagnostics(
                 document,
                 index,
-                defaultDiagnosticsOptions
+                defaultDiagnosticsOptions,
             );
 
             expect(result[0].range).to.eql(Range.create(1, 19, 1, 20));
@@ -102,14 +102,14 @@ describe("Validator", () => {
                 "test-uri",
                 "twine",
                 1,
-                '{ "test": 17, }'
+                '{ "test": 17, }',
             );
             const passages = [
                 buildPassage({
                     label: "Passage 1a",
                     location: Location.create(
                         "test-uri",
-                        Range.create(1, 1, 2, 3)
+                        Range.create(1, 1, 2, 3),
                     ),
                 }),
                 buildPassage({ label: "Passage 1b" }),
@@ -117,7 +117,7 @@ describe("Validator", () => {
                     label: "Passage 1a",
                     location: Location.create(
                         "test-uri",
-                        Range.create(4, 4, 5, 5)
+                        Range.create(4, 4, 5, 5),
                     ),
                 }),
             ];
@@ -127,26 +127,26 @@ describe("Validator", () => {
             const result = await uut.generateDiagnostics(
                 document,
                 index,
-                defaultDiagnosticsOptions
+                defaultDiagnosticsOptions,
             );
 
             expect(result.length).to.equal(2);
             expect(result[0].message).to.contain(
-                'Passage "Passage 1a" was defined elsewhere'
+                'Passage "Passage 1a" was defined elsewhere',
             );
             expect(result[0].relatedInformation).to.not.be.undefined;
             if (result[0].relatedInformation !== undefined) {
                 expect(result[0].relatedInformation[0].location).to.eql(
-                    Location.create("test-uri", Range.create(4, 4, 5, 5))
+                    Location.create("test-uri", Range.create(4, 4, 5, 5)),
                 );
             }
             expect(result[1].message).to.contain(
-                'Passage "Passage 1a" was defined elsewhere'
+                'Passage "Passage 1a" was defined elsewhere',
             );
             expect(result[1].relatedInformation).to.not.be.undefined;
             if (result[1].relatedInformation !== undefined) {
                 expect(result[1].relatedInformation[0].location).to.eql(
-                    Location.create("test-uri", Range.create(1, 1, 2, 3))
+                    Location.create("test-uri", Range.create(1, 1, 2, 3)),
                 );
             }
         });
@@ -156,7 +156,7 @@ describe("Validator", () => {
                 "test-uri",
                 "twine",
                 1,
-                '{ "test": 17, }'
+                '{ "test": 17, }',
             );
             const passages1 = [
                 buildPassage({ label: "Passage 1a" }),
@@ -164,7 +164,7 @@ describe("Validator", () => {
                     label: "Passage 1b",
                     location: Location.create(
                         "uri-one",
-                        Range.create(1, 1, 2, 3)
+                        Range.create(1, 1, 2, 3),
                     ),
                 }),
             ];
@@ -174,7 +174,7 @@ describe("Validator", () => {
                     label: "Passage 1b",
                     location: Location.create(
                         "test-uri",
-                        Range.create(4, 4, 5, 5)
+                        Range.create(4, 4, 5, 5),
                     ),
                 }),
             ];
@@ -185,17 +185,17 @@ describe("Validator", () => {
             const result = await uut.generateDiagnostics(
                 document,
                 index,
-                defaultDiagnosticsOptions
+                defaultDiagnosticsOptions,
             );
 
             expect(result.length).to.equal(1);
             expect(result[0].message).to.contain(
-                'Passage "Passage 1b" was defined elsewhere'
+                'Passage "Passage 1b" was defined elsewhere',
             );
             expect(result[0].relatedInformation).to.not.be.undefined;
             if (result[0].relatedInformation !== undefined) {
                 expect(result[0].relatedInformation[0].location).to.eql(
-                    Location.create("uri-one", Range.create(1, 1, 2, 3))
+                    Location.create("uri-one", Range.create(1, 1, 2, 3)),
                 );
             }
         });
@@ -207,7 +207,7 @@ describe("Validator", () => {
                 "test-uri",
                 "twine",
                 1,
-                '{ "test": 17, }'
+                '{ "test": 17, }',
             );
             const index = new Index();
             index.setReferences("test-uri", [
@@ -223,12 +223,12 @@ describe("Validator", () => {
             const result = await uut.generateDiagnostics(
                 document,
                 index,
-                defaultDiagnosticsOptions
+                defaultDiagnosticsOptions,
             );
 
             expect(result.length).to.equal(1);
             expect(result[0].message).to.contain(
-                "Cannot find passage 'Non-existent passage'"
+                "Cannot find passage 'Non-existent passage'",
             );
         });
 
@@ -237,7 +237,7 @@ describe("Validator", () => {
                 "test-uri",
                 "twine",
                 1,
-                '{ "test": 17, }'
+                '{ "test": 17, }',
             );
             const index = new Index();
             index.setReferences("test-uri", [

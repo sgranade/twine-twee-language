@@ -7,7 +7,7 @@ import { ProjectIndex } from "./project-index";
 export function getDefinitionAt(
     document: TextDocument,
     position: Position,
-    index: ProjectIndex
+    index: ProjectIndex,
 ): Definition | undefined {
     // First: check the index
     const definition = index.getDefinitionBySymbolAt(document.uri, position);
@@ -15,6 +15,6 @@ export function getDefinitionAt(
 
     // Second: check the story format
     return getStoryFormatParser(
-        index.getStoryData()?.storyFormat
+        index.getStoryData()?.storyFormat,
     )?.getDefinitionAt(document, position, index);
 }

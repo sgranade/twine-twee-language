@@ -7,12 +7,12 @@ export function getReferencesToSymbolAt(
     uri: string,
     position: Position,
     index: ProjectIndex,
-    includeDeclaration: boolean
+    includeDeclaration: boolean,
 ): Location[] | undefined {
     // Check the story format's references, followed by the default index
     const refLocations =
         getStoryFormatParser(
-            index.getStoryData()?.storyFormat
+            index.getStoryData()?.storyFormat,
         )?.getReferencesToSymbolAt(uri, position, index, includeDeclaration) ||
         index.getReferencesToSymbolAt(uri, position, includeDeclaration)
             ?.locations;

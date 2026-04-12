@@ -35,7 +35,7 @@ describe("SugarCube Parser", () => {
                     contents: "stylesheet",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(0, 12, 0, 22)
+                        Range.create(0, 12, 0, 22),
                     ),
                 },
             ];
@@ -67,7 +67,7 @@ describe("SugarCube Parser", () => {
                     contents: "Twine.audio",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(0, 12, 0, 23)
+                        Range.create(0, 12, 0, 23),
                     ),
                 },
             ];
@@ -94,7 +94,7 @@ describe("SugarCube Parser", () => {
                     contents: "Twine.image",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(0, 12, 0, 23)
+                        Range.create(0, 12, 0, 23),
                     ),
                 },
             ];
@@ -121,7 +121,7 @@ describe("SugarCube Parser", () => {
                     contents: "Twine.video",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(0, 12, 0, 23)
+                        Range.create(0, 12, 0, 23),
                     ),
                 },
             ];
@@ -148,7 +148,7 @@ describe("SugarCube Parser", () => {
                     contents: "Twine.vtt",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(0, 12, 0, 23)
+                        Range.create(0, 12, 0, 23),
                     ),
                 },
             ];
@@ -199,7 +199,7 @@ describe("SugarCube Parser", () => {
                     contents: "$bare_variable",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(2, 10, 2, 24)
+                        Range.create(2, 10, 2, 24),
                     ),
                     kind: OSugarCubeSymbolKind.Variable,
                 },
@@ -226,7 +226,7 @@ describe("SugarCube Parser", () => {
                     contents: "$bareVariable",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(2, 10, 2, 23)
+                        Range.create(2, 10, 2, 23),
                     ),
                     kind: OSugarCubeSymbolKind.Variable,
                 },
@@ -234,7 +234,7 @@ describe("SugarCube Parser", () => {
                     contents: "$bareVariable.prop",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(2, 24, 2, 28)
+                        Range.create(2, 24, 2, 28),
                     ),
                     kind: OSugarCubeSymbolKind.Property,
                 },
@@ -261,7 +261,7 @@ describe("SugarCube Parser", () => {
                     contents: "$bareVariable",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(2, 10, 2, 23)
+                        Range.create(2, 10, 2, 23),
                     ),
                     kind: OSugarCubeSymbolKind.Variable,
                 },
@@ -269,7 +269,7 @@ describe("SugarCube Parser", () => {
                     contents: "_otherVar",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(2, 24, 2, 33)
+                        Range.create(2, 24, 2, 33),
                     ),
                     kind: OSugarCubeSymbolKind.Variable,
                 },
@@ -638,7 +638,7 @@ describe("SugarCube Parser", () => {
                     contents: "target passage",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(2, 15, 2, 29)
+                        Range.create(2, 15, 2, 29),
                     ),
                     kind: TwineSymbolKind.Passage,
                 },
@@ -685,7 +685,7 @@ describe("SugarCube Parser", () => {
                     contents: "$tempy",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(2, 25, 2, 31)
+                        Range.create(2, 25, 2, 31),
                     ),
                     kind: OSugarCubeSymbolKind.Variable,
                 },
@@ -752,7 +752,7 @@ describe("SugarCube Parser", () => {
                     contents: "target passage",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(2, 35, 2, 49)
+                        Range.create(2, 35, 2, 49),
                     ),
                     kind: TwineSymbolKind.Passage,
                 },
@@ -838,7 +838,7 @@ describe("SugarCube Parser", () => {
                     contents: "target passage",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(2, 36, 2, 50)
+                        Range.create(2, 36, 2, 50),
                     ),
                     kind: TwineSymbolKind.Passage,
                 },
@@ -924,7 +924,7 @@ describe("SugarCube Parser", () => {
                     contents: "target passage",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(2, 15, 2, 29)
+                        Range.create(2, 15, 2, 29),
                     ),
                     kind: TwineSymbolKind.Passage,
                 },
@@ -1018,7 +1018,7 @@ describe("SugarCube Parser", () => {
                     contents: "target passage",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(2, 15, 2, 29)
+                        Range.create(2, 15, 2, 29),
                     ),
                     kind: TwineSymbolKind.Passage,
                 },
@@ -1026,7 +1026,7 @@ describe("SugarCube Parser", () => {
                     contents: "$tempy",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(2, 32, 2, 38)
+                        Range.create(2, 32, 2, 38),
                     ),
                     kind: OSugarCubeSymbolKind.Variable,
                 },
@@ -1054,7 +1054,7 @@ describe("SugarCube Parser", () => {
                     contents: "$tempy",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(2, 28, 2, 34)
+                        Range.create(2, 28, 2, 34),
                     ),
                     kind: OSugarCubeSymbolKind.Variable,
                 },
@@ -1143,7 +1143,7 @@ describe("SugarCube Parser", () => {
                     contents: "target passage",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(2, 35, 2, 49)
+                        Range.create(2, 35, 2, 49),
                     ),
                     kind: TwineSymbolKind.Passage,
                 },
@@ -1151,7 +1151,7 @@ describe("SugarCube Parser", () => {
                     contents: "$tempy",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(2, 52, 2, 58)
+                        Range.create(2, 52, 2, 58),
                     ),
                     kind: OSugarCubeSymbolKind.Variable,
                 },
@@ -1179,7 +1179,7 @@ describe("SugarCube Parser", () => {
                     contents: "$tempy",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(2, 48, 2, 54)
+                        Range.create(2, 48, 2, 54),
                     ),
                     kind: OSugarCubeSymbolKind.Variable,
                 },
@@ -1268,7 +1268,7 @@ describe("SugarCube Parser", () => {
                     contents: "target passage",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(2, 36, 2, 50)
+                        Range.create(2, 36, 2, 50),
                     ),
                     kind: TwineSymbolKind.Passage,
                 },
@@ -1276,7 +1276,7 @@ describe("SugarCube Parser", () => {
                     contents: "$tempy",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(2, 53, 2, 59)
+                        Range.create(2, 53, 2, 59),
                     ),
                     kind: OSugarCubeSymbolKind.Variable,
                 },
@@ -1304,7 +1304,7 @@ describe("SugarCube Parser", () => {
                     contents: "$tempy",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(2, 49, 2, 55)
+                        Range.create(2, 49, 2, 55),
                     ),
                     kind: OSugarCubeSymbolKind.Variable,
                 },
@@ -1393,7 +1393,7 @@ describe("SugarCube Parser", () => {
                     contents: "target passage",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(2, 15, 2, 29)
+                        Range.create(2, 15, 2, 29),
                     ),
                     kind: TwineSymbolKind.Passage,
                 },
@@ -1401,7 +1401,7 @@ describe("SugarCube Parser", () => {
                     contents: "$tempy",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(2, 54, 2, 60)
+                        Range.create(2, 54, 2, 60),
                     ),
                     kind: OSugarCubeSymbolKind.Variable,
                 },
@@ -1429,7 +1429,7 @@ describe("SugarCube Parser", () => {
                     contents: "$tempy",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(2, 50, 2, 56)
+                        Range.create(2, 50, 2, 56),
                     ),
                     kind: OSugarCubeSymbolKind.Variable,
                 },
@@ -1478,7 +1478,7 @@ describe("SugarCube Parser", () => {
             macro.deprecated = "2.1";
             const mockFunction = ImportMock.mockFunction(
                 macrosModule,
-                "allMacros"
+                "allMacros",
             ).returns({ testy: macro });
 
             parser?.parsePassageText(passage, header.length, state);
@@ -1510,7 +1510,7 @@ describe("SugarCube Parser", () => {
             });
             const mockFunction = ImportMock.mockFunction(
                 macrosModule,
-                "allMacros"
+                "allMacros",
             ).returns({ testy: macro });
 
             parser?.parsePassageText(passage, header.length, state);
@@ -1522,7 +1522,7 @@ describe("SugarCube Parser", () => {
                 contents: "testy",
                 location: Location.create(
                     "fake-uri",
-                    Range.create(1, 9, 1, 14)
+                    Range.create(1, 9, 1, 14),
                 ),
                 kind: OSugarCubeSymbolKind.KnownMacro,
             });
@@ -1543,7 +1543,7 @@ describe("SugarCube Parser", () => {
             });
             const mockFunction = ImportMock.mockFunction(
                 macrosModule,
-                "allMacros"
+                "allMacros",
             ).returns({ testy: macro });
 
             parser?.parsePassageText(passage, header.length, state);
@@ -1568,7 +1568,7 @@ describe("SugarCube Parser", () => {
             });
             const mockFunction = ImportMock.mockFunction(
                 macrosModule,
-                "allMacros"
+                "allMacros",
             ).returns({ testy: macro });
 
             parser?.parsePassageText(passage, header.length, state);
@@ -1593,7 +1593,7 @@ describe("SugarCube Parser", () => {
             });
             const mockFunction = ImportMock.mockFunction(
                 macrosModule,
-                "allMacros"
+                "allMacros",
             ).returns({ testy: macro });
 
             parser?.parsePassageText(passage, header.length, state);
@@ -1618,7 +1618,7 @@ describe("SugarCube Parser", () => {
             });
             const mockFunction = ImportMock.mockFunction(
                 macrosModule,
-                "allMacros"
+                "allMacros",
             ).returns({ testy: macro });
 
             parser?.parsePassageText(passage, header.length, state);
@@ -1643,7 +1643,7 @@ describe("SugarCube Parser", () => {
             });
             const mockFunction = ImportMock.mockFunction(
                 macrosModule,
-                "allMacros"
+                "allMacros",
             ).returns({ testy: macro });
 
             parser?.parsePassageText(passage, header.length, state);
@@ -1668,7 +1668,7 @@ describe("SugarCube Parser", () => {
             });
             const mockFunction = ImportMock.mockFunction(
                 macrosModule,
-                "allMacros"
+                "allMacros",
             ).returns({ testy: macro });
 
             parser?.parsePassageText(passage, header.length, state);
@@ -1700,7 +1700,7 @@ describe("SugarCube Parser", () => {
             };
             const mockFunction = ImportMock.mockFunction(
                 macrosModule,
-                "allMacros"
+                "allMacros",
             ).returns({ testy: macro });
 
             parser?.parsePassageText(passage, header.length, state);
@@ -1732,7 +1732,7 @@ describe("SugarCube Parser", () => {
             kidMacro.parents = ["testy"];
             const mockFunction = ImportMock.mockFunction(
                 macrosModule,
-                "allMacros"
+                "allMacros",
             ).returns({
                 testy: testyMacro,
                 kid: kidMacro,
@@ -1768,7 +1768,7 @@ describe("SugarCube Parser", () => {
                     contents: "script",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(1, 9, 1, 15)
+                        Range.create(1, 9, 1, 15),
                     ),
                     kind: OSugarCubeSymbolKind.KnownMacro,
                 });
@@ -1833,7 +1833,7 @@ describe("SugarCube Parser", () => {
                         contents: "script",
                         location: Location.create(
                             "fake-uri",
-                            Range.create(1, 9, 1, 15)
+                            Range.create(1, 9, 1, 15),
                         ),
                         kind: OSugarCubeSymbolKind.KnownMacro,
                     },
@@ -1864,7 +1864,7 @@ describe("SugarCube Parser", () => {
                         contents: "script",
                         location: Location.create(
                             "fake-uri",
-                            Range.create(1, 9, 1, 15)
+                            Range.create(1, 9, 1, 15),
                         ),
                         kind: OSugarCubeSymbolKind.KnownMacro,
                     },
@@ -1872,7 +1872,7 @@ describe("SugarCube Parser", () => {
                         contents: "$items",
                         location: Location.create(
                             "fake-uri",
-                            Range.create(2, 4, 2, 10)
+                            Range.create(2, 4, 2, 10),
                         ),
                         kind: OSugarCubeSymbolKind.Variable,
                     },
@@ -1880,7 +1880,7 @@ describe("SugarCube Parser", () => {
                         contents: "_hit",
                         location: Location.create(
                             "fake-uri",
-                            Range.create(3, 2, 3, 6)
+                            Range.create(3, 2, 3, 6),
                         ),
                         kind: OSugarCubeSymbolKind.Variable,
                     },
@@ -2003,7 +2003,7 @@ describe("SugarCube Parser", () => {
                         contents: "$var1",
                         location: Location.create(
                             "fake-uri",
-                            Range.create(1, 14, 1, 19)
+                            Range.create(1, 14, 1, 19),
                         ),
                         kind: OSugarCubeSymbolKind.Variable,
                     },
@@ -2011,7 +2011,7 @@ describe("SugarCube Parser", () => {
                         contents: "_var2",
                         location: Location.create(
                             "fake-uri",
-                            Range.create(1, 23, 1, 28)
+                            Range.create(1, 23, 1, 28),
                         ),
                         kind: OSugarCubeSymbolKind.Variable,
                     },
@@ -2019,7 +2019,7 @@ describe("SugarCube Parser", () => {
                         contents: "$testy",
                         location: Location.create(
                             "fake-uri",
-                            Range.create(1, 38, 1, 44)
+                            Range.create(1, 38, 1, 44),
                         ),
                         kind: OSugarCubeSymbolKind.Variable,
                     },
@@ -2027,7 +2027,7 @@ describe("SugarCube Parser", () => {
                         contents: "$var2",
                         location: Location.create(
                             "fake-uri",
-                            Range.create(1, 47, 1, 52)
+                            Range.create(1, 47, 1, 52),
                         ),
                         kind: OSugarCubeSymbolKind.Variable,
                     },
@@ -2035,7 +2035,7 @@ describe("SugarCube Parser", () => {
                         contents: "_var3",
                         location: Location.create(
                             "fake-uri",
-                            Range.create(1, 54, 1, 59)
+                            Range.create(1, 54, 1, 59),
                         ),
                         kind: OSugarCubeSymbolKind.Variable,
                     },
@@ -2043,7 +2043,7 @@ describe("SugarCube Parser", () => {
                         contents: "$var4",
                         location: Location.create(
                             "fake-uri",
-                            Range.create(1, 69, 1, 74)
+                            Range.create(1, 69, 1, 74),
                         ),
                         kind: OSugarCubeSymbolKind.Variable,
                     },
@@ -2068,7 +2068,7 @@ describe("SugarCube Parser", () => {
                         contents: "a",
                         location: Location.create(
                             "fake-uri",
-                            Range.create(1, 12, 1, 13)
+                            Range.create(1, 12, 1, 13),
                         ),
                         kind: OSugarCubeSymbolKind.UnknownMacro,
                     },
@@ -2093,7 +2093,7 @@ describe("SugarCube Parser", () => {
                     contents: "Passage Name",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(1, 16, 1, 28)
+                        Range.create(1, 16, 1, 28),
                     ),
                     kind: TwineSymbolKind.Passage,
                 });
@@ -2120,7 +2120,7 @@ describe("SugarCube Parser", () => {
                 };
                 const mockFunction = ImportMock.mockFunction(
                     macrosModule,
-                    "allMacros"
+                    "allMacros",
                 ).returns({ a: macro });
 
                 parser?.parsePassageText(passage, header.length, state);
@@ -2147,7 +2147,7 @@ describe("SugarCube Parser", () => {
                 };
                 const mockFunction = ImportMock.mockFunction(
                     macrosModule,
-                    "allMacros"
+                    "allMacros",
                 ).returns({ a: macro });
 
                 parser?.parsePassageText(passage, header.length, state);
@@ -2168,7 +2168,7 @@ describe("SugarCube Parser", () => {
                         contents: "a",
                         location: Location.create(
                             "fake-uri",
-                            Range.create(1, 12, 1, 13)
+                            Range.create(1, 12, 1, 13),
                         ),
                         kind: OSugarCubeSymbolKind.KnownMacro,
                     },
@@ -2193,7 +2193,7 @@ describe("SugarCube Parser", () => {
                 };
                 const mockFunction = ImportMock.mockFunction(
                     macrosModule,
-                    "allMacros"
+                    "allMacros",
                 ).returns({ a: macro });
 
                 parser?.parsePassageText(passage, header.length, state);
@@ -2220,7 +2220,7 @@ describe("SugarCube Parser", () => {
                         contents: "a",
                         location: Location.create(
                             "fake-uri",
-                            Range.create(1, 12, 1, 13)
+                            Range.create(1, 12, 1, 13),
                         ),
                         kind: OSugarCubeSymbolKind.KnownMacro,
                     },
@@ -2228,7 +2228,7 @@ describe("SugarCube Parser", () => {
                         contents: "$testy",
                         location: Location.create(
                             "fake-uri",
-                            Range.create(1, 14, 1, 20)
+                            Range.create(1, 14, 1, 20),
                         ),
                         kind: OSugarCubeSymbolKind.Variable,
                     },
@@ -2254,7 +2254,7 @@ describe("SugarCube Parser", () => {
                 });
                 const mockFunction = ImportMock.mockFunction(
                     macrosModule,
-                    "allMacros"
+                    "allMacros",
                 ).returns({ a: macro });
 
                 parser?.parsePassageText(passage, header.length, state);
@@ -2317,7 +2317,7 @@ describe("SugarCube Parser", () => {
                 });
                 const mockFunction = ImportMock.mockFunction(
                     macrosModule,
-                    "allMacros"
+                    "allMacros",
                 ).returns({ a: macro });
 
                 parser?.parsePassageText(passage, header.length, state);
@@ -2329,7 +2329,7 @@ describe("SugarCube Parser", () => {
                         contents: "$testy",
                         location: Location.create(
                             "fake-uri",
-                            Range.create(1, 33, 1, 39)
+                            Range.create(1, 33, 1, 39),
                         ),
                         kind: OSugarCubeSymbolKind.Variable,
                     },
@@ -2351,7 +2351,7 @@ describe("SugarCube Parser", () => {
                 });
                 const mockFunction = ImportMock.mockFunction(
                     macrosModule,
-                    "allMacros"
+                    "allMacros",
                 ).returns({ a: macro });
 
                 parser?.parsePassageText(passage, header.length, state);
@@ -2405,7 +2405,7 @@ describe("SugarCube Parser", () => {
                 });
                 const mockFunction = ImportMock.mockFunction(
                     macrosModule,
-                    "allMacros"
+                    "allMacros",
                 ).returns({ a: macro });
 
                 parser?.parsePassageText(passage, header.length, state);
@@ -2417,7 +2417,7 @@ describe("SugarCube Parser", () => {
                         contents: "$testy",
                         location: Location.create(
                             "fake-uri",
-                            Range.create(1, 23, 1, 29)
+                            Range.create(1, 23, 1, 29),
                         ),
                         kind: OSugarCubeSymbolKind.Variable,
                     },
@@ -2440,7 +2440,7 @@ describe("SugarCube Parser", () => {
                 });
                 const mockFunction = ImportMock.mockFunction(
                     macrosModule,
-                    "allMacros"
+                    "allMacros",
                 ).returns({ a: macro });
 
                 parser?.parsePassageText(passage, header.length, state);
@@ -2452,7 +2452,7 @@ describe("SugarCube Parser", () => {
                         contents: "Passage Name",
                         location: Location.create(
                             "fake-uri",
-                            Range.create(1, 16, 1, 28)
+                            Range.create(1, 16, 1, 28),
                         ),
                         kind: TwineSymbolKind.Passage,
                     },
@@ -2460,7 +2460,7 @@ describe("SugarCube Parser", () => {
                         contents: "$testy",
                         location: Location.create(
                             "fake-uri",
-                            Range.create(1, 44, 1, 50)
+                            Range.create(1, 44, 1, 50),
                         ),
                         kind: OSugarCubeSymbolKind.Variable,
                     },
@@ -2482,7 +2482,7 @@ describe("SugarCube Parser", () => {
                 });
                 const mockFunction = ImportMock.mockFunction(
                     macrosModule,
-                    "allMacros"
+                    "allMacros",
                 ).returns({ a: macro });
 
                 parser?.parsePassageText(passage, header.length, state);
@@ -2494,7 +2494,7 @@ describe("SugarCube Parser", () => {
                         contents: "Passage Name",
                         location: Location.create(
                             "fake-uri",
-                            Range.create(1, 20, 1, 32)
+                            Range.create(1, 20, 1, 32),
                         ),
                         kind: TwineSymbolKind.Passage,
                     },
@@ -2516,7 +2516,7 @@ describe("SugarCube Parser", () => {
                 });
                 const mockFunction = ImportMock.mockFunction(
                     macrosModule,
-                    "allMacros"
+                    "allMacros",
                 ).returns({ a: macro });
 
                 parser?.parsePassageText(passage, header.length, state);
@@ -2528,7 +2528,7 @@ describe("SugarCube Parser", () => {
                         contents: "Passage",
                         location: Location.create(
                             "fake-uri",
-                            Range.create(1, 19, 1, 26)
+                            Range.create(1, 19, 1, 26),
                         ),
                         kind: TwineSymbolKind.Passage,
                     },
@@ -2550,7 +2550,7 @@ describe("SugarCube Parser", () => {
                 });
                 const mockFunction = ImportMock.mockFunction(
                     macrosModule,
-                    "allMacros"
+                    "allMacros",
                 ).returns({ a: macro });
 
                 parser?.parsePassageText(passage, header.length, state);
@@ -2562,7 +2562,7 @@ describe("SugarCube Parser", () => {
                         contents: "$testy",
                         location: Location.create(
                             "fake-uri",
-                            Range.create(1, 20, 1, 26)
+                            Range.create(1, 20, 1, 26),
                         ),
                         kind: OSugarCubeSymbolKind.Variable,
                     },
@@ -2584,7 +2584,7 @@ describe("SugarCube Parser", () => {
                 });
                 const mockFunction = ImportMock.mockFunction(
                     macrosModule,
-                    "allMacros"
+                    "allMacros",
                 ).returns({ a: macro });
 
                 parser?.parsePassageText(passage, header.length, state);
@@ -2596,7 +2596,7 @@ describe("SugarCube Parser", () => {
                         contents: "$testy",
                         location: Location.create(
                             "fake-uri",
-                            Range.create(1, 20, 1, 26)
+                            Range.create(1, 20, 1, 26),
                         ),
                         kind: OSugarCubeSymbolKind.Variable,
                     },
@@ -2663,7 +2663,7 @@ describe("SugarCube Parser", () => {
             });
             const mockFunction = ImportMock.mockFunction(
                 macrosModule,
-                "allMacros"
+                "allMacros",
             ).returns({ testy: macro });
 
             parser?.parsePassageText(passage, header.length, state);
@@ -2691,7 +2691,7 @@ describe("SugarCube Parser", () => {
             });
             const mockFunction = ImportMock.mockFunction(
                 macrosModule,
-                "allMacros"
+                "allMacros",
             ).returns({ testy: macro });
 
             parser?.parsePassageText(passage, header.length, state);
@@ -2719,7 +2719,7 @@ describe("SugarCube Parser", () => {
             });
             const mockFunction = ImportMock.mockFunction(
                 macrosModule,
-                "allMacros"
+                "allMacros",
             ).returns({ testy: macro });
 
             parser?.parsePassageText(passage, header.length, state);
@@ -2751,7 +2751,7 @@ describe("SugarCube Parser", () => {
                     contents: "OtherPassage",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(2, 39, 2, 51)
+                        Range.create(2, 39, 2, 51),
                     ),
                     kind: TwineSymbolKind.Passage,
                 },
@@ -2778,7 +2778,7 @@ describe("SugarCube Parser", () => {
                     contents: "$tempy",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(2, 39, 2, 45)
+                        Range.create(2, 39, 2, 45),
                     ),
                     kind: OSugarCubeSymbolKind.Variable,
                 },
@@ -2805,7 +2805,7 @@ describe("SugarCube Parser", () => {
                     contents: "OtherPassage",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(2, 43, 2, 55)
+                        Range.create(2, 43, 2, 55),
                     ),
                     kind: TwineSymbolKind.Passage,
                 },
@@ -2832,7 +2832,7 @@ describe("SugarCube Parser", () => {
                     contents: "OtherPassage",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(2, 46, 2, 58)
+                        Range.create(2, 46, 2, 58),
                     ),
                     kind: TwineSymbolKind.Passage,
                 },
@@ -2859,7 +2859,7 @@ describe("SugarCube Parser", () => {
                     contents: "OtherPassage",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(2, 43, 2, 55)
+                        Range.create(2, 43, 2, 55),
                     ),
                     kind: TwineSymbolKind.Passage,
                 },
@@ -2886,7 +2886,7 @@ describe("SugarCube Parser", () => {
                     contents: "OtherPassage",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(2, 42, 2, 54)
+                        Range.create(2, 42, 2, 54),
                     ),
                     kind: TwineSymbolKind.Passage,
                 },
@@ -2913,7 +2913,7 @@ describe("SugarCube Parser", () => {
                     contents: "OtherPassage",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(2, 43, 2, 55)
+                        Range.create(2, 43, 2, 55),
                     ),
                     kind: TwineSymbolKind.Passage,
                 },
@@ -2940,7 +2940,7 @@ describe("SugarCube Parser", () => {
                     contents: "OtherPassage",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(2, 44, 2, 56)
+                        Range.create(2, 44, 2, 56),
                     ),
                     kind: TwineSymbolKind.Passage,
                 },
@@ -2967,7 +2967,7 @@ describe("SugarCube Parser", () => {
                     contents: "OtherPassage",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(2, 43, 2, 55)
+                        Range.create(2, 43, 2, 55),
                     ),
                     kind: TwineSymbolKind.Passage,
                 },
@@ -2994,7 +2994,7 @@ describe("SugarCube Parser", () => {
                     contents: "$thing",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(2, 38, 2, 44)
+                        Range.create(2, 38, 2, 44),
                     ),
                     kind: OSugarCubeSymbolKind.Variable,
                 },
@@ -3021,7 +3021,7 @@ describe("SugarCube Parser", () => {
                     contents: "$thing",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(2, 42, 2, 48)
+                        Range.create(2, 42, 2, 48),
                     ),
                     kind: OSugarCubeSymbolKind.Variable,
                 },
@@ -3048,7 +3048,7 @@ describe("SugarCube Parser", () => {
                     contents: "$thing",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(2, 45, 2, 51)
+                        Range.create(2, 45, 2, 51),
                     ),
                     kind: OSugarCubeSymbolKind.Variable,
                 },
@@ -3075,7 +3075,7 @@ describe("SugarCube Parser", () => {
                     contents: "_id",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(2, 49, 2, 52)
+                        Range.create(2, 49, 2, 52),
                     ),
                     kind: OSugarCubeSymbolKind.Variable,
                 },
@@ -3102,7 +3102,7 @@ describe("SugarCube Parser", () => {
                     contents: "_id",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(2, 42, 2, 45)
+                        Range.create(2, 42, 2, 45),
                     ),
                     kind: OSugarCubeSymbolKind.Variable,
                 },
@@ -3148,7 +3148,7 @@ describe("SugarCube Parser", () => {
 
             expect(callbacks.embeddedDocuments.length).to.equal(2); // HTML doc for the full passage + CSS
             expect(result.document.getText()).to.eql(
-                "p {\n  color: #26b72b;\n}"
+                "p {\n  color: #26b72b;\n}",
             );
             expect(result.document.languageId).to.eql("css");
             expect(result.range).to.eql(Range.create(1, 13, 3, 1));
@@ -3353,7 +3353,7 @@ describe("SugarCube Parser", () => {
                 expect(callbacks.errors.length).to.equal(1);
                 expect(result.severity).to.eql(DiagnosticSeverity.Warning);
                 expect(result.message).to.include(
-                    "StoryDisplayTitle isn't supported in SugarCube version 2.30.0"
+                    "StoryDisplayTitle isn't supported in SugarCube version 2.30.0",
                 );
                 expect(result.range).to.eql(Range.create(0, 3, 0, 20));
             });
@@ -3385,7 +3385,7 @@ describe("SugarCube Parser", () => {
                 expect(callbacks.errors.length).to.equal(1);
                 expect(result.severity).to.eql(DiagnosticSeverity.Warning);
                 expect(result.message).to.include(
-                    "StoryInterface isn't supported in SugarCube version 2.17.0"
+                    "StoryInterface isn't supported in SugarCube version 2.17.0",
                 );
                 expect(result.range).to.eql(Range.create(0, 3, 0, 17));
             });
@@ -3417,7 +3417,7 @@ describe("SugarCube Parser", () => {
                 expect(callbacks.errors.length).to.equal(1);
                 expect(result.severity).to.eql(DiagnosticSeverity.Warning);
                 expect(result.message).to.include(
-                    "StoryShare is deprecated as of SugarCube version 2.37.0"
+                    "StoryShare is deprecated as of SugarCube version 2.37.0",
                 );
                 expect(result.range).to.eql(Range.create(0, 3, 0, 13));
             });
@@ -3438,7 +3438,7 @@ describe("SugarCube Parser", () => {
                         contents: "Twine.audio",
                         location: Location.create(
                             "fake-uri",
-                            Range.create(0, 12, 0, 23)
+                            Range.create(0, 12, 0, 23),
                         ),
                     },
                 ];
@@ -3454,7 +3454,7 @@ describe("SugarCube Parser", () => {
                 expect(callbacks.errors.length).to.equal(1);
                 expect(result.severity).to.eql(DiagnosticSeverity.Warning);
                 expect(result.message).to.include(
-                    "Twine.audio isn't supported in SugarCube version 2.23.0"
+                    "Twine.audio isn't supported in SugarCube version 2.23.0",
                 );
                 expect(result.range).to.eql(Range.create(0, 12, 0, 23));
             });
@@ -3475,7 +3475,7 @@ describe("SugarCube Parser", () => {
                         contents: "Twine.video",
                         location: Location.create(
                             "fake-uri",
-                            Range.create(0, 12, 0, 23)
+                            Range.create(0, 12, 0, 23),
                         ),
                     },
                 ];
@@ -3491,7 +3491,7 @@ describe("SugarCube Parser", () => {
                 expect(callbacks.errors.length).to.equal(1);
                 expect(result.severity).to.eql(DiagnosticSeverity.Warning);
                 expect(result.message).to.include(
-                    "Twine.video isn't supported in SugarCube version 2.23.0"
+                    "Twine.video isn't supported in SugarCube version 2.23.0",
                 );
                 expect(result.range).to.eql(Range.create(0, 12, 0, 23));
             });
@@ -3512,7 +3512,7 @@ describe("SugarCube Parser", () => {
                         contents: "Twine.vtt",
                         location: Location.create(
                             "fake-uri",
-                            Range.create(0, 12, 0, 23)
+                            Range.create(0, 12, 0, 23),
                         ),
                     },
                 ];
@@ -3528,7 +3528,7 @@ describe("SugarCube Parser", () => {
                 expect(callbacks.errors.length).to.equal(1);
                 expect(result.severity).to.eql(DiagnosticSeverity.Warning);
                 expect(result.message).to.include(
-                    "Twine.vtt isn't supported in SugarCube version 2.23.0"
+                    "Twine.vtt isn't supported in SugarCube version 2.23.0",
                 );
                 expect(result.range).to.eql(Range.create(0, 12, 0, 23));
             });
@@ -3549,14 +3549,14 @@ describe("SugarCube Parser", () => {
                         contents: "Twine.image",
                         location: Location.create(
                             "fake-uri",
-                            Range.create(0, 12, 0, 23)
+                            Range.create(0, 12, 0, 23),
                         ),
                     },
                     {
                         contents: "Twine.audio",
                         location: Location.create(
                             "fake-uri",
-                            Range.create(0, 25, 0, 31)
+                            Range.create(0, 25, 0, 31),
                         ),
                     },
                 ];
@@ -3572,12 +3572,12 @@ describe("SugarCube Parser", () => {
                 expect(callbacks.errors.length).to.equal(2);
                 expect(result[0].severity).to.eql(DiagnosticSeverity.Error);
                 expect(result[0].message).to.include(
-                    "Multiple media passage tags aren't allowed"
+                    "Multiple media passage tags aren't allowed",
                 );
                 expect(result[0].range).to.eql(Range.create(0, 12, 0, 23));
                 expect(result[1].severity).to.eql(DiagnosticSeverity.Error);
                 expect(result[1].message).to.include(
-                    "Multiple media passage tags aren't allowed"
+                    "Multiple media passage tags aren't allowed",
                 );
                 expect(result[1].range).to.eql(Range.create(0, 25, 0, 31));
             });
@@ -3598,7 +3598,7 @@ describe("SugarCube Parser", () => {
                         contents: "bookmark",
                         location: Location.create(
                             "fake-uri",
-                            Range.create(0, 12, 0, 23)
+                            Range.create(0, 12, 0, 23),
                         ),
                     },
                 ];
@@ -3614,7 +3614,7 @@ describe("SugarCube Parser", () => {
                 expect(callbacks.errors.length).to.equal(1);
                 expect(result.severity).to.eql(DiagnosticSeverity.Warning);
                 expect(result.message).to.include(
-                    "bookmark is deprecated as of SugarCube version 2.37.0"
+                    "bookmark is deprecated as of SugarCube version 2.37.0",
                 );
                 expect(result.range).to.eql(Range.create(0, 12, 0, 23));
             });
@@ -3640,7 +3640,7 @@ describe("SugarCube Parser", () => {
                 macro.since = "2.1.1";
                 const mockFunction = ImportMock.mockFunction(
                     macrosModule,
-                    "allMacros"
+                    "allMacros",
                 ).returns({ testy: macro });
 
                 parser?.parsePassageText(passage, header.length, state);
@@ -3650,7 +3650,7 @@ describe("SugarCube Parser", () => {
                 expect(callbacks.errors.length).to.equal(1);
                 expect(result.severity).to.eql(DiagnosticSeverity.Error);
                 expect(result.message).to.include(
-                    "`testy` isn't available until SugarCube version 2.1.1 but your StoryFormat version is 2.1"
+                    "`testy` isn't available until SugarCube version 2.1.1 but your StoryFormat version is 2.1",
                 );
                 expect(result.range).to.eql(Range.create(1, 10, 1, 19));
             });
@@ -3674,7 +3674,7 @@ describe("SugarCube Parser", () => {
                 macro.removed = "2.1";
                 const mockFunction = ImportMock.mockFunction(
                     macrosModule,
-                    "allMacros"
+                    "allMacros",
                 ).returns({ testy: macro });
 
                 parser?.parsePassageText(passage, header.length, state);
@@ -3684,7 +3684,7 @@ describe("SugarCube Parser", () => {
                 expect(callbacks.errors.length).to.equal(1);
                 expect(result.severity).to.eql(DiagnosticSeverity.Error);
                 expect(result.message).to.include(
-                    "`testy` was removed in SugarCube version 2.1 and your StoryFormat version is 2.1"
+                    "`testy` was removed in SugarCube version 2.1 and your StoryFormat version is 2.1",
                 );
                 expect(result.range).to.eql(Range.create(1, 10, 1, 19));
             });
@@ -3704,7 +3704,7 @@ describe("SugarCube Parser", () => {
                 });
                 const mockFunction = ImportMock.mockFunction(
                     macrosModule,
-                    "allMacros"
+                    "allMacros",
                 ).returns({ testy: macro });
 
                 parser?.parsePassageText(passage, header.length, state);
@@ -3714,7 +3714,7 @@ describe("SugarCube Parser", () => {
                 expect(callbacks.errors.length).to.equal(1);
                 expect(result.severity).to.eql(DiagnosticSeverity.Error);
                 expect(result.message).to.include(
-                    "<<testy>> macro isn't a container and so doesn't have a closing macro"
+                    "<<testy>> macro isn't a container and so doesn't have a closing macro",
                 );
                 expect(result.range).to.eql(Range.create(1, 10, 1, 20));
             });
@@ -3734,7 +3734,7 @@ describe("SugarCube Parser", () => {
                 });
                 const mockFunction = ImportMock.mockFunction(
                     macrosModule,
-                    "allMacros"
+                    "allMacros",
                 ).returns({ testy: macro });
 
                 parser?.parsePassageText(passage, header.length, state);
@@ -3744,7 +3744,7 @@ describe("SugarCube Parser", () => {
                 expect(callbacks.errors.length).to.equal(1);
                 expect(result.severity).to.eql(DiagnosticSeverity.Error);
                 expect(result.message).to.include(
-                    "Closing macro <</testy>> not found"
+                    "Closing macro <</testy>> not found",
                 );
                 expect(result.range).to.eql(Range.create(1, 10, 1, 19));
             });
@@ -3764,7 +3764,7 @@ describe("SugarCube Parser", () => {
                 });
                 const mockFunction = ImportMock.mockFunction(
                     macrosModule,
-                    "allMacros"
+                    "allMacros",
                 ).returns({ testy: macro });
 
                 parser?.parsePassageText(passage, header.length, state);
@@ -3774,7 +3774,7 @@ describe("SugarCube Parser", () => {
                 expect(callbacks.errors.length).to.equal(1);
                 expect(result.severity).to.eql(DiagnosticSeverity.Warning);
                 expect(result.message).to.include(
-                    "<<endtesty>> is deprecated; use <</testy>> instead"
+                    "<<endtesty>> is deprecated; use <</testy>> instead",
                 );
                 expect(result.range).to.eql(Range.create(1, 19, 1, 31));
             });
@@ -3794,7 +3794,7 @@ describe("SugarCube Parser", () => {
                 });
                 const mockFunction = ImportMock.mockFunction(
                     macrosModule,
-                    "allMacros"
+                    "allMacros",
                 ).returns({ testy: macro });
 
                 parser?.parsePassageText(passage, header.length, state);
@@ -3804,7 +3804,7 @@ describe("SugarCube Parser", () => {
                 expect(callbacks.errors.length).to.equal(1);
                 expect(result.severity).to.eql(DiagnosticSeverity.Error);
                 expect(result.message).to.include(
-                    "Opening macro <<testy>> not found"
+                    "Opening macro <<testy>> not found",
                 );
                 expect(result.range).to.eql(Range.create(1, 10, 1, 20));
             });
@@ -3827,7 +3827,7 @@ describe("SugarCube Parser", () => {
                 macroB.parents = [{ name: "a", max: 2 }];
                 const mockFunction = ImportMock.mockFunction(
                     macrosModule,
-                    "allMacros"
+                    "allMacros",
                 ).returns({ a: macroA, b: macroB });
 
                 parser?.parsePassageText(passage, header.length, state);
@@ -3858,7 +3858,7 @@ describe("SugarCube Parser", () => {
                 macroB.parents = [{ name: "a", max: 2 }];
                 const mockFunction = ImportMock.mockFunction(
                     macrosModule,
-                    "allMacros"
+                    "allMacros",
                 ).returns({ a: macroA, b: macroB });
 
                 parser?.parsePassageText(passage, header.length, state);
@@ -3868,7 +3868,7 @@ describe("SugarCube Parser", () => {
                 expect(callbacks.errors.length).to.equal(1);
                 expect(result.severity).to.eql(DiagnosticSeverity.Error);
                 expect(result.message).to.include(
-                    "Child macro <<b>> can be used at most 2 times"
+                    "Child macro <<b>> can be used at most 2 times",
                 );
                 expect(result.range).to.eql(Range.create(4, 0, 4, 5));
             });
@@ -3892,7 +3892,7 @@ describe("SugarCube Parser", () => {
                 macroB.parents = [{ name: "a", max: 1 }];
                 const mockFunction = ImportMock.mockFunction(
                     macrosModule,
-                    "allMacros"
+                    "allMacros",
                 ).returns({ a: macroA, b: macroB });
 
                 parser?.parsePassageText(passage, header.length, state);
@@ -3919,7 +3919,7 @@ describe("SugarCube Parser", () => {
                     expect(callbacks.errors.length).to.equal(1);
                     expect(result.severity).to.eql(DiagnosticSeverity.Error);
                     expect(result.message).to.include(
-                        "Unable to parse macro argument: unterminated single quoted string"
+                        "Unable to parse macro argument: unterminated single quoted string",
                     );
                     expect(result.range).to.eql(Range.create(1, 14, 1, 27));
                 });
@@ -3969,7 +3969,7 @@ describe("SugarCube Parser", () => {
                     macro.arguments = true;
                     const mockFunction = ImportMock.mockFunction(
                         macrosModule,
-                        "allMacros"
+                        "allMacros",
                     ).returns({ a: macro });
 
                     parser?.parsePassageText(passage, header.length, state);
@@ -3995,7 +3995,7 @@ describe("SugarCube Parser", () => {
                     macro.arguments = false;
                     const mockFunction = ImportMock.mockFunction(
                         macrosModule,
-                        "allMacros"
+                        "allMacros",
                     ).returns({ a: macro });
 
                     parser?.parsePassageText(passage, header.length, state);
@@ -4021,7 +4021,7 @@ describe("SugarCube Parser", () => {
                     macro.arguments = undefined;
                     const mockFunction = ImportMock.mockFunction(
                         macrosModule,
-                        "allMacros"
+                        "allMacros",
                     ).returns({ a: macro });
 
                     parser?.parsePassageText(passage, header.length, state);
@@ -4047,7 +4047,7 @@ describe("SugarCube Parser", () => {
                     });
                     const mockFunction = ImportMock.mockFunction(
                         macrosModule,
-                        "allMacros"
+                        "allMacros",
                     ).returns({ a: macro });
 
                     parser?.parsePassageText(passage, header.length, state);
@@ -4072,7 +4072,7 @@ describe("SugarCube Parser", () => {
                     });
                     const mockFunction = ImportMock.mockFunction(
                         macrosModule,
-                        "allMacros"
+                        "allMacros",
                     ).returns({ a: macro });
 
                     parser?.parsePassageText(passage, header.length, state);
@@ -4082,7 +4082,7 @@ describe("SugarCube Parser", () => {
                     expect(callbacks.errors.length).to.equal(1);
                     expect(result.severity).to.eql(DiagnosticSeverity.Error);
                     expect(result.message).to.include(
-                        "Argument is not a boolean"
+                        "Argument is not a boolean",
                     );
                     expect(result.range).to.eql(Range.create(1, 14, 1, 15));
                 });
@@ -4103,7 +4103,7 @@ describe("SugarCube Parser", () => {
                     });
                     const mockFunction = ImportMock.mockFunction(
                         macrosModule,
-                        "allMacros"
+                        "allMacros",
                     ).returns({ a: macro });
 
                     parser?.parsePassageText(passage, header.length, state);
@@ -4129,7 +4129,7 @@ describe("SugarCube Parser", () => {
                     });
                     const mockFunction = ImportMock.mockFunction(
                         macrosModule,
-                        "allMacros"
+                        "allMacros",
                     ).returns({ a: macro });
 
                     parser?.parsePassageText(passage, header.length, state);
@@ -4139,7 +4139,7 @@ describe("SugarCube Parser", () => {
                     expect(callbacks.errors.length).to.equal(1);
                     expect(result.severity).to.eql(DiagnosticSeverity.Warning);
                     expect(result.message).to.include(
-                        "Closing macros don't take arguments"
+                        "Closing macros don't take arguments",
                     );
                     expect(result.range).to.eql(Range.create(1, 22, 1, 28));
                 });
@@ -4159,7 +4159,7 @@ describe("SugarCube Parser", () => {
                     });
                     const mockFunction = ImportMock.mockFunction(
                         macrosModule,
-                        "allMacros"
+                        "allMacros",
                     ).returns({ a: macro });
 
                     parser?.parsePassageText(passage, header.length, state);
@@ -4169,7 +4169,7 @@ describe("SugarCube Parser", () => {
                     expect(callbacks.errors.length).to.equal(1);
                     expect(result.severity).to.eql(DiagnosticSeverity.Warning);
                     expect(result.message).to.include(
-                        "Do you mean for this receiver value to be a bare variable?"
+                        "Do you mean for this receiver value to be a bare variable?",
                     );
                     expect(result.range).to.eql(Range.create(1, 19, 1, 25));
                 });
@@ -4190,7 +4190,7 @@ describe("SugarCube Parser", () => {
                     });
                     const mockFunction = ImportMock.mockFunction(
                         macrosModule,
-                        "allMacros"
+                        "allMacros",
                     ).returns({ a: macro });
 
                     parser?.parsePassageText(passage, header.length, state);
@@ -4216,7 +4216,7 @@ describe("SugarCube Parser", () => {
                     });
                     const mockFunction = ImportMock.mockFunction(
                         macrosModule,
-                        "allMacros"
+                        "allMacros",
                     ).returns({ a: macro });
 
                     parser?.parsePassageText(passage, header.length, state);
@@ -4226,7 +4226,7 @@ describe("SugarCube Parser", () => {
                     expect(callbacks.errors.length).to.equal(1);
                     expect(result.severity).to.eql(DiagnosticSeverity.Error);
                     expect(result.message).to.include(
-                        "Argument is a link, but does not allow setter syntax"
+                        "Argument is a link, but does not allow setter syntax",
                     );
                     expect(result.range).to.eql(Range.create(1, 14, 1, 57));
                 });
@@ -4252,7 +4252,7 @@ describe("SugarCube Parser", () => {
                 expect(callbacks.errors.length).to.equal(1);
                 expect(result.severity).to.eql(DiagnosticSeverity.Error);
                 expect(result.message).to.include(
-                    `Both "data-passage" and "href" attributes aren't allowed`
+                    `Both "data-passage" and "href" attributes aren't allowed`,
                 );
                 expect(result.range).to.eql(Range.create(2, 45, 2, 57));
             });
@@ -4275,7 +4275,7 @@ describe("SugarCube Parser", () => {
                 expect(callbacks.errors.length).to.equal(1);
                 expect(result.severity).to.eql(DiagnosticSeverity.Error);
                 expect(result.message).to.include(
-                    `"data-setter" can't have an evaluation directive`
+                    `"data-setter" can't have an evaluation directive`,
                 );
                 expect(result.range).to.eql(Range.create(2, 20, 2, 21));
             });
@@ -4298,7 +4298,7 @@ describe("SugarCube Parser", () => {
                 expect(callbacks.errors.length).to.equal(1);
                 expect(result.severity).to.eql(DiagnosticSeverity.Error);
                 expect(result.message).to.include(
-                    `"data-setter" can't have an evaluation directive`
+                    `"data-setter" can't have an evaluation directive`,
                 );
                 expect(result.range).to.eql(Range.create(2, 20, 2, 28));
             });

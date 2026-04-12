@@ -31,14 +31,14 @@ describe("SugarCube Hover", () => {
         });
         const mockFunction = ImportMock.mockFunction(
             macrosModule,
-            "allMacros"
+            "allMacros",
         ).returns({ mockro: macro });
 
         const result = parser?.generateHover(
             doc,
             Position.create(1, 3),
             [],
-            index
+            index,
         );
         mockFunction.restore();
 
@@ -69,18 +69,18 @@ describe("SugarCube Hover", () => {
         });
         const mockFunction1 = ImportMock.mockFunction(
             macrosModule,
-            "allMacros"
+            "allMacros",
         ).returns({ mockro: macro });
         const mockFunction2 = ImportMock.mockFunction(
             macrosModule,
-            "allMacroEnums"
+            "allMacroEnums",
         ).returns({ enum: "replaced" });
 
         const result = parser?.generateHover(
             doc,
             Position.create(1, 3),
             [],
-            index
+            index,
         );
         mockFunction1.restore();
         mockFunction2.restore();
@@ -113,14 +113,14 @@ describe("SugarCube Hover", () => {
         macro.syntax = "My syntax";
         const mockFunction = ImportMock.mockFunction(
             macrosModule,
-            "allMacros"
+            "allMacros",
         ).returns({ mockro: macro });
 
         const result = parser?.generateHover(
             doc,
             Position.create(1, 3),
             [],
-            index
+            index,
         );
         mockFunction.restore();
 
@@ -151,14 +151,14 @@ describe("SugarCube Hover", () => {
         macro.description = undefined;
         const mockFunction = ImportMock.mockFunction(
             macrosModule,
-            "allMacros"
+            "allMacros",
         ).returns({ mockro: macro });
 
         const result = parser?.generateHover(
             doc,
             Position.create(1, 3),
             [],
-            index
+            index,
         );
         mockFunction.restore();
 

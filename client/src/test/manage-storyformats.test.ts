@@ -138,7 +138,7 @@ describe("Manage Story Formats", () => {
 
             const result = uut.storyFormatToWorkspacePath(
                 storyFormat,
-                provider
+                provider,
             );
 
             expect(result).to.be.undefined;
@@ -155,7 +155,7 @@ describe("Manage Story Formats", () => {
 
             const result = uut.storyFormatToWorkspacePath(
                 storyFormat,
-                provider
+                provider,
             );
 
             expect(result).to.match(/^\.storyformatpath\//);
@@ -172,11 +172,11 @@ describe("Manage Story Formats", () => {
 
             const result = uut.storyFormatToWorkspacePath(
                 storyFormat,
-                provider
+                provider,
             );
 
             expect(result).to.equal(
-                ".storyformatpath/chapbook-2-1-3/format.js"
+                ".storyformatpath/chapbook-2-1-3/format.js",
             );
         });
 
@@ -191,11 +191,11 @@ describe("Manage Story Formats", () => {
 
             const result = uut.storyFormatToWorkspacePath(
                 storyFormat,
-                provider
+                provider,
             );
 
             expect(result).to.equal(
-                ".storyformatpath/chapbook-2-1-3/format.js"
+                ".storyformatpath/chapbook-2-1-3/format.js",
             );
         });
     });
@@ -224,7 +224,7 @@ describe("Manage Story Formats", () => {
 
             const result = await uut.readLocalStoryFormat(
                 storyFormat,
-                provider
+                provider,
             );
 
             expect(result).to.equal("I'm a story format!");
@@ -253,7 +253,7 @@ describe("Manage Story Formats", () => {
 
             const result = await uut.readLocalStoryFormat(
                 storyFormat,
-                provider
+                provider,
             );
 
             expect(result).to.equal("I'm a story format!");
@@ -273,7 +273,7 @@ describe("Manage Story Formats", () => {
             }
 
             expect(result.message).to.equal(
-                "Couldn't find a local copy of story format Chapbook version undefined"
+                "Couldn't find a local copy of story format Chapbook version undefined",
             );
         });
     });
@@ -287,7 +287,7 @@ describe("Manage Story Formats", () => {
 
             const result = await uut.localStoryFormatExists(
                 storyFormat,
-                provider
+                provider,
             );
 
             expect(result).to.be.false;
@@ -310,7 +310,7 @@ describe("Manage Story Formats", () => {
 
             const result = await uut.localStoryFormatExists(
                 storyFormat,
-                provider
+                provider,
             );
 
             expect(result).to.be.true;
@@ -326,7 +326,7 @@ describe("Manage Story Formats", () => {
 
             const result = await uut.localStoryFormatExists(
                 storyFormat,
-                provider
+                provider,
             );
 
             expect(result).to.be.false;
@@ -365,7 +365,7 @@ describe("Manage Story Formats", () => {
             const result = uut.storyFormatSupportsDownloading(format);
 
             expect(result).to.eql(
-                uut.StoryFormatDownloadSupport.StoryFormatNotSupported
+                uut.StoryFormatDownloadSupport.StoryFormatNotSupported,
             );
         });
 
@@ -377,7 +377,7 @@ describe("Manage Story Formats", () => {
             const result = uut.storyFormatSupportsDownloading(format);
 
             expect(result).to.eql(
-                uut.StoryFormatDownloadSupport.MissingVersion
+                uut.StoryFormatDownloadSupport.MissingVersion,
             );
         });
 
@@ -390,7 +390,7 @@ describe("Manage Story Formats", () => {
             const result = uut.storyFormatSupportsDownloading(format);
 
             expect(result).to.eql(
-                uut.StoryFormatDownloadSupport.BadVersionFormat
+                uut.StoryFormatDownloadSupport.BadVersionFormat,
             );
         });
     });
@@ -402,7 +402,7 @@ describe("Manage Story Formats", () => {
         it("should return an error for a non-Chapbook or SugarCube story format", async () => {
             const mockFunction = ImportMock.mockFunction(
                 globalThis,
-                "fetch"
+                "fetch",
             ).returns(Promise.resolve(new Response("okay!")));
 
             const result = await uut.downloadStoryFormat({
@@ -414,14 +414,14 @@ describe("Manage Story Formats", () => {
             expect(result).to.be.instanceOf(Error);
             if (result instanceof Error)
                 expect(result.message).to.include(
-                    "Downloading story format nope! isn't currently supported"
+                    "Downloading story format nope! isn't currently supported",
                 );
         });
 
         it("should return an error for a story format with no version", async () => {
             const mockFunction = ImportMock.mockFunction(
                 globalThis,
-                "fetch"
+                "fetch",
             ).returns(Promise.resolve(new Response("okay!")));
 
             const result = await uut.downloadStoryFormat({
@@ -432,7 +432,7 @@ describe("Manage Story Formats", () => {
             expect(result).to.be.instanceOf(Error);
             if (result instanceof Error)
                 expect(result.message).to.include(
-                    "Story format downloads require a format version"
+                    "Story format downloads require a format version",
                 );
         });
 
@@ -440,13 +440,13 @@ describe("Manage Story Formats", () => {
             const mockFunction = ImportMock.mockFunction(globalThis, "fetch");
             mockFunction
                 .withArgs(
-                    sinon.match(new RegExp(uut.ChapbookArchiveUri.toString()))
+                    sinon.match(new RegExp(uut.ChapbookArchiveUri.toString())),
                 )
                 .returns(Promise.resolve(new Response("totally a format")));
             mockFunction
                 .withArgs(sinon.match(new RegExp(uut.ChapbookMainPage)))
                 .returns(
-                    Promise.resolve(new Response(undefined, { status: 404 }))
+                    Promise.resolve(new Response(undefined, { status: 404 })),
                 );
 
             const result = await uut.downloadStoryFormat({
@@ -462,23 +462,23 @@ describe("Manage Story Formats", () => {
             const mockFunction = ImportMock.mockFunction(globalThis, "fetch");
             mockFunction
                 .withArgs(
-                    sinon.match(new RegExp(uut.ChapbookArchiveUri.toString()))
+                    sinon.match(new RegExp(uut.ChapbookArchiveUri.toString())),
                 )
                 .returns(
-                    Promise.resolve(new Response(undefined, { status: 404 }))
+                    Promise.resolve(new Response(undefined, { status: 404 })),
                 );
             mockFunction
                 .withArgs(uut.ChapbookMainPage)
                 .returns(
                     Promise.resolve(
                         new Response(
-                            "here we go: https://klembot.github.io/chapbook/use/2.2.0/format.js"
-                        )
-                    )
+                            "here we go: https://klembot.github.io/chapbook/use/2.2.0/format.js",
+                        ),
+                    ),
                 );
             mockFunction
                 .withArgs(
-                    "https://klembot.github.io/chapbook/use/2.2.0/format.js"
+                    "https://klembot.github.io/chapbook/use/2.2.0/format.js",
                 )
                 .returns(Promise.resolve(new Response("latest format")));
 
@@ -495,19 +495,19 @@ describe("Manage Story Formats", () => {
             const mockFunction = ImportMock.mockFunction(globalThis, "fetch");
             mockFunction
                 .withArgs(
-                    sinon.match(new RegExp(uut.ChapbookArchiveUri.toString()))
+                    sinon.match(new RegExp(uut.ChapbookArchiveUri.toString())),
                 )
                 .returns(
-                    Promise.resolve(new Response(undefined, { status: 404 }))
+                    Promise.resolve(new Response(undefined, { status: 404 })),
                 );
             mockFunction
                 .withArgs(uut.ChapbookMainPage)
                 .returns(
                     Promise.resolve(
                         new Response(
-                            "unexpected URL: https://klembot.github.io/chapbook/use/2.2.0/renamedFormat.js"
-                        )
-                    )
+                            "unexpected URL: https://klembot.github.io/chapbook/use/2.2.0/renamedFormat.js",
+                        ),
+                    ),
                 );
 
             const result = await uut.downloadStoryFormat({
@@ -519,7 +519,7 @@ describe("Manage Story Formats", () => {
             expect(result).to.be.instanceOf(Error);
             if (result instanceof Error)
                 expect(result.message).to.include(
-                    "Couldn't find the link to the latest Chapbook version to download"
+                    "Couldn't find the link to the latest Chapbook version to download",
                 );
         });
 
@@ -527,19 +527,19 @@ describe("Manage Story Formats", () => {
             const mockFunction = ImportMock.mockFunction(globalThis, "fetch");
             mockFunction
                 .withArgs(
-                    sinon.match(new RegExp(uut.ChapbookArchiveUri.toString()))
+                    sinon.match(new RegExp(uut.ChapbookArchiveUri.toString())),
                 )
                 .returns(
-                    Promise.resolve(new Response(undefined, { status: 404 }))
+                    Promise.resolve(new Response(undefined, { status: 404 })),
                 );
             mockFunction
                 .withArgs(sinon.match(new RegExp(uut.ChapbookMainPage)))
                 .returns(
                     Promise.resolve(
                         new Response(
-                            "here we go: https://klembot.github.io/chapbook/use/2.2.0/format.js"
-                        )
-                    )
+                            "here we go: https://klembot.github.io/chapbook/use/2.2.0/format.js",
+                        ),
+                    ),
                 );
 
             const result = await uut.downloadStoryFormat({
@@ -551,7 +551,7 @@ describe("Manage Story Formats", () => {
             expect(result).to.be.instanceOf(Error);
             if (result instanceof Error)
                 expect(result.message).to.include(
-                    "Couldn't find Chapbook 2.3.0 to download"
+                    "Couldn't find Chapbook 2.3.0 to download",
                 );
         });
 
@@ -560,7 +560,7 @@ describe("Manage Story Formats", () => {
             mockFunction
                 .withArgs(sinon.match(/github.com\/tmedwards\/sugarcube-2/))
                 .returns(
-                    Promise.resolve(new Response(undefined, { status: 404 }))
+                    Promise.resolve(new Response(undefined, { status: 404 })),
                 );
 
             const result = await uut.downloadStoryFormat({
@@ -572,7 +572,7 @@ describe("Manage Story Formats", () => {
             expect(result).to.be.instanceOf(Error);
             if (result instanceof Error)
                 expect(result.message).to.include(
-                    "Couldn't find SugarCube 2.34.1 to download"
+                    "Couldn't find SugarCube 2.34.1 to download",
                 );
         });
 
@@ -580,7 +580,7 @@ describe("Manage Story Formats", () => {
             const zipFile = new AdmZip();
             zipFile.addFile(
                 "example/format.js",
-                Buffer.from("totally a format")
+                Buffer.from("totally a format"),
             );
             const mockFunction = ImportMock.mockFunction(globalThis, "fetch");
             mockFunction
@@ -600,7 +600,7 @@ describe("Manage Story Formats", () => {
             const zipFile = new AdmZip();
             zipFile.addFile(
                 "example/misnamedFormat.js",
-                Buffer.from("totally a format")
+                Buffer.from("totally a format"),
             );
             const mockFunction = ImportMock.mockFunction(globalThis, "fetch");
             mockFunction
@@ -616,7 +616,7 @@ describe("Manage Story Formats", () => {
             expect(result).to.be.instanceOf(Error);
             if (result instanceof Error)
                 expect(result.message).to.include(
-                    "Couldn't find the format.js file"
+                    "Couldn't find the format.js file",
                 );
         });
     });

@@ -53,7 +53,7 @@ class EventListenerManager {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     handleNotification(manager: EventListenerManager, ...params: any[]) {
         manager.listenMethods = manager.listenMethods.filter(
-            (v) => !v.disposed
+            (v) => !v.disposed,
         );
         for (const listenMethod of manager.listenMethods) {
             listenMethod.handler(...params);
@@ -70,7 +70,7 @@ class EventListenerManager {
  */
 export function addListener(
     event: ContextEvent,
-    listener: EventListener
+    listener: EventListener,
 ): vscode.Disposable {
     const wrapper = new EventListenerWrapper(listener);
     let manager = contextListenerManagers[event];

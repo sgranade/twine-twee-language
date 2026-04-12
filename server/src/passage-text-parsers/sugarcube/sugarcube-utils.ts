@@ -11,7 +11,7 @@ import { OSugarCubeSymbolKind } from "./types";
  */
 export function createVariableAndPropertyReferences(
     varsAndProps: [Label[], JSPropertyLabel[]],
-    state: ParsingState
+    state: ParsingState,
 ): void {
     for (const v of varsAndProps[0]) {
         state.callbacks.onSymbolReference({

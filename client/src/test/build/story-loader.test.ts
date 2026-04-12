@@ -636,7 +636,7 @@ describe("Twee Story File Loader", () => {
             }
 
             expect(result.message).to.eql(
-                "Story has a badly-formatted IFID value: nope!"
+                "Story has a badly-formatted IFID value: nope!",
             );
         });
 

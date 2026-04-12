@@ -168,7 +168,7 @@ describe("Utilities", () => {
             // No arrange
 
             const [, result] = uut.removeAndCountPadding(
-                " \t No left padding? "
+                " \t No left padding? ",
             );
 
             expect(result).to.eql(3);
@@ -178,7 +178,7 @@ describe("Utilities", () => {
             // No arrange
 
             const [, , result] = uut.removeAndCountPadding(
-                " \t No left padding? "
+                " \t No left padding? ",
             );
 
             expect(result).to.eql(1);
@@ -259,13 +259,13 @@ describe("Utilities", () => {
                 "inner-uri",
                 "text",
                 1,
-                "Inner line 1\ninner line 2"
+                "Inner line 1\ninner line 2",
             );
             const outerDoc = TextDocument.create(
                 "outer-uri",
                 "text",
                 1,
-                "Outer line 1\nInner line 1\ninner line 2\nOuter line 4"
+                "Outer line 1\nInner line 1\ninner line 2\nOuter line 4",
             );
             const innerDocOffset = outerDoc
                 .getText()
@@ -275,7 +275,7 @@ describe("Utilities", () => {
                 innerDoc,
                 Position.create(1, 7),
                 outerDoc,
-                innerDocOffset
+                innerDocOffset,
             );
 
             expect(result).to.eql({ line: 2, character: 7 });
@@ -286,13 +286,13 @@ describe("Utilities", () => {
                 "inner-uri",
                 "text",
                 1,
-                "{inner bit}"
+                "{inner bit}",
             );
             const outerDoc = TextDocument.create(
                 "outer-uri",
                 "text",
                 1,
-                "Outer line 1\nOuter {inner bit} line 2"
+                "Outer line 1\nOuter {inner bit} line 2",
             );
             const innerDocOffset = outerDoc
                 .getText()
@@ -302,7 +302,7 @@ describe("Utilities", () => {
                 innerDoc,
                 Position.create(0, 3),
                 outerDoc,
-                innerDocOffset
+                innerDocOffset,
             );
 
             expect(result).to.eql({ line: 1, character: 9 });
@@ -315,13 +315,13 @@ describe("Utilities", () => {
                 "inner-uri",
                 "text",
                 1,
-                "Inner line 1\ninner line 2"
+                "Inner line 1\ninner line 2",
             );
             const outerDoc = TextDocument.create(
                 "outer-uri",
                 "text",
                 1,
-                "Outer line 1\nInner line 1\ninner line 2\nOuter line 4"
+                "Outer line 1\nInner line 1\ninner line 2\nOuter line 4",
             );
             const innerDocOffset = outerDoc
                 .getText()
@@ -331,7 +331,7 @@ describe("Utilities", () => {
                 innerDoc,
                 Range.create(0, 3, 1, 7),
                 outerDoc,
-                innerDocOffset
+                innerDocOffset,
             );
 
             expect(result).to.eql({
@@ -347,7 +347,7 @@ describe("Utilities", () => {
 
             const result = uut.comparePositions(
                 Position.create(17, 1),
-                Position.create(17, 2)
+                Position.create(17, 2),
             );
 
             expect(result).to.equal(-1);
@@ -358,7 +358,7 @@ describe("Utilities", () => {
 
             const result = uut.comparePositions(
                 Position.create(17, 2),
-                Position.create(17, 2)
+                Position.create(17, 2),
             );
 
             expect(result).to.equal(0);
@@ -369,7 +369,7 @@ describe("Utilities", () => {
 
             const result = uut.comparePositions(
                 Position.create(17, 3),
-                Position.create(17, 2)
+                Position.create(17, 2),
             );
 
             expect(result).to.equal(1);
@@ -382,7 +382,7 @@ describe("Utilities", () => {
 
             const result = uut.positionInRange(
                 Position.create(17, 1),
-                Range.create(17, 2, 19, 4)
+                Range.create(17, 2, 19, 4),
             );
 
             expect(result).to.be.false;
@@ -393,7 +393,7 @@ describe("Utilities", () => {
 
             const result = uut.positionInRange(
                 Position.create(17, 2),
-                Range.create(17, 2, 19, 4)
+                Range.create(17, 2, 19, 4),
             );
 
             expect(result).to.be.true;
@@ -404,7 +404,7 @@ describe("Utilities", () => {
 
             const result = uut.positionInRange(
                 Position.create(19, 4),
-                Range.create(17, 2, 19, 4)
+                Range.create(17, 2, 19, 4),
             );
 
             expect(result).to.be.true;
@@ -415,7 +415,7 @@ describe("Utilities", () => {
 
             const result = uut.positionInRange(
                 Position.create(19, 5),
-                Range.create(17, 2, 19, 4)
+                Range.create(17, 2, 19, 4),
             );
 
             expect(result).to.be.false;

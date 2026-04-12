@@ -10,7 +10,7 @@ describe("Build Utilities", () => {
         const result = uut.escapeHtmlEntities(src);
 
         expect(result).to.equal(
-            "Test for &quot; &#39; &#39; &quot; &amp;lt; &lt;&gt;"
+            "Test for &quot; &#39; &#39; &quot; &amp;lt; &lt;&gt;",
         );
     });
 
@@ -20,7 +20,7 @@ describe("Build Utilities", () => {
         const result = uut.escapeAttrEntities(src);
 
         expect(result).to.equal(
-            "Test for &quot; &#39; &#39; &quot; &amp;lt; <>"
+            "Test for &quot; &#39; &#39; &quot; &amp;lt; <>",
         );
     });
 });

@@ -29,7 +29,7 @@ describe("Chapbook Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ":: Passage\nv\n--\nContent"
+                ":: Passage\nv\n--\nContent",
             );
             const pos = Position.create(1, 1);
             const index = new Index();
@@ -68,7 +68,7 @@ describe("Chapbook Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ":: Passage\nvar1.\n--\nContent"
+                ":: Passage\nvar1.\n--\nContent",
             );
             const pos = Position.create(1, 5);
             const index = new Index();
@@ -98,7 +98,7 @@ describe("Chapbook Completions", () => {
                     locations: [
                         Location.create(
                             "fake-uri",
-                            Range.create(9, 10, 11, 12)
+                            Range.create(9, 10, 11, 12),
                         ),
                     ],
                     kind: OChapbookSymbolKind.Property,
@@ -108,7 +108,7 @@ describe("Chapbook Completions", () => {
                     locations: [
                         Location.create(
                             "fake-uri",
-                            Range.create(13, 14, 15, 16)
+                            Range.create(13, 14, 15, 16),
                         ),
                     ],
                     kind: OChapbookSymbolKind.PropertySet,
@@ -127,7 +127,7 @@ describe("Chapbook Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ':: Passage\nvar: ""--\nContent'
+                ':: Passage\nvar: ""--\nContent',
             );
             const pos = Position.create(1, 6);
             const index = new Index();
@@ -165,7 +165,7 @@ describe("Chapbook Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ':: Passage\nvar: ""--\nContent'
+                ':: Passage\nvar: ""--\nContent',
             );
             const pos = Position.create(1, 7);
             const index = new Index();
@@ -205,7 +205,7 @@ describe("Chapbook Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ":: Passage\n[ here "
+                ":: Passage\n[ here ",
             );
             const pos = Position.create(1, 4);
             const index = new Index();
@@ -220,7 +220,7 @@ describe("Chapbook Completions", () => {
             const results = parser?.generateCompletions(doc, pos, [], index);
 
             expect(results?.itemDefaults?.editRange).to.eql(
-                Range.create(1, 2, 1, 7)
+                Range.create(1, 2, 1, 7),
             );
         });
 
@@ -229,7 +229,7 @@ describe("Chapbook Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ":: Passage\n[ here "
+                ":: Passage\n[ here ",
             );
             const pos = Position.create(1, 4);
             const index = new Index();
@@ -245,7 +245,7 @@ describe("Chapbook Completions", () => {
                     name: "custom modifier",
                     location: Location.create(
                         "source-uri",
-                        Range.create(5, 6, 7, 8)
+                        Range.create(5, 6, 7, 8),
                     ),
                     kind: OChapbookSymbolKind.CustomModifier,
                     match: /custom\s+modifier/i,
@@ -254,7 +254,7 @@ describe("Chapbook Completions", () => {
             const parser = uut.getChapbookParser(undefined);
             const mockFunction = ImportMock.mockFunction(
                 modifiersModule,
-                "all"
+                "all",
             ).returns([]);
 
             const results = parser?.generateCompletions(doc, pos, [], index);
@@ -268,7 +268,7 @@ describe("Chapbook Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ":: Passage\n[ here; not here "
+                ":: Passage\n[ here; not here ",
             );
             const pos = Position.create(1, 4);
             const index = new Index();
@@ -283,7 +283,7 @@ describe("Chapbook Completions", () => {
             const results = parser?.generateCompletions(doc, pos, [], index);
 
             expect(results?.itemDefaults?.editRange).to.eql(
-                Range.create(1, 2, 1, 6)
+                Range.create(1, 2, 1, 6),
             );
         });
 
@@ -292,7 +292,7 @@ describe("Chapbook Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ":: Passage\n[ not here; here \nnot here"
+                ":: Passage\n[ not here; here \nnot here",
             );
             const pos = Position.create(1, 12);
             const index = new Index();
@@ -307,7 +307,7 @@ describe("Chapbook Completions", () => {
             const results = parser?.generateCompletions(doc, pos, [], index);
 
             expect(results?.itemDefaults?.editRange).to.eql(
-                Range.create(1, 12, 1, 17)
+                Range.create(1, 12, 1, 17),
             );
         });
 
@@ -316,7 +316,7 @@ describe("Chapbook Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ":: Passage\n[ here ] not here"
+                ":: Passage\n[ here ] not here",
             );
             const pos = Position.create(1, 4);
             const index = new Index();
@@ -331,7 +331,7 @@ describe("Chapbook Completions", () => {
             const results = parser?.generateCompletions(doc, pos, [], index);
 
             expect(results?.itemDefaults?.editRange).to.eql(
-                Range.create(1, 2, 1, 7)
+                Range.create(1, 2, 1, 7),
             );
         });
 
@@ -340,7 +340,7 @@ describe("Chapbook Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ":: Passage\n[ not here; here] not here"
+                ":: Passage\n[ not here; here] not here",
             );
             const pos = Position.create(1, 12);
             const index = new Index();
@@ -354,7 +354,7 @@ describe("Chapbook Completions", () => {
             modifier.completions = ["mod"];
             const mockFunction = ImportMock.mockFunction(
                 modifiersModule,
-                "all"
+                "all",
             ).returns([modifier]);
             const parser = uut.getChapbookParser(undefined);
 
@@ -362,7 +362,7 @@ describe("Chapbook Completions", () => {
             mockFunction.restore();
 
             expect(results?.itemDefaults?.editRange).to.eql(
-                Range.create(1, 12, 1, 16)
+                Range.create(1, 12, 1, 16),
             );
             expect(results?.items[0].textEditText).to.equal("mod");
         });
@@ -372,7 +372,7 @@ describe("Chapbook Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ":: Passage\n[ not here; here] not here"
+                ":: Passage\n[ not here; here] not here",
             );
             const pos = Position.create(1, 16);
             const index = new Index();
@@ -386,7 +386,7 @@ describe("Chapbook Completions", () => {
             modifier.completions = ["mod"];
             const mockFunction = ImportMock.mockFunction(
                 modifiersModule,
-                "all"
+                "all",
             ).returns([modifier]);
             const parser = uut.getChapbookParser(undefined);
 
@@ -394,7 +394,7 @@ describe("Chapbook Completions", () => {
             mockFunction.restore();
 
             expect(results?.itemDefaults?.editRange).to.eql(
-                Range.create(1, 12, 1, 16)
+                Range.create(1, 12, 1, 16),
             );
             expect(results?.items[0].textEditText).to.equal("mod");
         });
@@ -404,7 +404,7 @@ describe("Chapbook Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ":: Passage\n[ mod "
+                ":: Passage\n[ mod ",
             );
             const pos = Position.create(1, 6);
             const index = new Index();
@@ -422,7 +422,7 @@ describe("Chapbook Completions", () => {
             };
             const mockFunction = ImportMock.mockFunction(
                 modifiersModule,
-                "all"
+                "all",
             ).returns([modifier]);
             const parser = uut.getChapbookParser(undefined);
 
@@ -431,7 +431,7 @@ describe("Chapbook Completions", () => {
 
             expect(results?.items[0].textEditText).to.eql("mod '${1:URL}'");
             expect(results?.itemDefaults?.editRange).to.eql(
-                Range.create(1, 2, 1, 6)
+                Range.create(1, 2, 1, 6),
             );
         });
 
@@ -440,7 +440,7 @@ describe("Chapbook Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ":: Passage\n[ mod ;"
+                ":: Passage\n[ mod ;",
             );
             const pos = Position.create(1, 6);
             const index = new Index();
@@ -458,7 +458,7 @@ describe("Chapbook Completions", () => {
             };
             const mockFunction = ImportMock.mockFunction(
                 modifiersModule,
-                "all"
+                "all",
             ).returns([modifier]);
             const parser = uut.getChapbookParser(undefined);
 
@@ -467,7 +467,7 @@ describe("Chapbook Completions", () => {
 
             expect(results?.items[0].textEditText).to.eql("mod '${1:URL}'");
             expect(results?.itemDefaults?.editRange).to.eql(
-                Range.create(1, 2, 1, 6)
+                Range.create(1, 2, 1, 6),
             );
         });
 
@@ -476,7 +476,7 @@ describe("Chapbook Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ":: Passage\n[ custom mod "
+                ":: Passage\n[ custom mod ",
             );
             const pos = Position.create(1, 4);
             const index = new Index();
@@ -492,7 +492,7 @@ describe("Chapbook Completions", () => {
                     contents: "custom mod",
                     location: Location.create(
                         "source-uri",
-                        Range.create(5, 6, 7, 8)
+                        Range.create(5, 6, 7, 8),
                     ),
                     firstArgument: {
                         required: ArgumentRequirement.required,
@@ -505,17 +505,17 @@ describe("Chapbook Completions", () => {
             const parser = uut.getChapbookParser(undefined);
             const mockFunction = ImportMock.mockFunction(
                 modifiersModule,
-                "all"
+                "all",
             ).returns([]);
 
             const results = parser?.generateCompletions(doc, pos, [], index);
             mockFunction.restore();
 
             expect(results?.items[0].textEditText).to.eql(
-                "custom mod '${1:URL}'"
+                "custom mod '${1:URL}'",
             );
             expect(results?.itemDefaults?.editRange).to.eql(
-                Range.create(1, 2, 1, 13)
+                Range.create(1, 2, 1, 13),
             );
         });
 
@@ -524,7 +524,7 @@ describe("Chapbook Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ":: Passage\n[ mod "
+                ":: Passage\n[ mod ",
             );
             const pos = Position.create(1, 6);
             const index = new Index();
@@ -551,7 +551,7 @@ describe("Chapbook Completions", () => {
             };
             const mockFunction = ImportMock.mockFunction(
                 modifiersModule,
-                "all"
+                "all",
             ).returns([modifier]);
             const parser = uut.getChapbookParser(undefined);
 
@@ -567,7 +567,7 @@ describe("Chapbook Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ":: Passage\n[ mod var1."
+                ":: Passage\n[ mod var1.",
             );
             const pos = Position.create(1, 11);
             const index = new Index();
@@ -597,7 +597,7 @@ describe("Chapbook Completions", () => {
                     locations: [
                         Location.create(
                             "fake-uri",
-                            Range.create(9, 10, 11, 12)
+                            Range.create(9, 10, 11, 12),
                         ),
                     ],
                     kind: OChapbookSymbolKind.PropertySet,
@@ -611,7 +611,7 @@ describe("Chapbook Completions", () => {
             };
             const mockFunction = ImportMock.mockFunction(
                 modifiersModule,
-                "all"
+                "all",
             ).returns([modifier]);
             const parser = uut.getChapbookParser(undefined);
 
@@ -627,7 +627,7 @@ describe("Chapbook Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ":: Passage\n[ mod "
+                ":: Passage\n[ mod ",
             );
             const pos = Position.create(1, 6);
             const index = new Index();
@@ -645,7 +645,7 @@ describe("Chapbook Completions", () => {
             };
             const mockFunction = ImportMock.mockFunction(
                 modifiersModule,
-                "all"
+                "all",
             ).returns([modifier]);
             const parser = uut.getChapbookParser(undefined);
 
@@ -655,7 +655,7 @@ describe("Chapbook Completions", () => {
             expect(results?.items[0].label).to.eql("I'm a passage!");
             expect(results?.items[0].textEditText).to.eql("'I'm a passage!'");
             expect(results?.itemDefaults?.editRange).to.eql(
-                Range.create(1, 6, 1, 6)
+                Range.create(1, 6, 1, 6),
             );
         });
 
@@ -664,7 +664,7 @@ describe("Chapbook Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ":: Passage\n[ custom mod "
+                ":: Passage\n[ custom mod ",
             );
             const pos = Position.create(1, 12);
             const index = new Index();
@@ -679,7 +679,7 @@ describe("Chapbook Completions", () => {
                     contents: "custom mod",
                     location: Location.create(
                         "source-uri",
-                        Range.create(5, 6, 7, 8)
+                        Range.create(5, 6, 7, 8),
                     ),
                     kind: OChapbookSymbolKind.CustomModifier,
                     match: /^custom mod/i,
@@ -692,7 +692,7 @@ describe("Chapbook Completions", () => {
             const parser = uut.getChapbookParser(undefined);
             const mockFunction = ImportMock.mockFunction(
                 modifiersModule,
-                "all"
+                "all",
             ).returns([]);
 
             const results = parser?.generateCompletions(doc, pos, [], index);
@@ -701,7 +701,7 @@ describe("Chapbook Completions", () => {
             expect(results?.items[0].label).to.eql("I'm a passage!");
             expect(results?.items[0].textEditText).to.eql("'I'm a passage!'");
             expect(results?.itemDefaults?.editRange).to.eql(
-                Range.create(1, 13, 1, 13)
+                Range.create(1, 13, 1, 13),
             );
         });
 
@@ -710,7 +710,7 @@ describe("Chapbook Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ":: Passage\n[ mod "
+                ":: Passage\n[ mod ",
             );
             const pos = Position.create(1, 6);
             const index = new Index();
@@ -728,7 +728,7 @@ describe("Chapbook Completions", () => {
             };
             const mockFunction = ImportMock.mockFunction(
                 modifiersModule,
-                "all"
+                "all",
             ).returns([modifier]);
             const parser = uut.getChapbookParser(undefined);
 
@@ -738,7 +738,7 @@ describe("Chapbook Completions", () => {
             expect(results?.items[0].label).to.eql("I'm a passage!");
             expect(results?.items[0].textEditText).to.eql("'I'm a passage!'");
             expect(results?.itemDefaults?.editRange).to.eql(
-                Range.create(1, 6, 1, 6)
+                Range.create(1, 6, 1, 6),
             );
         });
 
@@ -747,7 +747,7 @@ describe("Chapbook Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ":: Passage\n[ custom mod "
+                ":: Passage\n[ custom mod ",
             );
             const pos = Position.create(1, 12);
             const index = new Index();
@@ -762,7 +762,7 @@ describe("Chapbook Completions", () => {
                     contents: "custom mod",
                     location: Location.create(
                         "source-uri",
-                        Range.create(5, 6, 7, 8)
+                        Range.create(5, 6, 7, 8),
                     ),
                     kind: OChapbookSymbolKind.CustomModifier,
                     match: /^custom mod/i,
@@ -775,7 +775,7 @@ describe("Chapbook Completions", () => {
             const parser = uut.getChapbookParser(undefined);
             const mockFunction = ImportMock.mockFunction(
                 modifiersModule,
-                "all"
+                "all",
             ).returns([]);
 
             const results = parser?.generateCompletions(doc, pos, [], index);
@@ -784,7 +784,7 @@ describe("Chapbook Completions", () => {
             expect(results?.items[0].label).to.eql("I'm a passage!");
             expect(results?.items[0].textEditText).to.eql("'I'm a passage!'");
             expect(results?.itemDefaults?.editRange).to.eql(
-                Range.create(1, 13, 1, 13)
+                Range.create(1, 13, 1, 13),
             );
         });
     });
@@ -795,7 +795,7 @@ describe("Chapbook Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ":: Passage\nLet's try {te"
+                ":: Passage\nLet's try {te",
             );
             const pos = Position.create(1, 12);
             const index = new Index();
@@ -820,7 +820,7 @@ describe("Chapbook Completions", () => {
             };
             const mockFunction = ImportMock.mockFunction(
                 insertsModule,
-                "all"
+                "all",
             ).returns([insert]);
             const parser = uut.getChapbookParser(undefined);
 
@@ -829,7 +829,7 @@ describe("Chapbook Completions", () => {
 
             expect(results?.items[0].label).to.eql("test insert");
             expect(results?.itemDefaults?.editRange).to.eql(
-                Range.create(1, 11, 1, 13)
+                Range.create(1, 11, 1, 13),
             );
         });
 
@@ -838,7 +838,7 @@ describe("Chapbook Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ":: Passage\nLet's try {te"
+                ":: Passage\nLet's try {te",
             );
             const pos = Position.create(1, 12);
             const index = new Index();
@@ -853,7 +853,7 @@ describe("Chapbook Completions", () => {
                     contents: "custom insert",
                     location: Location.create(
                         "source-uri",
-                        Range.create(5, 6, 7, 8)
+                        Range.create(5, 6, 7, 8),
                     ),
                     kind: OChapbookSymbolKind.CustomInsert,
                     match: /custom\s+insert/i,
@@ -861,7 +861,7 @@ describe("Chapbook Completions", () => {
             ]);
             const mockFunction = ImportMock.mockFunction(
                 insertsModule,
-                "all"
+                "all",
             ).returns([]);
             const parser = uut.getChapbookParser(undefined);
 
@@ -876,7 +876,7 @@ describe("Chapbook Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ":: Passage\n[JavaScript]\nLet's try {te"
+                ":: Passage\n[JavaScript]\nLet's try {te",
             );
             const pos = Position.create(2, 12);
             const scriptEmbeddedDocument = EmbeddedDocument.create(
@@ -886,7 +886,7 @@ describe("Chapbook Completions", () => {
                 24,
                 doc,
                 false,
-                true
+                true,
             );
             const index = new Index();
             index.setPassages("fake-uri", [
@@ -900,7 +900,7 @@ describe("Chapbook Completions", () => {
                     contents: "custom insert",
                     location: Location.create(
                         "source-uri",
-                        Range.create(5, 6, 7, 8)
+                        Range.create(5, 6, 7, 8),
                     ),
                     kind: OChapbookSymbolKind.CustomInsert,
                     match: /custom\s+insert/i,
@@ -908,7 +908,7 @@ describe("Chapbook Completions", () => {
             ]);
             const mockFunction = ImportMock.mockFunction(
                 insertsModule,
-                "all"
+                "all",
             ).returns([]);
             const parser = uut.getChapbookParser(undefined);
 
@@ -916,7 +916,7 @@ describe("Chapbook Completions", () => {
                 doc,
                 pos,
                 [scriptEmbeddedDocument],
-                index
+                index,
             );
             mockFunction.restore();
 
@@ -928,7 +928,7 @@ describe("Chapbook Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ":: Passage\nLet's try {va"
+                ":: Passage\nLet's try {va",
             );
             const pos = Position.create(1, 12);
             const index = new Index();
@@ -956,7 +956,7 @@ describe("Chapbook Completions", () => {
             ]);
             const mockFunction = ImportMock.mockFunction(
                 insertsModule,
-                "all"
+                "all",
             ).returns([]);
             const parser = uut.getChapbookParser(undefined);
 
@@ -965,7 +965,7 @@ describe("Chapbook Completions", () => {
 
             expect(results?.items[0].label).to.eql("var1");
             expect(results?.itemDefaults?.editRange).to.eql(
-                Range.create(1, 11, 1, 13)
+                Range.create(1, 11, 1, 13),
             );
         });
 
@@ -974,7 +974,7 @@ describe("Chapbook Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ":: Passage\nLet's try {var1.o"
+                ":: Passage\nLet's try {var1.o",
             );
             const pos = Position.create(1, 17);
             const index = new Index();
@@ -997,7 +997,7 @@ describe("Chapbook Completions", () => {
                     locations: [
                         Location.create(
                             "fake-uri",
-                            Range.create(9, 10, 11, 12)
+                            Range.create(9, 10, 11, 12),
                         ),
                     ],
                     kind: OChapbookSymbolKind.PropertySet,
@@ -1007,7 +1007,7 @@ describe("Chapbook Completions", () => {
                     locations: [
                         Location.create(
                             "fake-uri",
-                            Range.create(13, 14, 15, 16)
+                            Range.create(13, 14, 15, 16),
                         ),
                     ],
                     kind: OChapbookSymbolKind.Property,
@@ -1015,7 +1015,7 @@ describe("Chapbook Completions", () => {
             ]);
             const mockFunction = ImportMock.mockFunction(
                 insertsModule,
-                "all"
+                "all",
             ).returns([]);
             const parser = uut.getChapbookParser(undefined);
 
@@ -1024,7 +1024,7 @@ describe("Chapbook Completions", () => {
 
             expect(results?.items[0].label).to.eql("otherprop");
             expect(results?.items[0].textEdit).to.eql(
-                TextEdit.replace(Range.create(1, 16, 1, 17), "otherprop")
+                TextEdit.replace(Range.create(1, 16, 1, 17), "otherprop"),
             );
         });
 
@@ -1033,7 +1033,7 @@ describe("Chapbook Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ":: Passage\nLet's try {va nope"
+                ":: Passage\nLet's try {va nope",
             );
             const pos = Position.create(1, 12);
             const index = new Index();
@@ -1054,7 +1054,7 @@ describe("Chapbook Completions", () => {
             ]);
             const mockFunction = ImportMock.mockFunction(
                 insertsModule,
-                "all"
+                "all",
             ).returns([]);
             const parser = uut.getChapbookParser(undefined);
 
@@ -1069,7 +1069,7 @@ describe("Chapbook Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ":: Passage\nLet's try {te nope"
+                ":: Passage\nLet's try {te nope",
             );
             const pos = Position.create(1, 12);
             const index = new Index();
@@ -1094,7 +1094,7 @@ describe("Chapbook Completions", () => {
             };
             const mockFunction = ImportMock.mockFunction(
                 insertsModule,
-                "all"
+                "all",
             ).returns([insert]);
             const parser = uut.getChapbookParser(undefined);
 
@@ -1103,7 +1103,7 @@ describe("Chapbook Completions", () => {
 
             expect(results?.items[0].label).to.eql("test insert");
             expect(results?.itemDefaults?.editRange).to.eql(
-                Range.create(1, 11, 1, 13)
+                Range.create(1, 11, 1, 13),
             );
         });
 
@@ -1112,7 +1112,7 @@ describe("Chapbook Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ":: Passage\nLet's try {te, prop: 'yep'"
+                ":: Passage\nLet's try {te, prop: 'yep'",
             );
             const pos = Position.create(1, 12);
             const index = new Index();
@@ -1137,7 +1137,7 @@ describe("Chapbook Completions", () => {
             };
             const mockFunction = ImportMock.mockFunction(
                 insertsModule,
-                "all"
+                "all",
             ).returns([insert]);
             const parser = uut.getChapbookParser(undefined);
 
@@ -1146,7 +1146,7 @@ describe("Chapbook Completions", () => {
 
             expect(results?.items[0].label).to.eql("test insert");
             expect(results?.itemDefaults?.editRange).to.eql(
-                Range.create(1, 11, 1, 13)
+                Range.create(1, 11, 1, 13),
             );
         });
 
@@ -1155,7 +1155,7 @@ describe("Chapbook Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ":: Passage\nLet's try {te: 'first arg'"
+                ":: Passage\nLet's try {te: 'first arg'",
             );
             const pos = Position.create(1, 12);
             const index = new Index();
@@ -1180,7 +1180,7 @@ describe("Chapbook Completions", () => {
             };
             const mockFunction = ImportMock.mockFunction(
                 insertsModule,
-                "all"
+                "all",
             ).returns([insert]);
             const parser = uut.getChapbookParser(undefined);
 
@@ -1190,7 +1190,7 @@ describe("Chapbook Completions", () => {
             expect(results?.items[0].label).to.eql("test insert");
             expect(results?.items[0].textEditText).to.eql("test insert");
             expect(results?.itemDefaults?.editRange).to.eql(
-                Range.create(1, 11, 1, 13)
+                Range.create(1, 11, 1, 13),
             );
         });
 
@@ -1199,7 +1199,7 @@ describe("Chapbook Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ":: Passage\nLet's try {te: 'first arg'"
+                ":: Passage\nLet's try {te: 'first arg'",
             );
             const pos = Position.create(1, 12);
             const index = new Index();
@@ -1214,7 +1214,7 @@ describe("Chapbook Completions", () => {
                     contents: "custom insert",
                     location: Location.create(
                         "source-uri",
-                        Range.create(5, 6, 7, 8)
+                        Range.create(5, 6, 7, 8),
                     ),
                     kind: OChapbookSymbolKind.CustomInsert,
                     match: /custom\s+insert/i,
@@ -1222,7 +1222,7 @@ describe("Chapbook Completions", () => {
             ]);
             const mockFunction = ImportMock.mockFunction(
                 insertsModule,
-                "all"
+                "all",
             ).returns([]);
             const parser = uut.getChapbookParser(undefined);
 
@@ -1232,7 +1232,7 @@ describe("Chapbook Completions", () => {
             expect(results?.items[0].label).to.eql("custom insert");
             expect(results?.items[0].textEditText).to.eql("custom insert");
             expect(results?.itemDefaults?.editRange).to.eql(
-                Range.create(1, 11, 1, 13)
+                Range.create(1, 11, 1, 13),
             );
         });
 
@@ -1241,7 +1241,7 @@ describe("Chapbook Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ":: Passage\nLet's try {te"
+                ":: Passage\nLet's try {te",
             );
             const pos = Position.create(1, 12);
             const index = new Index();
@@ -1266,7 +1266,7 @@ describe("Chapbook Completions", () => {
             };
             const mockFunction = ImportMock.mockFunction(
                 insertsModule,
-                "all"
+                "all",
             ).returns([insert]);
             const parser = uut.getChapbookParser(undefined);
 
@@ -1274,10 +1274,10 @@ describe("Chapbook Completions", () => {
             mockFunction.restore();
 
             expect(results?.items[0].textEditText).to.eql(
-                "test insert: '${1:arg}'"
+                "test insert: '${1:arg}'",
             );
             expect(results?.itemDefaults?.editRange).to.eql(
-                Range.create(1, 11, 1, 13)
+                Range.create(1, 11, 1, 13),
             );
         });
 
@@ -1286,7 +1286,7 @@ describe("Chapbook Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ":: Passage\nLet's try {te"
+                ":: Passage\nLet's try {te",
             );
             const pos = Position.create(1, 12);
             const index = new Index();
@@ -1301,7 +1301,7 @@ describe("Chapbook Completions", () => {
                     contents: "custom insert",
                     location: Location.create(
                         "source-uri",
-                        Range.create(5, 6, 7, 8)
+                        Range.create(5, 6, 7, 8),
                     ),
                     kind: OChapbookSymbolKind.CustomInsert,
                     match: /custom\s+insert/i,
@@ -1318,7 +1318,7 @@ describe("Chapbook Completions", () => {
             ]);
             const mockFunction = ImportMock.mockFunction(
                 insertsModule,
-                "all"
+                "all",
             ).returns([]);
             const parser = uut.getChapbookParser(undefined);
 
@@ -1326,10 +1326,10 @@ describe("Chapbook Completions", () => {
             mockFunction.restore();
 
             expect(results?.items[0].textEditText).to.eql(
-                "custom insert: '${1:arg}'"
+                "custom insert: '${1:arg}'",
             );
             expect(results?.itemDefaults?.editRange).to.eql(
-                Range.create(1, 11, 1, 13)
+                Range.create(1, 11, 1, 13),
             );
         });
 
@@ -1338,7 +1338,7 @@ describe("Chapbook Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ":: Passage\nLet's try {te ,"
+                ":: Passage\nLet's try {te ,",
             );
             const pos = Position.create(1, 12);
             const index = new Index();
@@ -1363,7 +1363,7 @@ describe("Chapbook Completions", () => {
             };
             const mockFunction = ImportMock.mockFunction(
                 insertsModule,
-                "all"
+                "all",
             ).returns([insert]);
             const parser = uut.getChapbookParser(undefined);
 
@@ -1371,10 +1371,10 @@ describe("Chapbook Completions", () => {
             mockFunction.restore();
 
             expect(results?.items[0].textEditText).to.eql(
-                "test insert: '${1:arg}'"
+                "test insert: '${1:arg}'",
             );
             expect(results?.itemDefaults?.editRange).to.eql(
-                Range.create(1, 11, 1, 14)
+                Range.create(1, 11, 1, 14),
             );
         });
 
@@ -1383,7 +1383,7 @@ describe("Chapbook Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ":: Passage\nLet's try {te ,"
+                ":: Passage\nLet's try {te ,",
             );
             const pos = Position.create(1, 12);
             const index = new Index();
@@ -1398,7 +1398,7 @@ describe("Chapbook Completions", () => {
                     contents: "custom insert",
                     location: Location.create(
                         "source-uri",
-                        Range.create(5, 6, 7, 8)
+                        Range.create(5, 6, 7, 8),
                     ),
                     kind: OChapbookSymbolKind.CustomInsert,
                     match: /custom\s+insert/i,
@@ -1415,7 +1415,7 @@ describe("Chapbook Completions", () => {
             ]);
             const mockFunction = ImportMock.mockFunction(
                 insertsModule,
-                "all"
+                "all",
             ).returns([]);
             const parser = uut.getChapbookParser(undefined);
 
@@ -1423,10 +1423,10 @@ describe("Chapbook Completions", () => {
             mockFunction.restore();
 
             expect(results?.items[0].textEditText).to.eql(
-                "custom insert: '${1:arg}'"
+                "custom insert: '${1:arg}'",
             );
             expect(results?.itemDefaults?.editRange).to.eql(
-                Range.create(1, 11, 1, 14)
+                Range.create(1, 11, 1, 14),
             );
         });
 
@@ -1435,7 +1435,7 @@ describe("Chapbook Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ":: Passage\nLet's try {te ,"
+                ":: Passage\nLet's try {te ,",
             );
             const pos = Position.create(1, 12);
             const index = new Index();
@@ -1456,7 +1456,7 @@ describe("Chapbook Completions", () => {
             };
             const mockFunction = ImportMock.mockFunction(
                 insertsModule,
-                "all"
+                "all",
             ).returns([insert]);
             const parser = uut.getChapbookParser(undefined);
 
@@ -1464,10 +1464,10 @@ describe("Chapbook Completions", () => {
             mockFunction.restore();
 
             expect(results?.items[0].textEditText).to.eql(
-                "test insert: '${1:URL}'"
+                "test insert: '${1:URL}'",
             );
             expect(results?.itemDefaults?.editRange).to.eql(
-                Range.create(1, 11, 1, 14)
+                Range.create(1, 11, 1, 14),
             );
         });
 
@@ -1476,7 +1476,7 @@ describe("Chapbook Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ":: Passage\nLet's try {te ,"
+                ":: Passage\nLet's try {te ,",
             );
             const pos = Position.create(1, 12);
             const index = new Index();
@@ -1491,7 +1491,7 @@ describe("Chapbook Completions", () => {
                     contents: "custom insert",
                     location: Location.create(
                         "source-uri",
-                        Range.create(5, 6, 7, 8)
+                        Range.create(5, 6, 7, 8),
                     ),
                     kind: OChapbookSymbolKind.CustomInsert,
                     match: /custom\s+insert/i,
@@ -1510,7 +1510,7 @@ describe("Chapbook Completions", () => {
             ]);
             const mockFunction = ImportMock.mockFunction(
                 insertsModule,
-                "all"
+                "all",
             ).returns([]);
             const parser = uut.getChapbookParser(undefined);
 
@@ -1518,10 +1518,10 @@ describe("Chapbook Completions", () => {
             mockFunction.restore();
 
             expect(results?.items[0].textEditText).to.eql(
-                "custom insert: '${1:URL}'"
+                "custom insert: '${1:URL}'",
             );
             expect(results?.itemDefaults?.editRange).to.eql(
-                Range.create(1, 11, 1, 14)
+                Range.create(1, 11, 1, 14),
             );
         });
 
@@ -1530,7 +1530,7 @@ describe("Chapbook Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ":: Passage\nLet's try {te "
+                ":: Passage\nLet's try {te ",
             );
             const pos = Position.create(1, 12);
             const index = new Index();
@@ -1552,7 +1552,7 @@ describe("Chapbook Completions", () => {
             };
             const mockFunction = ImportMock.mockFunction(
                 insertsModule,
-                "all"
+                "all",
             ).returns([insert]);
             const parser = uut.getChapbookParser(undefined);
 
@@ -1560,10 +1560,10 @@ describe("Chapbook Completions", () => {
             mockFunction.restore();
 
             expect(results?.items[0].textEditText).to.eql(
-                "test insert: '${1:URL}', one: ${2:true}, two: '${3:falsy}'"
+                "test insert: '${1:URL}', one: ${2:true}, two: '${3:falsy}'",
             );
             expect(results?.itemDefaults?.editRange).to.eql(
-                Range.create(1, 11, 1, 13)
+                Range.create(1, 11, 1, 13),
             );
         });
 
@@ -1572,7 +1572,7 @@ describe("Chapbook Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ":: Passage\nLet's try {te "
+                ":: Passage\nLet's try {te ",
             );
             const pos = Position.create(1, 12);
             const index = new Index();
@@ -1587,7 +1587,7 @@ describe("Chapbook Completions", () => {
                     contents: "custom insert",
                     location: Location.create(
                         "source-uri",
-                        Range.create(5, 6, 7, 8)
+                        Range.create(5, 6, 7, 8),
                     ),
                     kind: OChapbookSymbolKind.CustomInsert,
                     match: /custom\s+insert/i,
@@ -1616,7 +1616,7 @@ describe("Chapbook Completions", () => {
             ]);
             const mockFunction = ImportMock.mockFunction(
                 insertsModule,
-                "all"
+                "all",
             ).returns([]);
             const parser = uut.getChapbookParser(undefined);
 
@@ -1624,10 +1624,10 @@ describe("Chapbook Completions", () => {
             mockFunction.restore();
 
             expect(results?.items[0].textEditText).to.eql(
-                "custom insert: '${1:URL}', one: ${2:true}, two: '${3:falsy}'"
+                "custom insert: '${1:URL}', one: ${2:true}, two: '${3:falsy}'",
             );
             expect(results?.itemDefaults?.editRange).to.eql(
-                Range.create(1, 11, 1, 13)
+                Range.create(1, 11, 1, 13),
             );
         });
 
@@ -1636,7 +1636,7 @@ describe("Chapbook Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ":: Passage\nLet's try {te ,"
+                ":: Passage\nLet's try {te ,",
             );
             const pos = Position.create(1, 12);
             const index = new Index();
@@ -1657,7 +1657,7 @@ describe("Chapbook Completions", () => {
             };
             const mockFunction = ImportMock.mockFunction(
                 insertsModule,
-                "all"
+                "all",
             ).returns([insert]);
             const parser = uut.getChapbookParser(undefined);
 
@@ -1665,10 +1665,10 @@ describe("Chapbook Completions", () => {
             mockFunction.restore();
 
             expect(results?.items[0].textEditText).to.eql(
-                "test insert: '${1:URL}'"
+                "test insert: '${1:URL}'",
             );
             expect(results?.itemDefaults?.editRange).to.eql(
-                Range.create(1, 11, 1, 14)
+                Range.create(1, 11, 1, 14),
             );
         });
 
@@ -1677,7 +1677,7 @@ describe("Chapbook Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ":: Passage\nLet's try {te ,"
+                ":: Passage\nLet's try {te ,",
             );
             const pos = Position.create(1, 12);
             const index = new Index();
@@ -1692,7 +1692,7 @@ describe("Chapbook Completions", () => {
                     contents: "custom insert",
                     location: Location.create(
                         "source-uri",
-                        Range.create(5, 6, 7, 8)
+                        Range.create(5, 6, 7, 8),
                     ),
                     kind: OChapbookSymbolKind.CustomInsert,
                     match: /custom\s+insert/i,
@@ -1716,7 +1716,7 @@ describe("Chapbook Completions", () => {
             ]);
             const mockFunction = ImportMock.mockFunction(
                 insertsModule,
-                "all"
+                "all",
             ).returns([]);
             const parser = uut.getChapbookParser(undefined);
 
@@ -1724,10 +1724,10 @@ describe("Chapbook Completions", () => {
             mockFunction.restore();
 
             expect(results?.items[0].textEditText).to.eql(
-                "custom insert: '${1:URL}'"
+                "custom insert: '${1:URL}'",
             );
             expect(results?.itemDefaults?.editRange).to.eql(
-                Range.create(1, 11, 1, 14)
+                Range.create(1, 11, 1, 14),
             );
         });
 
@@ -1736,7 +1736,7 @@ describe("Chapbook Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ":: Passage\nLet's try {te :"
+                ":: Passage\nLet's try {te :",
             );
             const pos = Position.create(1, 12);
             const index = new Index();
@@ -1757,7 +1757,7 @@ describe("Chapbook Completions", () => {
             };
             const mockFunction = ImportMock.mockFunction(
                 insertsModule,
-                "all"
+                "all",
             ).returns([insert]);
             const parser = uut.getChapbookParser(undefined);
 
@@ -1766,7 +1766,7 @@ describe("Chapbook Completions", () => {
 
             expect(results?.items[0].textEditText).to.eql("test insert");
             expect(results?.itemDefaults?.editRange).to.eql(
-                Range.create(1, 11, 1, 14)
+                Range.create(1, 11, 1, 14),
             );
         });
 
@@ -1775,7 +1775,7 @@ describe("Chapbook Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ":: Passage\nLet's try {te :"
+                ":: Passage\nLet's try {te :",
             );
             const pos = Position.create(1, 12);
             const index = new Index();
@@ -1790,7 +1790,7 @@ describe("Chapbook Completions", () => {
                     contents: "custom insert",
                     location: Location.create(
                         "source-uri",
-                        Range.create(5, 6, 7, 8)
+                        Range.create(5, 6, 7, 8),
                     ),
                     kind: OChapbookSymbolKind.CustomInsert,
                     match: /custom\s+insert/i,
@@ -1805,7 +1805,7 @@ describe("Chapbook Completions", () => {
             ]);
             const mockFunction = ImportMock.mockFunction(
                 insertsModule,
-                "all"
+                "all",
             ).returns([]);
             const parser = uut.getChapbookParser(undefined);
 
@@ -1814,7 +1814,7 @@ describe("Chapbook Completions", () => {
 
             expect(results?.items[0].textEditText).to.eql("custom insert");
             expect(results?.itemDefaults?.editRange).to.eql(
-                Range.create(1, 11, 1, 14)
+                Range.create(1, 11, 1, 14),
             );
         });
 
@@ -1823,7 +1823,7 @@ describe("Chapbook Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ":: Passage\nLet's try {test insert: }"
+                ":: Passage\nLet's try {test insert: }",
             );
             const pos = Position.create(1, 24);
             const index = new Index();
@@ -1853,7 +1853,7 @@ describe("Chapbook Completions", () => {
             };
             const mockFunction = ImportMock.mockFunction(
                 insertsModule,
-                "all"
+                "all",
             ).returns([insert]);
             const parser = uut.getChapbookParser(undefined);
 
@@ -1869,7 +1869,7 @@ describe("Chapbook Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ":: Passage\nLet's try {test insert: var1.}"
+                ":: Passage\nLet's try {test insert: var1.}",
             );
             const pos = Position.create(1, 29);
             const index = new Index();
@@ -1892,7 +1892,7 @@ describe("Chapbook Completions", () => {
                     locations: [
                         Location.create(
                             "fake-uri",
-                            Range.create(9, 10, 11, 12)
+                            Range.create(9, 10, 11, 12),
                         ),
                     ],
                     kind: OChapbookSymbolKind.PropertySet,
@@ -1909,7 +1909,7 @@ describe("Chapbook Completions", () => {
             };
             const mockFunction = ImportMock.mockFunction(
                 insertsModule,
-                "all"
+                "all",
             ).returns([insert]);
             const parser = uut.getChapbookParser(undefined);
 
@@ -1925,7 +1925,7 @@ describe("Chapbook Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ":: Passage\nLet's try {test insert: }"
+                ":: Passage\nLet's try {test insert: }",
             );
             const pos = Position.create(1, 24);
             const index = new Index();
@@ -1946,7 +1946,7 @@ describe("Chapbook Completions", () => {
             };
             const mockFunction = ImportMock.mockFunction(
                 insertsModule,
-                "all"
+                "all",
             ).returns([insert]);
             const parser = uut.getChapbookParser(undefined);
 
@@ -1956,7 +1956,7 @@ describe("Chapbook Completions", () => {
             expect(results?.items[0].label).to.eql("I'm a passage!");
             expect(results?.items[0].textEditText).to.eql("'I'm a passage!'");
             expect(results?.itemDefaults?.editRange).to.eql(
-                Range.create(1, 24, 1, 24)
+                Range.create(1, 24, 1, 24),
             );
         });
 
@@ -1965,7 +1965,7 @@ describe("Chapbook Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ":: Passage\nLet's try {custom insert: }"
+                ":: Passage\nLet's try {custom insert: }",
             );
             const pos = Position.create(1, 26);
             const index = new Index();
@@ -1980,7 +1980,7 @@ describe("Chapbook Completions", () => {
                     contents: "custom insert",
                     location: Location.create(
                         "source-uri",
-                        Range.create(5, 6, 7, 8)
+                        Range.create(5, 6, 7, 8),
                     ),
                     kind: OChapbookSymbolKind.CustomInsert,
                     match: /custom\s+insert/i,
@@ -1993,7 +1993,7 @@ describe("Chapbook Completions", () => {
             ]);
             const mockFunction = ImportMock.mockFunction(
                 insertsModule,
-                "all"
+                "all",
             ).returns([]);
             const parser = uut.getChapbookParser(undefined);
 
@@ -2003,7 +2003,7 @@ describe("Chapbook Completions", () => {
             expect(results?.items[0].label).to.eql("I'm a passage!");
             expect(results?.items[0].textEditText).to.eql("'I'm a passage!'");
             expect(results?.itemDefaults?.editRange).to.eql(
-                Range.create(1, 26, 1, 26)
+                Range.create(1, 26, 1, 26),
             );
         });
 
@@ -2012,7 +2012,7 @@ describe("Chapbook Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ":: Passage\nLet's try {test insert: }"
+                ":: Passage\nLet's try {test insert: }",
             );
             const pos = Position.create(1, 24);
             const index = new Index();
@@ -2033,7 +2033,7 @@ describe("Chapbook Completions", () => {
             };
             const mockFunction = ImportMock.mockFunction(
                 insertsModule,
-                "all"
+                "all",
             ).returns([insert]);
             const parser = uut.getChapbookParser(undefined);
 
@@ -2043,7 +2043,7 @@ describe("Chapbook Completions", () => {
             expect(results?.items[0].label).to.eql("passage");
             expect(results?.items[0].textEditText).to.eql("'passage'");
             expect(results?.itemDefaults?.editRange).to.eql(
-                Range.create(1, 24, 1, 24)
+                Range.create(1, 24, 1, 24),
             );
         });
 
@@ -2052,7 +2052,7 @@ describe("Chapbook Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ":: Passage\nLet's try {custom insert: }"
+                ":: Passage\nLet's try {custom insert: }",
             );
             const pos = Position.create(1, 26);
             const index = new Index();
@@ -2067,7 +2067,7 @@ describe("Chapbook Completions", () => {
                     contents: "custom insert",
                     location: Location.create(
                         "source-uri",
-                        Range.create(5, 6, 7, 8)
+                        Range.create(5, 6, 7, 8),
                     ),
                     kind: OChapbookSymbolKind.CustomInsert,
                     match: /custom\s+insert/i,
@@ -2080,7 +2080,7 @@ describe("Chapbook Completions", () => {
             ]);
             const mockFunction = ImportMock.mockFunction(
                 insertsModule,
-                "all"
+                "all",
             ).returns([]);
             const parser = uut.getChapbookParser(undefined);
 
@@ -2090,7 +2090,7 @@ describe("Chapbook Completions", () => {
             expect(results?.items[0].label).to.eql("I'm a passage!");
             expect(results?.items[0].textEditText).to.eql("'I'm a passage!'");
             expect(results?.itemDefaults?.editRange).to.eql(
-                Range.create(1, 26, 1, 26)
+                Range.create(1, 26, 1, 26),
             );
         });
 
@@ -2099,7 +2099,7 @@ describe("Chapbook Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ":: I'm a passage!\nLet's try {test insert: 'placeholder' }"
+                ":: I'm a passage!\nLet's try {test insert: 'placeholder' }",
             );
             const pos = Position.create(1, 27);
             const index = new Index();
@@ -2120,7 +2120,7 @@ describe("Chapbook Completions", () => {
             };
             const mockFunction = ImportMock.mockFunction(
                 insertsModule,
-                "all"
+                "all",
             ).returns([insert]);
             const parser = uut.getChapbookParser(undefined);
 
@@ -2130,7 +2130,7 @@ describe("Chapbook Completions", () => {
             expect(results?.items[0].label).to.eql("I'm a passage!");
             expect(results?.items[0].textEditText).to.eql("I'm a passage!");
             expect(results?.itemDefaults?.editRange).to.eql(
-                Range.create(1, 25, 1, 36)
+                Range.create(1, 25, 1, 36),
             );
         });
 
@@ -2139,7 +2139,7 @@ describe("Chapbook Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ":: Passage\nLet's try {test insert, "
+                ":: Passage\nLet's try {test insert, ",
             );
             const pos = Position.create(1, 23);
             const index = new Index();
@@ -2161,7 +2161,7 @@ describe("Chapbook Completions", () => {
             };
             const mockFunction = ImportMock.mockFunction(
                 insertsModule,
-                "all"
+                "all",
             ).returns([insert]);
             const parser = uut.getChapbookParser(undefined);
 
@@ -2173,7 +2173,7 @@ describe("Chapbook Completions", () => {
             expect(results?.items[1].label).to.eql("two");
             expect(results?.items[1].textEditText).to.eql(" two: '${1:value}'");
             expect(results?.itemDefaults?.editRange).to.eql(
-                Range.create(1, 23, 1, 23)
+                Range.create(1, 23, 1, 23),
             );
         });
 
@@ -2182,7 +2182,7 @@ describe("Chapbook Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ":: Passage\nLet's try {custom insert, "
+                ":: Passage\nLet's try {custom insert, ",
             );
             const pos = Position.create(1, 25);
             const index = new Index();
@@ -2197,7 +2197,7 @@ describe("Chapbook Completions", () => {
                     contents: "custom insert",
                     location: Location.create(
                         "source-uri",
-                        Range.create(5, 6, 7, 8)
+                        Range.create(5, 6, 7, 8),
                     ),
                     kind: OChapbookSymbolKind.CustomInsert,
                     match: /custom\s+insert/i,
@@ -2222,7 +2222,7 @@ describe("Chapbook Completions", () => {
             ]);
             const mockFunction = ImportMock.mockFunction(
                 insertsModule,
-                "all"
+                "all",
             ).returns([]);
             const parser = uut.getChapbookParser(undefined);
 
@@ -2234,7 +2234,7 @@ describe("Chapbook Completions", () => {
             expect(results?.items[1].label).to.eql("two");
             expect(results?.items[1].textEditText).to.eql(" two: '${1:value}'");
             expect(results?.itemDefaults?.editRange).to.eql(
-                Range.create(1, 25, 1, 25)
+                Range.create(1, 25, 1, 25),
             );
         });
 
@@ -2243,7 +2243,7 @@ describe("Chapbook Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ":: Passage\nLet's try {test insert, :"
+                ":: Passage\nLet's try {test insert, :",
             );
             const pos = Position.create(1, 23);
             const index = new Index();
@@ -2265,7 +2265,7 @@ describe("Chapbook Completions", () => {
             };
             const mockFunction = ImportMock.mockFunction(
                 insertsModule,
-                "all"
+                "all",
             ).returns([insert]);
             const parser = uut.getChapbookParser(undefined);
 
@@ -2277,7 +2277,7 @@ describe("Chapbook Completions", () => {
             expect(results?.items[1].label).to.eql("two");
             expect(results?.items[1].textEditText).to.eql(" two: '${1:arg}'");
             expect(results?.itemDefaults?.editRange).to.eql(
-                Range.create(1, 23, 1, 25)
+                Range.create(1, 23, 1, 25),
             );
         });
 
@@ -2286,7 +2286,7 @@ describe("Chapbook Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ":: Passage\nLet's try {custom insert, :"
+                ":: Passage\nLet's try {custom insert, :",
             );
             const pos = Position.create(1, 25);
             const index = new Index();
@@ -2301,7 +2301,7 @@ describe("Chapbook Completions", () => {
                     contents: "custom insert",
                     location: Location.create(
                         "source-uri",
-                        Range.create(5, 6, 7, 8)
+                        Range.create(5, 6, 7, 8),
                     ),
                     kind: OChapbookSymbolKind.CustomInsert,
                     match: /custom\s+insert/i,
@@ -2326,7 +2326,7 @@ describe("Chapbook Completions", () => {
             ]);
             const mockFunction = ImportMock.mockFunction(
                 insertsModule,
-                "all"
+                "all",
             ).returns([]);
             const parser = uut.getChapbookParser(undefined);
 
@@ -2338,7 +2338,7 @@ describe("Chapbook Completions", () => {
             expect(results?.items[1].label).to.eql("two");
             expect(results?.items[1].textEditText).to.eql(" two: '${1:arg}'");
             expect(results?.itemDefaults?.editRange).to.eql(
-                Range.create(1, 25, 1, 27)
+                Range.create(1, 25, 1, 27),
             );
         });
 
@@ -2347,7 +2347,7 @@ describe("Chapbook Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ":: Passage\nLet's try {test insert, : 'here'"
+                ":: Passage\nLet's try {test insert, : 'here'",
             );
             const pos = Position.create(1, 28);
             const index = new Index();
@@ -2369,7 +2369,7 @@ describe("Chapbook Completions", () => {
             };
             const mockFunction = ImportMock.mockFunction(
                 insertsModule,
-                "all"
+                "all",
             ).returns([insert]);
             const parser = uut.getChapbookParser(undefined);
 
@@ -2384,7 +2384,7 @@ describe("Chapbook Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ":: Passage\nLet's try {test insert, one: 'here',"
+                ":: Passage\nLet's try {test insert, one: 'here',",
             );
             const pos = Position.create(1, 30);
             const index = new Index();
@@ -2420,7 +2420,7 @@ describe("Chapbook Completions", () => {
             };
             const mockFunction = ImportMock.mockFunction(
                 insertsModule,
-                "all"
+                "all",
             ).returns([insert]);
             const parser = uut.getChapbookParser(undefined);
 
@@ -2436,7 +2436,7 @@ describe("Chapbook Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ":: Passage\nLet's try {test insert, one: 'here',"
+                ":: Passage\nLet's try {test insert, one: 'here',",
             );
             const pos = Position.create(1, 30);
             const index = new Index();
@@ -2463,7 +2463,7 @@ describe("Chapbook Completions", () => {
             };
             const mockFunction = ImportMock.mockFunction(
                 insertsModule,
-                "all"
+                "all",
             ).returns([insert]);
             const parser = uut.getChapbookParser(undefined);
 
@@ -2473,7 +2473,7 @@ describe("Chapbook Completions", () => {
             expect(results?.items[0].label).to.eql("I'm a passage!");
             expect(results?.items[0].textEditText).to.eql("I'm a passage!");
             expect(results?.itemDefaults?.editRange).to.eql(
-                Range.create(1, 30, 1, 34)
+                Range.create(1, 30, 1, 34),
             );
         });
     });

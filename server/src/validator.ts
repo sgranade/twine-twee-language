@@ -20,7 +20,7 @@ import { comparePositions, containingRange } from "./utilities";
  */
 function validatePassages(
     document: TextDocument,
-    index: ProjectIndex
+    index: ProjectIndex,
 ): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];
 
@@ -38,11 +38,11 @@ function validatePassages(
                 otherPassage.name.location.uri === passage.name.location.uri &&
                 comparePositions(
                     otherPassage.name.location.range.start,
-                    passage.name.location.range.start
+                    passage.name.location.range.start,
                 ) === 0 &&
                 comparePositions(
                     otherPassage.name.location.range.end,
-                    passage.name.location.range.end
+                    passage.name.location.range.end,
                 ) === 0 &&
                 matchingPassages.length > 1
             ) {
@@ -58,10 +58,10 @@ function validatePassages(
                     [
                         DiagnosticRelatedInformation.create(
                             otherPassage.name.location,
-                            `Other creation of passage "${passage.name.contents}"`
+                            `Other creation of passage "${passage.name.contents}"`,
                         ),
-                    ]
-                )
+                    ],
+                ),
             );
         }
     }
@@ -80,7 +80,7 @@ function validatePassages(
 function validatePassageReferences(
     document: TextDocument,
     index: ProjectIndex,
-    diagnosticsOptions: DiagnosticsOptions
+    diagnosticsOptions: DiagnosticsOptions,
 ): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];
 
@@ -97,8 +97,8 @@ function validatePassageReferences(
                             `Cannot find passage '${ref.contents}'`,
                             DiagnosticSeverity.Warning,
                             undefined,
-                            "Twine"
-                        )
+                            "Twine",
+                        ),
                     );
                 }
             }
@@ -119,7 +119,7 @@ function validatePassageReferences(
 export async function generateDiagnostics(
     document: TextDocument,
     index: ProjectIndex,
-    diagnosticsOptions: DiagnosticsOptions
+    diagnosticsOptions: DiagnosticsOptions,
 ): Promise<Diagnostic[]> {
     // Start with parse errors
     const diagnostics: Diagnostic[] = [...index.getParseErrors(document.uri)];
@@ -133,7 +133,7 @@ export async function generateDiagnostics(
                 embeddedDocument.document,
                 diagnostic.range,
                 document,
-                document.offsetAt(embeddedDocument.range.start)
+                document.offsetAt(embeddedDocument.range.start),
             );
             diagnostics.push(diagnostic);
         }
@@ -144,14 +144,14 @@ export async function generateDiagnostics(
 
     // Validate passage references
     diagnostics.push(
-        ...validatePassageReferences(document, index, diagnosticsOptions)
+        ...validatePassageReferences(document, index, diagnosticsOptions),
     );
 
     // If we have a story format, let it generate its own diagnostics
     diagnostics.push(
         ...(getStoryFormatParser(
-            index.getStoryData()?.storyFormat
-        )?.generateDiagnostics(document, index, diagnosticsOptions) ?? [])
+            index.getStoryData()?.storyFormat,
+        )?.generateDiagnostics(document, index, diagnosticsOptions) ?? []),
     );
 
     return diagnostics;

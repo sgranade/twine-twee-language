@@ -136,7 +136,7 @@ export interface ParserCallbacks {
 export function createLocationFor(
     text: string,
     at: number,
-    doc: TextDocument
+    doc: TextDocument,
 ): Location {
     return Location.create(doc.uri, createRangeFor(text, at, doc));
 }
@@ -152,7 +152,7 @@ export function createLocationFor(
 export function createRangeFor(
     text: string,
     at: number,
-    doc: TextDocument
+    doc: TextDocument,
 ): Range {
     return Range.create(doc.positionAt(at), doc.positionAt(at + text.length));
 }
@@ -170,7 +170,7 @@ export function createSymbolFor(
     text: string,
     at: number,
     kind: number,
-    doc: TextDocument
+    doc: TextDocument,
 ): ProjSymbol {
     return {
         contents: text,
@@ -191,7 +191,7 @@ export function logErrorFor(
     text: string,
     at: number,
     message: string,
-    state: ParsingState
+    state: ParsingState,
 ): void {
     state.callbacks.onParseError(
         createDiagnosticFor(
@@ -199,8 +199,8 @@ export function logErrorFor(
             state.textDocument,
             text,
             at,
-            message
-        )
+            message,
+        ),
     );
 }
 
@@ -216,7 +216,7 @@ export function logWarningFor(
     text: string,
     at: number,
     message: string,
-    state: ParsingState
+    state: ParsingState,
 ): void {
     state.callbacks.onParseError(
         createDiagnosticFor(
@@ -224,8 +224,8 @@ export function logWarningFor(
             state.textDocument,
             text,
             at,
-            message
-        )
+            message,
+        ),
     );
 }
 
@@ -243,7 +243,7 @@ export function logSemanticTokenFor(
     at: number,
     type: TokenType,
     modifiers: TokenModifier[],
-    state: ParsingState
+    state: ParsingState,
 ): void {
     let { line, character } = state.textDocument.positionAt(at);
     // Tokens can only span a single line, so split on those lines
@@ -283,14 +283,14 @@ export function parsePassageReference(
     passage: string,
     at: number,
     state: ParsingState,
-    storyFormatParsingState: StoryFormatParsingState
+    storyFormatParsingState: StoryFormatParsingState,
 ): void {
     capturePreSemanticTokenFor(
         passage,
         at,
         ETokenType.class,
         [],
-        storyFormatParsingState
+        storyFormatParsingState,
     );
 
     state.callbacks.onSymbolReference({
@@ -420,7 +420,7 @@ export function findAndParseLinks(
     subsection: string,
     subsectionIndex: number,
     state: ParsingState,
-    storyFormatParsingState: StoryFormatParsingState
+    storyFormatParsingState: StoryFormatParsingState,
 ): string {
     for (const m of subsection.matchAll(/\[\[(.*?)\]\]/g)) {
         // Get rid of the link from the subsection text so it doesn't get re-parsed when we look for other content
@@ -437,7 +437,7 @@ export function findAndParseLinks(
                 link.target,
                 link.targetIndex,
                 state,
-                storyFormatParsingState
+                storyFormatParsingState,
             );
 
         if (link.displaySection !== undefined) {
@@ -446,14 +446,14 @@ export function findAndParseLinks(
                 link.displaySection.dividerIndex,
                 ETokenType.keyword,
                 [],
-                storyFormatParsingState
+                storyFormatParsingState,
             );
             capturePreSemanticTokenFor(
                 link.displaySection.display,
                 link.displaySection.displayIndex,
                 ETokenType.string,
                 [],
-                storyFormatParsingState
+                storyFormatParsingState,
             );
         }
     }
@@ -478,7 +478,7 @@ const styleTagCloseRegex = /<\/style>/gi;
 export function findAndParseHtml(
     subsection: string,
     subsectionIndex: number,
-    state: ParsingState
+    state: ParsingState,
 ): string {
     styleTagOpenRegex.lastIndex = 0;
     // I'm going to pretend that no one ever nests style tags inside style tags
@@ -501,8 +501,8 @@ export function findAndParseHtml(
                 "css",
                 cssContents,
                 openInnerIndex + subsectionIndex,
-                state.textDocument
-            )
+                state.textDocument,
+            ),
         );
 
         // Get rid of the style tags and embedded language section so it doesn't get re-parsed
@@ -528,7 +528,7 @@ export function findAndParseHtml(
 function parseHeaderMetadata(
     rawMetadata: string,
     metadataIndex: number,
-    state: ParsingState
+    state: ParsingState,
 ): PassageMetadata {
     const metadata: PassageMetadata = {
         raw: {
@@ -538,9 +538,9 @@ function parseHeaderMetadata(
                 Range.create(
                     state.textDocument.positionAt(metadataIndex),
                     state.textDocument.positionAt(
-                        metadataIndex + rawMetadata.length
-                    )
-                )
+                        metadataIndex + rawMetadata.length,
+                    ),
+                ),
             ),
         },
     };
@@ -550,7 +550,7 @@ function parseHeaderMetadata(
         "json",
         rawMetadata,
         metadataIndex,
-        state.textDocument
+        state.textDocument,
     );
     const jsonDocument = parseJSON(subDocument.document);
 
@@ -582,7 +582,7 @@ function parseHeaderMetadata(
 function parsePassageHeader(
     header: string,
     index: number,
-    state: ParsingState
+    state: ParsingState,
 ): Passage {
     let unparsedHeader = header;
     let name = "";
@@ -609,7 +609,7 @@ function parsePassageHeader(
                     unparsedHeader,
                     parsingIndex,
                     "Tags aren't formatted correctly. Are you missing a ']'?",
-                    state
+                    state,
                 );
                 unparsedHeader = "";
             } else {
@@ -623,9 +623,9 @@ function parsePassageHeader(
                             Range.create(
                                 state.textDocument.positionAt(tagIndex),
                                 state.textDocument.positionAt(
-                                    tagIndex + tag.length
-                                )
-                            )
+                                    tagIndex + tag.length,
+                                ),
+                            ),
                         ),
                     };
                 });
@@ -642,14 +642,14 @@ function parsePassageHeader(
                     unparsedHeader,
                     parsingIndex,
                     "Metadata isn't formatted correctly. Are you missing a '}'?",
-                    state
+                    state,
                 );
                 unparsedHeader = "";
             } else {
                 metadata = parseHeaderMetadata(
                     metaMatch[1],
                     parsingIndex + metaMatch.index,
-                    state
+                    state,
                 );
                 unparsedHeader = unparsedHeader.substring(metaMatch[0].length);
                 parsingIndex += metaMatch[0].length;
@@ -666,14 +666,14 @@ function parsePassageHeader(
                 misplacedTagMatch[0],
                 parsingIndex + misplacedTagMatch.index,
                 "Tags need to come before metadata.",
-                state
+                state,
             );
         } else {
             logErrorFor(
                 unparsedHeader,
                 parsingIndex,
                 `Passage headers can't have text after ${metadata !== undefined ? "metadata" : "tags"}`,
-                state
+                state,
             );
         }
     }
@@ -686,7 +686,7 @@ function parsePassageHeader(
             closeMatch[0],
             headerStartIndex + closeMatch.index,
             `Passage names can't include ${closeMatch[0]} without a \\ in front of it.`,
-            state
+            state,
         );
     }
 
@@ -697,8 +697,8 @@ function parsePassageHeader(
         state.textDocument.uri,
         Range.create(
             state.textDocument.positionAt(nameIndex),
-            state.textDocument.positionAt(nameIndex + name.length)
-        )
+            state.textDocument.positionAt(nameIndex + name.length),
+        ),
     );
     return {
         name: {
@@ -722,15 +722,17 @@ function parsePassageHeader(
 function parseStoryTitlePassage(
     passageText: string,
     textIndex: number,
-    state: ParsingState
+    state: ParsingState,
 ): void {
     const trimmedPassageText = passageText.trimEnd();
     state.callbacks.onStoryTitle(
         trimmedPassageText,
         Range.create(
             state.textDocument.positionAt(textIndex),
-            state.textDocument.positionAt(textIndex + trimmedPassageText.length)
-        )
+            state.textDocument.positionAt(
+                textIndex + trimmedPassageText.length,
+            ),
+        ),
     );
 }
 
@@ -745,7 +747,7 @@ function parseStoryTitlePassage(
 function parseStoryDataPassage(
     passageText: string,
     textIndex: number,
-    state: ParsingState
+    state: ParsingState,
 ): StoryData {
     const storyData: StoryData = {
         ifid: "",
@@ -756,7 +758,7 @@ function parseStoryDataPassage(
         "json",
         passageText,
         textIndex,
-        state.textDocument
+        state.textDocument,
     );
     const jsonDocument = parseJSON(subDocument.document);
 
@@ -805,8 +807,10 @@ function parseStoryDataPassage(
         storyData,
         Range.create(
             state.textDocument.positionAt(textIndex),
-            state.textDocument.positionAt(textIndex + trimmedPassageText.length)
-        )
+            state.textDocument.positionAt(
+                textIndex + trimmedPassageText.length,
+            ),
+        ),
     );
     state.callbacks.onEmbeddedDocument(subDocument);
 
@@ -823,7 +827,7 @@ function parseStoryDataPassage(
 function parseStylesheetPassage(
     passageText: string,
     textIndex: number,
-    state: ParsingState
+    state: ParsingState,
 ): void {
     state.callbacks.onEmbeddedDocument(
         EmbeddedDocument.create(
@@ -831,8 +835,8 @@ function parseStylesheetPassage(
             "css",
             passageText,
             textIndex,
-            state.textDocument
-        )
+            state.textDocument,
+        ),
     );
 }
 
@@ -848,7 +852,7 @@ function parsePassageText(
     passage: Passage,
     passageText: string,
     textIndex: number,
-    state: ParsingState
+    state: ParsingState,
 ): void {
     if (passage.name.contents === "StoryTitle") {
         parseStoryTitlePassage(passageText, textIndex, state);
@@ -860,7 +864,7 @@ function parsePassageText(
         state.storyFormatParser?.parsePassageText(
             passageText,
             textIndex,
-            state
+            state,
         );
     }
 }
@@ -877,7 +881,7 @@ function findAndParsePassageContents(
     text: string,
     passage: Passage,
     followingPassage: Passage | undefined,
-    state: ParsingState
+    state: ParsingState,
 ): void {
     // Set the currently-being-parsed passage
     state.currentPassage = passage;
@@ -894,12 +898,12 @@ function findAndParsePassageContents(
                   state.textDocument.offsetAt({
                       line: followingPassage.name.location.range.start.line - 1,
                       character: 0,
-                  })
+                  }),
               )
             : undefined;
     const passageText = text.substring(
         passageContentsStartIndex,
-        passageContentsEndIndex
+        passageContentsEndIndex,
     );
 
     // Update the passage's scope to encompass the contents, not counting
@@ -911,8 +915,8 @@ function findAndParsePassageContents(
         },
         state.textDocument.positionAt(
             passageContentsStartIndex +
-                passageText.replace(/\r?\n$/g, "").length
-        )
+                passageText.replace(/\r?\n$/g, "").length,
+        ),
     );
 
     // Even if we're not to parse passage text, we call this function
@@ -932,7 +936,7 @@ function parseTwee3(state: ParsingState): void {
 
     // Generate all passages
     const passages = [...text.matchAll(/^::([^:].*?|)$/gm)].map((m) =>
-        parsePassageHeader(m[1], m.index, state)
+        parsePassageHeader(m[1], m.index, state),
     );
 
     // Call back on the passages, along with their contents.
@@ -970,7 +974,7 @@ export function parse(
     callbacks: ParserCallbacks,
     parseLevel: ParseLevel,
     storyFormat?: StoryFormat,
-    diagnosticsOptions?: DiagnosticsOptions
+    diagnosticsOptions?: DiagnosticsOptions,
 ): void {
     const state: ParsingState = {
         textDocument: textDocument,
@@ -984,7 +988,7 @@ export function parse(
     // if that changes the story format, it changes how we parse passages
     const docText = textDocument.getText();
     for (const storyDataMatch of docText.matchAll(
-        /^::\s*StoryData\b.*?\r?\n/gm
+        /^::\s*StoryData\b.*?\r?\n/gm,
     )) {
         if (storyDataMatch !== null) {
             const contentStartIndex =
@@ -1000,13 +1004,13 @@ export function parse(
             }
             const storyDataText = docText.slice(
                 contentStartIndex,
-                nextPassageIndex
+                nextPassageIndex,
             );
 
             const storyData = parseStoryDataPassage(
                 storyDataText,
                 contentStartIndex,
-                state
+                state,
             );
             if (
                 storyData.storyFormat?.format !== storyFormat?.format ||

@@ -9,7 +9,7 @@ import { getStoryFormatParser } from "./passage-text-parsers";
 export async function generateHover(
     document: TextDocument,
     position: Position,
-    index: ProjectIndex
+    index: ProjectIndex,
 ): Promise<Hover | null | undefined> {
     const offset = document.offsetAt(position);
     let passageDocument: EmbeddedDocument | undefined;
@@ -32,7 +32,7 @@ export async function generateHover(
                         embeddedDocument.document,
                         hover.range,
                         document,
-                        document.offsetAt(embeddedDocument.range.start)
+                        document.offsetAt(embeddedDocument.range.start),
                     );
                 }
 
@@ -50,7 +50,7 @@ export async function generateHover(
                 document,
                 position,
                 deferredEmbeddedDocuments,
-                index
+                index,
             );
             if (hover !== null) return hover;
         }
@@ -66,7 +66,7 @@ export async function generateHover(
                 passageDocument.document,
                 hover.range,
                 document,
-                document.offsetAt(passageDocument.range.start)
+                document.offsetAt(passageDocument.range.start),
             );
         }
 

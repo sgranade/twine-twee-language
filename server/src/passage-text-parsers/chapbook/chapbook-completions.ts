@@ -38,7 +38,7 @@ function generateVariableAndPropertyCompletions(
     document: TextDocument,
     text: string,
     offset: number,
-    index: ProjectIndex
+    index: ProjectIndex,
 ): CompletionList | null {
     const completions: string[] = [];
 
@@ -57,7 +57,7 @@ function generateVariableAndPropertyCompletions(
             ? undefined
             : Range.create(
                   document.positionAt(offset + text.length - m[3].length),
-                  document.positionAt(offset + text.length)
+                  document.positionAt(offset + text.length),
               );
     for (const uri of index.getIndexedUris()) {
         if (context !== undefined) {
@@ -70,8 +70,8 @@ function generateVariableAndPropertyCompletions(
                 ...(allPropRefs
                     .filter((ref) => ref.contents.startsWith(context))
                     .map(
-                        (ref) => ref.contents.split(".").pop() ?? ref.contents
-                    ) ?? [])
+                        (ref) => ref.contents.split(".").pop() ?? ref.contents,
+                    ) ?? []),
             );
         } else {
             // Get all set variables
@@ -90,7 +90,7 @@ function generateVariableAndPropertyCompletions(
                     kind: CompletionItemKind.Property,
                     textEdit: TextEdit.replace(range, c),
                 };
-            })
+            }),
         );
     } else {
         return CompletionList.create(
@@ -100,7 +100,7 @@ function generateVariableAndPropertyCompletions(
                     kind: CompletionItemKind.Variable,
                     textEditText: c,
                 };
-            })
+            }),
         );
     }
 }
@@ -123,7 +123,7 @@ function generateModifierCompletions(
     document: TextDocument,
     modifierContentStart: number,
     offset: number,
-    index: ProjectIndex
+    index: ProjectIndex,
 ): CompletionList | null {
     const text = document.getText();
     let i = offset;
@@ -169,7 +169,7 @@ function generateModifierCompletions(
     }
 
     const modifier = modifiers.find((modifier) =>
-        modifier.match.test(modifierText)
+        modifier.match.test(modifierText),
     );
     const modifierMatch = modifier?.match.exec(modifierText) ?? undefined;
 
@@ -184,18 +184,18 @@ function generateModifierCompletions(
                 document,
                 text.slice(
                     modifierContentStart + modifierMatch[0].length,
-                    modifierContentEnd
+                    modifierContentEnd,
                 ),
                 modifierContentStart + modifierMatch[0].length,
                 modifierContentEnd,
-                index
+                index,
             );
         } else if (modifier.firstArgument?.type === ValueType.expression) {
             return generateVariableAndPropertyCompletions(
                 document,
                 text.slice(modifierContentStart, offset),
                 modifierContentStart,
-                index
+                index,
             );
         } else if (
             modifier.firstArgument?.required === ArgumentRequirement.required
@@ -213,7 +213,7 @@ function generateModifierCompletions(
                 insertTextFormat: InsertTextFormat.Snippet,
                 editRange: Range.create(
                     document.positionAt(modifierContentStart),
-                    document.positionAt(modifierContentEnd)
+                    document.positionAt(modifierContentEnd),
                 ),
             };
             return completionList;
@@ -238,13 +238,13 @@ function generateModifierCompletions(
                 kind: CompletionItemKind.Function,
                 textEditText: leadingSpace + c,
             };
-        })
+        }),
     );
     completionList.itemDefaults = {
         insertTextFormat: InsertTextFormat.Snippet,
         editRange: Range.create(
             document.positionAt(modifierContentStart),
-            document.positionAt(modifierContentEnd)
+            document.positionAt(modifierContentEnd),
         ),
     };
 
@@ -284,7 +284,7 @@ function placeholderWithTabStop(placeholder: string, tabStop?: number): string {
  */
 function insertPropertyPlaceholder(
     info: string | InsertProperty | null,
-    tabStop?: number
+    tabStop?: number,
 ): string {
     let placeholder = "'arg'";
     if (InsertProperty.is(info) && info.placeholder !== undefined) {
@@ -302,7 +302,7 @@ function insertPropertyPlaceholder(
  * @returns Completion items corresponding to the properties.
  */
 function insertPropertiesToCompletionItems(
-    props: Record<string, string | InsertProperty | null>
+    props: Record<string, string | InsertProperty | null>,
 ): CompletionItem[] {
     return (
         Object.entries(props) as [string, string | InsertProperty | null][]
@@ -330,7 +330,7 @@ function generatePassageCompletions(
     section: string,
     start: number,
     end: number,
-    index: ProjectIndex
+    index: ProjectIndex,
 ): CompletionList {
     // If there's existing text surrounded by quotes, we need to
     // leave those in place so editors that reduce completion options
@@ -359,13 +359,13 @@ function generatePassageCompletions(
                 kind: CompletionItemKind.Class,
                 textEditText: `${prefix}${p}${suffix}`,
             };
-        })
+        }),
     );
     completionList.itemDefaults = {
         insertTextFormat: InsertTextFormat.Snippet,
         editRange: Range.create(
             document.positionAt(start),
-            document.positionAt(end)
+            document.positionAt(end),
         ),
     };
 
@@ -389,7 +389,7 @@ function generateInsertCompletions(
     document: TextDocument,
     insertContentStart: number,
     offset: number,
-    index: ProjectIndex
+    index: ProjectIndex,
 ): CompletionList | null {
     let i: number;
     const text = document.getText();
@@ -449,7 +449,7 @@ function generateInsertCompletions(
                 // If there's no comma, put in placeholders for any required properties
                 if (commaMissing) {
                     for (const [name, info] of Object.entries(
-                        insert.requiredProps ?? {}
+                        insert.requiredProps ?? {},
                     )) {
                         textEditText += `, ${name}: ${insertPropertyPlaceholder(info, placeholderCount++)}`;
                     }
@@ -474,8 +474,8 @@ function generateInsertCompletions(
                     document,
                     text.slice(insertContentStart, offset),
                     insertContentStart,
-                    index
-                )?.items ?? [])
+                    index,
+                )?.items ?? []),
             );
         }
 
@@ -484,7 +484,7 @@ function generateInsertCompletions(
             insertTextFormat: InsertTextFormat.Snippet,
             editRange: Range.create(
                 document.positionAt(insertContentStart),
-                document.positionAt(insertNameEnd)
+                document.positionAt(insertNameEnd),
             ),
         };
 
@@ -517,17 +517,17 @@ function generateInsertCompletions(
         if (text[insertSectionEnd] === ":") insertSectionEnd++;
 
         const propCompletions = insertPropertiesToCompletionItems(
-            insert.requiredProps ?? {}
+            insert.requiredProps ?? {},
         );
         propCompletions.push(
-            ...insertPropertiesToCompletionItems(insert.optionalProps ?? {})
+            ...insertPropertiesToCompletionItems(insert.optionalProps ?? {}),
         );
         const completionList = CompletionList.create(propCompletions);
         completionList.itemDefaults = {
             insertTextFormat: InsertTextFormat.Snippet,
             editRange: Range.create(
                 document.positionAt(insertSectionStart),
-                document.positionAt(insertSectionEnd)
+                document.positionAt(insertSectionEnd),
             ),
         };
 
@@ -555,14 +555,14 @@ function generateInsertCompletions(
                 text.slice(insertSectionStart, insertSectionEnd),
                 insertSectionStart,
                 insertSectionEnd,
-                index
+                index,
             );
         } else if (insert.firstArgument?.type === ValueType.expression) {
             return generateVariableAndPropertyCompletions(
                 document,
                 text.slice(insertSectionStart, offset),
                 insertSectionStart,
-                index
+                index,
             );
         }
     } else {
@@ -595,14 +595,14 @@ function generateInsertCompletions(
                         text.slice(insertSectionStart, insertSectionEnd),
                         insertSectionStart,
                         insertSectionEnd,
-                        index
+                        index,
                     );
                 } else if (propInfo.type === ValueType.expression) {
                     return generateVariableAndPropertyCompletions(
                         document,
                         text.slice(insertSectionStart, offset),
                         insertSectionStart,
-                        index
+                        index,
                     );
                 }
             }
@@ -616,7 +616,7 @@ export function generateCompletions(
     document: TextDocument,
     position: Position,
     deferredEmbeddedDocuments: EmbeddedDocument[],
-    index: ProjectIndex
+    index: ProjectIndex,
 ): CompletionList | null {
     const offset = document.offsetAt(position);
     const passage = index.getPassageAt(document.uri, position);
@@ -626,7 +626,7 @@ export function generateCompletions(
     // on the line after the scope's start
     const passageTextScope = Range.create(
         Position.create(passage.scope.start.line + 1, 0),
-        passage.scope.end
+        passage.scope.end,
     );
     const passageTextOffset = document.offsetAt(passageTextScope.start);
     const passageText = document.getText(passageTextScope);
@@ -641,7 +641,7 @@ export function generateCompletions(
             document,
             passageText.slice(0, i),
             passageTextOffset,
-            index
+            index,
         );
     }
 
@@ -662,14 +662,14 @@ export function generateCompletions(
                 document,
                 passageTextOffset + i + 1,
                 offset,
-                index
+                index,
             );
         } else if (passageText[i] === "{") {
             return generateInsertCompletions(
                 document,
                 passageTextOffset + i + 1,
                 offset,
-                index
+                index,
             );
         }
     }

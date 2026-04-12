@@ -23,7 +23,7 @@ export function createStatusBarItems(context: vscode.ExtensionContext) {
     const buildingStatusBarItem = vscode.window.createStatusBarItem(
         StatusBarItemIDs.Building,
         vscode.StatusBarAlignment.Left,
-        8
+        8,
     );
     buildingStatusBarItem.name = "Twine Building";
     buildingStatusBarItem.text = "$(sync~spin) Building Twine game...";
@@ -36,7 +36,7 @@ export function createStatusBarItems(context: vscode.ExtensionContext) {
     const runStatusBarItem = vscode.window.createStatusBarItem(
         StatusBarItemIDs.Run,
         vscode.StatusBarAlignment.Left,
-        15
+        15,
     );
     runStatusBarItem.name = "Run Twine Game";
     runStatusBarItem.text = "$(debug-start) Run Twine Game";
@@ -54,7 +54,7 @@ export function createStatusBarItems(context: vscode.ExtensionContext) {
     const reloadStatusBarItem = vscode.window.createStatusBarItem(
         StatusBarItemIDs.Reload,
         vscode.StatusBarAlignment.Left,
-        15
+        15,
     );
     reloadStatusBarItem.name = "Reload Twine Game";
     reloadStatusBarItem.text = "$(debug-rerun) Reload Twine Game";
@@ -67,7 +67,7 @@ export function createStatusBarItems(context: vscode.ExtensionContext) {
     const indexingStatusBarItem = vscode.window.createStatusBarItem(
         StatusBarItemIDs.Indexing,
         vscode.StatusBarAlignment.Left,
-        2
+        2,
     );
     indexingStatusBarItem.name = "Twine Indexing";
     indexingStatusBarItem.text = "$(sync~spin) Indexing Twine project...";

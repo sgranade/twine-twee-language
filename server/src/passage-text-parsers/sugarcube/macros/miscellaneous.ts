@@ -87,8 +87,8 @@ export const widgetMacro: MacroInfo = {
                     `This passage contains <<widget>> macros, so needs a "widget" passage tag`,
                     DiagnosticSeverity.Warning,
                     undefined,
-                    "Twine"
-                )
+                    "Twine",
+                ),
             );
         }
 
@@ -102,7 +102,7 @@ export const widgetMacro: MacroInfo = {
                     argsIndex,
                     ETokenType.string,
                     [ETokenModifier.declaration],
-                    sugarcubeState
+                    sugarcubeState,
                 );
 
                 // Remove the quote marks if they exist
@@ -115,7 +115,7 @@ export const widgetMacro: MacroInfo = {
                     location: createLocationFor(
                         widgetName,
                         argsIndex,
-                        state.textDocument
+                        state.textDocument,
                     ),
                     kind: OSugarCubeSymbolKind.KnownMacro,
                     container: isContainer,

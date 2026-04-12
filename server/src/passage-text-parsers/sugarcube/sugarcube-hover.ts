@@ -11,7 +11,7 @@ export function generateHover(
     document: TextDocument,
     position: Position,
     deferredEmbeddedDocuments: EmbeddedDocument[],
-    index: ProjectIndex
+    index: ProjectIndex,
 ): Hover | null {
     // See if we have any references to a macro. If so, return its
     // description (if it exists) as the hover information.

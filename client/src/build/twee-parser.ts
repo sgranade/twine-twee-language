@@ -48,7 +48,7 @@ const metadataRegex = /(\{(.*?)((?<!\\)\}))\s*/;
  */
 function parseHeaderMetadata(
     rawMetadata: string,
-    metadataIndex: number
+    metadataIndex: number,
 ): PassageMetadata {
     const metadata: PassageMetadata = {};
 
@@ -63,7 +63,7 @@ function parseHeaderMetadata(
         throw new TweeParseError(
             `Couldn't parse metadata: ${message}`,
             metadataIndex,
-            metadataIndex + rawMetadata.length
+            metadataIndex + rawMetadata.length,
         );
     }
 
@@ -102,12 +102,12 @@ function parsePassageHeader(header: string, index: number): Passage {
                 throw new TweeParseError(
                     "Tags aren't formatted correctly",
                     parsingIndex,
-                    parsingIndex + unparsedHeader.length
+                    parsingIndex + unparsedHeader.length,
                 );
             } else {
                 const rawTags = new Set(tagMatch[1].split(/\s+/));
                 tags = Array.from(rawTags).map((tag) =>
-                    tag.replace(/\\(.)/g, "$1")
+                    tag.replace(/\\(.)/g, "$1"),
                 );
                 unparsedHeader = unparsedHeader.substring(tagMatch[0].length);
                 parsingIndex += tagMatch[0].length;
@@ -121,12 +121,12 @@ function parsePassageHeader(header: string, index: number): Passage {
                 throw new TweeParseError(
                     "Metadata isn't formatted correctly",
                     parsingIndex,
-                    parsingIndex + unparsedHeader.length
+                    parsingIndex + unparsedHeader.length,
                 );
             } else {
                 metadata = parseHeaderMetadata(
                     metaMatch[1],
-                    parsingIndex + metaMatch.index
+                    parsingIndex + metaMatch.index,
                 );
                 unparsedHeader = unparsedHeader.substring(metaMatch[0].length);
                 parsingIndex += metaMatch[0].length;
@@ -142,7 +142,7 @@ function parsePassageHeader(header: string, index: number): Passage {
         throw new TweeParseError(
             msg,
             parsingIndex,
-            parsingIndex + unparsedHeader.length
+            parsingIndex + unparsedHeader.length,
         );
     }
 
@@ -154,7 +154,7 @@ function parsePassageHeader(header: string, index: number): Passage {
         throw new TweeParseError(
             `Passage names can't include ${closeMatch[0]} without a \\ in front of it`,
             index + closeMatch.index,
-            index + closeMatch.index + 1
+            index + closeMatch.index + 1,
         );
     }
 
@@ -193,7 +193,7 @@ function parseStoryTitlePassage(story: Story, passageText: string): void {
 function parseStoryDataPassage(
     story: Story,
     passageText: string,
-    textIndex: number
+    textIndex: number,
 ): void {
     const storyData: StoryData = {
         ifid: "",
@@ -208,20 +208,20 @@ function parseStoryDataPassage(
             storyData.ifid = jsonData["ifid"]?.toUpperCase().trim();
             if (
                 !/^[a-fA-F\d]{8}-[a-fA-F\d]{4}-4[a-fA-F\d]{3}-[a-fA-F\d]{4}-[a-fA-F\d]{12}$/.test(
-                    storyData.ifid
+                    storyData.ifid,
                 )
             ) {
                 throw new TweeParseError(
                     `StoryData passage has a badly-formatted IFID value: ${jsonData["ifid"].trim()}`,
                     textIndex,
-                    textIndex + passageText.length
+                    textIndex + passageText.length,
                 );
             }
         } else if (jsonData["ifid"] === undefined) {
             throw new TweeParseError(
                 `StoryData passage is missing an IFID value`,
                 textIndex,
-                textIndex + passageText.length
+                textIndex + passageText.length,
             );
         }
         if (typeof jsonData["format"] === "string")
@@ -245,7 +245,7 @@ function parseStoryDataPassage(
         throw new TweeParseError(
             `Couldn't parse StoryData passage: ${message}`,
             textIndex,
-            textIndex + passageText.length
+            textIndex + passageText.length,
         );
     }
 
@@ -267,7 +267,7 @@ function parseStoryDataPassage(
 function parsePassageText(
     story: Story,
     passage: Passage,
-    textIndex: number
+    textIndex: number,
 ): void {
     if (passage.name === "StoryTitle") {
         parseStoryTitlePassage(story, passage.text);
@@ -295,7 +295,7 @@ export function parseTwee3(story: Story, text: string): void {
             m.index + m[0].length,
             ndx < passages.length - 1
                 ? passageHeaderMatches[ndx + 1].index
-                : undefined
+                : undefined,
         );
         parsePassageText(story, passage, m.index + m[0].length);
         passage.text = passage.text.trim();

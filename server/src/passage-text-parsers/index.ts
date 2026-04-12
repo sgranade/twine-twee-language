@@ -43,7 +43,7 @@ export interface StoryFormatParser {
     parsePassageText(
         passageText: string,
         textIndex: number,
-        state: ParsingState
+        state: ParsingState,
     ): void;
     /**
      * Generate completions at a position.
@@ -58,7 +58,7 @@ export interface StoryFormatParser {
         document: TextDocument,
         position: Position,
         deferredEmbeddedDocuments: EmbeddedDocument[],
-        index: ProjectIndex
+        index: ProjectIndex,
     ): CompletionList | null;
     /**
      * Generate diagnostics.
@@ -70,7 +70,7 @@ export interface StoryFormatParser {
     generateDiagnostics(
         document: TextDocument,
         index: ProjectIndex,
-        diagnosticsOptions: DiagnosticsOptions
+        diagnosticsOptions: DiagnosticsOptions,
     ): Diagnostic[];
     /**
      * Generate hover information.
@@ -85,7 +85,7 @@ export interface StoryFormatParser {
         document: TextDocument,
         position: Position,
         deferredEmbeddedDocuments: EmbeddedDocument[],
-        index: ProjectIndex
+        index: ProjectIndex,
     ): Hover | null;
     /**
      * Get a symbol's definition by a position in a document.
@@ -98,7 +98,7 @@ export interface StoryFormatParser {
     getDefinitionAt(
         document: TextDocument,
         position: Position,
-        index: ProjectIndex
+        index: ProjectIndex,
     ): Definition | undefined;
     /**
      * Get references to a symbol by a position in a document.
@@ -117,7 +117,7 @@ export interface StoryFormatParser {
         documentUri: string,
         position: Position,
         index: ProjectIndex,
-        includeDeclaration: boolean
+        includeDeclaration: boolean,
     ): Location[] | undefined;
 }
 
@@ -128,7 +128,7 @@ export interface StoryFormatParser {
  * @returns Parser, or undefined if no parser is available for the story format.
  */
 export function getStoryFormatParser(
-    format: StoryFormat | undefined
+    format: StoryFormat | undefined,
 ): StoryFormatParser | undefined {
     const formatName = format?.format.toLowerCase();
     if (formatName === "chapbook") {
@@ -186,7 +186,7 @@ export function capturePreSemanticTokenFor(
     at: number,
     type: TokenType,
     modifiers: TokenModifier[],
-    storyFormatState: StoryFormatParsingState
+    storyFormatState: StoryFormatParsingState,
 ): void {
     if (text.length)
         storyFormatState.passageTokens[at] = {

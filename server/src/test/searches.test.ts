@@ -17,7 +17,7 @@ describe("Searches", () => {
                     kind: TwineSymbolKind.Passage,
                     location: Location.create(
                         "source-uri",
-                        Range.create(3, 4, 3, 7)
+                        Range.create(3, 4, 3, 7),
                     ),
                 },
             ]);
@@ -25,7 +25,7 @@ describe("Searches", () => {
             const result = uut.prepareRename(
                 "source-uri",
                 Position.create(3, 5),
-                index
+                index,
             );
 
             expect(result).to.eql(Range.create(3, 4, 3, 7));
@@ -46,7 +46,7 @@ describe("Searches", () => {
             const result = uut.prepareRename(
                 "source-uri",
                 Position.create(3, 5),
-                index
+                index,
             );
 
             expect(result).to.eql(Range.create(3, 4, 3, 7));
@@ -78,7 +78,7 @@ describe("Searches", () => {
                         locations: [
                             Location.create(
                                 "other-uri",
-                                Range.create(5, 2, 5, 4)
+                                Range.create(5, 2, 5, 4),
                             ),
                         ],
                         kind: TwineSymbolKind.Passage,
@@ -88,11 +88,11 @@ describe("Searches", () => {
                         locations: [
                             Location.create(
                                 "other-uri",
-                                Range.create(5, 6, 7, 8)
+                                Range.create(5, 6, 7, 8),
                             ),
                             Location.create(
                                 "other-uri",
-                                Range.create(9, 10, 11, 12)
+                                Range.create(9, 10, 11, 12),
                             ),
                         ],
                         kind: TwineSymbolKind.Passage,
@@ -106,7 +106,7 @@ describe("Searches", () => {
                     "fake-uri",
                     Position.create(1, 2),
                     "New Passage 1",
-                    index
+                    index,
                 );
 
                 expect(result).to.eql({
@@ -114,13 +114,13 @@ describe("Searches", () => {
                         "fake-uri": [
                             TextEdit.replace(
                                 Range.create(1, 1, 2, 2),
-                                "New Passage 1"
+                                "New Passage 1",
                             ),
                         ],
                         "other-uri": [
                             TextEdit.replace(
                                 Range.create(5, 2, 5, 4),
-                                "New Passage 1"
+                                "New Passage 1",
                             ),
                         ],
                     },
@@ -150,7 +150,7 @@ describe("Searches", () => {
                         locations: [
                             Location.create(
                                 "other-uri",
-                                Range.create(5, 2, 5, 4)
+                                Range.create(5, 2, 5, 4),
                             ),
                         ],
                         kind: TwineSymbolKind.Passage,
@@ -160,11 +160,11 @@ describe("Searches", () => {
                         locations: [
                             Location.create(
                                 "other-uri",
-                                Range.create(5, 6, 7, 8)
+                                Range.create(5, 6, 7, 8),
                             ),
                             Location.create(
                                 "other-uri",
-                                Range.create(9, 10, 11, 12)
+                                Range.create(9, 10, 11, 12),
                             ),
                         ],
                         kind: TwineSymbolKind.Passage,
@@ -178,7 +178,7 @@ describe("Searches", () => {
                     "other-uri",
                     Position.create(5, 4),
                     "New Passage 1",
-                    index
+                    index,
                 );
 
                 expect(result).to.eql({
@@ -186,13 +186,13 @@ describe("Searches", () => {
                         "fake-uri": [
                             TextEdit.replace(
                                 Range.create(1, 1, 2, 2),
-                                "New Passage 1"
+                                "New Passage 1",
                             ),
                         ],
                         "other-uri": [
                             TextEdit.replace(
                                 Range.create(5, 2, 5, 4),
-                                "New Passage 1"
+                                "New Passage 1",
                             ),
                         ],
                     },

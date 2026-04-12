@@ -123,7 +123,7 @@ export const scriptMacroBlock = [
 ]
     .map(
         ([open, close]) =>
-            `(?:(?<open>${open})(?<contents>(?:.|\r?\n)*?)${close})`
+            `(?:(?<open>${open})(?<contents>(?:.|\r?\n)*?)${close})`,
     )
     .join("|");
 

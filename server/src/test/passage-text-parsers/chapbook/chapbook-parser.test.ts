@@ -137,7 +137,7 @@ describe("Chapbook Parser", () => {
                 contents: "hi",
                 location: Location.create(
                     "fake-uri",
-                    Range.create(3, 9, 3, 11)
+                    Range.create(3, 9, 3, 11),
                 ),
                 kind: OChapbookSymbolKind.CustomInsert,
                 match: /hi/,
@@ -249,7 +249,7 @@ describe("Chapbook Parser", () => {
                     contents: "var1",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(2, 1, 2, 5)
+                        Range.create(2, 1, 2, 5),
                     ),
                     kind: OChapbookSymbolKind.VariableSet,
                 },
@@ -257,7 +257,7 @@ describe("Chapbook Parser", () => {
                     contents: "var1.prop",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(2, 6, 2, 10)
+                        Range.create(2, 6, 2, 10),
                     ),
                     kind: OChapbookSymbolKind.PropertySet,
                 },
@@ -283,7 +283,7 @@ describe("Chapbook Parser", () => {
                 contents: "var_1",
                 location: Location.create(
                     "fake-uri",
-                    Range.create(2, 8, 2, 13)
+                    Range.create(2, 8, 2, 13),
                 ),
                 kind: OChapbookSymbolKind.Variable,
             });
@@ -291,7 +291,7 @@ describe("Chapbook Parser", () => {
                 contents: "otherVar",
                 location: Location.create(
                     "fake-uri",
-                    Range.create(2, 17, 2, 25)
+                    Range.create(2, 17, 2, 25),
                 ),
                 kind: OChapbookSymbolKind.Variable,
             });
@@ -371,7 +371,7 @@ describe("Chapbook Parser", () => {
                 contents: "var2",
                 location: Location.create(
                     "fake-uri",
-                    Range.create(2, 7, 2, 11)
+                    Range.create(2, 7, 2, 11),
                 ),
                 kind: OChapbookSymbolKind.Variable,
             });
@@ -484,7 +484,7 @@ describe("Chapbook Parser", () => {
                 contents: "var2",
                 location: Location.create(
                     "fake-uri",
-                    Range.create(2, 11, 2, 15)
+                    Range.create(2, 11, 2, 15),
                 ),
                 kind: OChapbookSymbolKind.Variable,
             });
@@ -572,7 +572,7 @@ describe("Chapbook Parser", () => {
                     });
                     const mockFunction = ImportMock.mockFunction(
                         modifiersModule,
-                        "all"
+                        "all",
                     ).returns([modifier]);
                     const parser = uut.getChapbookParser(undefined);
 
@@ -654,7 +654,7 @@ describe("Chapbook Parser", () => {
                     modifier.deprecated = "2.1";
                     const mockFunction = ImportMock.mockFunction(
                         modifiersModule,
-                        "all"
+                        "all",
                     ).returns([modifier]);
 
                     parser?.parsePassageText(passage, header.length, state);
@@ -790,7 +790,7 @@ describe("Chapbook Parser", () => {
                     const parser = uut.getChapbookParser(undefined);
                     const mockFunction = ImportMock.mockFunction(
                         modifiersModule,
-                        "all"
+                        "all",
                     ).returns([modifier]);
 
                     parser?.parsePassageText(passage, header.length, state);
@@ -802,7 +802,7 @@ describe("Chapbook Parser", () => {
                         contents: "mock-mod",
                         location: Location.create(
                             "fake-uri",
-                            Range.create(1, 1, 1, 9)
+                            Range.create(1, 1, 1, 9),
                         ),
                         kind: OChapbookSymbolKind.BuiltInModifier,
                     });
@@ -820,7 +820,7 @@ describe("Chapbook Parser", () => {
                     const parser = uut.getChapbookParser(undefined);
                     const mockFunction = ImportMock.mockFunction(
                         modifiersModule,
-                        "all"
+                        "all",
                     ).returns([]);
 
                     parser?.parsePassageText(passage, header.length, state);
@@ -832,7 +832,7 @@ describe("Chapbook Parser", () => {
                         contents: "mock-mod",
                         location: Location.create(
                             "fake-uri",
-                            Range.create(1, 1, 1, 9)
+                            Range.create(1, 1, 1, 9),
                         ),
                         kind: OChapbookSymbolKind.CustomModifier,
                     });
@@ -851,7 +851,7 @@ describe("Chapbook Parser", () => {
                     const parser = uut.getChapbookParser(undefined);
                     const mockFunction = ImportMock.mockFunction(
                         modifiersModule,
-                        "all"
+                        "all",
                     ).returns([]);
 
                     parser?.parsePassageText(passage, header.length, state);
@@ -877,7 +877,7 @@ describe("Chapbook Parser", () => {
                     const parser = uut.getChapbookParser(undefined);
                     const mockFunction = ImportMock.mockFunction(
                         modifiersModule,
-                        "all"
+                        "all",
                     ).returns([]);
 
                     parser?.parsePassageText(passage, header.length, state);
@@ -953,7 +953,7 @@ describe("Chapbook Parser", () => {
                     const parser = uut.getChapbookParser(undefined);
                     const mockFunction = ImportMock.mockFunction(
                         modifiersModule,
-                        "all"
+                        "all",
                     ).returns([modifier]);
 
                     parser?.parsePassageText(passage, header.length, state);
@@ -980,7 +980,7 @@ describe("Chapbook Parser", () => {
                     const parser = uut.getChapbookParser(undefined);
                     const mockFunction = ImportMock.mockFunction(
                         modifiersModule,
-                        "all"
+                        "all",
                     ).returns([modifier]);
 
                     parser?.parsePassageText(passage, header.length, state);
@@ -992,7 +992,7 @@ describe("Chapbook Parser", () => {
                         contents: "tempy",
                         location: Location.create(
                             "fake-uri",
-                            Range.create(1, 10, 1, 15)
+                            Range.create(1, 10, 1, 15),
                         ),
                         kind: OChapbookSymbolKind.Variable,
                     });
@@ -1000,7 +1000,7 @@ describe("Chapbook Parser", () => {
                         contents: "other",
                         location: Location.create(
                             "fake-uri",
-                            Range.create(1, 18, 1, 23)
+                            Range.create(1, 18, 1, 23),
                         ),
                         kind: OChapbookSymbolKind.Variable,
                     });
@@ -1008,7 +1008,7 @@ describe("Chapbook Parser", () => {
                         contents: "other.prop",
                         location: Location.create(
                             "fake-uri",
-                            Range.create(1, 24, 1, 28)
+                            Range.create(1, 24, 1, 28),
                         ),
                         kind: OChapbookSymbolKind.Property,
                     });
@@ -1032,7 +1032,7 @@ describe("Chapbook Parser", () => {
                     const parser = uut.getChapbookParser(undefined);
                     const mockFunction = ImportMock.mockFunction(
                         modifiersModule,
-                        "all"
+                        "all",
                     ).returns([modifier]);
 
                     parser?.parsePassageText(passage, header.length, state);
@@ -1044,7 +1044,7 @@ describe("Chapbook Parser", () => {
                         contents: "arg",
                         location: Location.create(
                             "fake-uri",
-                            Range.create(1, 11, 1, 14)
+                            Range.create(1, 11, 1, 14),
                         ),
                         kind: TwineSymbolKind.Passage,
                     });
@@ -1068,7 +1068,7 @@ describe("Chapbook Parser", () => {
                     const parser = uut.getChapbookParser(undefined);
                     const mockFunction = ImportMock.mockFunction(
                         modifiersModule,
-                        "all"
+                        "all",
                     ).returns([modifier]);
 
                     parser?.parsePassageText(passage, header.length, state);
@@ -1102,7 +1102,7 @@ describe("Chapbook Parser", () => {
                     const parser = uut.getChapbookParser(undefined);
                     const mockFunction = ImportMock.mockFunction(
                         modifiersModule,
-                        "all"
+                        "all",
                     ).returns([modifier]);
 
                     parser?.parsePassageText(passage, header.length, state);
@@ -1114,7 +1114,7 @@ describe("Chapbook Parser", () => {
                         contents: "arg",
                         location: Location.create(
                             "fake-uri",
-                            Range.create(1, 11, 1, 14)
+                            Range.create(1, 11, 1, 14),
                         ),
                         kind: TwineSymbolKind.Passage,
                     });
@@ -1138,7 +1138,7 @@ describe("Chapbook Parser", () => {
                     const parser = uut.getChapbookParser(undefined);
                     const mockFunction = ImportMock.mockFunction(
                         modifiersModule,
-                        "all"
+                        "all",
                     ).returns([modifier]);
 
                     parser?.parsePassageText(passage, header.length, state);
@@ -1172,7 +1172,7 @@ describe("Chapbook Parser", () => {
                     const parser = uut.getChapbookParser(undefined);
                     const mockFunction = ImportMock.mockFunction(
                         modifiersModule,
-                        "all"
+                        "all",
                     ).returns([modifier]);
 
                     parser?.parsePassageText(passage, header.length, state);
@@ -1201,7 +1201,7 @@ describe("Chapbook Parser", () => {
                     const parser = uut.getChapbookParser(undefined);
                     const mockFunction = ImportMock.mockFunction(
                         modifiersModule,
-                        "all"
+                        "all",
                     ).returns([modifier]);
 
                     parser?.parsePassageText(passage, header.length, state);
@@ -1235,7 +1235,7 @@ describe("Chapbook Parser", () => {
                     const parser = uut.getChapbookParser(undefined);
                     const mockFunction = ImportMock.mockFunction(
                         modifiersModule,
-                        "all"
+                        "all",
                     ).returns([modifier]);
 
                     parser?.parsePassageText(passage, header.length, state);
@@ -1247,7 +1247,7 @@ describe("Chapbook Parser", () => {
                         contents: "arg",
                         location: Location.create(
                             "fake-uri",
-                            Range.create(1, 11, 1, 14)
+                            Range.create(1, 11, 1, 14),
                         ),
                         kind: OChapbookSymbolKind.Variable,
                     });
@@ -1255,7 +1255,7 @@ describe("Chapbook Parser", () => {
                         contents: "arg.prop",
                         location: Location.create(
                             "fake-uri",
-                            Range.create(1, 15, 1, 19)
+                            Range.create(1, 15, 1, 19),
                         ),
                         kind: OChapbookSymbolKind.Property,
                     });
@@ -1279,7 +1279,7 @@ describe("Chapbook Parser", () => {
                     const parser = uut.getChapbookParser(undefined);
                     const mockFunction = ImportMock.mockFunction(
                         modifiersModule,
-                        "all"
+                        "all",
                     ).returns([modifier]);
 
                     parser?.parsePassageText(passage, header.length, state);
@@ -1313,7 +1313,7 @@ describe("Chapbook Parser", () => {
                             contents: "javascript",
                             location: Location.create(
                                 "fake-uri",
-                                Range.create(3, 1, 3, 11)
+                                Range.create(3, 1, 3, 11),
                             ),
                             kind: OChapbookSymbolKind.BuiltInModifier,
                         },
@@ -1339,7 +1339,7 @@ describe("Chapbook Parser", () => {
                     const [, result] = callbacks.embeddedDocuments;
 
                     expect(result.document.getText()).to.eql(
-                        "Fake CSS\nMore fake\n"
+                        "Fake CSS\nMore fake\n",
                     );
                     expect(result.document.languageId).to.eql("css");
                     expect(result.range).to.eql(Range.create(3, 0, 5, 0));
@@ -1364,7 +1364,7 @@ describe("Chapbook Parser", () => {
                     const [, result] = callbacks.embeddedDocuments;
 
                     expect(result.document.getText()).to.eql(
-                        "let one = 2;\nconst three = 4;\n"
+                        "let one = 2;\nconst three = 4;\n",
                     );
                     expect(result.document.languageId).to.eql("javascript");
                     expect(result.range).to.eql(Range.create(3, 0, 5, 0));
@@ -1436,7 +1436,7 @@ describe("Chapbook Parser", () => {
                         contents: "target passage",
                         location: Location.create(
                             "fake-uri",
-                            Range.create(2, 15, 2, 29)
+                            Range.create(2, 15, 2, 29),
                         ),
                         kind: TwineSymbolKind.Passage,
                     },
@@ -1503,7 +1503,7 @@ describe("Chapbook Parser", () => {
                         contents: "target passage",
                         location: Location.create(
                             "fake-uri",
-                            Range.create(2, 35, 2, 49)
+                            Range.create(2, 35, 2, 49),
                         ),
                         kind: TwineSymbolKind.Passage,
                     },
@@ -1571,7 +1571,7 @@ describe("Chapbook Parser", () => {
                         contents: "target passage",
                         location: Location.create(
                             "fake-uri",
-                            Range.create(2, 36, 2, 50)
+                            Range.create(2, 36, 2, 50),
                         ),
                         kind: TwineSymbolKind.Passage,
                     },
@@ -1639,7 +1639,7 @@ describe("Chapbook Parser", () => {
                         contents: "target passage",
                         location: Location.create(
                             "fake-uri",
-                            Range.create(2, 15, 2, 29)
+                            Range.create(2, 15, 2, 29),
                         ),
                         kind: TwineSymbolKind.Passage,
                     },
@@ -1669,7 +1669,7 @@ describe("Chapbook Parser", () => {
                 const [, result] = callbacks.embeddedDocuments;
 
                 expect(result.document.getText()).to.eql(
-                    "\n  html {\n    margin: 1px;\n  }\n"
+                    "\n  html {\n    margin: 1px;\n  }\n",
                 );
                 expect(result.document.languageId).to.eql("css");
                 expect(result.range).to.eql(Range.create(2, 19, 6, 0));
@@ -1802,7 +1802,7 @@ describe("Chapbook Parser", () => {
                     insert.deprecated = "2.1";
                     const mockFunction = ImportMock.mockFunction(
                         insertsModule,
-                        "all"
+                        "all",
                     ).returns([insert]);
 
                     parser?.parsePassageText(passage, header.length, state);
@@ -2090,7 +2090,7 @@ describe("Chapbook Parser", () => {
                             contents: "var1",
                             location: Location.create(
                                 "fake-uri",
-                                Range.create(2, 21, 2, 25)
+                                Range.create(2, 21, 2, 25),
                             ),
                             kind: OChapbookSymbolKind.Variable,
                         },
@@ -2098,7 +2098,7 @@ describe("Chapbook Parser", () => {
                             contents: "var1.prop",
                             location: Location.create(
                                 "fake-uri",
-                                Range.create(2, 26, 2, 30)
+                                Range.create(2, 26, 2, 30),
                             ),
                             kind: OChapbookSymbolKind.Property,
                         },
@@ -2120,7 +2120,7 @@ describe("Chapbook Parser", () => {
                     const parser = uut.getChapbookParser(undefined);
                     const mockFunction = ImportMock.mockFunction(
                         insertsModule,
-                        "all"
+                        "all",
                     ).returns([insert]);
 
                     parser?.parsePassageText(passage, header.length, state);
@@ -2132,7 +2132,7 @@ describe("Chapbook Parser", () => {
                         contents: "mock insert",
                         location: Location.create(
                             "fake-uri",
-                            Range.create(1, 9, 1, 20)
+                            Range.create(1, 9, 1, 20),
                         ),
                         kind: OChapbookSymbolKind.BuiltInInsert,
                     });
@@ -2150,7 +2150,7 @@ describe("Chapbook Parser", () => {
                     const parser = uut.getChapbookParser(undefined);
                     const mockFunction = ImportMock.mockFunction(
                         insertsModule,
-                        "all"
+                        "all",
                     ).returns([]);
 
                     parser?.parsePassageText(passage, header.length, state);
@@ -2162,7 +2162,7 @@ describe("Chapbook Parser", () => {
                         contents: "mock insert",
                         location: Location.create(
                             "fake-uri",
-                            Range.create(1, 9, 1, 20)
+                            Range.create(1, 9, 1, 20),
                         ),
                         kind: OChapbookSymbolKind.CustomInsert,
                     });
@@ -2182,7 +2182,7 @@ describe("Chapbook Parser", () => {
                     const parser = uut.getChapbookParser(undefined);
                     const mockFunction = ImportMock.mockFunction(
                         insertsModule,
-                        "all"
+                        "all",
                     ).returns([insert]);
 
                     parser?.parsePassageText(passage, header.length, state);
@@ -2194,7 +2194,7 @@ describe("Chapbook Parser", () => {
                         contents: "arg",
                         location: Location.create(
                             "fake-uri",
-                            Range.create(1, 23, 1, 26)
+                            Range.create(1, 23, 1, 26),
                         ),
                         kind: OChapbookSymbolKind.Variable,
                     });
@@ -2218,7 +2218,7 @@ describe("Chapbook Parser", () => {
                     const parser = uut.getChapbookParser(undefined);
                     const mockFunction = ImportMock.mockFunction(
                         insertsModule,
-                        "all"
+                        "all",
                     ).returns([insert]);
 
                     parser?.parsePassageText(passage, header.length, state);
@@ -2251,7 +2251,7 @@ describe("Chapbook Parser", () => {
                     const parser = uut.getChapbookParser(undefined);
                     const mockFunction = ImportMock.mockFunction(
                         insertsModule,
-                        "all"
+                        "all",
                     ).returns([insert]);
 
                     parser?.parsePassageText(passage, header.length, state);
@@ -2288,7 +2288,7 @@ describe("Chapbook Parser", () => {
                     const parser = uut.getChapbookParser(undefined);
                     const mockFunction = ImportMock.mockFunction(
                         insertsModule,
-                        "all"
+                        "all",
                     ).returns([insert]);
 
                     parser?.parsePassageText(passage, header.length, state);
@@ -2320,7 +2320,7 @@ describe("Chapbook Parser", () => {
                     const parser = uut.getChapbookParser(undefined);
                     const mockFunction = ImportMock.mockFunction(
                         insertsModule,
-                        "all"
+                        "all",
                     ).returns([insert]);
 
                     parser?.parsePassageText(passage, header.length, state);
@@ -2352,7 +2352,7 @@ describe("Chapbook Parser", () => {
                     const parser = uut.getChapbookParser(undefined);
                     const mockFunction = ImportMock.mockFunction(
                         insertsModule,
-                        "all"
+                        "all",
                     ).returns([insert]);
 
                     parser?.parsePassageText(passage, header.length, state);
@@ -2382,7 +2382,7 @@ describe("Chapbook Parser", () => {
                     const parser = uut.getChapbookParser(undefined);
                     const mockFunction = ImportMock.mockFunction(
                         insertsModule,
-                        "all"
+                        "all",
                     ).returns([insert]);
 
                     parser?.parsePassageText(passage, header.length, state);
@@ -2394,7 +2394,7 @@ describe("Chapbook Parser", () => {
                         contents: "tempy",
                         location: Location.create(
                             "fake-uri",
-                            Range.create(1, 23, 1, 28)
+                            Range.create(1, 23, 1, 28),
                         ),
                         kind: OChapbookSymbolKind.Variable,
                     });
@@ -2402,7 +2402,7 @@ describe("Chapbook Parser", () => {
                         contents: "tempy.prop",
                         location: Location.create(
                             "fake-uri",
-                            Range.create(1, 29, 1, 33)
+                            Range.create(1, 29, 1, 33),
                         ),
                         kind: OChapbookSymbolKind.Property,
                     });
@@ -2424,7 +2424,7 @@ describe("Chapbook Parser", () => {
                     const parser = uut.getChapbookParser(undefined);
                     const mockFunction = ImportMock.mockFunction(
                         insertsModule,
-                        "all"
+                        "all",
                     ).returns([insert]);
 
                     parser?.parsePassageText(passage, header.length, state);
@@ -2436,7 +2436,7 @@ describe("Chapbook Parser", () => {
                         contents: "arg",
                         location: Location.create(
                             "fake-uri",
-                            Range.create(1, 24, 1, 27)
+                            Range.create(1, 24, 1, 27),
                         ),
                         kind: TwineSymbolKind.Passage,
                     });
@@ -2457,7 +2457,7 @@ describe("Chapbook Parser", () => {
                     const parser = uut.getChapbookParser(undefined);
                     const mockFunction = ImportMock.mockFunction(
                         insertsModule,
-                        "all"
+                        "all",
                     ).returns([insert]);
 
                     parser?.parsePassageText(passage, header.length, state);
@@ -2489,7 +2489,7 @@ describe("Chapbook Parser", () => {
                     const parser = uut.getChapbookParser(undefined);
                     const mockFunction = ImportMock.mockFunction(
                         insertsModule,
-                        "all"
+                        "all",
                     ).returns([insert]);
 
                     parser?.parsePassageText(passage, header.length, state);
@@ -2501,7 +2501,7 @@ describe("Chapbook Parser", () => {
                         contents: "arg",
                         location: Location.create(
                             "fake-uri",
-                            Range.create(1, 24, 1, 27)
+                            Range.create(1, 24, 1, 27),
                         ),
                         kind: TwineSymbolKind.Passage,
                     });
@@ -2522,7 +2522,7 @@ describe("Chapbook Parser", () => {
                     const parser = uut.getChapbookParser(undefined);
                     const mockFunction = ImportMock.mockFunction(
                         insertsModule,
-                        "all"
+                        "all",
                     ).returns([insert]);
 
                     parser?.parsePassageText(passage, header.length, state);
@@ -2554,7 +2554,7 @@ describe("Chapbook Parser", () => {
                     const parser = uut.getChapbookParser(undefined);
                     const mockFunction = ImportMock.mockFunction(
                         insertsModule,
-                        "all"
+                        "all",
                     ).returns([insert]);
 
                     parser?.parsePassageText(passage, header.length, state);
@@ -2581,7 +2581,7 @@ describe("Chapbook Parser", () => {
                     const parser = uut.getChapbookParser(undefined);
                     const mockFunction = ImportMock.mockFunction(
                         insertsModule,
-                        "all"
+                        "all",
                     ).returns([insert]);
 
                     parser?.parsePassageText(passage, header.length, state);
@@ -2612,7 +2612,7 @@ describe("Chapbook Parser", () => {
                     const parser = uut.getChapbookParser(undefined);
                     const mockFunction = ImportMock.mockFunction(
                         insertsModule,
-                        "all"
+                        "all",
                     ).returns([insert]);
 
                     parser?.parsePassageText(passage, header.length, state);
@@ -2624,7 +2624,7 @@ describe("Chapbook Parser", () => {
                         contents: "arg",
                         location: Location.create(
                             "fake-uri",
-                            Range.create(1, 23, 1, 26)
+                            Range.create(1, 23, 1, 26),
                         ),
                         kind: OChapbookSymbolKind.Variable,
                     });
@@ -2632,7 +2632,7 @@ describe("Chapbook Parser", () => {
                         contents: "arg.prop",
                         location: Location.create(
                             "fake-uri",
-                            Range.create(1, 27, 1, 31)
+                            Range.create(1, 27, 1, 31),
                         ),
                         kind: OChapbookSymbolKind.Property,
                     });
@@ -2653,7 +2653,7 @@ describe("Chapbook Parser", () => {
                     const parser = uut.getChapbookParser(undefined);
                     const mockFunction = ImportMock.mockFunction(
                         insertsModule,
-                        "all"
+                        "all",
                     ).returns([insert]);
 
                     parser?.parsePassageText(passage, header.length, state);
@@ -2690,7 +2690,7 @@ describe("Chapbook Parser", () => {
                     const parser = uut.getChapbookParser(undefined);
                     const mockFunction = ImportMock.mockFunction(
                         insertsModule,
-                        "all"
+                        "all",
                     ).returns([insert]);
 
                     parser?.parsePassageText(passage, header.length, state);
@@ -2702,7 +2702,7 @@ describe("Chapbook Parser", () => {
                         contents: "var1",
                         location: Location.create(
                             "fake-uri",
-                            Range.create(1, 37, 1, 41)
+                            Range.create(1, 37, 1, 41),
                         ),
                         kind: OChapbookSymbolKind.Variable,
                     });
@@ -2710,7 +2710,7 @@ describe("Chapbook Parser", () => {
                         contents: "var1.prop",
                         location: Location.create(
                             "fake-uri",
-                            Range.create(1, 42, 1, 46)
+                            Range.create(1, 42, 1, 46),
                         ),
                         kind: OChapbookSymbolKind.Property,
                     });
@@ -2743,7 +2743,7 @@ describe("Chapbook Parser", () => {
                     const parser = uut.getChapbookParser(undefined);
                     const mockFunction = ImportMock.mockFunction(
                         insertsModule,
-                        "all"
+                        "all",
                     ).returns([insert]);
 
                     parser?.parsePassageText(passage, header.length, state);
@@ -2786,7 +2786,7 @@ describe("Chapbook Parser", () => {
                     const parser = uut.getChapbookParser(undefined);
                     const mockFunction = ImportMock.mockFunction(
                         insertsModule,
-                        "all"
+                        "all",
                     ).returns([insert]);
 
                     parser?.parsePassageText(passage, header.length, state);
@@ -2825,7 +2825,7 @@ describe("Chapbook Parser", () => {
                     const parser = uut.getChapbookParser(undefined);
                     const mockFunction = ImportMock.mockFunction(
                         insertsModule,
-                        "all"
+                        "all",
                     ).returns([insert]);
 
                     parser?.parsePassageText(passage, header.length, state);
@@ -2877,7 +2877,7 @@ describe("Chapbook Parser", () => {
                     contents: "hi\\s+there",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(4, 9, 4, 19)
+                        Range.create(4, 9, 4, 19),
                     ),
                     kind: OChapbookSymbolKind.CustomInsert,
                     match: /hi\s+there/,
@@ -2910,7 +2910,7 @@ describe("Chapbook Parser", () => {
                     contents: "hi there",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(4, 9, 4, 19)
+                        Range.create(4, 9, 4, 19),
                     ),
                     kind: OChapbookSymbolKind.CustomInsert,
                     match: /hi\s+there/,
@@ -2944,7 +2944,7 @@ describe("Chapbook Parser", () => {
                     description: "I am an insert!",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(4, 9, 4, 19)
+                        Range.create(4, 9, 4, 19),
                     ),
                     kind: OChapbookSymbolKind.CustomInsert,
                     match: /hi\s+there/,
@@ -2978,7 +2978,7 @@ describe("Chapbook Parser", () => {
                     syntax: "{hi there}",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(4, 9, 4, 19)
+                        Range.create(4, 9, 4, 19),
                     ),
                     kind: OChapbookSymbolKind.CustomInsert,
                     match: /hi\s+there/,
@@ -3012,7 +3012,7 @@ describe("Chapbook Parser", () => {
                     completions: ["one"],
                     location: Location.create(
                         "fake-uri",
-                        Range.create(4, 9, 4, 19)
+                        Range.create(4, 9, 4, 19),
                     ),
                     kind: OChapbookSymbolKind.CustomInsert,
                     match: /hi\s+there/,
@@ -3046,7 +3046,7 @@ describe("Chapbook Parser", () => {
                     completions: ["one", "two"],
                     location: Location.create(
                         "fake-uri",
-                        Range.create(4, 9, 4, 19)
+                        Range.create(4, 9, 4, 19),
                     ),
                     kind: OChapbookSymbolKind.CustomInsert,
                     match: /hi\s+there/,
@@ -3079,7 +3079,7 @@ describe("Chapbook Parser", () => {
                     contents: "hi\\s+there",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(4, 9, 4, 19)
+                        Range.create(4, 9, 4, 19),
                     ),
                     kind: OChapbookSymbolKind.CustomInsert,
                     match: /hi\s+there/,
@@ -3117,7 +3117,7 @@ describe("Chapbook Parser", () => {
                     contents: "hi\\s+there",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(4, 9, 4, 19)
+                        Range.create(4, 9, 4, 19),
                     ),
                     kind: OChapbookSymbolKind.CustomInsert,
                     match: /hi\s+there/,
@@ -3155,7 +3155,7 @@ describe("Chapbook Parser", () => {
                     contents: "hi\\s+there",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(4, 9, 4, 19)
+                        Range.create(4, 9, 4, 19),
                     ),
                     kind: OChapbookSymbolKind.CustomInsert,
                     match: /hi\s+there/,
@@ -3193,7 +3193,7 @@ describe("Chapbook Parser", () => {
                     contents: "hi\\s+there",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(4, 9, 4, 19)
+                        Range.create(4, 9, 4, 19),
                     ),
                     kind: OChapbookSymbolKind.CustomInsert,
                     match: /hi\s+there/,
@@ -3231,7 +3231,7 @@ describe("Chapbook Parser", () => {
                     contents: "hi\\s+there",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(4, 9, 4, 19)
+                        Range.create(4, 9, 4, 19),
                     ),
                     kind: OChapbookSymbolKind.CustomInsert,
                     match: /hi\s+there/,
@@ -3269,7 +3269,7 @@ describe("Chapbook Parser", () => {
                     contents: "hi\\s+there",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(4, 9, 4, 19)
+                        Range.create(4, 9, 4, 19),
                     ),
                     kind: OChapbookSymbolKind.CustomInsert,
                     match: /hi\s+there/,
@@ -3308,7 +3308,7 @@ describe("Chapbook Parser", () => {
                     contents: "hi\\s+there",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(4, 9, 4, 19)
+                        Range.create(4, 9, 4, 19),
                     ),
                     kind: OChapbookSymbolKind.CustomInsert,
                     match: /hi\s+there/,
@@ -3347,7 +3347,7 @@ describe("Chapbook Parser", () => {
                     contents: "hi\\s+there",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(4, 9, 4, 19)
+                        Range.create(4, 9, 4, 19),
                     ),
                     kind: OChapbookSymbolKind.CustomInsert,
                     match: /hi\s+there/,
@@ -3386,7 +3386,7 @@ describe("Chapbook Parser", () => {
                     contents: "hi\\s+there",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(4, 9, 4, 19)
+                        Range.create(4, 9, 4, 19),
                     ),
                     kind: OChapbookSymbolKind.CustomInsert,
                     match: /hi\s+there/,
@@ -3425,7 +3425,7 @@ describe("Chapbook Parser", () => {
                     contents: "hi\\s+there",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(4, 9, 4, 19)
+                        Range.create(4, 9, 4, 19),
                     ),
                     kind: OChapbookSymbolKind.CustomInsert,
                     match: /hi\s+there/,
@@ -3464,7 +3464,7 @@ describe("Chapbook Parser", () => {
                     contents: "hi\\s+there",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(4, 9, 4, 19)
+                        Range.create(4, 9, 4, 19),
                     ),
                     kind: OChapbookSymbolKind.CustomInsert,
                     match: /hi\s+there/,
@@ -3509,7 +3509,7 @@ describe("Chapbook Parser", () => {
                     contents: "hi\\s+there",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(4, 9, 4, 19)
+                        Range.create(4, 9, 4, 19),
                     ),
                     kind: OChapbookSymbolKind.CustomInsert,
                     match: /hi\s+there/,
@@ -3565,7 +3565,7 @@ describe("Chapbook Parser", () => {
                     contents: "hi\\s+there",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(4, 9, 4, 19)
+                        Range.create(4, 9, 4, 19),
                     ),
                     kind: OChapbookSymbolKind.CustomInsert,
                     match: /hi\s+there/,
@@ -3576,7 +3576,7 @@ describe("Chapbook Parser", () => {
                     contents: "different\\s+insert",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(9, 9, 9, 27)
+                        Range.create(9, 9, 9, 27),
                     ),
                     kind: OChapbookSymbolKind.CustomInsert,
                     match: /different\s+insert/,
@@ -3609,7 +3609,7 @@ describe("Chapbook Parser", () => {
                     contents: "hi\\s+there",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(4, 9, 4, 19)
+                        Range.create(4, 9, 4, 19),
                     ),
                     kind: OChapbookSymbolKind.CustomModifier,
                     match: /hi\s+there/,
@@ -3642,7 +3642,7 @@ describe("Chapbook Parser", () => {
                     contents: "hi there",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(4, 9, 4, 19)
+                        Range.create(4, 9, 4, 19),
                     ),
                     kind: OChapbookSymbolKind.CustomModifier,
                     match: /hi\s+there/,
@@ -3676,7 +3676,7 @@ describe("Chapbook Parser", () => {
                     description: "I'm a modifier!",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(4, 9, 4, 19)
+                        Range.create(4, 9, 4, 19),
                     ),
                     kind: OChapbookSymbolKind.CustomModifier,
                     match: /hi\s+there/,
@@ -3710,7 +3710,7 @@ describe("Chapbook Parser", () => {
                     syntax: "[hi there]",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(4, 9, 4, 19)
+                        Range.create(4, 9, 4, 19),
                     ),
                     kind: OChapbookSymbolKind.CustomModifier,
                     match: /hi\s+there/,
@@ -3744,7 +3744,7 @@ describe("Chapbook Parser", () => {
                     completions: ["one"],
                     location: Location.create(
                         "fake-uri",
-                        Range.create(4, 9, 4, 19)
+                        Range.create(4, 9, 4, 19),
                     ),
                     kind: OChapbookSymbolKind.CustomModifier,
                     match: /hi\s+there/,
@@ -3778,7 +3778,7 @@ describe("Chapbook Parser", () => {
                     completions: ["one", "two"],
                     location: Location.create(
                         "fake-uri",
-                        Range.create(4, 9, 4, 19)
+                        Range.create(4, 9, 4, 19),
                     ),
                     kind: OChapbookSymbolKind.CustomModifier,
                     match: /hi\s+there/,
@@ -3811,7 +3811,7 @@ describe("Chapbook Parser", () => {
                     contents: "hi\\s+there",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(4, 9, 4, 19)
+                        Range.create(4, 9, 4, 19),
                     ),
                     kind: OChapbookSymbolKind.CustomModifier,
                     match: /hi\s+there/,
@@ -3847,7 +3847,7 @@ describe("Chapbook Parser", () => {
                     contents: "hi\\s+there",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(4, 9, 4, 19)
+                        Range.create(4, 9, 4, 19),
                     ),
                     kind: OChapbookSymbolKind.CustomModifier,
                     match: /hi\s+there/,
@@ -3883,7 +3883,7 @@ describe("Chapbook Parser", () => {
                     contents: "hi\\s+there",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(4, 9, 4, 19)
+                        Range.create(4, 9, 4, 19),
                     ),
                     kind: OChapbookSymbolKind.CustomModifier,
                     match: /hi\s+there/,
@@ -3919,7 +3919,7 @@ describe("Chapbook Parser", () => {
                     contents: "hi\\s+there",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(4, 9, 4, 19)
+                        Range.create(4, 9, 4, 19),
                     ),
                     kind: OChapbookSymbolKind.CustomModifier,
                     match: /hi\s+there/,
@@ -3955,7 +3955,7 @@ describe("Chapbook Parser", () => {
                     contents: "hi\\s+there",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(4, 9, 4, 19)
+                        Range.create(4, 9, 4, 19),
                     ),
                     kind: OChapbookSymbolKind.CustomModifier,
                     match: /hi\s+there/,
@@ -3991,7 +3991,7 @@ describe("Chapbook Parser", () => {
                     contents: "hi\\s+there",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(4, 9, 4, 19)
+                        Range.create(4, 9, 4, 19),
                     ),
                     kind: OChapbookSymbolKind.CustomModifier,
                     match: /hi\s+there/,
@@ -4060,7 +4060,7 @@ describe("Chapbook Parser", () => {
                 expect(callbacks.errors.length).to.equal(1);
                 expect(result.severity).to.eql(DiagnosticSeverity.Error);
                 expect(result.message).to.include(
-                    "Variable names can't have spaces"
+                    "Variable names can't have spaces",
                 );
                 expect(result.range).to.eql(Range.create(1, 4, 1, 5));
             });
@@ -4081,7 +4081,7 @@ describe("Chapbook Parser", () => {
                 expect(callbacks.errors.length).to.equal(1);
                 expect(result.severity).to.eql(DiagnosticSeverity.Error);
                 expect(result.message).to.include(
-                    "Missing a close parenthesis"
+                    "Missing a close parenthesis",
                 );
                 expect(result.range).to.eql(Range.create(1, 8, 1, 8));
             });
@@ -4128,7 +4128,7 @@ describe("Chapbook Parser", () => {
                     modifier.since = "2.1.1";
                     const mockFunction = ImportMock.mockFunction(
                         modifiersModule,
-                        "all"
+                        "all",
                     ).returns([modifier]);
 
                     parser?.parsePassageText(passage, header.length, state);
@@ -4138,7 +4138,7 @@ describe("Chapbook Parser", () => {
                     expect(callbacks.errors.length).to.equal(1);
                     expect(result.severity).to.eql(DiagnosticSeverity.Error);
                     expect(result.message).to.include(
-                        "`modMe` isn't available until Chapbook version 2.1.1 but your StoryFormat version is 2.1"
+                        "`modMe` isn't available until Chapbook version 2.1.1 but your StoryFormat version is 2.1",
                     );
                     expect(result.range).to.eql(Range.create(3, 1, 3, 4));
                 });
@@ -4163,7 +4163,7 @@ describe("Chapbook Parser", () => {
                     modifier.removed = "2.1";
                     const mockFunction = ImportMock.mockFunction(
                         modifiersModule,
-                        "all"
+                        "all",
                     ).returns([modifier]);
 
                     parser?.parsePassageText(passage, header.length, state);
@@ -4173,7 +4173,7 @@ describe("Chapbook Parser", () => {
                     expect(callbacks.errors.length).to.equal(1);
                     expect(result.severity).to.eql(DiagnosticSeverity.Error);
                     expect(result.message).to.include(
-                        "`modMe` was removed in Chapbook version 2.1 and your StoryFormat version is 2.1"
+                        "`modMe` was removed in Chapbook version 2.1 and your StoryFormat version is 2.1",
                     );
                     expect(result.range).to.eql(Range.create(3, 1, 3, 4));
                 });
@@ -4194,7 +4194,7 @@ describe("Chapbook Parser", () => {
                     expect(callbacks.errors.length).to.equal(1);
                     expect(result.severity).to.eql(DiagnosticSeverity.Error);
                     expect(result.message).to.include(
-                        "Modifiers can't have spaces before them"
+                        "Modifiers can't have spaces before them",
                     );
                     expect(result.range).to.eql(Range.create(3, 0, 3, 2));
                 });
@@ -4216,7 +4216,7 @@ describe("Chapbook Parser", () => {
                     expect(callbacks.errors.length).to.equal(2);
                     expect(result.severity).to.eql(DiagnosticSeverity.Error);
                     expect(result.message).to.include(
-                        "Modifiers can't have spaces after them"
+                        "Modifiers can't have spaces after them",
                     );
                     expect(result.range).to.eql(Range.create(3, 7, 3, 9));
                 });
@@ -4275,7 +4275,7 @@ describe("Chapbook Parser", () => {
                     insert.since = "2.1.1";
                     const mockFunction = ImportMock.mockFunction(
                         insertsModule,
-                        "all"
+                        "all",
                     ).returns([insert]);
 
                     parser?.parsePassageText(passage, header.length, state);
@@ -4285,7 +4285,7 @@ describe("Chapbook Parser", () => {
                     expect(callbacks.errors.length).to.equal(1);
                     expect(result.severity).to.eql(DiagnosticSeverity.Error);
                     expect(result.message).to.include(
-                        "`fn insert` isn't available until Chapbook version 2.1.1 but your StoryFormat version is 2.1"
+                        "`fn insert` isn't available until Chapbook version 2.1.1 but your StoryFormat version is 2.1",
                     );
                     expect(result.range).to.eql(Range.create(3, 11, 3, 20));
                 });
@@ -4311,7 +4311,7 @@ describe("Chapbook Parser", () => {
                     insert.removed = "2.1";
                     const mockFunction = ImportMock.mockFunction(
                         insertsModule,
-                        "all"
+                        "all",
                     ).returns([insert]);
 
                     parser?.parsePassageText(passage, header.length, state);
@@ -4321,7 +4321,7 @@ describe("Chapbook Parser", () => {
                     expect(callbacks.errors.length).to.equal(1);
                     expect(result.severity).to.eql(DiagnosticSeverity.Error);
                     expect(result.message).to.include(
-                        "`fn insert` was removed in Chapbook version 2.1 and your StoryFormat version is 2.1"
+                        "`fn insert` was removed in Chapbook version 2.1 and your StoryFormat version is 2.1",
                     );
                     expect(result.range).to.eql(Range.create(3, 11, 3, 20));
                 });
@@ -4343,7 +4343,7 @@ describe("Chapbook Parser", () => {
                     expect(callbacks.errors.length).to.equal(1);
                     expect(result.severity).to.eql(DiagnosticSeverity.Error);
                     expect(result.message).to.include(
-                        "Array dereferencing can only be at the end"
+                        "Array dereferencing can only be at the end",
                     );
                     expect(result.range).to.eql(Range.create(3, 5, 3, 8));
                 });
@@ -4364,7 +4364,7 @@ describe("Chapbook Parser", () => {
                     expect(callbacks.errors.length).to.equal(1);
                     expect(result.severity).to.eql(DiagnosticSeverity.Error);
                     expect(result.message).to.include(
-                        "Properties can't have spaces"
+                        "Properties can't have spaces",
                     );
                     expect(result.range).to.eql(Range.create(1, 13, 1, 21));
                 });
@@ -4399,7 +4399,7 @@ describe("Chapbook Parser", () => {
                     const parser = uut.getChapbookParser(undefined);
                     const mockFunction = ImportMock.mockFunction(
                         insertsModule,
-                        "all"
+                        "all",
                     ).returns([insert]);
 
                     parser?.parsePassageText(passage, header.length, state);
@@ -4409,7 +4409,7 @@ describe("Chapbook Parser", () => {
                     expect(callbacks.errors.length).to.equal(1);
                     expect(result.severity).to.eql(DiagnosticSeverity.Error);
                     expect(result.message).to.include(
-                        "Properties can't have spaces"
+                        "Properties can't have spaces",
                     );
                     expect(result.range).to.eql(Range.create(1, 22, 1, 30));
                 });
@@ -4429,7 +4429,7 @@ describe("Chapbook Parser", () => {
                     const parser = uut.getChapbookParser(undefined);
                     const mockFunction = ImportMock.mockFunction(
                         insertsModule,
-                        "all"
+                        "all",
                     ).returns([insert]);
 
                     parser?.parsePassageText(passage, header.length, state);
@@ -4439,7 +4439,7 @@ describe("Chapbook Parser", () => {
                     expect(callbacks.errors.length).to.equal(1);
                     expect(result.severity).to.eql(DiagnosticSeverity.Error);
                     expect(result.message).to.include(
-                        "`Mock Insert` requires a first argument"
+                        "`Mock Insert` requires a first argument",
                     );
                     expect(result.range).to.eql(Range.create(1, 10, 1, 21));
                 });
@@ -4459,7 +4459,7 @@ describe("Chapbook Parser", () => {
                     const parser = uut.getChapbookParser(undefined);
                     const mockFunction = ImportMock.mockFunction(
                         insertsModule,
-                        "all"
+                        "all",
                     ).returns([insert]);
 
                     parser?.parsePassageText(passage, header.length, state);
@@ -4469,7 +4469,7 @@ describe("Chapbook Parser", () => {
                     expect(callbacks.errors.length).to.equal(1);
                     expect(result.severity).to.eql(DiagnosticSeverity.Warning);
                     expect(result.message).to.include(
-                        "`Mock Insert` will ignore this first argument"
+                        "`Mock Insert` will ignore this first argument",
                     );
                     expect(result.range).to.eql(Range.create(1, 23, 1, 28));
                 });
@@ -4489,7 +4489,7 @@ describe("Chapbook Parser", () => {
                     const parser = uut.getChapbookParser(undefined);
                     const mockFunction = ImportMock.mockFunction(
                         insertsModule,
-                        "all"
+                        "all",
                     ).returns([insert]);
 
                     parser?.parsePassageText(passage, header.length, state);
@@ -4499,7 +4499,7 @@ describe("Chapbook Parser", () => {
                     expect(callbacks.errors.length).to.equal(1);
                     expect(result.severity).to.eql(DiagnosticSeverity.Error);
                     expect(result.message).to.include(
-                        "Insert {Mock Insert} missing expected properties: expected, also"
+                        "Insert {Mock Insert} missing expected properties: expected, also",
                     );
                     expect(result.range).to.eql(Range.create(1, 10, 1, 21));
                 });
@@ -4519,7 +4519,7 @@ describe("Chapbook Parser", () => {
                     const parser = uut.getChapbookParser(undefined);
                     const mockFunction = ImportMock.mockFunction(
                         insertsModule,
-                        "all"
+                        "all",
                     ).returns([insert]);
 
                     parser?.parsePassageText(passage, header.length, state);
@@ -4543,7 +4543,7 @@ describe("Chapbook Parser", () => {
                     const parser = uut.getChapbookParser(undefined);
                     const mockFunction = ImportMock.mockFunction(
                         insertsModule,
-                        "all"
+                        "all",
                     ).returns([insert]);
 
                     parser?.parsePassageText(passage, header.length, state);
@@ -4553,7 +4553,7 @@ describe("Chapbook Parser", () => {
                     expect(callbacks.errors.length).to.equal(1);
                     expect(result.severity).to.eql(DiagnosticSeverity.Warning);
                     expect(result.message).to.include(
-                        "Insert {Mock Insert} will ignore this property"
+                        "Insert {Mock Insert} will ignore this property",
                     );
                     expect(result.range).to.eql(Range.create(1, 23, 1, 27));
                 });
@@ -4581,7 +4581,7 @@ describe("Chapbook Parser", () => {
                     expect(callbacks.errors.length).to.equal(1);
                     expect(result.severity).to.eql(DiagnosticSeverity.Error);
                     expect(result.message).to.include(
-                        "The extension's version must be a number like '2.0.0'"
+                        "The extension's version must be a number like '2.0.0'",
                     );
                     expect(result.range).to.eql(Range.create(2, 15, 2, 19));
                 });
@@ -4626,7 +4626,7 @@ describe("Chapbook Parser", () => {
                     expect(callbacks.errors.length).to.equal(1);
                     expect(result.severity).to.eql(DiagnosticSeverity.Warning);
                     expect(result.message).to.include(
-                        "The current story format version is 2.0.1, so this extension will be ignored"
+                        "The current story format version is 2.0.1, so this extension will be ignored",
                     );
                     expect(result.range).to.eql(Range.create(2, 15, 2, 21));
                 });
@@ -4673,7 +4673,7 @@ describe("Chapbook Parser", () => {
                     expect(callbacks.errors.length).to.equal(1);
                     expect(result.severity).to.eql(DiagnosticSeverity.Warning);
                     expect(result.message).to.include(
-                        "The current story format version is 2.0, so this extension will be ignored"
+                        "The current story format version is 2.0, so this extension will be ignored",
                     );
                     expect(result.range).to.eql(Range.create(2, 15, 2, 20));
                 });
@@ -4720,7 +4720,7 @@ describe("Chapbook Parser", () => {
                     expect(callbacks.errors.length).to.equal(1);
                     expect(result.severity).to.eql(DiagnosticSeverity.Warning);
                     expect(result.message).to.include(
-                        "Unrecognized engine template function"
+                        "Unrecognized engine template function",
                     );
                     expect(result.range).to.eql(Range.create(3, 0, 3, 20));
                 });
@@ -4747,7 +4747,7 @@ describe("Chapbook Parser", () => {
                     expect(callbacks.errors.length).to.equal(1);
                     expect(result.severity).to.eql(DiagnosticSeverity.Error);
                     expect(result.message).to.include(
-                        "Must be a regular expression"
+                        "Must be a regular expression",
                     );
                     expect(result.range).to.eql(Range.create(4, 8, 4, 9));
                 });
@@ -4774,7 +4774,7 @@ describe("Chapbook Parser", () => {
                     expect(callbacks.errors.length).to.equal(1);
                     expect(result.severity).to.eql(DiagnosticSeverity.Error);
                     expect(result.message).to.include(
-                        "Custom inserts must have a space in their match"
+                        "Custom inserts must have a space in their match",
                     );
                     expect(result.range).to.eql(Range.create(4, 9, 4, 11));
                 });
@@ -4897,7 +4897,7 @@ describe("Chapbook Parser", () => {
                     expect(callbacks.errors.length).to.equal(1);
                     expect(result.severity).to.eql(DiagnosticSeverity.Warning);
                     expect(result.message).to.include(
-                        "Completions must be a string or an array of strings"
+                        "Completions must be a string or an array of strings",
                     );
                     expect(result.range).to.eql(Range.create(4, 35, 4, 36));
                 });
@@ -4924,7 +4924,7 @@ describe("Chapbook Parser", () => {
                     expect(callbacks.errors.length).to.equal(1);
                     expect(result.severity).to.eql(DiagnosticSeverity.Warning);
                     expect(result.message).to.include(
-                        "Completions must be a string or an array of strings"
+                        "Completions must be a string or an array of strings",
                     );
                     expect(result.range).to.eql(Range.create(4, 36, 4, 37));
                 });
@@ -4951,7 +4951,7 @@ describe("Chapbook Parser", () => {
                     expect(callbacks.errors.length).to.equal(1);
                     expect(result.severity).to.eql(DiagnosticSeverity.Warning);
                     expect(result.message).to.include(
-                        "requiredProps are ignored for a custom modifier"
+                        "requiredProps are ignored for a custom modifier",
                     );
                     expect(result.range).to.eql(Range.create(6, 0, 6, 13));
                 });
@@ -4978,7 +4978,7 @@ describe("Chapbook Parser", () => {
                     expect(callbacks.errors.length).to.equal(1);
                     expect(result.severity).to.eql(DiagnosticSeverity.Warning);
                     expect(result.message).to.include(
-                        "optionalProps are ignored for a custom modifier"
+                        "optionalProps are ignored for a custom modifier",
                     );
                     expect(result.range).to.eql(Range.create(6, 0, 6, 13));
                 });

@@ -29,7 +29,7 @@ export function getSugarCubeMacroInfo(): SC2MacroInfo[] {
  */
 export function getSugarCubeParser(
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    formatVersion: string | undefined
+    formatVersion: string | undefined,
 ): StoryFormatParser | undefined {
     return {
         id: "sugarcube-any",

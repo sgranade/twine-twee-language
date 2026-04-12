@@ -167,7 +167,7 @@ namespace Heartbeat {
 
         try {
             const tweeFileUris = new Set(
-                await connection.sendRequest(FindTweeFilesRequest)
+                await connection.sendRequest(FindTweeFilesRequest),
             );
 
             // We'll loop through the files in stages: first to find a StoryData value,
@@ -218,7 +218,7 @@ namespace Heartbeat {
                         doc,
                         ParseLevel.Full,
                         diagnosticsOptions,
-                        false // Don't re-index on story format change b/c we're in the middle of re-indexing
+                        false, // Don't re-index on story format change b/c we're in the middle of re-indexing
                     );
                 }
             }
@@ -241,7 +241,7 @@ namespace Heartbeat {
                     doc,
                     ParseLevel.Full,
                     diagnosticsOptions,
-                    false // Don't re-index on story format change
+                    false, // Don't re-index on story format change
                 );
             }
             for (const doc of unprocessedOpenDocuments) {
@@ -262,7 +262,7 @@ namespace Heartbeat {
         try {
             const sc2MacroFileUris = await connection.sendRequest(
                 FindFilesRequest,
-                "**/*.twee-config.{json,yaml,yml}"
+                "**/*.twee-config.{json,yaml,yml}",
             );
             for (const uri of sc2MacroFileUris) {
                 await parseT3LTMacroFile(uri);
@@ -274,7 +274,7 @@ namespace Heartbeat {
             onSCMacroChanges();
         } catch (err) {
             connection.console.error(
-                `Client couldn't find SugarCube 2 macro files: ${err}`
+                `Client couldn't find SugarCube 2 macro files: ${err}`,
             );
         }
 
@@ -347,7 +347,7 @@ connection.onInitialized(async () => {
         // Register for all configuration changes.
         connection.client.register(
             DidChangeConfigurationNotification.type,
-            undefined
+            undefined,
         );
     }
 
@@ -378,7 +378,7 @@ connection.onInitialized(async () => {
 
 connection.onCompletion(
     async (
-        params: TextDocumentPositionParams
+        params: TextDocumentPositionParams,
     ): Promise<CompletionList | null> => {
         const document = documents.get(params.textDocument.uri);
         if (document === undefined) {
@@ -388,9 +388,9 @@ connection.onCompletion(
             document,
             params.position,
             projectIndex,
-            hasDiagnosticRelatedInformationCapability
+            hasDiagnosticRelatedInformationCapability,
         );
-    }
+    },
 );
 
 connection.onDefinition((params: DefinitionParams): Definition | undefined => {
@@ -450,13 +450,13 @@ documents.onDidOpen(async (change) => {
 connection.onDocumentSymbol(
     (params: DocumentSymbolParams): DocumentSymbol[] | null => {
         return generateSymbols(params.textDocument.uri, projectIndex);
-    }
+    },
 );
 
 connection.onFoldingRanges(
     (params: FoldingRangeParams): FoldingRange[] | null => {
         return generateFoldingRanges(params.textDocument.uri, projectIndex);
-    }
+    },
 );
 
 connection.onHover(
@@ -466,7 +466,7 @@ connection.onHover(
             return null;
         }
         return await generateHover(document, params.position, projectIndex);
-    }
+    },
 );
 
 connection.onNotification(CustomMessages.RequestReindex, () => {
@@ -481,7 +481,7 @@ connection.onPrepareRename((params: PrepareRenameParams): Range | undefined => {
     return prepareRename(
         params.textDocument.uri,
         params.position,
-        projectIndex
+        projectIndex,
     );
 });
 
@@ -490,7 +490,7 @@ connection.onRenameRequest((params: RenameParams): WorkspaceEdit | null => {
         params.textDocument.uri,
         params.position,
         params.newName,
-        projectIndex
+        projectIndex,
     );
 });
 
@@ -499,7 +499,7 @@ connection.onReferences((params: ReferenceParams): Location[] | undefined => {
         params.textDocument.uri,
         params.position,
         projectIndex,
-        params.context.includeDeclaration
+        params.context.includeDeclaration,
     );
 });
 
@@ -520,7 +520,7 @@ connection.onShutdown(() => {
  */
 async function fetchFile(
     uri: string,
-    langId: string = "twee3"
+    langId: string = "twee3",
 ): Promise<TextDocument | undefined> {
     try {
         const content = await connection.sendRequest(ReadFileRequest, {
@@ -573,7 +573,7 @@ async function parseTextDocument(
     document: TextDocument,
     parseLevel: ParseLevel,
     diagnosticsOptions: DiagnosticsOptions | undefined,
-    reindexOnStoryFormatChange: boolean
+    reindexOnStoryFormatChange: boolean,
 ) {
     if (diagnosticsOptions === undefined) {
         // We'll only get the diagnostic options if we're parsing passage
@@ -619,7 +619,7 @@ async function parseTextDocument(
 function onSCMacroChanges() {
     connection.sendNotification(
         CustomMessages.UpdatedSugarCubeMacroList,
-        getSugarCubeMacroInfo()
+        getSugarCubeMacroInfo(),
     );
 }
 
@@ -666,7 +666,7 @@ async function parseT3LTMacroFile(uri: string) {
     if (doc !== undefined) {
         const parsedResults = tweeConfigFileToMacrosAndEnums(
             doc.getText(),
-            isYaml
+            isYaml,
         );
         if (parsedResults.macrosAndEnums !== undefined) {
             setCustomMacrosAndEnums(uri, parsedResults.macrosAndEnums);
@@ -675,7 +675,7 @@ async function parseT3LTMacroFile(uri: string) {
             const diagnostics = [
                 Diagnostic.create(
                     Range.create(0, 0, 1, 0),
-                    `Problems with the configuration file: ${parsedResults.errors.join("\n")}`
+                    `Problems with the configuration file: ${parsedResults.errors.join("\n")}`,
                 ),
             ];
             connection.sendDiagnostics({
@@ -716,7 +716,7 @@ async function processAllOpenDocuments() {
  */
 async function validateTextDocument(
     textDocument: TextDocument,
-    diagnosticsOptions: DiagnosticsOptions | undefined
+    diagnosticsOptions: DiagnosticsOptions | undefined,
 ) {
     if (diagnosticsOptions === undefined) {
         diagnosticsOptions = (await getSettings())["twee-3"];
@@ -725,7 +725,7 @@ async function validateTextDocument(
     const diagnostics = await generateDiagnostics(
         textDocument,
         projectIndex,
-        diagnosticsOptions
+        diagnosticsOptions,
     );
 
     connection.sendDiagnostics({ uri: textDocument.uri, diagnostics });

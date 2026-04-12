@@ -88,7 +88,7 @@ describe("Story Output", () => {
 
         expect(result).to.equal(
             "<!-- UUID://sweet-if'id// -->" +
-                `<tw-storydata name="Game Name" startnode="2" creator="Twine (Twee 3) Language" creator-version="${CLIENT_VERSION}" ifid="sweet-if&#39;id" zoom="0.72" format="<MyFormat>" format-version="1.2.3" options="debug another"`
+                `<tw-storydata name="Game Name" startnode="2" creator="Twine (Twee 3) Language" creator-version="${CLIENT_VERSION}" ifid="sweet-if&#39;id" zoom="0.72" format="<MyFormat>" format-version="1.2.3" options="debug another"`,
         );
     });
 
@@ -102,7 +102,7 @@ describe("Story Output", () => {
         const result = m[1];
 
         expect(result).to.equal(
-            'role="stylesheet" id="twine-user-stylesheet" type="text/twine-css">'
+            'role="stylesheet" id="twine-user-stylesheet" type="text/twine-css">',
         );
     });
 
@@ -113,7 +113,7 @@ describe("Story Output", () => {
                 name: "Stylish",
                 isStylesheet: true,
                 text: "stylin'",
-            })
+            }),
         );
         const storyFormatData = '{"source": "{{STORY_DATA}}"}';
 
@@ -122,7 +122,7 @@ describe("Story Output", () => {
         const result = m[1];
 
         expect(result).to.equal(
-            '/* twine-user-stylesheet #1: "Stylish" */\nstylin\''
+            '/* twine-user-stylesheet #1: "Stylish" */\nstylin\'',
         );
     });
 
@@ -138,7 +138,7 @@ describe("Story Output", () => {
                 name: "Style 2",
                 isStylesheet: true,
                 text: "so stylish",
-            })
+            }),
         );
         const storyFormatData = '{"source": "{{STORY_DATA}}"}';
 
@@ -148,7 +148,7 @@ describe("Story Output", () => {
 
         expect(result).to.equal(
             '/* twine-user-stylesheet #1: "Stylish" */\nstylin\'\n' +
-                '/* twine-user-stylesheet #2: "Style 2" */\nso stylish'
+                '/* twine-user-stylesheet #2: "Style 2" */\nso stylish',
         );
     });
 
@@ -166,7 +166,7 @@ describe("Story Output", () => {
                 name: "Style 2",
                 isStylesheet: true,
                 text: "so stylish",
-            })
+            }),
         );
         const storyFormatData = '{"source": "{{STORY_DATA}}"}';
 
@@ -175,7 +175,7 @@ describe("Story Output", () => {
         const result = m[1];
 
         expect(result).to.equal(
-            '/* twine-user-stylesheet #1: "Style 2" */\nso stylish'
+            '/* twine-user-stylesheet #1: "Style 2" */\nso stylish',
         );
     });
 
@@ -189,7 +189,7 @@ describe("Story Output", () => {
         const result = m[1];
 
         expect(result).to.equal(
-            'role="script" id="twine-user-script" type="text/twine-javascript">'
+            'role="script" id="twine-user-script" type="text/twine-javascript">',
         );
     });
 
@@ -200,7 +200,7 @@ describe("Story Output", () => {
                 name: "Scripty",
                 isScript: true,
                 text: "scriptin'",
-            })
+            }),
         );
         const storyFormatData = '{"source": "{{STORY_DATA}}"}';
 
@@ -209,7 +209,7 @@ describe("Story Output", () => {
         const result = m[1];
 
         expect(result).to.equal(
-            '/* twine-user-script #1: "Scripty" */\nscriptin\''
+            '/* twine-user-script #1: "Scripty" */\nscriptin\'',
         );
     });
 
@@ -225,7 +225,7 @@ describe("Story Output", () => {
                 name: "Script 2",
                 isScript: true,
                 text: "so scriptish",
-            })
+            }),
         );
         const storyFormatData = '{"source": "{{STORY_DATA}}"}';
 
@@ -235,7 +235,7 @@ describe("Story Output", () => {
 
         expect(result).to.equal(
             '/* twine-user-script #1: "Scripty" */\nscriptin\'\n' +
-                '/* twine-user-script #2: "Script 2" */\nso scriptish'
+                '/* twine-user-script #2: "Script 2" */\nso scriptish',
         );
     });
 
@@ -253,7 +253,7 @@ describe("Story Output", () => {
                 name: "Script 2",
                 isScript: true,
                 text: "so scriptish",
-            })
+            }),
         );
         const storyFormatData = '{"source": "{{STORY_DATA}}"}';
 
@@ -262,7 +262,7 @@ describe("Story Output", () => {
         const result = m[1];
 
         expect(result).to.equal(
-            '/* twine-user-script #1: "Script 2" */\nso scriptish'
+            '/* twine-user-script #1: "Script 2" */\nso scriptish',
         );
     });
 
@@ -321,15 +321,15 @@ describe("Story Output", () => {
 
         expect(m.length).to.equal(3);
         expect(result_p0[1]).to.equal(
-            'pid="1" name="A very <passage" tags="" position="100,100" size="100,100"'
+            'pid="1" name="A very <passage" tags="" position="100,100" size="100,100"',
         );
         expect(result_p0[2]).to.equal("&gt;text&lt; goes here");
         expect(result_p1[1]).to.equal(
-            'pid="2" name="What? A &#39;passage&#39; &amp; stuff?" tags="tag1 tag2" position="225,100" size="100,100"'
+            'pid="2" name="What? A &#39;passage&#39; &amp; stuff?" tags="tag1 tag2" position="225,100" size="100,100"',
         );
         expect(result_p1[2]).to.equal("This has &#39;info&#39;.");
         expect(result_p2[1]).to.equal(
-            'pid="3" name="Start" tags="" position="350,100" size="100,100"'
+            'pid="3" name="Start" tags="" position="350,100" size="100,100"',
         );
         expect(result_p2[2]).to.equal("Gonna start here.");
     });
@@ -358,7 +358,7 @@ describe("Story Output", () => {
 
         expect(m.length).to.equal(1);
         expect(result_p0[1]).to.equal(
-            'pid="1" name="Start" tags="" position="100,100" size="100,100"'
+            'pid="1" name="Start" tags="" position="100,100" size="100,100"',
         );
         expect(result_p0[2]).to.equal("Gonna start here.");
     });
@@ -387,7 +387,7 @@ describe("Story Output", () => {
 
         expect(m.length).to.equal(1);
         expect(result_p0[1]).to.equal(
-            'pid="1" name="Start" tags="" position="100,100" size="100,100"'
+            'pid="1" name="Start" tags="" position="100,100" size="100,100"',
         );
         expect(result_p0[2]).to.equal("Gonna start here.");
     });
@@ -416,7 +416,7 @@ describe("Story Output", () => {
 
         expect(m.length).to.equal(1);
         expect(result_p0[1]).to.equal(
-            'pid="1" name="Start" tags="" position="100,100" size="100,100"'
+            'pid="1" name="Start" tags="" position="100,100" size="100,100"',
         );
         expect(result_p0[2]).to.equal("Gonna start here.");
     });

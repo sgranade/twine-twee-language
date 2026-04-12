@@ -24,7 +24,7 @@ const customMacroAndEnumCache: Record<string, MacrosAndEnums> = {};
  */
 export function setCustomMacrosAndEnums(
     uri: string,
-    macrosAndEnums: MacrosAndEnums
+    macrosAndEnums: MacrosAndEnums,
 ) {
     let enumsChanged = false;
 
@@ -53,7 +53,7 @@ export function setCustomMacrosAndEnums(
         if (Array.isArray(macro.arguments)) {
             const parsedArguments = parseMacroParameters(
                 macro.arguments,
-                allEnums
+                allEnums,
             );
             if (!(parsedArguments instanceof Error)) {
                 macro.parsedArguments = parsedArguments;
@@ -213,7 +213,7 @@ interface TweeConfigFileConversionResults {
  */
 export function tweeConfigFileToMacrosAndEnums(
     str: string,
-    isYaml: boolean
+    isYaml: boolean,
 ): TweeConfigFileConversionResults {
     const ret: TweeConfigFileConversionResults = {
         errors: [],
@@ -244,7 +244,7 @@ export function tweeConfigFileToMacrosAndEnums(
                 if (rawEnums !== undefined) {
                     if (typeof rawEnums !== "object") {
                         ret.errors.push(
-                            "enums must be a mapping of string keys to string values"
+                            "enums must be a mapping of string keys to string values",
                         );
                     } else {
                         const badEnumNames: string[] = [];

@@ -43,18 +43,18 @@ export namespace EmbeddedDocument {
         offset: number,
         parent: TextDocument,
         isPassage?: boolean,
-        deferToStoryFormat?: boolean
+        deferToStoryFormat?: boolean,
     ): EmbeddedDocument {
         return {
             document: TextDocument.create(
                 uri,
                 languageId,
                 parent.version,
-                content
+                content,
             ),
             range: Range.create(
                 parent.positionAt(offset),
-                parent.positionAt(offset + content.length)
+                parent.positionAt(offset + content.length),
             ),
             isPassage: isPassage || false,
             deferToStoryFormat: deferToStoryFormat || false,
@@ -76,7 +76,7 @@ export namespace EmbeddedDocument {
  */
 export function updateEmbeddedDocument(
     embeddedDocument: EmbeddedDocument,
-    parent: TextDocument
+    parent: TextDocument,
 ): EmbeddedDocument {
     if (parent.version > embeddedDocument.document.version) {
         embeddedDocument = EmbeddedDocument.create(
@@ -85,7 +85,7 @@ export function updateEmbeddedDocument(
             parent.getText(embeddedDocument.range),
             parent.offsetAt(embeddedDocument.range.start),
             parent,
-            embeddedDocument.isPassage
+            embeddedDocument.isPassage,
         );
     }
     return embeddedDocument;
@@ -102,7 +102,7 @@ export function updateEmbeddedDocument(
 export async function doComplete(
     parentDocument: TextDocument,
     embeddedDocument: EmbeddedDocument,
-    offset: number
+    offset: number,
 ): Promise<CompletionList | null> {
     const embeddedOffset =
         offset - parentDocument.offsetAt(embeddedDocument.range.start);
@@ -123,7 +123,7 @@ export async function doComplete(
 export async function doHover(
     parentDocument: TextDocument,
     embeddedDocument: EmbeddedDocument,
-    offset: number
+    offset: number,
 ): Promise<Hover | null | undefined> {
     const embeddedOffset =
         offset - parentDocument.offsetAt(embeddedDocument.range.start);
@@ -138,7 +138,7 @@ export async function doHover(
  * @returns List of diagnostic messages.
  */
 export async function doValidation(
-    embeddedDocument: EmbeddedDocument
+    embeddedDocument: EmbeddedDocument,
 ): Promise<Diagnostic[]> {
     const service = getLanguageService(embeddedDocument.document.languageId);
     return service?.doValidation(embeddedDocument) ?? [];
@@ -157,7 +157,7 @@ interface LanguageService {
      */
     doComplete: (
         embeddedDocument: EmbeddedDocument,
-        offset: number
+        offset: number,
     ) => Promise<CompletionList | null>;
     /**
      * Get hover information.
@@ -168,7 +168,7 @@ interface LanguageService {
      */
     doHover: (
         embeddedDocument: EmbeddedDocument,
-        offset: number
+        offset: number,
     ) => Promise<Hover | null>;
     /**
      * Validate an embedded document.
@@ -222,7 +222,7 @@ const jsonLanguageService = getJSONLanguageService({
 export function addJsonSchema(
     uri: string,
     fileRegex: string[],
-    schema: string
+    schema: string,
 ) {
     jsonUriToFileRegex[uri] = fileRegex;
     jsonUriToSchema[uri] = schema;
@@ -238,7 +238,7 @@ addJsonSchema(storyDataSchemaUri, ["*/storydata.json"], storyDataSchema);
 addJsonSchema(
     headerMetadataSchemaUri,
     ["*/headermetadata.json"],
-    headerMetadataSchema
+    headerMetadataSchema,
 );
 
 /**
@@ -259,7 +259,7 @@ const jsonService: LanguageService = {
         return await jsonLanguageService.doComplete(
             embeddedDocument.document,
             embeddedDocument.document.positionAt(offset),
-            parseJSON(embeddedDocument.document)
+            parseJSON(embeddedDocument.document),
         );
     },
 
@@ -267,14 +267,14 @@ const jsonService: LanguageService = {
         return await jsonLanguageService.doHover(
             embeddedDocument.document,
             embeddedDocument.document.positionAt(offset),
-            parseJSON(embeddedDocument.document)
+            parseJSON(embeddedDocument.document),
         );
     },
 
     async doValidation(embeddedDocument) {
         return await jsonLanguageService.doValidation(
             embeddedDocument.document,
-            parseJSON(embeddedDocument.document)
+            parseJSON(embeddedDocument.document),
         );
     },
 };
@@ -289,33 +289,33 @@ const cssLanguageService = getCSSLanguageService();
 const cssService: LanguageService = {
     async doComplete(embeddedDocument, offset) {
         const stylesheet = cssLanguageService.parseStylesheet(
-            embeddedDocument.document
+            embeddedDocument.document,
         );
         return cssLanguageService.doComplete(
             embeddedDocument.document,
             embeddedDocument.document.positionAt(offset),
-            stylesheet
+            stylesheet,
         );
     },
 
     async doHover(embeddedDocument, offset) {
         const stylesheet = cssLanguageService.parseStylesheet(
-            embeddedDocument.document
+            embeddedDocument.document,
         );
         return cssLanguageService.doHover(
             embeddedDocument.document,
             embeddedDocument.document.positionAt(offset),
-            stylesheet
+            stylesheet,
         );
     },
 
     async doValidation(embeddedDocument) {
         const stylesheet = cssLanguageService.parseStylesheet(
-            embeddedDocument.document
+            embeddedDocument.document,
         );
         return cssLanguageService.doValidation(
             embeddedDocument.document,
-            stylesheet
+            stylesheet,
         );
     },
 };
@@ -332,7 +332,7 @@ const htmlService: LanguageService = {
         return htmlLanguageService.doComplete(
             embeddedDocument.document,
             embeddedDocument.document.positionAt(offset),
-            htmlLanguageService.parseHTMLDocument(embeddedDocument.document)
+            htmlLanguageService.parseHTMLDocument(embeddedDocument.document),
         );
     },
 
@@ -340,7 +340,7 @@ const htmlService: LanguageService = {
         return htmlLanguageService.doHover(
             embeddedDocument.document,
             embeddedDocument.document.positionAt(offset),
-            htmlLanguageService.parseHTMLDocument(embeddedDocument.document)
+            htmlLanguageService.parseHTMLDocument(embeddedDocument.document),
         );
     },
 

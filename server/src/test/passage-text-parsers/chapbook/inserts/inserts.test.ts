@@ -33,10 +33,10 @@ describe("Chapbook Inserts", () => {
 
             expect(callbacks.errors.length).to.equal(1);
             expect(callbacks.errors[0].message).to.include(
-                "Must be a string or variable"
+                "Must be a string or variable",
             );
             expect(callbacks.errors[0].range).to.eql(
-                Range.create(0, 10, 0, 21)
+                Range.create(0, 10, 0, 21),
             );
         });
 
@@ -112,7 +112,7 @@ describe("Chapbook Inserts", () => {
                     contents: "Passage Ref",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(0, 11, 0, 22)
+                        Range.create(0, 11, 0, 22),
                     ),
                     kind: TwineSymbolKind.Passage,
                 },
@@ -142,7 +142,7 @@ describe("Chapbook Inserts", () => {
             expect(callbacks.errors.length).to.equal(1);
             expect(result.severity).to.eql(DiagnosticSeverity.Error);
             expect(result.message).to.include(
-                'Either the "passage" or "text" property must be defined'
+                'Either the "passage" or "text" property must be defined',
             );
             expect(result.range).to.eql(Range.create(0, 1, 0, 12));
         });
@@ -172,7 +172,7 @@ describe("Chapbook Inserts", () => {
             expect(callbacks.errors.length).to.equal(1);
             expect(result.severity).to.eql(DiagnosticSeverity.Warning);
             expect(result.message).to.include(
-                'The "passage" property will be ignored'
+                'The "passage" property will be ignored',
             );
             expect(result.range).to.eql(Range.create(0, 29, 0, 36));
         });

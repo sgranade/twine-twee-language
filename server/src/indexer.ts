@@ -53,7 +53,7 @@ export function updateProjectIndex(
     textDocument: TextDocument,
     parseLevel: ParseLevel,
     index: ProjectIndex,
-    diagnosticsOptions?: DiagnosticsOptions
+    diagnosticsOptions?: DiagnosticsOptions,
 ): void {
     const indexingState = new IndexingState(textDocument);
     const uri = textDocument.uri;
@@ -77,8 +77,8 @@ export function updateProjectIndex(
                         "This replaces an existing StoryTitle. Is that intentional?",
                         DiagnosticSeverity.Warning,
                         undefined,
-                        "Twine"
-                    )
+                        "Twine",
+                    ),
                 );
             } else {
                 index.setStoryTitle(title, uri);
@@ -92,8 +92,8 @@ export function updateProjectIndex(
                         "This replaces existing StoryData. Is that intentional?",
                         DiagnosticSeverity.Warning,
                         undefined,
-                        "Twine"
-                    )
+                        "Twine",
+                    ),
                 );
             } else {
                 index.setStoryData(data, uri);
@@ -121,7 +121,7 @@ export function updateProjectIndex(
         callbacks,
         parseLevel,
         index.getStoryData()?.storyFormat,
-        diagnosticsOptions
+        diagnosticsOptions,
     );
 
     // Collate the array of individual references by kind and name

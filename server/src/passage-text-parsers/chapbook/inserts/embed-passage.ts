@@ -27,7 +27,7 @@ export const embedPassage: InsertInfo = {
                     args.firstArgument.text,
                     args.firstArgument.at,
                     "Must be a string or variable containing a passage name or a variable",
-                    state
+                    state,
                 );
             }
         }

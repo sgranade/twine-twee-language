@@ -62,7 +62,7 @@ const desugarRegExp = new RegExp(
         '(?:"(?:\\\\.|[^"\\\\])+")', // Double quoted string
         "(?:'(?:\\\\.|[^'\\\\])+')", // Single quoted string
     ].join("|"),
-    "g"
+    "g",
 );
 
 /**
@@ -147,7 +147,7 @@ interface SugaredPositionAndText {
  */
 function getSugaredPositionAndNewText(
     desugaredPosition: number,
-    positionMapping: PositionMapping[]
+    positionMapping: PositionMapping[],
 ): SugaredPositionAndText {
     const ret: SugaredPositionAndText = {
         sugaredPosition: desugaredPosition,
@@ -198,7 +198,7 @@ export function isTwineScriptExpression(expression: string): boolean {
                 // Resugar the text (if needed) and test to see if it's an SC2 variable.
                 const { sugaredText } = getSugaredPositionAndNewText(
                     token.at,
-                    positionMapping
+                    positionMapping,
                 );
                 if (sugaredText === "$" || sugaredText === "_") {
                     token.text = sugaredText + token.text.slice(1);
@@ -232,7 +232,7 @@ export function tokenizeTwineScriptExpression(
     expression: string,
     offset: number,
     textDocument: TextDocument,
-    storyFormatState: StoryFormatParsingState
+    storyFormatState: StoryFormatParsingState,
 ): [Label[], JSPropertyLabel[]] {
     const { desugared, positionMapping } = desugar(expression);
 
@@ -249,7 +249,7 @@ export function tokenizeTwineScriptExpression(
         "fake-uri",
         "javascript",
         1,
-        desugared
+        desugared,
     );
 
     const [vars, props] = tokenizeJavaScript(
@@ -257,19 +257,19 @@ export function tokenizeTwineScriptExpression(
         desugared,
         0, // offset of 0 since the desugared expression starts at the start of the doc
         desugaredDocument,
-        desugaredStoryFormatState
+        desugaredStoryFormatState,
     );
 
     // Adjust variable and property locations and (if needed) text
     const seenUnsugaredVars: Record<string, string> = {};
     for (const v of [...vars, ...props]) {
         const desugaredOffset = desugaredDocument.offsetAt(
-            v.location.range.start
+            v.location.range.start,
         );
 
         const { sugaredPosition, sugaredText } = getSugaredPositionAndNewText(
             desugaredOffset,
-            positionMapping
+            positionMapping,
         );
 
         // Variable sigils need to replace the first part of the existing string
@@ -295,7 +295,7 @@ export function tokenizeTwineScriptExpression(
         v.location = createLocationFor(
             v.contents,
             offset + sugaredPosition,
-            textDocument
+            textDocument,
         );
     }
 
@@ -303,7 +303,7 @@ export function tokenizeTwineScriptExpression(
     for (const t of Object.values(desugaredStoryFormatState.passageTokens)) {
         const { sugaredPosition, sugaredText } = getSugaredPositionAndNewText(
             t.at,
-            positionMapping
+            positionMapping,
         );
 
         // Variable sigils need to replace the first part of the existing string
@@ -316,7 +316,7 @@ export function tokenizeTwineScriptExpression(
             offset + sugaredPosition,
             t.type,
             t.modifiers,
-            storyFormatState
+            storyFormatState,
         );
     }
 

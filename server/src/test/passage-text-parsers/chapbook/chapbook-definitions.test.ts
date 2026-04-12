@@ -18,7 +18,7 @@ describe("Chapbook Definitions", () => {
             "fake-uri",
             "",
             0,
-            "Let's try {custom insert, one: 'here',"
+            "Let's try {custom insert, one: 'here',",
         );
         const index = new Index();
         index.setDefinitions("source-uri", [
@@ -26,7 +26,7 @@ describe("Chapbook Definitions", () => {
                 contents: "custom\\s+insert",
                 location: Location.create(
                     "source-uri",
-                    Range.create(5, 6, 7, 8)
+                    Range.create(5, 6, 7, 8),
                 ),
                 kind: OChapbookSymbolKind.CustomInsert,
                 match: /custom\s+insert/,
@@ -48,7 +48,7 @@ describe("Chapbook Definitions", () => {
         const result = parser?.getDefinitionAt(
             doc,
             Position.create(9, 4),
-            index
+            index,
         );
 
         expect(result).to.be.undefined;
@@ -59,7 +59,7 @@ describe("Chapbook Definitions", () => {
             "fake-uri",
             "",
             0,
-            "Let's try {custom insert, one: 'here',"
+            "Let's try {custom insert, one: 'here',",
         );
         const index = new Index();
         index.setDefinitions("source-uri", [
@@ -67,7 +67,7 @@ describe("Chapbook Definitions", () => {
                 contents: "custom\\s+insert",
                 location: Location.create(
                     "source-uri",
-                    Range.create(5, 6, 7, 8)
+                    Range.create(5, 6, 7, 8),
                 ),
                 kind: OChapbookSymbolKind.CustomInsert,
                 match: /custom\s+insert/,
@@ -89,11 +89,11 @@ describe("Chapbook Definitions", () => {
         const result = parser?.getDefinitionAt(
             doc,
             Position.create(1, 4),
-            index
+            index,
         );
 
         expect(result).to.eql(
-            Location.create("source-uri", Range.create(5, 6, 7, 8))
+            Location.create("source-uri", Range.create(5, 6, 7, 8)),
         );
     });
 
@@ -102,7 +102,7 @@ describe("Chapbook Definitions", () => {
             "fake-uri",
             "",
             0,
-            "[mod-me additional parameters]\nI'm modified!"
+            "[mod-me additional parameters]\nI'm modified!",
         );
         const index = new Index();
         index.setDefinitions("source-uri", [
@@ -110,7 +110,7 @@ describe("Chapbook Definitions", () => {
                 contents: "mod-me",
                 location: Location.create(
                     "source-uri",
-                    Range.create(5, 6, 7, 8)
+                    Range.create(5, 6, 7, 8),
                 ),
                 kind: OChapbookSymbolKind.CustomModifier,
                 match: /mod\s+me/,
@@ -132,11 +132,11 @@ describe("Chapbook Definitions", () => {
         const result = parser?.getDefinitionAt(
             doc,
             Position.create(1, 4),
-            index
+            index,
         );
 
         expect(result).to.eql(
-            Location.create("source-uri", Range.create(5, 6, 7, 8))
+            Location.create("source-uri", Range.create(5, 6, 7, 8)),
         );
     });
 });

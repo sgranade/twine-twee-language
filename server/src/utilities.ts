@@ -59,7 +59,7 @@ export function versionCompare(ver1: string, ver2: string): number {
  */
 export function hasOwnProperty<T, K extends PropertyKey>(
     obj: T,
-    prop: K
+    prop: K,
 ): obj is T & Record<K, unknown> {
     return Object.prototype.hasOwnProperty.call(obj, prop);
 }
@@ -99,7 +99,7 @@ export function nextLineIndex(document: string, startIndex: number): number {
 export function eraseMatches(
     s: string,
     r: RegExp,
-    c?: (m: RegExpExecArray | null) => void
+    c?: (m: RegExpExecArray | null) => void,
 ): string {
     // For speed, erase the matches by collecting substrings to join at the end
     const substrs: string[] = [];
@@ -171,7 +171,7 @@ export function extractToMatchingDelimiter(
     s: string,
     openDelimiter: string,
     closeDelimiter: string,
-    startIndex = 0
+    startIndex = 0,
 ): string | undefined {
     let matchEnd: number | undefined = undefined;
     let delimiterCount = 0;
@@ -191,7 +191,7 @@ export function extractToMatchingDelimiter(
     } else {
         match = RegExp(
             `(?<!\\\\)(\\${openDelimiter}|\\${closeDelimiter})`,
-            "g"
+            "g",
         );
     }
 
@@ -229,10 +229,10 @@ export function containingPosition(
     embeddedDocument: TextDocument,
     embeddedPosition: Position,
     document: TextDocument,
-    embeddedDocumentOffset: number
+    embeddedDocumentOffset: number,
 ): Position {
     return document.positionAt(
-        embeddedDocument.offsetAt(embeddedPosition) + embeddedDocumentOffset
+        embeddedDocument.offsetAt(embeddedPosition) + embeddedDocumentOffset,
     );
 }
 
@@ -249,21 +249,21 @@ export function containingRange(
     embeddedDocument: TextDocument,
     embeddedRange: Range,
     document: TextDocument,
-    embeddedDocumentOffset: number
+    embeddedDocumentOffset: number,
 ): Range {
     return Range.create(
         containingPosition(
             embeddedDocument,
             embeddedRange.start,
             document,
-            embeddedDocumentOffset
+            embeddedDocumentOffset,
         ),
         containingPosition(
             embeddedDocument,
             embeddedRange.end,
             document,
-            embeddedDocumentOffset
-        )
+            embeddedDocumentOffset,
+        ),
     );
 }
 
@@ -315,17 +315,17 @@ export function createDiagnostic(
     textDocument: TextDocument,
     start: number,
     end: number,
-    message: string
+    message: string,
 ): Diagnostic {
     return Diagnostic.create(
         Range.create(
             textDocument.positionAt(start),
-            textDocument.positionAt(end)
+            textDocument.positionAt(end),
         ),
         message,
         severity,
         undefined,
-        "Twine"
+        "Twine",
     );
 }
 
@@ -346,13 +346,13 @@ export function createDiagnosticFor(
     textDocument: TextDocument,
     text: string,
     at: number,
-    message: string
+    message: string,
 ): Diagnostic {
     return createDiagnostic(
         severity,
         textDocument,
         at,
         at + text.length,
-        message
+        message,
     );
 }

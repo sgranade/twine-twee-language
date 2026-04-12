@@ -36,7 +36,7 @@ async function recordDirectoryExistence(
     dir: string,
     rootUri: URI,
     dirsExist: Record<string, boolean>,
-    workspaceProvider: WorkspaceProvider
+    workspaceProvider: WorkspaceProvider,
 ) {
     const uri = UriUtils.joinPath(rootUri, dir);
     try {
@@ -84,18 +84,18 @@ interface BuildDirAndStoryUris {
  */
 export function getBuildAndStoryUris(
     workspaceProvider: WorkspaceProvider,
-    storyName?: string
+    storyName?: string,
 ): BuildDirAndStoryUris {
     const buildDir = workspaceProvider
         .getConfigurationItem<string>(
             Configuration.BaseSection,
-            Configuration.BuildDirectory
+            Configuration.BuildDirectory,
         )
         .trim();
     let storyFilename = workspaceProvider
         .getConfigurationItem<string>(
             Configuration.BaseSection,
-            Configuration.OutputFile
+            Configuration.OutputFile,
         )
         .trim();
     if (!storyFilename) {
@@ -107,7 +107,7 @@ export function getBuildAndStoryUris(
     }
     const buildDirUri = UriUtils.joinPath(
         workspaceProvider.rootWorkspaceUri() ?? URI.file("."),
-        buildDir
+        buildDir,
     );
     const storyUri = UriUtils.joinPath(buildDirUri, storyFilename);
     return { build: buildDirUri, story: storyUri };
@@ -119,13 +119,13 @@ export function getBuildAndStoryUris(
  * @param workspaceProvider Workspace provider.
  */
 export async function checkForProjectDirectories(
-    workspaceProvider: WorkspaceProvider
+    workspaceProvider: WorkspaceProvider,
 ) {
     // If the user doesn't want to create project directories, don't offer
     if (
         !workspaceProvider.getConfigurationItem(
             Configuration.BaseSection,
-            Configuration.ProjectCreate
+            Configuration.ProjectCreate,
         )
     ) {
         return;
@@ -152,7 +152,7 @@ export async function checkForProjectDirectories(
             d,
             rootUri,
             directoriesExist,
-            workspaceProvider
+            workspaceProvider,
         );
     }
     if (!Object.values(directoriesExist).includes(false)) {
@@ -164,7 +164,7 @@ export async function checkForProjectDirectories(
         "Create the project directories for story files, story formats, and built games?",
         "Yes",
         "Cancel",
-        "Don't Ask Again"
+        "Don't Ask Again",
     );
 
     // Return unless the choice is "Yes"
@@ -174,7 +174,7 @@ export async function checkForProjectDirectories(
             config.update(
                 Configuration.ProjectCreate,
                 false,
-                vscode.ConfigurationTarget.Workspace
+                vscode.ConfigurationTarget.Workspace,
             );
         }
         return;
@@ -199,13 +199,13 @@ export async function checkForProjectDirectories(
 export async function checkForLocalStoryFormat(
     storyFormat: StoryFormat,
     allowRedownloading: boolean,
-    workspaceProvider: WorkspaceProvider
+    workspaceProvider: WorkspaceProvider,
 ) {
     // If the user doesn't want to download story formats, don't offer
     if (
         !workspaceProvider.getConfigurationItem(
             Configuration.BaseSection,
-            Configuration.DownloadStoryFormat
+            Configuration.DownloadStoryFormat,
         )
     ) {
         return;
@@ -213,7 +213,7 @@ export async function checkForLocalStoryFormat(
 
     const alreadyDownloaded = await localStoryFormatExists(
         storyFormat,
-        workspaceProvider
+        workspaceProvider,
     );
 
     // If the story format exists & we don't want to allow
@@ -230,7 +230,7 @@ export async function checkForLocalStoryFormat(
                 // happens at user request, so let them know
                 // we can't
                 vscode.window.showErrorMessage(
-                    `Downloading story format ${storyFormat.format} isn't currently supported`
+                    `Downloading story format ${storyFormat.format} isn't currently supported`,
                 );
             }
             return;
@@ -238,7 +238,7 @@ export async function checkForLocalStoryFormat(
         case StoryFormatDownloadSupport.MissingVersion:
             // Give a warning and return
             vscode.window.showInformationMessage(
-                "The story format in the :: StoryData passage has no format-version, limiting the available support"
+                "The story format in the :: StoryData passage has no format-version, limiting the available support",
             );
             return;
     }
@@ -247,7 +247,7 @@ export async function checkForLocalStoryFormat(
         `Download a local copy of ${storyFormat.format} version ${storyFormat.formatVersion ?? "unknown"}?`,
         "Download",
         "Cancel",
-        "Don't Ask Again"
+        "Don't Ask Again",
     );
 
     // Return unless the choice is "Download"
@@ -255,12 +255,12 @@ export async function checkForLocalStoryFormat(
         if (selection === "Don't Ask Again") {
             // "Don't ask again" -> update the workspace-local configuration
             const config = vscode.workspace.getConfiguration(
-                Configuration.BaseSection
+                Configuration.BaseSection,
             );
             config.update(
                 Configuration.DownloadStoryFormat,
                 false,
-                vscode.ConfigurationTarget.Workspace
+                vscode.ConfigurationTarget.Workspace,
             );
         }
         return;
@@ -272,11 +272,11 @@ export async function checkForLocalStoryFormat(
             title: "Downloading Story Format",
             cancellable: false,
         },
-        () => downloadStoryFormat(storyFormat)
+        () => downloadStoryFormat(storyFormat),
     );
     if (format instanceof Error) {
         vscode.window.showErrorMessage(
-            `Could not download ${storyFormat.format} version ${storyFormat.formatVersion ?? "unknown"}: ${format.message}`
+            `Could not download ${storyFormat.format} version ${storyFormat.formatVersion ?? "unknown"}: ${format.message}`,
         );
     } else {
         try {
@@ -309,7 +309,7 @@ export async function checkForLocalStoryFormat(
  */
 export async function readLocalStoryFormatOrAskToDownload(
     storyFormat: StoryFormat,
-    workspaceProvider: WorkspaceProvider
+    workspaceProvider: WorkspaceProvider,
 ): Promise<string | undefined> {
     try {
         return await readLocalStoryFormat(storyFormat, workspaceProvider);
@@ -320,7 +320,7 @@ export async function readLocalStoryFormatOrAskToDownload(
         }
 
         await vscode.window.showErrorMessage(
-            `Couldn't find a local copy of the story format ${storyFormat.format}`
+            `Couldn't find a local copy of the story format ${storyFormat.format}`,
         );
         // Don't await this call so we don't wait around for the user to make up their mind
         checkForLocalStoryFormat(storyFormat, true, workspaceProvider);
@@ -336,7 +336,7 @@ export async function readLocalStoryFormatOrAskToDownload(
  */
 export async function build(
     options: Record<string, boolean>,
-    workspaceProvider: WorkspaceProvider
+    workspaceProvider: WorkspaceProvider,
 ) {
     const rootUri = workspaceProvider.rootWorkspaceUri();
     if (rootUri === undefined) {
@@ -358,26 +358,26 @@ export async function build(
         await vscode.commands.executeCommand(
             "setContext",
             CustomWhenContext.Building,
-            true
+            true,
         );
 
         // Get all files from the source directory
         const storyFilesDirectory = removeEndingSlash(
             workspaceProvider.getConfigurationItem(
                 Configuration.BaseSection,
-                Configuration.StoryFilesDirectory
-            )
+                Configuration.StoryFilesDirectory,
+            ),
         );
         const allFiles = (
             await workspaceProvider.findFiles(
-                storyFilesDirectory !== "" ? `${storyFilesDirectory}/**` : "**"
+                storyFilesDirectory !== "" ? `${storyFilesDirectory}/**` : "**",
             )
         )
             .filter((f) => canAddFileToStory(UriUtils.basename(f)))
             .sort(); // Sort to match Tweego order
         if (allFiles.length === 0) {
             vscode.window.showInformationMessage(
-                `Found no files to build in ${storyFilesDirectory}`
+                `Found no files to build in ${storyFilesDirectory}`,
             );
             return;
         }
@@ -387,7 +387,7 @@ export async function build(
         for (const fileUri of allFiles) {
             currentFileUri = fileUri;
             const contents = Buffer.from(
-                await workspaceProvider.fs.readFile(currentFileUri)
+                await workspaceProvider.fs.readFile(currentFileUri),
             );
             addFileToStory(story, UriUtils.basename(currentFileUri), contents);
         }
@@ -407,7 +407,7 @@ export async function build(
             const maybeStoryFormatData =
                 await readLocalStoryFormatOrAskToDownload(
                     story.storyData?.storyFormat ?? { format: "unknown" },
-                    workspaceProvider
+                    workspaceProvider,
                 );
             if (maybeStoryFormatData === undefined) {
                 // If it's not read, then return
@@ -427,17 +427,17 @@ export async function build(
         const includeDir = removeEndingSlash(
             workspaceProvider.getConfigurationItem(
                 Configuration.BaseSection,
-                Configuration.IncludeDirectory
-            )
+                Configuration.IncludeDirectory,
+            ),
         );
         if (includeDir) {
             // The URI of the include directory assuming it lives in the first workspace
             const includeRootWorkspaceDir = UriUtils.joinPath(
                 rootUri,
-                includeDir
+                includeDir,
             ).toString(true); // No %-encoding
             for (const includeFileUri of await workspaceProvider.findFiles(
-                includeDir + "/**"
+                includeDir + "/**",
             )) {
                 // To replicate the sub-directory structure, we can't just get the filename's
                 // basename. Instead, we need to remove the leading directories up to and
@@ -448,7 +448,7 @@ export async function build(
                 const ndx = includeFileStr.indexOf(includeRootWorkspaceDir);
                 if (ndx !== -1) {
                     includeFilepath = includeFileStr.slice(
-                        ndx + includeRootWorkspaceDir.length
+                        ndx + includeRootWorkspaceDir.length,
                     );
                 } else {
                     // As a fallback, try to remove everything before the name of the include
@@ -461,7 +461,7 @@ export async function build(
                 await workspaceProvider.fs.copy(
                     includeFileUri,
                     UriUtils.joinPath(outUris.build, includeFilepath),
-                    { overwrite: true }
+                    { overwrite: true },
                 );
             }
         }
@@ -477,11 +477,11 @@ export async function build(
             const editor = await vscode.window.showTextDocument(doc);
             const { line } = doc.positionAt(err.start);
             const range = doc.validateRange(
-                new vscode.Range(line, 0, line, Number.MAX_SAFE_INTEGER)
+                new vscode.Range(line, 0, line, Number.MAX_SAFE_INTEGER),
             );
             editor.revealRange(
                 range,
-                vscode.TextEditorRevealType.InCenterIfOutsideViewport
+                vscode.TextEditorRevealType.InCenterIfOutsideViewport,
             );
             editor.selection = new vscode.Selection(line, 0, line, 0);
             addTrailingAnnotation(editor, line, `Error: ${err.message.trim()}`);
@@ -491,7 +491,7 @@ export async function build(
         await vscode.commands.executeCommand(
             "setContext",
             CustomWhenContext.Building,
-            false
+            false,
         );
     }
 }

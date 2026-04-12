@@ -23,21 +23,21 @@ import { OSugarCubeSymbolKind } from "./types";
 function generateMacroDiagnostics(
     document: TextDocument,
     index: ProjectIndex,
-    diagnosticsOptions: DiagnosticsOptions
+    diagnosticsOptions: DiagnosticsOptions,
 ): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];
     const macros = allMacros();
     const builtInMacros = allBuiltInMacros();
     const allMacroDefs = getSugarCubeDefinitions(
         OSugarCubeSymbolKind.KnownMacro,
-        index
+        index,
     );
     const definedMacroNames = allMacroDefs.map((d) => d.contents);
 
     // Check for bad macro (widget) definitions
     const localMacroDefs = index.getDefinitions(
         document.uri,
-        OSugarCubeSymbolKind.KnownMacro
+        OSugarCubeSymbolKind.KnownMacro,
     );
     if (localMacroDefs?.length) {
         for (const macroDef of localMacroDefs) {
@@ -49,8 +49,8 @@ function generateMacroDiagnostics(
                         `Widget "${macroDef.contents}" can't have the same name as a built-in macro`,
                         DiagnosticSeverity.Error,
                         undefined,
-                        "Twine"
-                    )
+                        "Twine",
+                    ),
                 );
             } else {
                 // See if we got defined twice
@@ -62,7 +62,7 @@ function generateMacroDiagnostics(
                         `Widget "${macroDef.contents}" can't be defined more than once`,
                         DiagnosticSeverity.Error,
                         undefined,
-                        "Twine"
+                        "Twine",
                     );
                     // Find the other location where it's been defined
                     let loc = allMacroDefs[ndx1].location;
@@ -78,7 +78,7 @@ function generateMacroDiagnostics(
                     diagnostic.relatedInformation = [
                         DiagnosticRelatedInformation.create(
                             loc,
-                            `Other definition of "${macroDef.contents}"`
+                            `Other definition of "${macroDef.contents}"`,
                         ),
                     ];
                     diagnostics.push(diagnostic);
@@ -91,7 +91,7 @@ function generateMacroDiagnostics(
     if (diagnosticsOptions.warnings.unknownMacro) {
         for (const macroRef of index.getReferences(
             document.uri,
-            OSugarCubeSymbolKind.UnknownMacro
+            OSugarCubeSymbolKind.UnknownMacro,
         ) ?? []) {
             if (
                 macros[macroRef.contents] === undefined &&
@@ -104,9 +104,9 @@ function generateMacroDiagnostics(
                             `Macro "${macroRef.contents}" not recognized`,
                             DiagnosticSeverity.Warning,
                             undefined,
-                            "Twine"
-                        )
-                    )
+                            "Twine",
+                        ),
+                    ),
                 );
             }
         }
@@ -126,13 +126,13 @@ function generateMacroDiagnostics(
 export function generateDiagnostics(
     document: TextDocument,
     index: ProjectIndex,
-    diagnosticsOptions: DiagnosticsOptions
+    diagnosticsOptions: DiagnosticsOptions,
 ): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];
 
     // Check for unrecognized macros (if that option is set)
     diagnostics.push(
-        ...generateMacroDiagnostics(document, index, diagnosticsOptions)
+        ...generateMacroDiagnostics(document, index, diagnosticsOptions),
     );
 
     return diagnostics;

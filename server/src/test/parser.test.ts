@@ -40,7 +40,7 @@ describe("Server Twine Parser", () => {
                     "fake-uri",
                     "",
                     0,
-                    ":: Passage 1\nP1 contents\n\n:: Passage 2\nP2 contents"
+                    ":: Passage 1\nP1 contents\n\n:: Passage 2\nP2 contents",
                 );
 
                 uut.parse(doc, callbacks, uut.ParseLevel.Full);
@@ -54,7 +54,7 @@ describe("Server Twine Parser", () => {
                     "fake-uri",
                     "",
                     0,
-                    ":: Passage 1\nP1 contents\n\n:: Passage 2\nP2 contents"
+                    ":: Passage 1\nP1 contents\n\n:: Passage 2\nP2 contents",
                 );
 
                 uut.parse(doc, callbacks, uut.ParseLevel.Full);
@@ -71,13 +71,13 @@ describe("Server Twine Parser", () => {
                     "fake-uri",
                     "",
                     0,
-                    ":: Passage 1 \nP1 contents"
+                    ":: Passage 1 \nP1 contents",
                 );
 
                 uut.parse(doc, callbacks, uut.ParseLevel.Full);
 
                 expect(callbacks.passages[0].name.contents).to.equal(
-                    "Passage 1"
+                    "Passage 1",
                 );
             });
 
@@ -87,13 +87,13 @@ describe("Server Twine Parser", () => {
                     "fake-uri",
                     "",
                     0,
-                    ":: \\[Passage\\] \\1 \nP1 contents"
+                    ":: \\[Passage\\] \\1 \nP1 contents",
                 );
 
                 uut.parse(doc, callbacks, uut.ParseLevel.Full);
 
                 expect(callbacks.passages[0].name.contents).to.equal(
-                    "[Passage] 1"
+                    "[Passage] 1",
                 );
             });
 
@@ -103,7 +103,7 @@ describe("Server Twine Parser", () => {
                     "fake-uri",
                     "",
                     0,
-                    ":: Passage 1 \nP1 contents"
+                    ":: Passage 1 \nP1 contents",
                 );
 
                 uut.parse(doc, callbacks, uut.ParseLevel.Full);
@@ -118,7 +118,7 @@ describe("Server Twine Parser", () => {
                     "fake-uri",
                     "",
                     0,
-                    ":: Passage 1 [tag-1  tag_2]\nP1 contents"
+                    ":: Passage 1 [tag-1  tag_2]\nP1 contents",
                 );
 
                 uut.parse(doc, callbacks, uut.ParseLevel.Full);
@@ -129,14 +129,14 @@ describe("Server Twine Parser", () => {
                         contents: "tag-1",
                         location: Location.create(
                             "fake-uri",
-                            Range.create(0, 14, 0, 19)
+                            Range.create(0, 14, 0, 19),
                         ),
                     },
                     {
                         contents: "tag_2",
                         location: Location.create(
                             "fake-uri",
-                            Range.create(0, 21, 0, 26)
+                            Range.create(0, 21, 0, 26),
                         ),
                     },
                 ]);
@@ -148,12 +148,12 @@ describe("Server Twine Parser", () => {
                     "fake-uri",
                     "",
                     0,
-                    ":: Passage 1 [tag-1 tag_2 tag-1]\nP1 contents"
+                    ":: Passage 1 [tag-1 tag_2 tag-1]\nP1 contents",
                 );
 
                 uut.parse(doc, callbacks, uut.ParseLevel.Full);
                 const result = callbacks.passages[0].tags?.map(
-                    (x) => x.contents
+                    (x) => x.contents,
                 );
 
                 expect(result).to.eql(["tag-1", "tag_2"]);
@@ -165,7 +165,7 @@ describe("Server Twine Parser", () => {
                     "fake-uri",
                     "",
                     0,
-                    ":: Passage 1 [tag-1 \\[tag_2\\]]\nP1 contents"
+                    ":: Passage 1 [tag-1 \\[tag_2\\]]\nP1 contents",
                 );
 
                 uut.parse(doc, callbacks, uut.ParseLevel.Full);
@@ -176,14 +176,14 @@ describe("Server Twine Parser", () => {
                         contents: "tag-1",
                         location: Location.create(
                             "fake-uri",
-                            Range.create(0, 14, 0, 19)
+                            Range.create(0, 14, 0, 19),
                         ),
                     },
                     {
                         contents: "[tag_2]",
                         location: Location.create(
                             "fake-uri",
-                            Range.create(0, 20, 0, 29)
+                            Range.create(0, 20, 0, 29),
                         ),
                     },
                 ]);
@@ -195,7 +195,7 @@ describe("Server Twine Parser", () => {
                     "fake-uri",
                     "",
                     0,
-                    ":: Passage 1 [script]\nP1 contents"
+                    ":: Passage 1 [script]\nP1 contents",
                 );
 
                 uut.parse(doc, callbacks, uut.ParseLevel.Full);
@@ -209,7 +209,7 @@ describe("Server Twine Parser", () => {
                     "fake-uri",
                     "",
                     0,
-                    ":: Passage 1 [not-a-script]\nP1 contents"
+                    ":: Passage 1 [not-a-script]\nP1 contents",
                 );
 
                 uut.parse(doc, callbacks, uut.ParseLevel.Full);
@@ -223,7 +223,7 @@ describe("Server Twine Parser", () => {
                     "fake-uri",
                     "",
                     0,
-                    ":: Passage 1 [stylesheet]\nP1 contents"
+                    ":: Passage 1 [stylesheet]\nP1 contents",
                 );
 
                 uut.parse(doc, callbacks, uut.ParseLevel.Full);
@@ -237,7 +237,7 @@ describe("Server Twine Parser", () => {
                     "fake-uri",
                     "",
                     0,
-                    ":: Passage 1 [not-a-stylesheet]\nP1 contents"
+                    ":: Passage 1 [not-a-stylesheet]\nP1 contents",
                 );
 
                 uut.parse(doc, callbacks, uut.ParseLevel.Full);
@@ -251,7 +251,7 @@ describe("Server Twine Parser", () => {
                     "fake-uri",
                     "",
                     0,
-                    ":: Passage 1 [stylesheet]\nP1 contents"
+                    ":: Passage 1 [stylesheet]\nP1 contents",
                 );
 
                 uut.parse(doc, callbacks, uut.ParseLevel.Full);
@@ -268,7 +268,7 @@ describe("Server Twine Parser", () => {
                     "fake-uri",
                     "",
                     0,
-                    ':: Passage 1 {"position":"600,400", "size":"100,200"}\nP1 contents'
+                    ':: Passage 1 {"position":"600,400", "size":"100,200"}\nP1 contents',
                 );
 
                 uut.parse(doc, callbacks, uut.ParseLevel.Full);
@@ -279,7 +279,7 @@ describe("Server Twine Parser", () => {
                         contents: '{"position":"600,400", "size":"100,200"}',
                         location: Location.create(
                             "fake-uri",
-                            Range.create(0, 13, 0, 53)
+                            Range.create(0, 13, 0, 53),
                         ),
                     },
                     position: "600,400",
@@ -293,14 +293,14 @@ describe("Server Twine Parser", () => {
                     "fake-uri",
                     "",
                     0,
-                    ':: Passage 1 {"position":"600,400", "size":"100,200"}\nP1 contents'
+                    ':: Passage 1 {"position":"600,400", "size":"100,200"}\nP1 contents',
                 );
 
                 uut.parse(doc, callbacks, uut.ParseLevel.Full);
                 const [result] = callbacks.embeddedDocuments;
 
                 expect(result.document.getText()).to.eql(
-                    '{"position":"600,400", "size":"100,200"}'
+                    '{"position":"600,400", "size":"100,200"}',
                 );
                 expect(result.document.languageId).to.eql("json");
                 expect(result.range).to.eql(Range.create(0, 13, 0, 53));
@@ -312,7 +312,7 @@ describe("Server Twine Parser", () => {
                     "fake-uri",
                     "",
                     0,
-                    ':: Passage 1 [tag-1] {"position":"600,400"}\nP1 contents'
+                    ':: Passage 1 [tag-1] {"position":"600,400"}\nP1 contents',
                 );
 
                 uut.parse(doc, callbacks, uut.ParseLevel.Full);
@@ -323,7 +323,7 @@ describe("Server Twine Parser", () => {
                         contents: "tag-1",
                         location: Location.create(
                             "fake-uri",
-                            Range.create(0, 14, 0, 19)
+                            Range.create(0, 14, 0, 19),
                         ),
                     },
                 ]);
@@ -332,7 +332,7 @@ describe("Server Twine Parser", () => {
                         contents: '{"position":"600,400"}',
                         location: Location.create(
                             "fake-uri",
-                            Range.create(0, 21, 0, 43)
+                            Range.create(0, 21, 0, 43),
                         ),
                     },
                     position: "600,400",
@@ -345,7 +345,7 @@ describe("Server Twine Parser", () => {
                     "fake-uri",
                     "",
                     0,
-                    ":: Passage 1 \nP1 contents"
+                    ":: Passage 1 \nP1 contents",
                 );
 
                 uut.parse(doc, callbacks, uut.ParseLevel.Full);
@@ -361,7 +361,7 @@ describe("Server Twine Parser", () => {
                     "fake-uri",
                     "",
                     0,
-                    ":: Passage 1 \nP1 contents\n:: Passage 2"
+                    ":: Passage 1 \nP1 contents\n:: Passage 2",
                 );
 
                 uut.parse(doc, callbacks, uut.ParseLevel.Full);
@@ -377,7 +377,7 @@ describe("Server Twine Parser", () => {
                     "fake-uri",
                     "",
                     0,
-                    ":: Passage 1 \r\nP1 contents\r\n:: Passage 2"
+                    ":: Passage 1 \r\nP1 contents\r\n:: Passage 2",
                 );
 
                 uut.parse(doc, callbacks, uut.ParseLevel.Full);
@@ -393,7 +393,7 @@ describe("Server Twine Parser", () => {
                     "fake-uri",
                     "",
                     0,
-                    ":: Passage 1\nP1 contents\n"
+                    ":: Passage 1\nP1 contents\n",
                 );
 
                 uut.parse(doc, callbacks, uut.ParseLevel.PassageNames);
@@ -410,7 +410,7 @@ describe("Server Twine Parser", () => {
                     "fake-uri",
                     "",
                     0,
-                    ":: Passage 1\nP1 contents"
+                    ":: Passage 1\nP1 contents",
                 );
 
                 uut.parse(doc, callbacks, uut.ParseLevel.StoryData);
@@ -426,7 +426,7 @@ describe("Server Twine Parser", () => {
                     "fake-uri",
                     "",
                     0,
-                    ":: StoryTitle\nSweet title!\n"
+                    ":: StoryTitle\nSweet title!\n",
                 );
 
                 uut.parse(doc, callbacks, uut.ParseLevel.Full);
@@ -440,16 +440,16 @@ describe("Server Twine Parser", () => {
                     "fake-uri",
                     "",
                     0,
-                    ":: StoryTitle\nSweet title!"
+                    ":: StoryTitle\nSweet title!",
                 );
 
                 uut.parse(doc, callbacks, uut.ParseLevel.Full);
 
                 expect(callbacks.storyTitleRange?.start).to.eql(
-                    Position.create(1, 0)
+                    Position.create(1, 0),
                 );
                 expect(callbacks.storyTitleRange?.end).to.eql(
-                    Position.create(1, 12)
+                    Position.create(1, 12),
                 );
             });
 
@@ -459,16 +459,16 @@ describe("Server Twine Parser", () => {
                     "fake-uri",
                     "",
                     0,
-                    ":: StoryTitle\r\nSweet title!"
+                    ":: StoryTitle\r\nSweet title!",
                 );
 
                 uut.parse(doc, callbacks, uut.ParseLevel.Full);
 
                 expect(callbacks.storyTitleRange?.start).to.eql(
-                    Position.create(1, 0)
+                    Position.create(1, 0),
                 );
                 expect(callbacks.storyTitleRange?.end).to.eql(
-                    Position.create(1, 12)
+                    Position.create(1, 12),
                 );
             });
 
@@ -478,16 +478,16 @@ describe("Server Twine Parser", () => {
                     "fake-uri",
                     "",
                     0,
-                    ":: StoryTitle\r\nSweet title!"
+                    ":: StoryTitle\r\nSweet title!",
                 );
 
                 uut.parse(doc, callbacks, uut.ParseLevel.PassageNames);
 
                 expect(callbacks.storyTitleRange?.start).to.eql(
-                    Position.create(1, 0)
+                    Position.create(1, 0),
                 );
                 expect(callbacks.storyTitleRange?.end).to.eql(
-                    Position.create(1, 12)
+                    Position.create(1, 12),
                 );
             });
 
@@ -497,7 +497,7 @@ describe("Server Twine Parser", () => {
                     "fake-uri",
                     "",
                     0,
-                    ":: StoryTitle\r\nSweet title!"
+                    ":: StoryTitle\r\nSweet title!",
                 );
 
                 uut.parse(doc, callbacks, uut.ParseLevel.StoryData);
@@ -515,7 +515,7 @@ describe("Server Twine Parser", () => {
                         "{\n" +
                         '\t"ifid": "62891577-8D8E-496F-B46C-9FF0194C0EAC"\n' +
                         "}\n\n" +
-                        ":: NextPassage\nContent"
+                        ":: NextPassage\nContent",
                 );
 
                 uut.parse(doc, callbacks, uut.ParseLevel.Full);
@@ -524,7 +524,7 @@ describe("Server Twine Parser", () => {
                 expect(result.document.getText()).to.eql(
                     "{\n" +
                         '\t"ifid": "62891577-8D8E-496F-B46C-9FF0194C0EAC"\n' +
-                        "}\n"
+                        "}\n",
                 );
                 expect(result.document.languageId).to.eql("json");
                 expect(result.range).to.eql(Range.create(1, 0, 4, 0));
@@ -539,16 +539,16 @@ describe("Server Twine Parser", () => {
                     ":: StoryData\n" +
                         "{\n" +
                         '\t"ifid": "62891577-8D8E-496F-B46C-9FF0194C0EAC"\n' +
-                        "}\n"
+                        "}\n",
                 );
 
                 uut.parse(doc, callbacks, uut.ParseLevel.Full);
 
                 expect(callbacks.storyDataRange?.start).to.eql(
-                    Position.create(1, 0)
+                    Position.create(1, 0),
                 );
                 expect(callbacks.storyDataRange?.end).to.eql(
-                    Position.create(3, 1)
+                    Position.create(3, 1),
                 );
             });
 
@@ -561,16 +561,16 @@ describe("Server Twine Parser", () => {
                     ":: StoryData\r\n" +
                         "{\r\n" +
                         '\t"ifid": "62891577-8D8E-496F-B46C-9FF0194C0EAC"\r\n' +
-                        "}\r\n"
+                        "}\r\n",
                 );
 
                 uut.parse(doc, callbacks, uut.ParseLevel.Full);
 
                 expect(callbacks.storyDataRange?.start).to.eql(
-                    Position.create(1, 0)
+                    Position.create(1, 0),
                 );
                 expect(callbacks.storyDataRange?.end).to.eql(
-                    Position.create(3, 1)
+                    Position.create(3, 1),
                 );
             });
 
@@ -583,13 +583,13 @@ describe("Server Twine Parser", () => {
                     "fake-uri",
                     "",
                     0,
-                    ":: StoryData\n" + JSON.stringify(storyData, null, "\t")
+                    ":: StoryData\n" + JSON.stringify(storyData, null, "\t"),
                 );
 
                 uut.parse(doc, callbacks, uut.ParseLevel.Full);
 
                 expect(callbacks.storyData?.ifid).to.eql(
-                    "62891577-8D8E-496F-B46C-9FF0194C0EAC"
+                    "62891577-8D8E-496F-B46C-9FF0194C0EAC",
                 );
             });
 
@@ -602,13 +602,13 @@ describe("Server Twine Parser", () => {
                     "fake-uri",
                     "",
                     0,
-                    ":: StoryData\n" + JSON.stringify(storyData, null, "\t")
+                    ":: StoryData\n" + JSON.stringify(storyData, null, "\t"),
                 );
 
                 uut.parse(doc, callbacks, uut.ParseLevel.Full);
 
                 expect(callbacks.storyData?.storyFormat?.format).to.eql(
-                    "MySuperSweetFormat"
+                    "MySuperSweetFormat",
                 );
             });
 
@@ -622,13 +622,13 @@ describe("Server Twine Parser", () => {
                     "fake-uri",
                     "",
                     0,
-                    ":: StoryData\n" + JSON.stringify(storyData, null, "\t")
+                    ":: StoryData\n" + JSON.stringify(storyData, null, "\t"),
                 );
 
                 uut.parse(doc, callbacks, uut.ParseLevel.Full);
 
                 expect(
-                    callbacks.storyData?.storyFormat?.formatVersion
+                    callbacks.storyData?.storyFormat?.formatVersion,
                 ).to.equal("17.2");
             });
 
@@ -642,7 +642,7 @@ describe("Server Twine Parser", () => {
                     "fake-uri",
                     "",
                     0,
-                    ":: StoryData\n" + JSON.stringify(storyData, null, "\t")
+                    ":: StoryData\n" + JSON.stringify(storyData, null, "\t"),
                 );
 
                 uut.parse(doc, callbacks, uut.ParseLevel.Full);
@@ -659,7 +659,7 @@ describe("Server Twine Parser", () => {
                     "fake-uri",
                     "",
                     0,
-                    ":: StoryData\n" + JSON.stringify(storyData, null, "\t")
+                    ":: StoryData\n" + JSON.stringify(storyData, null, "\t"),
                 );
 
                 uut.parse(doc, callbacks, uut.ParseLevel.Full);
@@ -679,7 +679,7 @@ describe("Server Twine Parser", () => {
                     "fake-uri",
                     "",
                     0,
-                    ":: StoryData\n" + JSON.stringify(storyData, null, "\t")
+                    ":: StoryData\n" + JSON.stringify(storyData, null, "\t"),
                 );
 
                 uut.parse(doc, callbacks, uut.ParseLevel.Full);
@@ -696,7 +696,7 @@ describe("Server Twine Parser", () => {
                     "fake-uri",
                     "",
                     0,
-                    ":: StoryData\n" + JSON.stringify(storyData, null, "\t")
+                    ":: StoryData\n" + JSON.stringify(storyData, null, "\t"),
                 );
 
                 uut.parse(doc, callbacks, uut.ParseLevel.Full);
@@ -713,16 +713,16 @@ describe("Server Twine Parser", () => {
                     ":: StoryData\n" +
                         "{\n" +
                         '\t"ifid": "62891577-8D8E-496F-B46C-9FF0194C0EAC"\n' +
-                        "}\n"
+                        "}\n",
                 );
 
                 uut.parse(doc, callbacks, uut.ParseLevel.PassageNames);
 
                 expect(callbacks.storyDataRange?.start).to.eql(
-                    Position.create(1, 0)
+                    Position.create(1, 0),
                 );
                 expect(callbacks.storyDataRange?.end).to.eql(
-                    Position.create(3, 1)
+                    Position.create(3, 1),
                 );
             });
 
@@ -735,16 +735,16 @@ describe("Server Twine Parser", () => {
                     ":: StoryData\n" +
                         "{\n" +
                         '\t"ifid": "62891577-8D8E-496F-B46C-9FF0194C0EAC"\n' +
-                        "}\n"
+                        "}\n",
                 );
 
                 uut.parse(doc, callbacks, uut.ParseLevel.StoryData);
 
                 expect(callbacks.storyDataRange?.start).to.eql(
-                    Position.create(1, 0)
+                    Position.create(1, 0),
                 );
                 expect(callbacks.storyDataRange?.end).to.eql(
-                    Position.create(3, 1)
+                    Position.create(3, 1),
                 );
             });
         });
@@ -756,12 +756,12 @@ describe("Server Twine Parser", () => {
                     "fake-uri",
                     "",
                     0,
-                    ":: Passage\nI am the passage contents!\n"
+                    ":: Passage\nI am the passage contents!\n",
                 );
                 const receivedContents: string[] = [];
                 const mockFunction = ImportMock.mockFunction(
                     ptpModule,
-                    "getStoryFormatParser"
+                    "getStoryFormatParser",
                 ).callsFake((format: StoryFormat | undefined) => {
                     if (format?.format == "FakeFormat") {
                         return {
@@ -796,12 +796,12 @@ describe("Server Twine Parser", () => {
                         '\t"ifid": "62891577-8D8E-496F-B46C-9FF0194C0EAC"\n' +
                         '\t"format": "FakeFormat"\n' +
                         "}\n\n" +
-                        ":: Other Passage\nMe? Also contents!\n\n"
+                        ":: Other Passage\nMe? Also contents!\n\n",
                 );
                 const receivedContents: string[] = [];
                 const mockFunction = ImportMock.mockFunction(
                     ptpModule,
-                    "getStoryFormatParser"
+                    "getStoryFormatParser",
                 ).callsFake((format: StoryFormat | undefined) => {
                     if (format?.format == "FakeFormat") {
                         return {
@@ -831,12 +831,12 @@ describe("Server Twine Parser", () => {
                     "fake-uri",
                     "",
                     0,
-                    ":: Passage to be parsed\nI am the passage contents!\n"
+                    ":: Passage to be parsed\nI am the passage contents!\n",
                 );
                 const receivedContents: string[] = [];
                 const mockFunction = ImportMock.mockFunction(
                     ptpModule,
-                    "getStoryFormatParser"
+                    "getStoryFormatParser",
                 ).callsFake((format: StoryFormat | undefined) => {
                     if (format?.format == "FakeFormat") {
                         return {
@@ -844,11 +844,11 @@ describe("Server Twine Parser", () => {
                             parsePassageText: (
                                 passageText: string,
                                 textIndex: number,
-                                state: uut.ParsingState
+                                state: uut.ParsingState,
                             ) => {
                                 receivedContents.push(
                                     state.currentPassage?.name.contents ||
-                                        "nope!"
+                                        "nope!",
                                 );
                             },
                         };
@@ -881,7 +881,7 @@ describe("Server Twine Parser", () => {
                     passage,
                     header.length,
                     state,
-                    storyFormatParsingState
+                    storyFormatParsingState,
                 );
 
                 expect(storyFormatParsingState.passageTokens).to.be.empty;
@@ -903,7 +903,7 @@ describe("Server Twine Parser", () => {
                     passage,
                     2,
                     state,
-                    storyFormatParsingState
+                    storyFormatParsingState,
                 );
                 const result = storyFormatParsingState.passageTokens;
 
@@ -934,7 +934,7 @@ describe("Server Twine Parser", () => {
                     passage,
                     header.length,
                     state,
-                    storyFormatParsingState
+                    storyFormatParsingState,
                 );
                 const result = callbacks.references;
 
@@ -943,7 +943,7 @@ describe("Server Twine Parser", () => {
                         contents: "target passage",
                         location: Location.create(
                             "fake-uri",
-                            Range.create(2, 15, 2, 29)
+                            Range.create(2, 15, 2, 29),
                         ),
                         kind: TwineSymbolKind.Passage,
                     },
@@ -967,7 +967,7 @@ describe("Server Twine Parser", () => {
                     passage,
                     header.length,
                     state,
-                    storyFormatParsingState
+                    storyFormatParsingState,
                 );
                 const result = callbacks.references;
 
@@ -990,7 +990,7 @@ describe("Server Twine Parser", () => {
                     passage,
                     2,
                     state,
-                    storyFormatParsingState
+                    storyFormatParsingState,
                 );
                 const result = storyFormatParsingState.passageTokens;
 
@@ -1033,7 +1033,7 @@ describe("Server Twine Parser", () => {
                     passage,
                     header.length,
                     state,
-                    storyFormatParsingState
+                    storyFormatParsingState,
                 );
                 const result = callbacks.references;
 
@@ -1042,7 +1042,7 @@ describe("Server Twine Parser", () => {
                         contents: "target passage",
                         location: Location.create(
                             "fake-uri",
-                            Range.create(2, 35, 2, 49)
+                            Range.create(2, 35, 2, 49),
                         ),
                         kind: TwineSymbolKind.Passage,
                     },
@@ -1065,7 +1065,7 @@ describe("Server Twine Parser", () => {
                     passage,
                     2,
                     state,
-                    storyFormatParsingState
+                    storyFormatParsingState,
                 );
                 const result = storyFormatParsingState.passageTokens;
 
@@ -1108,7 +1108,7 @@ describe("Server Twine Parser", () => {
                     passage,
                     header.length,
                     state,
-                    storyFormatParsingState
+                    storyFormatParsingState,
                 );
                 const result = callbacks.references;
 
@@ -1117,7 +1117,7 @@ describe("Server Twine Parser", () => {
                         contents: "target passage",
                         location: Location.create(
                             "fake-uri",
-                            Range.create(2, 36, 2, 50)
+                            Range.create(2, 36, 2, 50),
                         ),
                         kind: TwineSymbolKind.Passage,
                     },
@@ -1140,7 +1140,7 @@ describe("Server Twine Parser", () => {
                     passage,
                     2,
                     state,
-                    storyFormatParsingState
+                    storyFormatParsingState,
                 );
                 const result = storyFormatParsingState.passageTokens;
 
@@ -1183,7 +1183,7 @@ describe("Server Twine Parser", () => {
                     passage,
                     header.length,
                     state,
-                    storyFormatParsingState
+                    storyFormatParsingState,
                 );
                 const result = callbacks.references;
 
@@ -1192,7 +1192,7 @@ describe("Server Twine Parser", () => {
                         contents: "target passage",
                         location: Location.create(
                             "fake-uri",
-                            Range.create(2, 15, 2, 29)
+                            Range.create(2, 15, 2, 29),
                         ),
                         kind: TwineSymbolKind.Passage,
                     },
@@ -1220,7 +1220,7 @@ describe("Server Twine Parser", () => {
                 const [result] = callbacks.embeddedDocuments;
 
                 expect(result.document.getText()).to.eql(
-                    "\n  html {\n    margin: 1px;\n  }\n"
+                    "\n  html {\n    margin: 1px;\n  }\n",
                 );
                 expect(result.document.languageId).to.eql("css");
                 expect(result.range).to.eql(Range.create(2, 19, 6, 0));
@@ -1244,7 +1244,7 @@ describe("Server Twine Parser", () => {
                 const result = uut.findAndParseHtml(
                     passage,
                     header.length,
-                    state
+                    state,
                 );
 
                 expect(result).to.eql(
@@ -1253,7 +1253,7 @@ describe("Server Twine Parser", () => {
                         "         " +
                         "                 " +
                         "    " +
-                        "         And final content"
+                        "         And final content",
                 );
             });
         });
@@ -1268,17 +1268,17 @@ describe("Server Twine Parser", () => {
                         "fake-uri",
                         "",
                         0,
-                        ':: Passage 1 {"position":"600,400"} [tag]\nP1 contents'
+                        ':: Passage 1 {"position":"600,400"} [tag]\nP1 contents',
                     );
 
                     uut.parse(doc, callbacks, uut.ParseLevel.Full);
 
                     expect(callbacks.errors.length).to.equal(1);
                     expect(callbacks.errors[0].message).to.include(
-                        "Tags need to come before metadata"
+                        "Tags need to come before metadata",
                     );
                     expect(callbacks.errors[0].range).to.eql(
-                        Range.create(0, 36, 0, 41)
+                        Range.create(0, 36, 0, 41),
                     );
                 });
 
@@ -1288,17 +1288,17 @@ describe("Server Twine Parser", () => {
                         "fake-uri",
                         "",
                         0,
-                        ':: Passage 1 {"position":"600,400"} Bad!\nP1 contents'
+                        ':: Passage 1 {"position":"600,400"} Bad!\nP1 contents',
                     );
 
                     uut.parse(doc, callbacks, uut.ParseLevel.Full);
 
                     expect(callbacks.errors.length).to.equal(1);
                     expect(callbacks.errors[0].message).to.include(
-                        "Passage headers can't have text after metadata"
+                        "Passage headers can't have text after metadata",
                     );
                     expect(callbacks.errors[0].range).to.eql(
-                        Range.create(0, 36, 0, 40)
+                        Range.create(0, 36, 0, 40),
                     );
                 });
 
@@ -1308,17 +1308,17 @@ describe("Server Twine Parser", () => {
                         "fake-uri",
                         "",
                         0,
-                        ":: Passage 1 [tag1] Bad!\nP1 contents"
+                        ":: Passage 1 [tag1] Bad!\nP1 contents",
                     );
 
                     uut.parse(doc, callbacks, uut.ParseLevel.Full);
 
                     expect(callbacks.errors.length).to.equal(1);
                     expect(callbacks.errors[0].message).to.include(
-                        "Passage headers can't have text after tags"
+                        "Passage headers can't have text after tags",
                     );
                     expect(callbacks.errors[0].range).to.eql(
-                        Range.create(0, 20, 0, 24)
+                        Range.create(0, 20, 0, 24),
                     );
                 });
 
@@ -1328,23 +1328,23 @@ describe("Server Twine Parser", () => {
                         "fake-uri",
                         "",
                         0,
-                        ":: Passage ] 1 } Bad!\nP1 contents"
+                        ":: Passage ] 1 } Bad!\nP1 contents",
                     );
 
                     uut.parse(doc, callbacks, uut.ParseLevel.Full);
 
                     expect(callbacks.errors.length).to.equal(2);
                     expect(callbacks.errors[0].message).to.include(
-                        "Passage names can't include ] without a \\ in front of it"
+                        "Passage names can't include ] without a \\ in front of it",
                     );
                     expect(callbacks.errors[0].range).to.eql(
-                        Range.create(0, 11, 0, 12)
+                        Range.create(0, 11, 0, 12),
                     );
                     expect(callbacks.errors[1].message).to.include(
-                        "Passage names can't include } without a \\ in front of it"
+                        "Passage names can't include } without a \\ in front of it",
                     );
                     expect(callbacks.errors[1].range).to.eql(
-                        Range.create(0, 15, 0, 16)
+                        Range.create(0, 15, 0, 16),
                     );
                 });
 
@@ -1354,17 +1354,17 @@ describe("Server Twine Parser", () => {
                         "fake-uri",
                         "",
                         0,
-                        ":: Passage 1 [nopers\nP1 contents"
+                        ":: Passage 1 [nopers\nP1 contents",
                     );
 
                     uut.parse(doc, callbacks, uut.ParseLevel.Full);
 
                     expect(callbacks.errors.length).to.equal(1);
                     expect(callbacks.errors[0].message).to.include(
-                        "Tags aren't formatted correctly."
+                        "Tags aren't formatted correctly.",
                     );
                     expect(callbacks.errors[0].range).to.eql(
-                        Range.create(0, 13, 0, 20)
+                        Range.create(0, 13, 0, 20),
                     );
                 });
             });

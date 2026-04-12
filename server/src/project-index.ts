@@ -206,7 +206,7 @@ export interface ProjectIndex {
      */
     getSymbolDefinitionByName(
         name: string,
-        kind: TwineSymbolKind
+        kind: TwineSymbolKind,
     ): Location | undefined;
     /**
      * Get the symbol definition (if any) at a location in a document.
@@ -229,7 +229,7 @@ export interface ProjectIndex {
      */
     getDefinitionBySymbolAt(
         uri: string,
-        position: Position
+        position: Position,
     ): ProjSymbol | undefined;
     /**
      * Get all references to a symbol based on a symbol or single reference in a document.
@@ -241,7 +241,7 @@ export interface ProjectIndex {
     getReferencesToSymbolAt(
         uri: string,
         position: Position,
-        includeDeclaration: boolean
+        includeDeclaration: boolean,
     ): References | undefined;
     /**
      * Get a passage by name.
@@ -386,7 +386,7 @@ export class Index implements ProjectIndex {
 
     getSymbolDefinitionByName(
         name: string,
-        kind: number
+        kind: number,
     ): Location | undefined {
         // Special case passages, since they're not stored as definitions
         if (kind === TwineSymbolKind.Passage) {
@@ -411,7 +411,7 @@ export class Index implements ProjectIndex {
     getDefinitionAt(uri: string, position: Position): ProjSymbol | undefined {
         // See if the index has a passage name here
         const passage = this.getPassages(uri)?.find((p) =>
-            positionInRange(position, p.name.location.range)
+            positionInRange(position, p.name.location.range),
         );
         if (passage !== undefined) {
             return {
@@ -425,7 +425,7 @@ export class Index implements ProjectIndex {
         const definitionsPerKind = this._definitions[uri] ?? {};
         for (const defs of Object.values(definitionsPerKind)) {
             const match = defs.find((def) =>
-                positionInRange(position, def.location.range)
+                positionInRange(position, def.location.range),
             );
             if (match !== undefined) {
                 return match;
@@ -440,7 +440,7 @@ export class Index implements ProjectIndex {
         for (const localReferences of Object.values(referencesPerKind)) {
             for (const ref of localReferences) {
                 const match = ref.locations.find((loc) =>
-                    positionInRange(position, loc.range)
+                    positionInRange(position, loc.range),
                 );
                 if (match !== undefined) {
                     return ref;
@@ -451,7 +451,7 @@ export class Index implements ProjectIndex {
     }
     getDefinitionBySymbolAt(
         uri: string,
-        position: Position
+        position: Position,
     ): ProjSymbol | undefined {
         // Do we have a reference at the position?
         const ref = this.getReferencesAt(uri, position);
@@ -459,7 +459,7 @@ export class Index implements ProjectIndex {
             // See if we have a matching symbol for this reference
             const symbolLocation = this.getSymbolDefinitionByName(
                 ref.contents,
-                ref.kind
+                ref.kind,
             );
             if (symbolLocation !== undefined) {
                 return {
@@ -477,7 +477,7 @@ export class Index implements ProjectIndex {
     getReferencesToSymbolAt(
         uri: string,
         position: Position,
-        includeDeclaration: boolean
+        includeDeclaration: boolean,
     ): References | undefined {
         const references: References = {
             contents: "placeholder",
@@ -504,7 +504,7 @@ export class Index implements ProjectIndex {
             const localReferences = referencesPerKind[references.kind];
             if (localReferences !== undefined) {
                 const ref = localReferences.find(
-                    (ref) => ref.contents === references.contents
+                    (ref) => ref.contents === references.contents,
                 );
                 if (ref !== undefined) {
                     references.locations.push(...ref.locations);
@@ -516,7 +516,7 @@ export class Index implements ProjectIndex {
         if (includeDeclaration) {
             const symbolDefinitionLocation = this.getSymbolDefinitionByName(
                 references.contents,
-                references.kind
+                references.kind,
             );
             if (symbolDefinitionLocation !== undefined) {
                 references.locations.push(symbolDefinitionLocation);
@@ -547,7 +547,7 @@ export class Index implements ProjectIndex {
             this._cachedPassageNames = [];
             for (const passages of Object.values(this._passages)) {
                 this._cachedPassageNames.push(
-                    ...passages.map((p) => p.name.contents)
+                    ...passages.map((p) => p.name.contents),
                 );
             }
             this._cachedPassageNames.sort();

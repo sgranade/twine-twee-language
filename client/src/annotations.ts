@@ -22,7 +22,7 @@ let editor: vscode.TextEditor | undefined;
 export function addTrailingAnnotation(
     ed: vscode.TextEditor,
     line: number,
-    message: string
+    message: string,
 ): void {
     clearAnnotations();
     if (ed.document === null) {
@@ -34,8 +34,8 @@ export function addTrailingAnnotation(
             line,
             Number.MAX_SAFE_INTEGER,
             line,
-            Number.MAX_SAFE_INTEGER
-        )
+            Number.MAX_SAFE_INTEGER,
+        ),
     );
     ed.setDecorations(annotationDecoration, [
         {
@@ -65,7 +65,7 @@ export function clearAnnotations() {
  * @param e Text document change event.
  */
 export function clearAnnotationOnChangeEvent(
-    e: vscode.TextDocumentChangeEvent
+    e: vscode.TextDocumentChangeEvent,
 ) {
     if (e.document.uri.toString() === editor?.document.uri.toString()) {
         clearAnnotations();

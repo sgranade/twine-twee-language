@@ -46,7 +46,7 @@ describe("SugarCube Macros", () => {
                 state.currentPassage = buildPassage({
                     location: Location.create(
                         "fake-uri",
-                        Range.create(1, 2, 3, 4)
+                        Range.create(1, 2, 3, 4),
                     ),
                 });
                 const storyFormatState = buildStoryFormatParsingState();
@@ -60,7 +60,7 @@ describe("SugarCube Macros", () => {
                         contents: "testy",
                         location: Location.create(
                             "fake-uri",
-                            Range.create(1, 1, 1, 6)
+                            Range.create(1, 1, 1, 6),
                         ),
                         kind: OSugarCubeSymbolKind.KnownMacro,
                         container: false,
@@ -77,7 +77,7 @@ describe("SugarCube Macros", () => {
                 state.currentPassage = buildPassage({
                     location: Location.create(
                         "fake-uri",
-                        Range.create(1, 2, 3, 4)
+                        Range.create(1, 2, 3, 4),
                     ),
                 });
                 const storyFormatState = buildStoryFormatParsingState();
@@ -91,7 +91,7 @@ describe("SugarCube Macros", () => {
                         contents: "testy",
                         location: Location.create(
                             "fake-uri",
-                            Range.create(1, 1, 1, 6)
+                            Range.create(1, 1, 1, 6),
                         ),
                         kind: OSugarCubeSymbolKind.KnownMacro,
                         container: true,
@@ -107,7 +107,7 @@ describe("SugarCube Macros", () => {
                 state.currentPassage = buildPassage({
                     location: Location.create(
                         "fake-uri",
-                        Range.create(1, 2, 3, 4)
+                        Range.create(1, 2, 3, 4),
                     ),
                 });
                 const storyFormatState = buildStoryFormatParsingState();
@@ -119,7 +119,7 @@ describe("SugarCube Macros", () => {
                 expect(callbacks.errors.length).to.equal(1);
                 expect(result.severity).to.eql(DiagnosticSeverity.Warning);
                 expect(result.message).to.include(
-                    `This passage contains <<widget>> macros, so needs a "widget" passage tag`
+                    `This passage contains <<widget>> macros, so needs a "widget" passage tag`,
                 );
                 expect(result.range).to.eql(Range.create(1, 2, 3, 4));
             });
@@ -135,7 +135,7 @@ describe("SugarCube Macros", () => {
                 state.currentPassage = buildPassage({
                     location: Location.create(
                         "fake-uri",
-                        Range.create(1, 2, 3, 4)
+                        Range.create(1, 2, 3, 4),
                     ),
                 });
                 const storyFormatState = buildStoryFormatParsingState();
@@ -151,11 +151,11 @@ describe("SugarCube Macros", () => {
                 expect(callbacks.errors.length).to.equal(1);
                 expect(result.severity).to.eql(DiagnosticSeverity.Error);
                 expect(result.message).to.include(
-                    `<<elseif>> can't come after an <<else>>`
+                    `<<elseif>> can't come after an <<else>>`,
                 );
                 expect(result.range).to.eql(Range.create(2, 4, 2, 14));
                 expect(result.relatedInformation![0].location.range).to.eql(
-                    Range.create(1, 0, 1, 8)
+                    Range.create(1, 0, 1, 8),
                 );
             });
         });
@@ -285,7 +285,7 @@ nope:
                 expect(result.macrosAndEnums).to.be.undefined;
                 expect(result.errors.length).to.equal(1);
                 expect(result.errors[0]).to.include(
-                    "No `sugarcube-2` key found"
+                    "No `sugarcube-2` key found",
                 );
             });
 
@@ -527,7 +527,7 @@ sugarcube-2:
 
                 const result = uut.tweeConfigFileToMacrosAndEnums(
                     yaml,
-                    true
+                    true,
                 ).errors;
 
                 expect(result[0]).to.include([
@@ -547,7 +547,7 @@ sugarcube-2:
 
                 const result = uut.tweeConfigFileToMacrosAndEnums(
                     yaml,
-                    true
+                    true,
                 ).errors;
 
                 expect(result[0]).to.include([
@@ -567,7 +567,7 @@ sugarcube-2:
 
                 const result = uut.tweeConfigFileToMacrosAndEnums(
                     yaml,
-                    true
+                    true,
                 ).errors;
 
                 expect(result[0]).to.include([
@@ -594,7 +594,7 @@ sugarcube-2:
                 expect(result.macrosAndEnums).to.be.undefined;
                 expect(result.errors.length).to.equal(1);
                 expect(result.errors[0]).to.include(
-                    "No `sugarcube-2` key found"
+                    "No `sugarcube-2` key found",
                 );
             });
 

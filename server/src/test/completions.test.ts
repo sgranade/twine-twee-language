@@ -25,7 +25,7 @@ describe("Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                "0123456789\n123456789\n123456789"
+                "0123456789\n123456789\n123456789",
             );
             const position = Position.create(1, 9);
             const index = new Index();
@@ -35,16 +35,16 @@ describe("Completions", () => {
                     "",
                     "embedded doc",
                     17,
-                    doc
+                    doc,
                 ),
             ]);
             const mockFunction = ImportMock.mockFunction(
                 embeddedLanguagesModule,
-                "doComplete"
+                "doComplete",
             ).callsFake(
                 async (
                     parentDoc: TextDocument,
-                    embeddedDoc: embeddedLanguagesModule.EmbeddedDocument
+                    embeddedDoc: embeddedLanguagesModule.EmbeddedDocument,
                 ) => {
                     if (embeddedDoc.document.uri === "inner-uri") {
                         return CompletionList.create([
@@ -52,14 +52,14 @@ describe("Completions", () => {
                         ]);
                     }
                     return null;
-                }
+                },
             );
 
             const result = await uut.generateCompletions(
                 doc,
                 position,
                 index,
-                true
+                true,
             );
             mockFunction.restore();
 
@@ -71,7 +71,7 @@ describe("Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                "0123456789\n123456789\n123456789"
+                "0123456789\n123456789\n123456789",
             );
             const position = Position.create(1, 9);
             const index = new Index();
@@ -81,34 +81,34 @@ describe("Completions", () => {
                     "",
                     "embedded doc",
                     17,
-                    doc
+                    doc,
                 ),
             ]);
             const mockFunction = ImportMock.mockFunction(
                 embeddedLanguagesModule,
-                "doComplete"
+                "doComplete",
             ).callsFake(
                 async (
                     parentDoc: TextDocument,
-                    embeddedDoc: embeddedLanguagesModule.EmbeddedDocument
+                    embeddedDoc: embeddedLanguagesModule.EmbeddedDocument,
                 ) => {
                     if (embeddedDoc.document.uri === "inner-uri") {
                         const item = CompletionItem.create("my completion!");
                         item.textEdit = TextEdit.replace(
                             Range.create(0, 1, 0, 5),
-                            "changeit!"
+                            "changeit!",
                         );
                         return CompletionList.create([item]);
                     }
                     return null;
-                }
+                },
             );
 
             const result = await uut.generateCompletions(
                 doc,
                 position,
                 index,
-                true
+                true,
             );
             mockFunction.restore();
 
@@ -123,7 +123,7 @@ describe("Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                "0123456789\n123456789\n123456789"
+                "0123456789\n123456789\n123456789",
             );
             const position = Position.create(1, 9);
             const index = new Index();
@@ -135,16 +135,16 @@ describe("Completions", () => {
                     17,
                     doc,
                     undefined,
-                    true
+                    true,
                 ),
             ]);
             const mockFunction = ImportMock.mockFunction(
                 embeddedLanguagesModule,
-                "doComplete"
+                "doComplete",
             ).callsFake(
                 async (
                     parentDoc: TextDocument,
-                    embeddedDoc: embeddedLanguagesModule.EmbeddedDocument
+                    embeddedDoc: embeddedLanguagesModule.EmbeddedDocument,
                 ) => {
                     if (embeddedDoc.document.uri === "inner-uri") {
                         return CompletionList.create([
@@ -152,14 +152,14 @@ describe("Completions", () => {
                         ]);
                     }
                     return null;
-                }
+                },
             );
 
             const result = await uut.generateCompletions(
                 doc,
                 position,
                 index,
-                true
+                true,
             );
             mockFunction.restore();
 
@@ -172,7 +172,7 @@ describe("Completions", () => {
                     "fake-uri",
                     "",
                     1,
-                    "0123456789\n123456789\n123456789\n123456789"
+                    "0123456789\n123456789\n123456789\n123456789",
                 );
                 const position = Position.create(1, 3);
                 const index = new Index();
@@ -182,7 +182,7 @@ describe("Completions", () => {
                         "json",
                         '{\n""\n}',
                         11,
-                        doc
+                        doc,
                     ),
                 ]);
 
@@ -190,10 +190,10 @@ describe("Completions", () => {
                     doc,
                     position,
                     index,
-                    true
+                    true,
                 );
                 const ifidItem = completions?.items.find((item) =>
-                    item.insertText?.includes("ifid")
+                    item.insertText?.includes("ifid"),
                 );
                 const result = ifidItem?.insertText?.slice(-39, -3) ?? "nope";
 
@@ -207,7 +207,7 @@ describe("Completions", () => {
                     "fake-uri",
                     "",
                     0,
-                    "0123456789\n123456789\n123456789\n123456789"
+                    "0123456789\n123456789\n123456789\n123456789",
                 );
                 const position = Position.create(2, 7);
                 const index = new Index();
@@ -217,12 +217,12 @@ describe("Completions", () => {
                         "",
                         '{\n"ifid": ""\n}',
                         17,
-                        doc
+                        doc,
                     ),
                 ]);
                 const mockDoComplete = ImportMock.mockFunction(
                     embeddedLanguagesModule,
-                    "doComplete"
+                    "doComplete",
                 ).callsFake(async () => {
                     return null;
                 });
@@ -231,16 +231,18 @@ describe("Completions", () => {
                     doc,
                     position,
                     index,
-                    true
+                    true,
                 );
                 mockDoComplete.restore();
 
                 // Slice the result to remove the quote marks
                 expect(
-                    uuid.validate(result?.items[0].label.slice(1, -1) ?? "nope")
+                    uuid.validate(
+                        result?.items[0].label.slice(1, -1) ?? "nope",
+                    ),
                 ).to.be.true;
                 expect(
-                    uuid.version(result?.items[0].label.slice(1, -1) ?? "nope")
+                    uuid.version(result?.items[0].label.slice(1, -1) ?? "nope"),
                 ).to.equal(4);
             });
 
@@ -249,7 +251,7 @@ describe("Completions", () => {
                     "fake-uri",
                     "",
                     0,
-                    "0123456789\n123456789\n123456789\n123456789"
+                    "0123456789\n123456789\n123456789\n123456789",
                 );
                 const position = Position.create(2, 9);
                 const index = new Index();
@@ -259,12 +261,12 @@ describe("Completions", () => {
                         "",
                         '{\n"format": ""\n}',
                         17,
-                        doc
+                        doc,
                     ),
                 ]);
                 const mockDoComplete = ImportMock.mockFunction(
                     embeddedLanguagesModule,
-                    "doComplete"
+                    "doComplete",
                 ).callsFake(async () => {
                     return null;
                 });
@@ -273,7 +275,7 @@ describe("Completions", () => {
                     doc,
                     position,
                     index,
-                    true
+                    true,
                 );
                 mockDoComplete.restore();
 
@@ -288,7 +290,7 @@ describe("Completions", () => {
                     "fake-uri",
                     "",
                     0,
-                    "0123456789\n123456789\n123456789\n123456789"
+                    "0123456789\n123456789\n123456789\n123456789",
                 );
                 const position = Position.create(2, 8);
                 const index = new Index();
@@ -301,12 +303,12 @@ describe("Completions", () => {
                         "",
                         '{\n"start": ""\n}',
                         17,
-                        doc
+                        doc,
                     ),
                 ]);
                 const mockDoComplete = ImportMock.mockFunction(
                     embeddedLanguagesModule,
-                    "doComplete"
+                    "doComplete",
                 ).callsFake(async () => {
                     return null;
                 });
@@ -315,7 +317,7 @@ describe("Completions", () => {
                     doc,
                     position,
                     index,
-                    true
+                    true,
                 );
                 mockDoComplete.restore();
 
@@ -328,7 +330,7 @@ describe("Completions", () => {
                     "fake-uri",
                     "",
                     0,
-                    "0123456789\n123456789\n12345678901234567890123456789\n123456789"
+                    "0123456789\n123456789\n12345678901234567890123456789\n123456789",
                 );
                 const position = Position.create(2, 23);
                 const index = new Index();
@@ -338,12 +340,12 @@ describe("Completions", () => {
                         "",
                         '{\n"tag-colors": { "test": "" }\n}',
                         17,
-                        doc
+                        doc,
                     ),
                 ]);
                 const mockDoComplete = ImportMock.mockFunction(
                     embeddedLanguagesModule,
-                    "doComplete"
+                    "doComplete",
                 ).callsFake(async () => {
                     return null;
                 });
@@ -352,7 +354,7 @@ describe("Completions", () => {
                     doc,
                     position,
                     index,
-                    true
+                    true,
                 );
                 mockDoComplete.restore();
 
@@ -379,13 +381,13 @@ describe("Completions", () => {
                 doc,
                 position,
                 index,
-                true
+                true,
             );
 
             expect(results?.items.length).to.equal(1);
             expect(results?.items[0].label).to.eql("Testy");
             expect(results?.itemDefaults?.editRange).to.eql(
-                Range.create(0, 3, 0, 4)
+                Range.create(0, 3, 0, 4),
             );
         });
 
@@ -399,7 +401,7 @@ describe("Completions", () => {
                 doc,
                 position,
                 index,
-                false // Return without CompletionList.itemDefaults
+                false, // Return without CompletionList.itemDefaults
             );
 
             expect(results?.items.length).to.equal(1);
@@ -419,13 +421,13 @@ describe("Completions", () => {
                 doc,
                 position,
                 index,
-                true
+                true,
             );
 
             expect(results?.items.length).to.equal(1);
             expect(results?.items[0].label).to.eql("Testy");
             expect(results?.itemDefaults?.editRange).to.eql(
-                Range.create(0, 3, 0, 9)
+                Range.create(0, 3, 0, 9),
             );
         });
 
@@ -439,7 +441,7 @@ describe("Completions", () => {
                 doc,
                 position,
                 index,
-                true
+                true,
             );
 
             expect(results).to.be.null;
@@ -450,7 +452,7 @@ describe("Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                " [[ toupe | other passage \nother"
+                " [[ toupe | other passage \nother",
             );
             const position = Position.create(0, 19);
             const index = new Index();
@@ -460,13 +462,13 @@ describe("Completions", () => {
                 doc,
                 position,
                 index,
-                true
+                true,
             );
 
             expect(results?.items.length).to.equal(1);
             expect(results?.items[0].label).to.eql("Testy");
             expect(results?.itemDefaults?.editRange).to.eql(
-                Range.create(0, 11, 0, 26)
+                Range.create(0, 11, 0, 26),
             );
         });
 
@@ -480,7 +482,7 @@ describe("Completions", () => {
                 doc,
                 position,
                 index,
-                true
+                true,
             );
 
             expect(results).to.be.null;
@@ -491,7 +493,7 @@ describe("Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                " [[ toupe -> other passage \nother"
+                " [[ toupe -> other passage \nother",
             );
             const position = Position.create(0, 19);
             const index = new Index();
@@ -501,13 +503,13 @@ describe("Completions", () => {
                 doc,
                 position,
                 index,
-                true
+                true,
             );
 
             expect(results?.items.length).to.equal(1);
             expect(results?.items[0].label).to.eql("Testy");
             expect(results?.itemDefaults?.editRange).to.eql(
-                Range.create(0, 12, 0, 27)
+                Range.create(0, 12, 0, 27),
             );
         });
 
@@ -516,7 +518,7 @@ describe("Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                " [[ replace all of this ]] but not this"
+                " [[ replace all of this ]] but not this",
             );
             const position = Position.create(0, 4);
             const index = new Index();
@@ -526,13 +528,13 @@ describe("Completions", () => {
                 doc,
                 position,
                 index,
-                true
+                true,
             );
 
             expect(results?.items.length).to.equal(1);
             expect(results?.items[0].label).to.eql("Testy");
             expect(results?.itemDefaults?.editRange).to.eql(
-                Range.create(0, 3, 0, 24)
+                Range.create(0, 3, 0, 24),
             );
         });
 
@@ -541,7 +543,7 @@ describe("Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                " [[ toupe | replace this ]] but not this"
+                " [[ toupe | replace this ]] but not this",
             );
             const position = Position.create(0, 19);
             const index = new Index();
@@ -551,13 +553,13 @@ describe("Completions", () => {
                 doc,
                 position,
                 index,
-                true
+                true,
             );
 
             expect(results?.items.length).to.equal(1);
             expect(results?.items[0].label).to.eql("Testy");
             expect(results?.itemDefaults?.editRange).to.eql(
-                Range.create(0, 11, 0, 25)
+                Range.create(0, 11, 0, 25),
             );
         });
 
@@ -566,7 +568,7 @@ describe("Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                " [[ toupe -> other passage ]] not here"
+                " [[ toupe -> other passage ]] not here",
             );
             const position = Position.create(0, 19);
             const index = new Index();
@@ -576,13 +578,13 @@ describe("Completions", () => {
                 doc,
                 position,
                 index,
-                true
+                true,
             );
 
             expect(results?.items.length).to.equal(1);
             expect(results?.items[0].label).to.eql("Testy");
             expect(results?.itemDefaults?.editRange).to.eql(
-                Range.create(0, 12, 0, 27)
+                Range.create(0, 12, 0, 27),
             );
         });
     });
@@ -597,14 +599,14 @@ describe("Completions", () => {
                     ifid: "mock-ifid",
                     storyFormat: { format: "FakeFormat" },
                 },
-                "fake-uri"
+                "fake-uri",
             );
             const completionList = CompletionList.create([
                 { label: "story completion" },
             ]);
             const mockFunction = ImportMock.mockFunction(
                 ptpModule,
-                "getStoryFormatParser"
+                "getStoryFormatParser",
             ).callsFake(() => {
                 return {
                     id: "FakeFormat",
@@ -616,7 +618,7 @@ describe("Completions", () => {
                 doc,
                 position,
                 index,
-                true
+                true,
             );
             mockFunction.restore();
 
@@ -632,7 +634,7 @@ describe("Completions", () => {
                     ifid: "mock-ifid",
                     storyFormat: { format: "FakeFormat" },
                 },
-                "fake-uri"
+                "fake-uri",
             );
             index.setEmbeddedDocuments("fake-uri", [
                 embeddedLanguagesModule.EmbeddedDocument.create(
@@ -642,7 +644,7 @@ describe("Completions", () => {
                     0,
                     doc,
                     false,
-                    true
+                    true,
                 ),
             ]);
             const completionList = CompletionList.create([
@@ -650,7 +652,7 @@ describe("Completions", () => {
             ]);
             const mockFunction = ImportMock.mockFunction(
                 ptpModule,
-                "getStoryFormatParser"
+                "getStoryFormatParser",
             ).callsFake(() => {
                 return {
                     id: "FakeFormat",
@@ -658,7 +660,7 @@ describe("Completions", () => {
                         doc: TextDocument,
                         pos: Position,
                         deferred: embeddedLanguagesModule.EmbeddedDocument[],
-                        index: Index
+                        index: Index,
                     ) => {
                         if (
                             deferred.length !== 1 ||
@@ -675,7 +677,7 @@ describe("Completions", () => {
                 doc,
                 position,
                 index,
-                true
+                true,
             );
             mockFunction.restore();
 
@@ -696,16 +698,16 @@ describe("Completions", () => {
                     "ePassage [[ ",
                     0,
                     doc,
-                    true
+                    true,
                 ),
             ]);
             const mockFunction = ImportMock.mockFunction(
                 embeddedLanguagesModule,
-                "doComplete"
+                "doComplete",
             ).callsFake(
                 async (
                     parentDoc: TextDocument,
-                    embeddedDoc: embeddedLanguagesModule.EmbeddedDocument
+                    embeddedDoc: embeddedLanguagesModule.EmbeddedDocument,
                 ) => {
                     if (embeddedDoc.document.uri === "inner-uri") {
                         return CompletionList.create([
@@ -713,14 +715,14 @@ describe("Completions", () => {
                         ]);
                     }
                     return null;
-                }
+                },
             );
 
             const result = await uut.generateCompletions(
                 doc,
                 position,
                 index,
-                true
+                true,
             );
             mockFunction.restore();
 
@@ -736,7 +738,7 @@ describe("Completions", () => {
                     ifid: "mock-ifid",
                     storyFormat: { format: "FakeFormat" },
                 },
-                "fake-uri"
+                "fake-uri",
             );
             const completionList = CompletionList.create([
                 { label: "story completion" },
@@ -748,12 +750,12 @@ describe("Completions", () => {
                     "ePassage cont",
                     0,
                     doc,
-                    true
+                    true,
                 ),
             ]);
             const mockPassageTextParserFunction = ImportMock.mockFunction(
                 ptpModule,
-                "getStoryFormatParser"
+                "getStoryFormatParser",
             ).callsFake(() => {
                 return {
                     id: "FakeFormat",
@@ -762,11 +764,11 @@ describe("Completions", () => {
             });
             const mockEmbeddedDocFunction = ImportMock.mockFunction(
                 embeddedLanguagesModule,
-                "doComplete"
+                "doComplete",
             ).callsFake(
                 async (
                     parentDoc: TextDocument,
-                    embeddedDoc: embeddedLanguagesModule.EmbeddedDocument
+                    embeddedDoc: embeddedLanguagesModule.EmbeddedDocument,
                 ) => {
                     if (embeddedDoc.document.uri === "inner-uri") {
                         return CompletionList.create([
@@ -774,14 +776,14 @@ describe("Completions", () => {
                         ]);
                     }
                     return null;
-                }
+                },
             );
 
             const result = await uut.generateCompletions(
                 doc,
                 position,
                 index,
-                true
+                true,
             );
             mockEmbeddedDocFunction.restore();
             mockPassageTextParserFunction.restore();
@@ -800,16 +802,16 @@ describe("Completions", () => {
                     "Passage cont",
                     0,
                     doc,
-                    true
+                    true,
                 ),
             ]);
             const mockFunction = ImportMock.mockFunction(
                 embeddedLanguagesModule,
-                "doComplete"
+                "doComplete",
             ).callsFake(
                 async (
                     parentDoc: TextDocument,
-                    embeddedDoc: embeddedLanguagesModule.EmbeddedDocument
+                    embeddedDoc: embeddedLanguagesModule.EmbeddedDocument,
                 ) => {
                     if (embeddedDoc.document.uri === "inner-uri") {
                         return CompletionList.create([
@@ -817,14 +819,14 @@ describe("Completions", () => {
                         ]);
                     }
                     return null;
-                }
+                },
             );
 
             const result = await uut.generateCompletions(
                 doc,
                 position,
                 index,
-                true
+                true,
             );
             mockFunction.restore();
 

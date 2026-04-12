@@ -100,7 +100,7 @@ function createSugarCube2MediaPassage(
     fileStem: string,
     ext: string,
     contents: Buffer,
-    passageTag: string
+    passageTag: string,
 ): Passage {
     const dataString = `data:${mediaTypeFromExt(ext)};base64,${contents.toString("base64")}`;
 
@@ -168,7 +168,7 @@ const supportedExtensions = new RegExp(
             "web(a|m)",
             "vtt",
         ].join("|") +
-        "$"
+        "$",
 );
 
 /**
@@ -194,7 +194,7 @@ export function addFileToStory(
     story: Story,
     basename: string,
     contents: Buffer,
-    encoding?: BufferEncoding
+    encoding?: BufferEncoding,
 ) {
     // eslint-disable-next-line prefer-const
     let { stem, ext } = filenameParts(basename);
@@ -246,7 +246,7 @@ export function addFileToStory(
         ext === "webp"
     ) {
         story.passages.push(
-            createSugarCube2MediaPassage(stem, ext, contents, "Twine.image")
+            createSugarCube2MediaPassage(stem, ext, contents, "Twine.image"),
         );
     } else if (
         ext === "aac" ||
@@ -261,15 +261,15 @@ export function addFileToStory(
         ext == "weba"
     ) {
         story.passages.push(
-            createSugarCube2MediaPassage(stem, ext, contents, "Twine.audio")
+            createSugarCube2MediaPassage(stem, ext, contents, "Twine.audio"),
         );
     } else if (ext === "mp4" || ext === "ogv" || ext === "webm") {
         story.passages.push(
-            createSugarCube2MediaPassage(stem, ext, contents, "Twine.video")
+            createSugarCube2MediaPassage(stem, ext, contents, "Twine.video"),
         );
     } else if (ext === "vtt") {
         story.passages.push(
-            createSugarCube2MediaPassage(stem, ext, contents, "Twine.vtt")
+            createSugarCube2MediaPassage(stem, ext, contents, "Twine.vtt"),
         );
     }
 }
@@ -292,11 +292,11 @@ export function validateStory(story: Story) {
     }
     if (
         !/^[a-fA-F\d]{8}-[a-fA-F\d]{4}-4[a-fA-F\d]{3}-[a-fA-F\d]{4}-[a-fA-F\d]{12}$/.test(
-            story.storyData.ifid
+            story.storyData.ifid,
         )
     ) {
         throw new Error(
-            `Story has a badly-formatted IFID value: ${story.storyData.ifid}`
+            `Story has a badly-formatted IFID value: ${story.storyData.ifid}`,
         );
     }
     // Final check: see if the start passage exists

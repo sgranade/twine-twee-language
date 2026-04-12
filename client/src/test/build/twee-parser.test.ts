@@ -319,7 +319,7 @@ describe("Client Twine Parser", () => {
                         }
 
                         expect(result.message).to.eql(
-                            "Tags need to come before metadata"
+                            "Tags need to come before metadata",
                         );
                         expect(result.start).to.eql(36);
                         expect(result.end).to.eql(41);
@@ -338,7 +338,7 @@ describe("Client Twine Parser", () => {
                         }
 
                         expect(result.message).to.eql(
-                            "No text allowed after passage tags or metadata"
+                            "No text allowed after passage tags or metadata",
                         );
                         expect(result.start).to.eql(36);
                         expect(result.end).to.eql(40);
@@ -356,7 +356,7 @@ describe("Client Twine Parser", () => {
                         }
 
                         expect(result.message).to.eql(
-                            "No text allowed after passage tags or metadata"
+                            "No text allowed after passage tags or metadata",
                         );
                         expect(result.start).to.eql(20);
                         expect(result.end).to.eql(24);
@@ -374,7 +374,7 @@ describe("Client Twine Parser", () => {
                         }
 
                         expect(result.message).to.eql(
-                            "Passage names can't include ] without a \\ in front of it"
+                            "Passage names can't include ] without a \\ in front of it",
                         );
                         expect(result.start).to.eql(11);
                         expect(result.end).to.eql(12);
@@ -392,7 +392,7 @@ describe("Client Twine Parser", () => {
                         }
 
                         expect(result.message).to.eql(
-                            "Tags aren't formatted correctly"
+                            "Tags aren't formatted correctly",
                         );
                         expect(result.start).to.eql(13);
                         expect(result.end).to.eql(20);
@@ -410,7 +410,7 @@ describe("Client Twine Parser", () => {
                         }
 
                         expect(result.message).to.eql(
-                            "Metadata isn't formatted correctly"
+                            "Metadata isn't formatted correctly",
                         );
                         expect(result.start).to.eql(13);
                         expect(result.end).to.eql(25);
@@ -428,7 +428,7 @@ describe("Client Twine Parser", () => {
                         }
 
                         expect(result.message).to.include(
-                            "Couldn't parse metadata:"
+                            "Couldn't parse metadata:",
                         );
                         expect(result.start).to.eql(13);
                         expect(result.end).to.eql(23);
@@ -448,7 +448,7 @@ describe("Client Twine Parser", () => {
                         }
 
                         expect(result.message).to.include(
-                            "Couldn't parse StoryData passage:"
+                            "Couldn't parse StoryData passage:",
                         );
                         expect(result.start).to.eql(12);
                         expect(result.end).to.eql(23);
@@ -470,7 +470,7 @@ describe("Client Twine Parser", () => {
                         }
 
                         expect(result.message).to.include(
-                            "StoryData passage is missing an IFID value"
+                            "StoryData passage is missing an IFID value",
                         );
                         expect(result.start).to.eql(13);
                         expect(result.end).to.eql(19);
@@ -493,7 +493,7 @@ describe("Client Twine Parser", () => {
                         }
 
                         expect(result.message).to.include(
-                            "StoryData passage has a badly-formatted IFID value: nopers"
+                            "StoryData passage has a badly-formatted IFID value: nopers",
                         );
                         expect(result.start).to.eql(13);
                         expect(result.end).to.eql(37);

@@ -68,6 +68,6 @@ export interface InsertInfo extends ChapbookFunctionInfo {
     parse: (
         tokens: InsertTokens,
         state: ParsingState,
-        chapbookState: ChapbookParsingState
+        chapbookState: ChapbookParsingState,
     ) => undefined;
 }

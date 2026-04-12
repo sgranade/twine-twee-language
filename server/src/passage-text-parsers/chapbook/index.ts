@@ -14,7 +14,7 @@ import { getReferencesToSymbolAt } from "./chapbook-references";
  */
 export function getChapbookParser(
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    formatVersion: string | undefined
+    formatVersion: string | undefined,
 ): StoryFormatParser | undefined {
     return {
         id: "chapbook-any",

@@ -51,7 +51,7 @@ describe("Chapbook References", () => {
             "fake-uri",
             Position.create(2, 1),
             index,
-            true
+            true,
         );
 
         expect(result).to.eql([
@@ -104,7 +104,7 @@ describe("Chapbook References", () => {
             "fake-uri",
             Position.create(14, 1),
             index,
-            true
+            true,
         );
 
         expect(result).to.eql([
@@ -157,7 +157,7 @@ describe("Chapbook References", () => {
             "fake-uri",
             Position.create(2, 1),
             index,
-            true
+            true,
         );
 
         expect(result).to.eql([
@@ -210,7 +210,7 @@ describe("Chapbook References", () => {
             "fake-uri",
             Position.create(14, 1),
             index,
-            true
+            true,
         );
 
         expect(result).to.eql([

@@ -45,7 +45,7 @@ export function parseEnums(baseString: string, enums: EnumRecord): string {
         /(?<!\\)%([\w]+)%/g,
         (_m: string, p1: string) => {
             return enums[p1] === undefined ? `%${p1} NOT FOUND%` : enums[p1];
-        }
+        },
     );
     return result.replace(/\\(%[\w]+%)/g, "$1");
 }
@@ -223,12 +223,12 @@ const varTestRegexp: RegExp = /^[$_][$A-Z_a-z][$0-9A-Z_a-z]*/;
 export function macroArgumentTokenToT3LTArg(
     token: ArgumentToken,
     state: ParsingState,
-    sugarCubeState: StoryFormatParsingState
+    sugarCubeState: StoryFormatParsingState,
 ): Arg | undefined {
     let arg = token.text;
     const range = Range.create(
         state.textDocument.positionAt(token.at),
-        state.textDocument.positionAt(token.at + token.text.length)
+        state.textDocument.positionAt(token.at + token.text.length),
     );
     if (token.type === MacroParse.Item.Bareword) {
         // This imitates the parsing of Barewords in the original code
@@ -325,7 +325,7 @@ export function macroArgumentTokenToT3LTArg(
             0,
             token.at,
             state,
-            sugarCubeState
+            sugarCubeState,
         );
         if (markup.error !== undefined) {
             return undefined;
@@ -383,7 +383,7 @@ export function macroArgumentTokenToT3LTArg(
 function makeSimpleParameterType(
     name: string | string[],
     errorMessage: string,
-    validateType: ((type: ArgType) => boolean) | ArgType
+    validateType: ((type: ArgType) => boolean) | ArgType,
 ): ParameterType {
     if (typeof name === "string") {
         name = [name];
@@ -421,18 +421,18 @@ const parameterTypes: ParameterType[] = [
     makeSimpleParameterType(
         ["bool", "boolean"],
         "Argument is not a boolean",
-        (type) => type === ArgType.True || type === ArgType.False
+        (type) => type === ArgType.True || type === ArgType.False,
     ),
     makeSimpleParameterType("null", "Argument is not 'null'", ArgType.Null),
     makeSimpleParameterType(
         "undefined",
         "Argument is not 'undefined'",
-        ArgType.Undefined
+        ArgType.Undefined,
     ),
     makeSimpleParameterType(
         "number",
         "Argument is not a number",
-        ArgType.Number
+        ArgType.Number,
     ),
     makeSimpleParameterType("NaN", "Argument is not 'NaN'", ArgType.NaN),
     makeSimpleParameterType("link", "Argument is not a link", ArgType.Link),
@@ -440,12 +440,12 @@ const parameterTypes: ParameterType[] = [
     makeSimpleParameterType(
         "bareword",
         "Argument is not a bareword",
-        ArgType.Bareword
+        ArgType.Bareword,
     ),
     makeSimpleParameterType(
         "string",
         "Argument is not a quoted string",
-        ArgType.String
+        ArgType.String,
     ),
     // This allows so many because they could all be turned-into/considered text.
     makeSimpleParameterType(
@@ -458,13 +458,13 @@ const parameterTypes: ParameterType[] = [
             t === ArgType.False ||
             t === ArgType.Null ||
             t === ArgType.NaN ||
-            t === ArgType.Number
+            t === ArgType.Number,
     ),
     makeSimpleParameterType(
         "var",
         "Argument is not a variable",
         (type) =>
-            type === ArgType.SettingsSetupAccess || type === ArgType.Variable
+            type === ArgType.SettingsSetupAccess || type === ArgType.Variable,
     ),
     {
         name: ["receiver"],
@@ -623,7 +623,7 @@ interface ArgumentInfo {
  */
 export function parseMacroParameters(
     parameters: string[],
-    enums: Readonly<EnumRecord>
+    enums: Readonly<EnumRecord>,
 ): Parameters | Error {
     try {
         parameters = parameters.map((parameter: string) => {
@@ -634,7 +634,7 @@ export function parseMacroParameters(
     } catch (err) {
         return new Error(
             (err as Error).message ||
-                "Failed to get error message; please report this."
+                "Failed to get error message; please report this.",
         );
     }
 }
@@ -670,7 +670,7 @@ export class Parameters {
             const variant = variants[i];
             if (variants === null || variant === undefined) {
                 throw new Error(
-                    `Undefined/null variants are not allowed (variant index from 0: ${i}).`
+                    `Undefined/null variants are not allowed (variant index from 0: ${i}).`,
                 );
             } else if (typeof variant === "string") {
                 result.push(new Variant(variant));
@@ -678,7 +678,7 @@ export class Parameters {
                 // configuration options
             } else {
                 throw new Error(
-                    `Invalid value, currently only string variants allowed. (variant index from 0: ${i})`
+                    `Invalid value, currently only string variants allowed. (variant index from 0: ${i})`,
                 );
             }
         }
@@ -879,7 +879,7 @@ class Variant {
             Success,
         }
         function isFailure(
-            status: Status
+            status: Status,
         ): status is Status.Failure | Status.NotFoundFailure {
             return (
                 status === Status.Failure || status === Status.NotFoundFailure
@@ -899,7 +899,7 @@ class Variant {
             text: string,
             argIndex: number,
             argFormatTypes: ArgumentFormatTypes,
-            rank: number = 0
+            rank: number = 0,
         ): CrawlInformation {
             return {
                 errors: [
@@ -923,7 +923,7 @@ class Variant {
             argIndex: number,
             argFormatTypes: ArgumentFormatTypes,
             rank: number,
-            warnings: ArgumentWarning[] = []
+            warnings: ArgumentWarning[] = [],
         ): CrawlInformation {
             return {
                 errors: [],
@@ -968,7 +968,7 @@ class Variant {
             iterations++;
             if (iterations >= Variant.ValidateLimit) {
                 throw new Error(
-                    `Validating macro took excessive amount of checking. Quitting. Got to argument ${argIndex}.`
+                    `Validating macro took excessive amount of checking. Quitting. Got to argument ${argIndex}.`,
                 );
             }
 
@@ -998,7 +998,7 @@ class Variant {
                         argIndex,
                         argFormatTypes,
                         rank,
-                        warnings
+                        warnings,
                     );
                 } else if (isFailure(infoRight.status)) {
                     // It was an error.
@@ -1049,7 +1049,7 @@ class Variant {
                 if (!isFailure(infoRight.status)) {
                     Object.assign(
                         infoRight.argFormatTypes,
-                        infoLeft.argFormatTypes
+                        infoLeft.argFormatTypes,
                     );
                     return infoRight;
                 }
@@ -1089,7 +1089,7 @@ class Variant {
                         Status.NotFoundFailure,
                         `Expected literal '${format.value}' but there was no argument`,
                         argIndex,
-                        {}
+                        {},
                     );
                 }
 
@@ -1101,7 +1101,7 @@ class Variant {
                 const success = makeSuccess(
                     argIndex + 1,
                     argFormatTypes,
-                    correctRank
+                    correctRank,
                 );
                 if (isAlwaysArgument(arg)) {
                     return success;
@@ -1114,7 +1114,7 @@ class Variant {
                             `Found string, but its value was not the expected '${format.value}'`,
                             argIndex,
                             argFormatTypes,
-                            correctTypeRank
+                            correctTypeRank,
                         );
                     }
                 } else if (arg.type === ArgType.Bareword) {
@@ -1126,7 +1126,7 @@ class Variant {
                             `Found text, but its value was not the expected '${format.value}'`,
                             argIndex,
                             argFormatTypes,
-                            correctTypeRank
+                            correctTypeRank,
                         );
                     }
                 } else if (
@@ -1152,7 +1152,7 @@ class Variant {
                         Status.Failure,
                         `Expected literal ('${format.value}'), but found:  `,
                         argIndex,
-                        argFormatTypes
+                        argFormatTypes,
                     );
                 }
             } else if (format.kind === FormatKind.Type) {
@@ -1165,13 +1165,13 @@ class Variant {
                         Status.NotFoundFailure,
                         `Expected type '${type.name[0] || "UNNAMED TYPE"}' but there was no argument`,
                         argIndex,
-                        {}
+                        {},
                     );
                 } else if (isAlwaysArgument(arg)) {
                     return makeSuccess(
                         argIndex + 1,
                         argFormatTypes,
-                        correctRank
+                        correctRank,
                     );
                 }
 
@@ -1209,7 +1209,7 @@ class Variant {
                                     warning: resultMsg,
                                     index: argIndex,
                                 },
-                            ]
+                            ],
                         );
                     }
                 } else {
@@ -1217,7 +1217,7 @@ class Variant {
                     return makeSuccess(
                         argIndex + 1,
                         argFormatTypes,
-                        correctRank
+                        correctRank,
                     );
                 }
             } else {
@@ -1327,13 +1327,13 @@ class Variant {
                 default:
                     throw new Error(
                         "Parse: Unhandled operator in infix binding power of: " +
-                            op
+                            op,
                     );
             }
         }
 
         function isPrefixOperator(
-            token: FormatLex
+            token: FormatLex,
         ): token is FormatLexMaybeNext | FormatLexRepeat {
             return (
                 token.kind === FormatKind.MaybeNext ||
@@ -1342,7 +1342,7 @@ class Variant {
         }
 
         function isValue(
-            token: FormatLex
+            token: FormatLex,
         ): token is FormatLiteral | FormatType {
             return (
                 token.kind === FormatKind.Literal ||
@@ -1354,13 +1354,13 @@ class Variant {
             iterations++;
             if (iterations >= Variant.ParserLimit) {
                 throw new Error(
-                    "Parser: Iterated too many times when parsing format. This might be an internal error, or due to a very complex input."
+                    "Parser: Iterated too many times when parsing format. This might be an internal error, or due to a very complex input.",
                 );
             }
 
             if (!lexed[index]) {
                 throw new Error(
-                    "Parse: Expected there to be a value at the given index."
+                    "Parse: Expected there to be a value at the given index.",
                 );
             }
 
@@ -1384,7 +1384,7 @@ class Variant {
                     if (after && after.kind === FormatKind.Group) {
                         if (after.open) {
                             throw new Error(
-                                "Parse: Expected closing parentheses but found opening parentheses!"
+                                "Parse: Expected closing parentheses but found opening parentheses!",
                             );
                         }
                         // Otherwise, we're good. Advance past the closing paren
@@ -1394,7 +1394,7 @@ class Variant {
                     }
                 } else {
                     throw new Error(
-                        "Parse: Did not expect opening parentheses"
+                        "Parse: Did not expect opening parentheses",
                     );
                 }
             } else if (isValue(current)) {
@@ -1402,7 +1402,7 @@ class Variant {
                 lhs = current;
             } else {
                 throw new Error(
-                    "Parse: Expected there to be literal or a type"
+                    "Parse: Expected there to be literal or a type",
                 );
             }
 
@@ -1410,7 +1410,7 @@ class Variant {
                 iterations++;
                 if (iterations >= Variant.ParserLimit) {
                     throw new Error(
-                        "Parser: Iterated too many times when parsing format operators. This might be an internal error, or due to a very complex input."
+                        "Parser: Iterated too many times when parsing format operators. This might be an internal error, or due to a very complex input.",
                     );
                 }
 
@@ -1483,7 +1483,7 @@ class Variant {
         function makeRange(
             start: number,
             end: number,
-            line: number = 0
+            line: number = 0,
         ): Range {
             return Range.create(line, start, line, end);
         }
@@ -1497,7 +1497,7 @@ class Variant {
             iterations++;
             if (iterations >= Variant.LexLimit) {
                 throw new Error(
-                    "Lex: Iterated too many times when parsing format. This might be an internal error, or a very long input string."
+                    "Lex: Iterated too many times when parsing format. This might be an internal error, or a very long input string.",
                 );
             }
             if (position >= formatString.length) {
@@ -1524,22 +1524,22 @@ class Variant {
                     });
                 } else if (next === undefined) {
                     throw new Error(
-                        "Lex: Expected input to continue after `&`, did you mean to use `&+`? Content is still required after such."
+                        "Lex: Expected input to continue after `&`, did you mean to use `&+`? Content is still required after such.",
                     );
                 } else if (next === "-") {
                     throw new Error(
-                        "Lex: Found `&-`, did you mean to use `&+`?"
+                        "Lex: Found `&-`, did you mean to use `&+`?",
                     );
                 } else if (
                     Variant.IdentifierStart.test(next) ||
                     Variant.Quote.test(next)
                 ) {
                     throw new Error(
-                        `Lex: Found '&${next}', did you mean to do '&+${next}'?`
+                        `Lex: Found '&${next}', did you mean to do '&+${next}'?`,
                     );
                 } else {
                     throw new Error(
-                        `Lex: Found invalid character after '&': '${next}'. Did you mean to use \`&+\`?`
+                        `Lex: Found invalid character after '&': '${next}'. Did you mean to use \`&+\`?`,
                     );
                 }
             } else if (chr === "|") {
@@ -1558,7 +1558,7 @@ class Variant {
                     });
                 } else if (next === undefined) {
                     throw new Error(
-                        "Lex: Expected input to continue after `|`, did you mean to use `|+` or `|`? Content is still required after both."
+                        "Lex: Expected input to continue after `|`, did you mean to use `|+` or `|`? Content is still required after both.",
                     );
                 } else if (Variant.Whitespace.test(next)) {
                     // |
@@ -1579,11 +1579,11 @@ class Variant {
                     });
                 } else if (next === "-") {
                     throw new Error(
-                        "Lex: Found `|-`, did you mean to use `|+` or `&+`?"
+                        "Lex: Found `|-`, did you mean to use `|+` or `&+`?",
                     );
                 } else {
                     throw new Error(
-                        `Lex: Found invalid character after '|': '${next}'. Did you mean to use \`|+\`?`
+                        `Lex: Found invalid character after '|': '${next}'. Did you mean to use \`|+\`?`,
                     );
                 }
             } else if (Variant.Quote.test(chr)) {
@@ -1595,7 +1595,7 @@ class Variant {
                     iterations++;
                     if (iterations >= Variant.LexLimit) {
                         throw new Error(
-                            "Lex: Iterated too many times when parsing string. This might be an internal error, or a very long input string."
+                            "Lex: Iterated too many times when parsing string. This might be an internal error, or a very long input string.",
                         );
                     }
 
@@ -1604,7 +1604,7 @@ class Variant {
                     // \n,\t,\f?,\x?,\u?,\\,\",\'
                     if (current === undefined) {
                         throw new Error(
-                            "Lex: Failed to parse string, found end of input before closing quote."
+                            "Lex: Failed to parse string, found end of input before closing quote.",
                         );
                     } else if (current === openingQuote) {
                         // See code after while loop
@@ -1643,7 +1643,7 @@ class Variant {
                     iterations++;
                     if (iterations >= Variant.LexLimit) {
                         throw new Error(
-                            "Lex: Iterated too many times when parsing identifier. This might be an internal error, or a very long input string."
+                            "Lex: Iterated too many times when parsing identifier. This might be an internal error, or a very long input string.",
                         );
                     }
 
@@ -1659,15 +1659,15 @@ class Variant {
                         position++;
                     } else if (Variant.Quote.test(current)) {
                         throw new Error(
-                            `Lex: Found quote mark (${current}) directly next to parameter type. Did you mean to use the \`|\` operator?`
+                            `Lex: Found quote mark (${current}) directly next to parameter type. Did you mean to use the \`|\` operator?`,
                         );
                     } else if (Variant.Digit.test(current)) {
                         throw new Error(
-                            `Lex: Found digit '${current}' after parameter type, but digits are not supported in those.`
+                            `Lex: Found digit '${current}' after parameter type, but digits are not supported in those.`,
                         );
                     } else {
                         throw new Error(
-                            `Lex: Found invalid parameter type character: '${current}'.`
+                            `Lex: Found invalid parameter type character: '${current}'.`,
                         );
                     }
                 }
@@ -1682,7 +1682,7 @@ class Variant {
                     });
                 } else {
                     throw new Error(
-                        `Lex: Failed to find parameter type '${identifier}'.`
+                        `Lex: Failed to find parameter type '${identifier}'.`,
                     );
                 }
             } else if (
@@ -1701,11 +1701,11 @@ class Variant {
                 });
             } else if (chr === "+") {
                 throw new Error(
-                    "Lex: Lone `+` symbol, did you mean to use `|+` or `&+`?"
+                    "Lex: Lone `+` symbol, did you mean to use `|+` or `&+`?",
                 );
             } else if (chr === "`") {
                 throw new Error(
-                    "Lex: Found ` character, did you mean to use single quote '?"
+                    "Lex: Found ` character, did you mean to use single quote '?",
                 );
             } else {
                 throw new Error(`Lex: Unrecognized symbol: '${chr}'`);
@@ -1900,7 +1900,7 @@ function compareFormat(left: Format, right: Format): boolean {
  * @param arg The argument to check
  */
 function isAlwaysArgument(
-    arg: Arg
+    arg: Arg,
 ): arg is VariableArgument | SettingsSetupAccessArgument | ExpressionArgument {
     if (arg === undefined) return false;
     // Note: we don't include empty expressions since those are trivially not allowed.

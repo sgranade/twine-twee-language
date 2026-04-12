@@ -7,7 +7,7 @@ import { getChapbookDefinitions } from "./chapbook-parser";
 export function getDefinitionAt(
     document: TextDocument,
     position: Position,
-    index: ProjectIndex
+    index: ProjectIndex,
 ): Definition | undefined {
     // The index will find all regular definitions and references.
     // It won't work for custom inserts and modifiers, however, as they're
@@ -16,7 +16,7 @@ export function getDefinitionAt(
     const ref = index.getReferencesAt(document.uri, position);
     if (ref !== undefined) {
         const definition = getChapbookDefinitions(ref.kind, index).find((def) =>
-            def.match.test(ref.contents)
+            def.match.test(ref.contents),
         );
         if (definition !== undefined) {
             return definition.location;

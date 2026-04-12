@@ -55,8 +55,8 @@ export function setEditorDecorationRanges(ranges: DecorationRange[]): void {
                 range.range.start.line,
                 range.range.start.character,
                 range.range.end.line,
-                range.range.end.character
-            )
+                range.range.end.character,
+            ),
         );
     }
 }
@@ -71,7 +71,7 @@ export function updateDecoration(editor: vscode.TextEditor): void {
     // If these searches end up being a bottleneck, consider switching to interval trees
     for (const [type, ranges] of Object.entries(currentRanges)) {
         const containingRanges = ranges.filter((r) =>
-            r.contains(cursorPosition)
+            r.contains(cursorPosition),
         );
         editor.setDecorations(
             decorations[type as unknown as DecorationType],

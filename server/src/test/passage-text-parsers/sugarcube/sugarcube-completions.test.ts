@@ -18,7 +18,7 @@ describe("SugarCube Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ":: Passage\nIt's a $v\n"
+                ":: Passage\nIt's a $v\n",
             );
             const position = Position.create(1, 9);
             const index = new Index();
@@ -44,13 +44,13 @@ describe("SugarCube Completions", () => {
                 doc,
                 position,
                 [],
-                index
+                index,
             );
 
             expect(results?.items.length).to.equal(1);
             expect(results?.items[0]?.label).to.eql("$var1");
             expect(results?.itemDefaults?.editRange).to.eql(
-                Range.create(1, 7, 1, 9)
+                Range.create(1, 7, 1, 9),
             );
         });
 
@@ -59,7 +59,7 @@ describe("SugarCube Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ":: Passage\nIt's a _v\n"
+                ":: Passage\nIt's a _v\n",
             );
             const position = Position.create(1, 9);
             const index = new Index();
@@ -85,7 +85,7 @@ describe("SugarCube Completions", () => {
                 doc,
                 position,
                 [],
-                index
+                index,
             );
 
             expect(results?.items.length).to.equal(1);
@@ -97,7 +97,7 @@ describe("SugarCube Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ":: Passage\n$var1."
+                ":: Passage\n$var1.",
             );
             const position = Position.create(1, 6);
             const index = new Index();
@@ -121,7 +121,7 @@ describe("SugarCube Completions", () => {
                     locations: [
                         Location.create(
                             "fake-uri",
-                            Range.create(9, 10, 11, 12)
+                            Range.create(9, 10, 11, 12),
                         ),
                     ],
                     kind: OSugarCubeSymbolKind.Property,
@@ -131,7 +131,7 @@ describe("SugarCube Completions", () => {
                     locations: [
                         Location.create(
                             "fake-uri",
-                            Range.create(13, 14, 15, 16)
+                            Range.create(13, 14, 15, 16),
                         ),
                     ],
                     kind: OSugarCubeSymbolKind.Property,
@@ -143,7 +143,7 @@ describe("SugarCube Completions", () => {
                 doc,
                 position,
                 [],
-                index
+                index,
             );
 
             expect(results?.items.length).to.equal(2);
@@ -158,14 +158,14 @@ describe("SugarCube Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ":: Passage\nLet's try <<te"
+                ":: Passage\nLet's try <<te",
             );
             const position = Position.create(1, 12);
             const index = new Index();
             const macro = buildMacroInfo({ name: "testy" });
             const mockFunction = ImportMock.mockFunction(
                 macrosModule,
-                "allMacros"
+                "allMacros",
             ).returns({ testy: macro });
             const parser = uut.getSugarCubeParser(undefined);
 
@@ -173,13 +173,13 @@ describe("SugarCube Completions", () => {
                 doc,
                 position,
                 [],
-                index
+                index,
             );
             mockFunction.restore();
 
             expect(results?.items[0].label).to.eql("testy");
             expect(results?.itemDefaults?.editRange).to.eql(
-                Range.create(1, 12, 1, 14)
+                Range.create(1, 12, 1, 14),
             );
         });
 
@@ -188,7 +188,7 @@ describe("SugarCube Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ":: Passage\nLet's try <<te"
+                ":: Passage\nLet's try <<te",
             );
             const position = Position.create(1, 12);
             const index = new Index();
@@ -197,14 +197,14 @@ describe("SugarCube Completions", () => {
                     contents: "testy",
                     location: Location.create(
                         "other-uri",
-                        Range.create(5, 6, 7, 8)
+                        Range.create(5, 6, 7, 8),
                     ),
                     kind: OSugarCubeSymbolKind.KnownMacro,
                 },
             ]);
             const mockFunction = ImportMock.mockFunction(
                 macrosModule,
-                "allMacros"
+                "allMacros",
             ).returns({});
             const parser = uut.getSugarCubeParser(undefined);
 
@@ -212,13 +212,13 @@ describe("SugarCube Completions", () => {
                 doc,
                 position,
                 [],
-                index
+                index,
             );
             mockFunction.restore();
 
             expect(results?.items[0].label).to.eql("testy");
             expect(results?.itemDefaults?.editRange).to.eql(
-                Range.create(1, 12, 1, 14)
+                Range.create(1, 12, 1, 14),
             );
         });
 
@@ -227,7 +227,7 @@ describe("SugarCube Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ":: Passage\nLet's try <<te"
+                ":: Passage\nLet's try <<te",
             );
             const position = Position.create(1, 12);
             const index = new Index();
@@ -236,7 +236,7 @@ describe("SugarCube Completions", () => {
                     contents: "testy",
                     location: Location.create(
                         "other-uri",
-                        Range.create(5, 6, 7, 8)
+                        Range.create(5, 6, 7, 8),
                     ),
                     kind: OSugarCubeSymbolKind.KnownMacro,
                 },
@@ -244,7 +244,7 @@ describe("SugarCube Completions", () => {
             const macro = buildMacroInfo({ name: "testy" });
             const mockFunction = ImportMock.mockFunction(
                 macrosModule,
-                "allMacros"
+                "allMacros",
             ).returns({ testy: macro });
             const parser = uut.getSugarCubeParser(undefined);
 
@@ -252,14 +252,14 @@ describe("SugarCube Completions", () => {
                 doc,
                 position,
                 [],
-                index
+                index,
             );
             mockFunction.restore();
 
             expect(results?.items.length).to.equal(1);
             expect(results?.items[0].label).to.eql("testy");
             expect(results?.itemDefaults?.editRange).to.eql(
-                Range.create(1, 12, 1, 14)
+                Range.create(1, 12, 1, 14),
             );
         });
 
@@ -268,14 +268,14 @@ describe("SugarCube Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ":: Passage\nLet's try <<te>>"
+                ":: Passage\nLet's try <<te>>",
             );
             const position = Position.create(1, 12);
             const index = new Index();
             const macro = buildMacroInfo({ name: "testy" });
             const mockFunction = ImportMock.mockFunction(
                 macrosModule,
-                "allMacros"
+                "allMacros",
             ).returns({ testy: macro });
             const parser = uut.getSugarCubeParser(undefined);
 
@@ -283,13 +283,13 @@ describe("SugarCube Completions", () => {
                 doc,
                 position,
                 [],
-                index
+                index,
             );
             mockFunction.restore();
 
             expect(results?.items[0].label).to.eql("testy");
             expect(results?.itemDefaults?.editRange).to.eql(
-                Range.create(1, 12, 1, 14)
+                Range.create(1, 12, 1, 14),
             );
         });
 
@@ -298,7 +298,7 @@ describe("SugarCube Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ":: Passage\nLet's try <<te"
+                ":: Passage\nLet's try <<te",
             );
             const position = Position.create(1, 14);
             const index = new Index();
@@ -306,7 +306,7 @@ describe("SugarCube Completions", () => {
             macro.arguments = undefined;
             const mockFunction = ImportMock.mockFunction(
                 macrosModule,
-                "allMacros"
+                "allMacros",
             ).returns({ testy: macro });
             const parser = uut.getSugarCubeParser(undefined);
 
@@ -314,7 +314,7 @@ describe("SugarCube Completions", () => {
                 doc,
                 position,
                 [],
-                index
+                index,
             );
             mockFunction.restore();
 
@@ -322,11 +322,11 @@ describe("SugarCube Completions", () => {
             expect(results?.items[0].textEdit).to.eql(
                 TextEdit.replace(
                     Range.create(1, 12, 1, 14),
-                    "testy>>${0}<</testy>>"
-                )
+                    "testy>>${0}<</testy>>",
+                ),
             );
             expect(results?.itemDefaults?.editRange).to.eql(
-                Range.create(1, 12, 1, 14)
+                Range.create(1, 12, 1, 14),
             );
         });
 
@@ -335,7 +335,7 @@ describe("SugarCube Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ":: Passage\nLet's try <<te"
+                ":: Passage\nLet's try <<te",
             );
             const position = Position.create(1, 14);
             const index = new Index();
@@ -343,7 +343,7 @@ describe("SugarCube Completions", () => {
             macro.arguments = true;
             const mockFunction = ImportMock.mockFunction(
                 macrosModule,
-                "allMacros"
+                "allMacros",
             ).returns({ testy: macro });
             const parser = uut.getSugarCubeParser(undefined);
 
@@ -351,7 +351,7 @@ describe("SugarCube Completions", () => {
                 doc,
                 position,
                 [],
-                index
+                index,
             );
             mockFunction.restore();
 
@@ -359,11 +359,11 @@ describe("SugarCube Completions", () => {
             expect(results?.items[0].textEdit).to.eql(
                 TextEdit.replace(
                     Range.create(1, 12, 1, 14),
-                    "testy ${0}>><</testy>>"
-                )
+                    "testy ${0}>><</testy>>",
+                ),
             );
             expect(results?.itemDefaults?.editRange).to.eql(
-                Range.create(1, 12, 1, 14)
+                Range.create(1, 12, 1, 14),
             );
         });
 
@@ -372,7 +372,7 @@ describe("SugarCube Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ":: Passage\nLet's try <<te"
+                ":: Passage\nLet's try <<te",
             );
             const position = Position.create(1, 14);
             const index = new Index();
@@ -380,7 +380,7 @@ describe("SugarCube Completions", () => {
             macro.arguments = ["text"];
             const mockFunction = ImportMock.mockFunction(
                 macrosModule,
-                "allMacros"
+                "allMacros",
             ).returns({ testy: macro });
             const parser = uut.getSugarCubeParser(undefined);
 
@@ -388,7 +388,7 @@ describe("SugarCube Completions", () => {
                 doc,
                 position,
                 [],
-                index
+                index,
             );
             mockFunction.restore();
 
@@ -396,11 +396,11 @@ describe("SugarCube Completions", () => {
             expect(results?.items[0].textEdit).to.eql(
                 TextEdit.replace(
                     Range.create(1, 12, 1, 14),
-                    "testy ${0}>><</testy>>"
-                )
+                    "testy ${0}>><</testy>>",
+                ),
             );
             expect(results?.itemDefaults?.editRange).to.eql(
-                Range.create(1, 12, 1, 14)
+                Range.create(1, 12, 1, 14),
             );
         });
 
@@ -409,7 +409,7 @@ describe("SugarCube Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ":: Passage\nLet's try <<te  >>"
+                ":: Passage\nLet's try <<te  >>",
             );
             const position = Position.create(1, 14);
             const index = new Index();
@@ -417,7 +417,7 @@ describe("SugarCube Completions", () => {
             macro.arguments = false;
             const mockFunction = ImportMock.mockFunction(
                 macrosModule,
-                "allMacros"
+                "allMacros",
             ).returns({ testy: macro });
             const parser = uut.getSugarCubeParser(undefined);
 
@@ -425,7 +425,7 @@ describe("SugarCube Completions", () => {
                 doc,
                 position,
                 [],
-                index
+                index,
             );
             mockFunction.restore();
 
@@ -433,8 +433,8 @@ describe("SugarCube Completions", () => {
             expect(results?.items[0].textEdit).to.eql(
                 TextEdit.replace(
                     Range.create(1, 12, 1, 18),
-                    "testy>>${0}<</testy>>"
-                )
+                    "testy>>${0}<</testy>>",
+                ),
             );
         });
 
@@ -443,7 +443,7 @@ describe("SugarCube Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ":: Passage\nLet's try <<te other stuff"
+                ":: Passage\nLet's try <<te other stuff",
             );
             const position = Position.create(1, 14);
             const index = new Index();
@@ -451,7 +451,7 @@ describe("SugarCube Completions", () => {
             macro.arguments = undefined;
             const mockFunction = ImportMock.mockFunction(
                 macrosModule,
-                "allMacros"
+                "allMacros",
             ).returns({ testy: macro });
             const parser = uut.getSugarCubeParser(undefined);
 
@@ -459,7 +459,7 @@ describe("SugarCube Completions", () => {
                 doc,
                 position,
                 [],
-                index
+                index,
             );
             mockFunction.restore();
 
@@ -467,8 +467,8 @@ describe("SugarCube Completions", () => {
             expect(results?.items[0].textEdit).to.eql(
                 TextEdit.replace(
                     Range.create(1, 12, 1, 14),
-                    "testy>>${0}<</testy>>"
-                )
+                    "testy>>${0}<</testy>>",
+                ),
             );
         });
 
@@ -477,7 +477,7 @@ describe("SugarCube Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ":: Passage\nLet's try <<te other arguments>> stuff"
+                ":: Passage\nLet's try <<te other arguments>> stuff",
             );
             const position = Position.create(1, 14);
             const index = new Index();
@@ -485,7 +485,7 @@ describe("SugarCube Completions", () => {
             macro.arguments = false;
             const mockFunction = ImportMock.mockFunction(
                 macrosModule,
-                "allMacros"
+                "allMacros",
             ).returns({ testy: macro });
             const parser = uut.getSugarCubeParser(undefined);
 
@@ -493,13 +493,13 @@ describe("SugarCube Completions", () => {
                 doc,
                 position,
                 [],
-                index
+                index,
             );
             mockFunction.restore();
 
             expect(results?.items[0].label).to.eql("testy");
             expect(results?.itemDefaults?.editRange).to.eql(
-                Range.create(1, 12, 1, 14)
+                Range.create(1, 12, 1, 14),
             );
         });
 
@@ -508,14 +508,14 @@ describe("SugarCube Completions", () => {
                 "fake-uri",
                 "",
                 0,
-                ":: Passage\nLet's try <<other>> <<testy fooble nope>>"
+                ":: Passage\nLet's try <<other>> <<testy fooble nope>>",
             );
             const position = Position.create(1, 41);
             const index = new Index();
             const macro = buildMacroInfo({ name: "testy", container: true });
             const mockFunction = ImportMock.mockFunction(
                 macrosModule,
-                "allMacros"
+                "allMacros",
             ).returns({ testy: macro });
             const parser = uut.getSugarCubeParser(undefined);
 
@@ -523,7 +523,7 @@ describe("SugarCube Completions", () => {
                 doc,
                 position,
                 [],
-                index
+                index,
             );
             mockFunction.restore();
 

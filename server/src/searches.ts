@@ -19,7 +19,7 @@ import { getReferencesToSymbolAt } from "./passage-text-parsers/chapbook/chapboo
 export function prepareRename(
     uri: string,
     position: Position,
-    index: ProjectIndex
+    index: ProjectIndex,
 ): Range | undefined {
     // Look for a definition or reference at the current location
     const symbol = index.getDefinitionAt(uri, position);
@@ -30,7 +30,7 @@ export function prepareRename(
     const refs = index.getReferencesAt(uri, position);
     if (refs !== undefined) {
         const match = refs.locations.find((loc) =>
-            positionInRange(position, loc.range)
+            positionInRange(position, loc.range),
         );
         if (match !== undefined) {
             return match.range;
@@ -52,14 +52,14 @@ export function generateRenames(
     uri: string,
     position: Position,
     newName: string,
-    index: ProjectIndex
+    index: ProjectIndex,
 ): WorkspaceEdit | null {
     // Get locations of symbols to change
     const locationsToChange = getReferencesToSymbolAt(
         uri,
         position,
         index,
-        true
+        true,
     );
     if (locationsToChange === undefined) {
         return null;

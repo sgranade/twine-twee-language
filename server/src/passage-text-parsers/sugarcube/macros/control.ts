@@ -35,7 +35,7 @@ export const ifMacro: MacroInfo = {
                         state.textDocument,
                         elseifMacro.fullText,
                         elseifMacro.at,
-                        "<<elseif>> can't come after an <<else>>"
+                        "<<elseif>> can't come after an <<else>>",
                     );
                     diagnostic.relatedInformation = [
                         DiagnosticRelatedInformation.create(
@@ -43,15 +43,15 @@ export const ifMacro: MacroInfo = {
                                 state.textDocument.uri,
                                 Range.create(
                                     state.textDocument.positionAt(
-                                        children[i].at
+                                        children[i].at,
                                     ),
                                     state.textDocument.positionAt(
                                         children[i].at +
-                                            children[i].fullText.length
-                                    )
-                                )
+                                            children[i].fullText.length,
+                                    ),
+                                ),
                             ),
-                            "The <<else>> before this <<elseif>>"
+                            "The <<else>> before this <<elseif>>",
                         ),
                     ];
                     state.callbacks.onParseError(diagnostic);

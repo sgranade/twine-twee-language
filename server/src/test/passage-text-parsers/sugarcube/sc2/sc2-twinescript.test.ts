@@ -210,7 +210,7 @@ describe("SugarCube TwineScript", () => {
             // No arrange
 
             const result = uut.isTwineScriptExpression(
-                '$var to (17 + 23) - "text"'
+                '$var to (17 + 23) - "text"',
             );
 
             expect(result).to.be.true;
@@ -225,7 +225,7 @@ describe("SugarCube TwineScript", () => {
                 "fake-uri",
                 "twine",
                 1,
-                `twinescript: ${expression}`
+                `twinescript: ${expression}`,
             );
             const storyState: StoryFormatParsingState = {
                 passageTokens: {},
@@ -235,7 +235,7 @@ describe("SugarCube TwineScript", () => {
                 expression,
                 offset,
                 textDocument,
-                storyState
+                storyState,
             );
             const result = storyState.passageTokens;
 
@@ -268,7 +268,7 @@ describe("SugarCube TwineScript", () => {
                 "fake-uri",
                 "twine",
                 1,
-                `twinescript:\n${expression}`
+                `twinescript:\n${expression}`,
             );
             const storyState: StoryFormatParsingState = {
                 passageTokens: {},
@@ -278,7 +278,7 @@ describe("SugarCube TwineScript", () => {
                 expression,
                 offset,
                 textDocument,
-                storyState
+                storyState,
             );
 
             expect(result[0]).to.eql([
@@ -286,7 +286,7 @@ describe("SugarCube TwineScript", () => {
                     contents: "$varbl",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(1, 0, 1, 6)
+                        Range.create(1, 0, 1, 6),
                     ),
                 },
             ]);
@@ -300,7 +300,7 @@ describe("SugarCube TwineScript", () => {
                 "fake-uri",
                 "twine",
                 1,
-                `twinescript:\n${expression}`
+                `twinescript:\n${expression}`,
             );
             const storyState: StoryFormatParsingState = {
                 passageTokens: {},
@@ -310,7 +310,7 @@ describe("SugarCube TwineScript", () => {
                 expression,
                 offset,
                 textDocument,
-                storyState
+                storyState,
             );
 
             expect(result[1]).to.eql([
@@ -318,7 +318,7 @@ describe("SugarCube TwineScript", () => {
                     contents: "rootprop1",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(1, 7, 1, 16)
+                        Range.create(1, 7, 1, 16),
                     ),
                     prefix: "$varbl",
                 },
@@ -326,7 +326,7 @@ describe("SugarCube TwineScript", () => {
                     contents: "rootprop2",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(1, 17, 1, 26)
+                        Range.create(1, 17, 1, 26),
                     ),
                     prefix: "$varbl.rootprop1",
                 },
@@ -340,7 +340,7 @@ describe("SugarCube TwineScript", () => {
                 "fake-uri",
                 "twine",
                 1,
-                `twinescript: ${expression}`
+                `twinescript: ${expression}`,
             );
             const storyState: StoryFormatParsingState = {
                 passageTokens: {},
@@ -350,7 +350,7 @@ describe("SugarCube TwineScript", () => {
                 expression,
                 offset,
                 textDocument,
-                storyState
+                storyState,
             );
             const result = storyState.passageTokens;
 
@@ -419,7 +419,7 @@ describe("SugarCube TwineScript", () => {
                 "fake-uri",
                 "twine",
                 1,
-                `twinescript: ${expression}`
+                `twinescript: ${expression}`,
             );
             const storyState: StoryFormatParsingState = {
                 passageTokens: {},
@@ -429,7 +429,7 @@ describe("SugarCube TwineScript", () => {
                 expression,
                 offset,
                 textDocument,
-                storyState
+                storyState,
             );
             const result = storyState.passageTokens;
 
@@ -498,7 +498,7 @@ describe("SugarCube TwineScript", () => {
                 "fake-uri",
                 "twine",
                 1,
-                `twinescript: ${expression}`
+                `twinescript: ${expression}`,
             );
             const storyState: StoryFormatParsingState = {
                 passageTokens: {},
@@ -508,7 +508,7 @@ describe("SugarCube TwineScript", () => {
                 expression,
                 offset,
                 textDocument,
-                storyState
+                storyState,
             );
             const result = storyState.passageTokens;
 
@@ -553,7 +553,7 @@ describe("SugarCube TwineScript", () => {
                 "fake-uri",
                 "twine",
                 1,
-                `twinescript: ${expression}`
+                `twinescript: ${expression}`,
             );
             const storyState: StoryFormatParsingState = {
                 passageTokens: {},
@@ -563,7 +563,7 @@ describe("SugarCube TwineScript", () => {
                 expression,
                 offset,
                 textDocument,
-                storyState
+                storyState,
             );
             const result = storyState.passageTokens;
 

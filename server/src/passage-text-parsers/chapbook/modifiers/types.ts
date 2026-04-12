@@ -19,6 +19,6 @@ export interface ModifierInfo extends ChapbookFunctionInfo {
     parse: (
         text: string,
         state: ParsingState,
-        chapbookState: ChapbookParsingState
+        chapbookState: ChapbookParsingState,
     ) => undefined;
 }

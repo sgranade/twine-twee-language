@@ -25,7 +25,7 @@ describe("JS Parser", () => {
             expression,
             offset,
             state.textDocument,
-            storyState
+            storyState,
         );
         const result = storyState.passageTokens;
 
@@ -56,7 +56,7 @@ describe("JS Parser", () => {
             expression,
             offset,
             state.textDocument,
-            storyState
+            storyState,
         );
         const result = storyState.passageTokens;
 
@@ -87,7 +87,7 @@ describe("JS Parser", () => {
             expression,
             offset,
             state.textDocument,
-            storyState
+            storyState,
         );
         const result = storyState.passageTokens;
 
@@ -118,7 +118,7 @@ describe("JS Parser", () => {
             expression,
             offset,
             state.textDocument,
-            storyState
+            storyState,
         );
         const result = storyState.passageTokens;
 
@@ -147,7 +147,7 @@ describe("JS Parser", () => {
             expression,
             offset,
             state.textDocument,
-            storyState
+            storyState,
         );
         const result = storyState.passageTokens;
 
@@ -176,7 +176,7 @@ describe("JS Parser", () => {
             expression,
             offset,
             state.textDocument,
-            storyState
+            storyState,
         );
         const result = storyState.passageTokens;
 
@@ -205,7 +205,7 @@ describe("JS Parser", () => {
             expression,
             offset,
             state.textDocument,
-            storyState
+            storyState,
         );
         const result = storyState.passageTokens;
 
@@ -234,7 +234,7 @@ describe("JS Parser", () => {
             expression,
             offset,
             state.textDocument,
-            storyState
+            storyState,
         );
         const result = storyState.passageTokens;
 
@@ -263,7 +263,7 @@ describe("JS Parser", () => {
             expression,
             offset,
             state.textDocument,
-            storyState
+            storyState,
         );
         const result = storyState.passageTokens;
 
@@ -304,7 +304,7 @@ describe("JS Parser", () => {
             expression,
             offset,
             state.textDocument,
-            storyState
+            storyState,
         );
         const result = storyState.passageTokens;
 
@@ -333,7 +333,7 @@ describe("JS Parser", () => {
             expression,
             offset,
             state.textDocument,
-            storyState
+            storyState,
         );
         const result = storyState.passageTokens;
 
@@ -368,7 +368,7 @@ describe("JS Parser", () => {
             expression,
             offset,
             state.textDocument,
-            storyState
+            storyState,
         );
         const result = storyState.passageTokens;
 
@@ -397,7 +397,7 @@ describe("JS Parser", () => {
             expression,
             offset,
             state.textDocument,
-            storyState
+            storyState,
         );
         const result = storyState.passageTokens;
 
@@ -426,7 +426,7 @@ describe("JS Parser", () => {
             expression,
             offset,
             state.textDocument,
-            storyState
+            storyState,
         );
         const result = storyState.passageTokens;
 
@@ -473,7 +473,7 @@ describe("JS Parser", () => {
             expression,
             offset,
             state.textDocument,
-            storyState
+            storyState,
         );
 
         expect(result[0]).to.eql([
@@ -503,7 +503,7 @@ describe("JS Parser", () => {
             expression,
             offset,
             state.textDocument,
-            storyState
+            storyState,
         );
 
         expect(result[0]).to.eql([
@@ -515,7 +515,7 @@ describe("JS Parser", () => {
                 contents: "val1",
                 location: Location.create(
                     "fake-uri",
-                    Range.create(1, 25, 1, 29)
+                    Range.create(1, 25, 1, 29),
                 ),
             },
         ]);
@@ -541,7 +541,7 @@ describe("JS Parser", () => {
             expression,
             offset,
             state.textDocument,
-            storyState
+            storyState,
         );
 
         expect(result[1]).to.eql([
@@ -549,7 +549,7 @@ describe("JS Parser", () => {
                 contents: "rootprop1",
                 location: Location.create(
                     "fake-uri",
-                    Range.create(1, 7, 1, 16)
+                    Range.create(1, 7, 1, 16),
                 ),
                 prefix: "var1",
             },
@@ -557,7 +557,7 @@ describe("JS Parser", () => {
                 contents: "rootprop2",
                 location: Location.create(
                     "fake-uri",
-                    Range.create(1, 17, 1, 26)
+                    Range.create(1, 17, 1, 26),
                 ),
                 prefix: "var1.rootprop1",
             },
@@ -581,7 +581,7 @@ describe("JS Parser", () => {
             expression,
             offset,
             state.textDocument,
-            storyState
+            storyState,
         );
 
         expect(result[1]).to.eql([
@@ -589,7 +589,7 @@ describe("JS Parser", () => {
                 contents: "rootprop1",
                 location: Location.create(
                     "fake-uri",
-                    Range.create(1, 7, 1, 16)
+                    Range.create(1, 7, 1, 16),
                 ),
                 prefix: "var1",
             },
@@ -597,7 +597,7 @@ describe("JS Parser", () => {
                 contents: "rootprop2",
                 location: Location.create(
                     "fake-uri",
-                    Range.create(1, 17, 1, 26)
+                    Range.create(1, 17, 1, 26),
                 ),
                 prefix: "var1.rootprop1",
             },
@@ -621,7 +621,7 @@ describe("JS Parser", () => {
             expression,
             offset,
             state.textDocument,
-            storyState
+            storyState,
         );
 
         expect(result[0]).to.eql([
@@ -649,7 +649,7 @@ describe("JS Parser", () => {
             expression,
             offset,
             state.textDocument,
-            storyState
+            storyState,
         );
 
         expect(result[0]).to.eql([
@@ -677,7 +677,7 @@ describe("JS Parser", () => {
             expression,
             offset,
             state.textDocument,
-            storyState
+            storyState,
         );
 
         expect(result[0]).to.eql([
@@ -689,7 +689,7 @@ describe("JS Parser", () => {
                 contents: "var2",
                 location: Location.create(
                     "fake-uri",
-                    Range.create(1, 9, 1, 13)
+                    Range.create(1, 9, 1, 13),
                 ),
             },
         ]);

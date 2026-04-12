@@ -36,14 +36,14 @@ describe("Chapbook Hover", () => {
         });
         const mockFunction = ImportMock.mockFunction(
             modifiersModule,
-            "all"
+            "all",
         ).returns([modifier]);
 
         const result = parser?.generateHover(
             doc,
             Position.create(1, 3),
             [],
-            index
+            index,
         );
         mockFunction.restore();
 
@@ -75,14 +75,14 @@ describe("Chapbook Hover", () => {
         modifier.syntax = "My syntax";
         const mockFunction = ImportMock.mockFunction(
             modifiersModule,
-            "all"
+            "all",
         ).returns([modifier]);
 
         const result = parser?.generateHover(
             doc,
             Position.create(1, 3),
             [],
-            index
+            index,
         );
         mockFunction.restore();
 
@@ -102,7 +102,7 @@ describe("Chapbook Hover", () => {
                 contents: "custom modifier",
                 location: Location.create(
                     "source-uri",
-                    Range.create(5, 6, 7, 8)
+                    Range.create(5, 6, 7, 8),
                 ),
                 kind: OChapbookSymbolKind.CustomModifier,
                 description: "This is a custom modifier!",
@@ -121,14 +121,14 @@ describe("Chapbook Hover", () => {
         const parser = uut.getChapbookParser(undefined);
         const mockFunction = ImportMock.mockFunction(
             modifiersModule,
-            "all"
+            "all",
         ).returns([]);
 
         const result = parser?.generateHover(
             doc,
             Position.create(1, 3),
             [],
-            index
+            index,
         );
         mockFunction.restore();
 
@@ -148,7 +148,7 @@ describe("Chapbook Hover", () => {
                 contents: "custom modifier",
                 location: Location.create(
                     "source-uri",
-                    Range.create(5, 6, 7, 8)
+                    Range.create(5, 6, 7, 8),
                 ),
                 kind: OChapbookSymbolKind.CustomModifier,
                 syntax: "[custom modifier]",
@@ -168,14 +168,14 @@ describe("Chapbook Hover", () => {
         const parser = uut.getChapbookParser(undefined);
         const mockFunction = ImportMock.mockFunction(
             modifiersModule,
-            "all"
+            "all",
         ).returns([]);
 
         const result = parser?.generateHover(
             doc,
             Position.create(1, 3),
             [],
-            index
+            index,
         );
         mockFunction.restore();
 
@@ -195,7 +195,7 @@ describe("Chapbook Hover", () => {
                 contents: "custom modifier",
                 location: Location.create(
                     "source-uri",
-                    Range.create(5, 6, 7, 8)
+                    Range.create(5, 6, 7, 8),
                 ),
                 kind: OChapbookSymbolKind.CustomModifier,
                 match: /custom\s+modifier/i,
@@ -213,14 +213,14 @@ describe("Chapbook Hover", () => {
         const parser = uut.getChapbookParser(undefined);
         const mockFunction = ImportMock.mockFunction(
             modifiersModule,
-            "all"
+            "all",
         ).returns([]);
 
         const result = parser?.generateHover(
             doc,
             Position.create(1, 3),
             [],
-            index
+            index,
         );
         mockFunction.restore();
 
@@ -246,14 +246,14 @@ describe("Chapbook Hover", () => {
         });
         const mockFunction = ImportMock.mockFunction(
             insertsModule,
-            "all"
+            "all",
         ).returns([insert]);
 
         const result = parser?.generateHover(
             doc,
             Position.create(1, 3),
             [],
-            index
+            index,
         );
         mockFunction.restore();
 
@@ -285,14 +285,14 @@ describe("Chapbook Hover", () => {
         insert.syntax = "{mock insert}";
         const mockFunction = ImportMock.mockFunction(
             insertsModule,
-            "all"
+            "all",
         ).returns([insert]);
 
         const result = parser?.generateHover(
             doc,
             Position.create(1, 3),
             [],
-            index
+            index,
         );
         mockFunction.restore();
 
@@ -312,7 +312,7 @@ describe("Chapbook Hover", () => {
                 contents: "custom\\s+insert",
                 location: Location.create(
                     "source-uri",
-                    Range.create(5, 6, 7, 8)
+                    Range.create(5, 6, 7, 8),
                 ),
                 kind: OChapbookSymbolKind.CustomInsert,
                 description: "This is a custom insert!",
@@ -331,14 +331,14 @@ describe("Chapbook Hover", () => {
         const parser = uut.getChapbookParser(undefined);
         const mockFunction = ImportMock.mockFunction(
             insertsModule,
-            "all"
+            "all",
         ).returns([]);
 
         const result = parser?.generateHover(
             doc,
             Position.create(1, 3),
             [],
-            index
+            index,
         );
         mockFunction.restore();
 
@@ -358,7 +358,7 @@ describe("Chapbook Hover", () => {
                 contents: "custom\\s+insert",
                 location: Location.create(
                     "source-uri",
-                    Range.create(5, 6, 7, 8)
+                    Range.create(5, 6, 7, 8),
                 ),
                 kind: OChapbookSymbolKind.CustomInsert,
                 description: "This is a custom insert!",
@@ -378,14 +378,14 @@ describe("Chapbook Hover", () => {
         const parser = uut.getChapbookParser(undefined);
         const mockFunction = ImportMock.mockFunction(
             insertsModule,
-            "all"
+            "all",
         ).returns([]);
 
         const result = parser?.generateHover(
             doc,
             Position.create(1, 3),
             [],
-            index
+            index,
         );
         mockFunction.restore();
 
@@ -405,7 +405,7 @@ describe("Chapbook Hover", () => {
                 contents: "custom\\s+insert",
                 location: Location.create(
                     "source-uri",
-                    Range.create(5, 6, 7, 8)
+                    Range.create(5, 6, 7, 8),
                 ),
                 kind: OChapbookSymbolKind.CustomInsert,
                 description: "This is a custom insert!",
@@ -424,14 +424,14 @@ describe("Chapbook Hover", () => {
         const parser = uut.getChapbookParser(undefined);
         const mockFunction = ImportMock.mockFunction(
             insertsModule,
-            "all"
+            "all",
         ).returns([]);
 
         const result = parser?.generateHover(
             doc,
             Position.create(1, 3),
             [],
-            index
+            index,
         );
         mockFunction.restore();
 

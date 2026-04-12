@@ -37,7 +37,7 @@ function createStringCompletion(
     label: string,
     range: Range,
     kind?: CompletionItemKind,
-    documentation?: string
+    documentation?: string,
 ): CompletionItem {
     const newText = `"${label}"`;
     const item = {
@@ -66,13 +66,13 @@ function createStringCompletions(
     labels: readonly string[],
     range: Range,
     kind?: CompletionItemKind,
-    documentation?: string
+    documentation?: string,
 ): CompletionItem[] {
     const completions: CompletionItem[] = [];
 
     for (const label of labels) {
         completions.push(
-            createStringCompletion(label, range, kind, documentation)
+            createStringCompletion(label, range, kind, documentation),
         );
     }
 
@@ -91,7 +91,7 @@ function createStringCompletions(
 function generateStoryDataCompletions(
     embeddedDocument: EmbeddedDocument,
     offset: number,
-    index: ProjectIndex
+    index: ProjectIndex,
 ): CompletionItem[] {
     const completions: CompletionItem[] = [];
 
@@ -100,7 +100,7 @@ function generateStoryDataCompletions(
     if (node?.parent?.type === "property") {
         const nodeRange = Range.create(
             embeddedDocument.document.positionAt(node.offset),
-            embeddedDocument.document.positionAt(node.offset + node.length)
+            embeddedDocument.document.positionAt(node.offset + node.length),
         );
 
         // A new IFID value
@@ -110,8 +110,8 @@ function generateStoryDataCompletions(
                     v4().toUpperCase(),
                     nodeRange,
                     CompletionItemKind.Text,
-                    "Newly-generated IFID"
-                )
+                    "Newly-generated IFID",
+                ),
             );
         }
 
@@ -121,8 +121,8 @@ function generateStoryDataCompletions(
                 ...createStringCompletions(
                     "Chapbook|Harlowe|SugarCube".split("|"),
                     nodeRange,
-                    CompletionItemKind.Text
-                )
+                    CompletionItemKind.Text,
+                ),
             );
         }
 
@@ -133,8 +133,8 @@ function generateStoryDataCompletions(
                 ...createStringCompletions(
                     [...uniquePassageNames],
                     nodeRange,
-                    CompletionItemKind.Class
-                )
+                    CompletionItemKind.Class,
+                ),
             );
         }
 
@@ -147,8 +147,8 @@ function generateStoryDataCompletions(
                 ...createStringCompletions(
                     "gray|red|orange|yellow|green|blue|purple".split("|"),
                     nodeRange,
-                    CompletionItemKind.Color
-                )
+                    CompletionItemKind.Color,
+                ),
             );
         }
     }
@@ -166,7 +166,7 @@ function generateStoryDataCompletions(
  * @returns List with defaults added to each individual completion item.
  */
 function removeCompletionListItemDefaults(
-    completionList: CompletionList
+    completionList: CompletionList,
 ): CompletionList {
     const insertTextFormat = completionList.itemDefaults?.insertTextFormat;
     const editRange = completionList.itemDefaults?.editRange;
@@ -201,7 +201,7 @@ async function generateEmbeddedDocumentCompletions(
     embeddedDocument: EmbeddedDocument,
     document: TextDocument,
     position: Position,
-    index: ProjectIndex
+    index: ProjectIndex,
 ): Promise<CompletionList | null> {
     const completionOffset = document.offsetAt(position);
 
@@ -220,7 +220,7 @@ async function generateEmbeddedDocumentCompletions(
         // If one of the completion items is the IFID property, generate a
         // new IFID value to go with it
         const ifidItem = completions.items.find(
-            (item) => item.insertText === '"ifid": "$1"'
+            (item) => item.insertText === '"ifid": "$1"',
         );
         if (ifidItem !== undefined) {
             ifidItem.insertText = `"ifid": "${v4().toUpperCase()}"$1`;
@@ -233,8 +233,8 @@ async function generateEmbeddedDocumentCompletions(
             ...generateStoryDataCompletions(
                 embeddedDocument,
                 completionOffset - embeddedDocOffset,
-                index
-            )
+                index,
+            ),
         );
     }
 
@@ -247,7 +247,7 @@ async function generateEmbeddedDocumentCompletions(
                     embeddedDocument.document,
                     item.textEdit.range,
                     document,
-                    embeddedDocOffset
+                    embeddedDocOffset,
                 );
             }
         }
@@ -269,7 +269,7 @@ export async function generateCompletions(
     document: TextDocument,
     position: Position,
     index: ProjectIndex,
-    hasCompletionListItemDefaults: boolean
+    hasCompletionListItemDefaults: boolean,
 ): Promise<CompletionList | null> {
     const completionOffset = document.offsetAt(position);
     let passageDocument: EmbeddedDocument | undefined;
@@ -291,7 +291,7 @@ export async function generateCompletions(
                     embeddedDocument,
                     document,
                     position,
-                    index
+                    index,
                 );
             }
         }
@@ -353,7 +353,7 @@ export async function generateCompletions(
             }
             const replacementRange = Range.create(
                 document.positionAt(linkBeginOffset),
-                document.positionAt(linkEndOffset)
+                document.positionAt(linkEndOffset),
             );
 
             let completionList = CompletionList.create(
@@ -363,7 +363,7 @@ export async function generateCompletions(
                         kind: CompletionItemKind.Class,
                     };
                 }),
-                false
+                false,
             );
             completionList.itemDefaults = {
                 editRange: replacementRange,
@@ -386,7 +386,7 @@ export async function generateCompletions(
                 document,
                 position,
                 deferredEmbeddedDocuments,
-                index
+                index,
             );
             if (completionList !== null) {
                 if (!hasCompletionListItemDefaults) {
@@ -404,7 +404,7 @@ export async function generateCompletions(
             passageDocument,
             document,
             position,
-            index
+            index,
         );
     }
 

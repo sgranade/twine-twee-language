@@ -12,25 +12,25 @@ describe("Embedded Languages", () => {
                 "parent-uri",
                 "parent lang",
                 17,
-                "Line 1\nLine 2!\nLine 3"
+                "Line 1\nLine 2!\nLine 3",
             );
             const changedParent = TextDocument.create(
                 "parent-uri",
                 "parent lang",
                 18,
-                "Line 1\nLine 2 - changed!\nLine 3"
+                "Line 1\nLine 2 - changed!\nLine 3",
             );
             const embeddedDocument = uut.EmbeddedDocument.create(
                 "child-uri",
                 "child lang",
                 "Line 2!\nLine 3",
                 7,
-                originalParent
+                originalParent,
             );
 
             const result = uut.updateEmbeddedDocument(
                 embeddedDocument,
-                changedParent
+                changedParent,
             );
 
             expect(result).to.eql({
@@ -38,7 +38,7 @@ describe("Embedded Languages", () => {
                     "child-uri",
                     "child lang",
                     18,
-                    "Line 2 - changed!\nLine 3"
+                    "Line 2 - changed!\nLine 3",
                 ),
                 range: Range.create(1, 0, 2, 6),
                 isPassage: false,
@@ -51,25 +51,25 @@ describe("Embedded Languages", () => {
                 "parent-uri",
                 "parent lang",
                 17,
-                "Line 1\nLine 2!\nLine 3"
+                "Line 1\nLine 2!\nLine 3",
             );
             const supposedlyChangedParent = TextDocument.create(
                 "parent-uri",
                 "parent lang",
                 17,
-                "Line 1\nLine 2 - changed!\nLine 3"
+                "Line 1\nLine 2 - changed!\nLine 3",
             );
             const embeddedDocument = uut.EmbeddedDocument.create(
                 "child-uri",
                 "child lang",
                 "Line 2!\nLine 3",
                 7,
-                originalParent
+                originalParent,
             );
 
             const result = uut.updateEmbeddedDocument(
                 embeddedDocument,
-                supposedlyChangedParent
+                supposedlyChangedParent,
             );
 
             expect(result).to.eql({
@@ -77,7 +77,7 @@ describe("Embedded Languages", () => {
                     "child-uri",
                     "child lang",
                     17,
-                    "Line 2!\nLine 3"
+                    "Line 2!\nLine 3",
                 ),
                 range: Range.create(1, 0, 2, 6),
                 isPassage: false,

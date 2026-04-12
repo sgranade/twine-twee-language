@@ -29,7 +29,7 @@ export const revealLink: InsertInfo = {
                     passageProp[0].text,
                     passageProp[0].at,
                     'The "passage" property will be ignored',
-                    state
+                    state,
                 );
             }
         } else if (passageProp === undefined) {
@@ -37,7 +37,7 @@ export const revealLink: InsertInfo = {
                 args.name.text,
                 args.name.at,
                 'Either the "passage" or "text" property must be defined',
-                state
+                state,
             );
         }
     },

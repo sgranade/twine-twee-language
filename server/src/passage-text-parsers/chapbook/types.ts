@@ -143,7 +143,7 @@ export namespace ChapbookFunctionInfo {
      */
     export function exists(
         info: ChapbookFunctionInfo,
-        version: string
+        version: string,
     ): boolean {
         if (info.since === undefined) return true;
         if (info.removed === undefined)
@@ -162,7 +162,7 @@ export namespace ChapbookFunctionInfo {
      */
     export function isDeprecated(
         info: ChapbookFunctionInfo,
-        version: string
+        version: string,
     ): boolean {
         if (info.deprecated === undefined) return false;
         return versionCompare(version, info.deprecated) >= 0;

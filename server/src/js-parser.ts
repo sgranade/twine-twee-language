@@ -110,7 +110,7 @@ function propertyScope(node: acorn.MemberExpression): string | undefined {
 function fullAncestorTokenizingCallback(
     rawNode: acorn.Node,
     _: unknown,
-    ancestors: acorn.Node[]
+    ancestors: acorn.Node[],
 ): void {
     // We end up setting semantic tokens for some nodes multiple times (for
     // example, an Identifier and then again for a property that's an identifier).
@@ -260,7 +260,7 @@ export function parseJSStrict(text: string, isProgram: boolean): acorn.Node {
  */
 export function parseJS(
     text: string,
-    isProgram: boolean
+    isProgram: boolean,
 ): acorn.Node | undefined {
     try {
         return parseJSStrict(text, isProgram);
@@ -285,7 +285,7 @@ export function parseJS(
  */
 export function tokenizeParsedJS(
     text: string,
-    ast: acorn.Node
+    ast: acorn.Node,
 ): Record<number, astUnprocessedToken> {
     currentExpression = text;
     unprocessedTokens = {};
@@ -313,7 +313,7 @@ export function tokenizeJavaScript(
     text: string,
     offset: number,
     document: TextDocument,
-    storyFormatState: StoryFormatParsingState
+    storyFormatState: StoryFormatParsingState,
 ): [Label[], JSPropertyLabel[]] {
     const vars: Label[] = [];
     const props: JSPropertyLabel[] = [];
@@ -329,7 +329,7 @@ export function tokenizeJavaScript(
                     location: createLocationFor(
                         token.text,
                         offset + token.at,
-                        document
+                        document,
                     ),
                 });
             } else if (
@@ -341,7 +341,7 @@ export function tokenizeJavaScript(
                     location: createLocationFor(
                         token.text,
                         offset + token.at,
-                        document
+                        document,
                     ),
                     prefix: token.scope,
                 });
@@ -351,7 +351,7 @@ export function tokenizeJavaScript(
                 offset + token.at,
                 token.type,
                 token.modifiers,
-                storyFormatState
+                storyFormatState,
             );
         }
     }

@@ -30,7 +30,7 @@ export const link: InsertInfo = {
                         content,
                         args.firstArgument.at + 1,
                         state,
-                        chapbookState
+                        chapbookState,
                     );
                 }
             }

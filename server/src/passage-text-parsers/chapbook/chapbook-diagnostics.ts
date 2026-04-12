@@ -29,20 +29,20 @@ function generateCustomInsertDiagnostics(
     document: TextDocument,
     index: ProjectIndex,
     text: string,
-    diagnosticsOptions: DiagnosticsOptions
+    diagnosticsOptions: DiagnosticsOptions,
 ): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];
 
     const customInserts = getChapbookDefinitions(
         OChapbookSymbolKind.CustomInsert,
-        index
+        index,
     );
     for (const insertRef of index.getReferences(
         document.uri,
-        OChapbookSymbolKind.CustomInsert
+        OChapbookSymbolKind.CustomInsert,
     ) ?? []) {
         const insert = customInserts.find((i) =>
-            i.match.test(insertRef.contents)
+            i.match.test(insertRef.contents),
         );
         if (insert !== undefined) {
             // We need to re-parse the custom insert and check for errors
@@ -58,7 +58,7 @@ function generateCustomInsertDiagnostics(
                 // Find the start of the insert
                 const startNdx = findStartOfModifierOrInsert(
                     text,
-                    document.offsetAt(loc.range.start)
+                    document.offsetAt(loc.range.start),
                 );
                 if (startNdx === undefined) continue;
 
@@ -74,8 +74,8 @@ function generateCustomInsertDiagnostics(
                         insert,
                         insertTokens,
                         document,
-                        index.getStoryData()?.storyFormat?.formatVersion
-                    )
+                        index.getStoryData()?.storyFormat?.formatVersion,
+                    ),
                 );
             }
         } else if (diagnosticsOptions.warnings.unknownMacro) {
@@ -86,9 +86,9 @@ function generateCustomInsertDiagnostics(
                         `Insert "${insertRef.contents}" not recognized`,
                         DiagnosticSeverity.Warning,
                         undefined,
-                        "Twine"
-                    )
-                )
+                        "Twine",
+                    ),
+                ),
             );
         }
     }
@@ -109,20 +109,20 @@ function generateCustomModifierDiagnostics(
     document: TextDocument,
     index: ProjectIndex,
     text: string,
-    diagnosticsOptions: DiagnosticsOptions
+    diagnosticsOptions: DiagnosticsOptions,
 ): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];
 
     const customModifiers = getChapbookDefinitions(
         OChapbookSymbolKind.CustomModifier,
-        index
+        index,
     );
     for (const modRef of index.getReferences(
         document.uri,
-        OChapbookSymbolKind.CustomModifier
+        OChapbookSymbolKind.CustomModifier,
     ) ?? []) {
         const modifier = customModifiers.find((i) =>
-            i.match.test(modRef.contents)
+            i.match.test(modRef.contents),
         );
         if (modifier !== undefined) {
             // We only validate arguments if the modifier has ones defined
@@ -132,7 +132,7 @@ function generateCustomModifierDiagnostics(
                 // Find the start of the modifier
                 let startNdx = findStartOfModifierOrInsert(
                     text,
-                    document.offsetAt(loc.range.start)
+                    document.offsetAt(loc.range.start),
                 );
                 if (startNdx === undefined) continue;
 
@@ -149,8 +149,8 @@ function generateCustomModifierDiagnostics(
                             modTokens.name,
                             modTokens.firstArgument,
                             index.getStoryData()?.storyFormat?.formatVersion,
-                            document
-                        )
+                            document,
+                        ),
                     );
                 }
             }
@@ -162,9 +162,9 @@ function generateCustomModifierDiagnostics(
                         `Modifier "${modRef.contents}" not recognized`,
                         DiagnosticSeverity.Warning,
                         undefined,
-                        "Twine"
-                    )
-                )
+                        "Twine",
+                    ),
+                ),
             );
         }
     }
@@ -183,7 +183,7 @@ function generateCustomModifierDiagnostics(
 export function generateDiagnostics(
     document: TextDocument,
     index: ProjectIndex,
-    diagnosticsOptions: DiagnosticsOptions
+    diagnosticsOptions: DiagnosticsOptions,
 ): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];
     const text = document.getText();
@@ -194,25 +194,25 @@ export function generateDiagnostics(
         propSetNamesWithDuplicates.push(
             ...(index
                 .getReferences(uri, OChapbookSymbolKind.PropertySet)
-                ?.map((ref) => ref.contents) ?? [])
+                ?.map((ref) => ref.contents) ?? []),
         );
     }
     const propSetNames = new Set(propSetNamesWithDuplicates);
     const varNamesWithDuplicates = lookupVariables.map(
-        (x) => x.split(".", 1)[0]
+        (x) => x.split(".", 1)[0],
     );
     for (const uri of index.getIndexedUris()) {
         varNamesWithDuplicates.push(
             ...(index
                 .getReferences(uri, OChapbookSymbolKind.VariableSet)
-                ?.map((ref) => ref.contents) ?? [])
+                ?.map((ref) => ref.contents) ?? []),
         );
     }
     const varSetNames = new Set(varNamesWithDuplicates);
 
     for (const varRef of index.getReferences(
         document.uri,
-        OChapbookSymbolKind.Variable
+        OChapbookSymbolKind.Variable,
     ) ?? []) {
         if (!varSetNames.has(varRef.contents)) {
             const message = `"${varRef.contents}" isn't set in any vars section. Make sure you've spelled it correctly.`;
@@ -223,15 +223,15 @@ export function generateDiagnostics(
                         message,
                         DiagnosticSeverity.Warning,
                         undefined,
-                        "Twine"
-                    )
-                )
+                        "Twine",
+                    ),
+                ),
             );
         }
     }
     for (const propRef of index.getReferences(
         document.uri,
-        OChapbookSymbolKind.Property
+        OChapbookSymbolKind.Property,
     ) ?? []) {
         if (!propSetNames.has(propRef.contents)) {
             const message = `"${propRef.contents}" isn't set in any vars section. Make sure you've spelled it correctly.`;
@@ -242,9 +242,9 @@ export function generateDiagnostics(
                         message,
                         DiagnosticSeverity.Warning,
                         undefined,
-                        "Twine"
-                    )
-                )
+                        "Twine",
+                    ),
+                ),
             );
         }
     }
@@ -256,8 +256,8 @@ export function generateDiagnostics(
             document,
             index,
             text,
-            diagnosticsOptions
-        )
+            diagnosticsOptions,
+        ),
     );
 
     diagnostics.push(
@@ -265,8 +265,8 @@ export function generateDiagnostics(
             document,
             index,
             text,
-            diagnosticsOptions
-        )
+            diagnosticsOptions,
+        ),
     );
 
     return diagnostics;

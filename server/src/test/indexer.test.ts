@@ -77,21 +77,21 @@ describe("Indexer", () => {
             // need to mock the passage text parser to create a reference
             const mockFunction = ImportMock.mockFunction(
                 ptpModule,
-                "getStoryFormatParser"
+                "getStoryFormatParser",
             ).callsFake(() => {
                 return {
                     id: "FakeFormat",
                     parsePassageText: (
                         passageText: string,
                         textIndex: number,
-                        state: ParsingState
+                        state: ParsingState,
                     ) => {
                         if (passageText === "Yup\n\n")
                             state.callbacks.onSymbolDefinition({
                                 contents: "symbol",
                                 location: Location.create(
                                     "test-uri",
-                                    Range.create(1, 2, 3, 4)
+                                    Range.create(1, 2, 3, 4),
                                 ),
                                 kind: 17,
                             });
@@ -108,7 +108,7 @@ describe("Indexer", () => {
                     contents: "symbol",
                     location: Location.create(
                         "test-uri",
-                        Range.create(1, 2, 3, 4)
+                        Range.create(1, 2, 3, 4),
                     ),
                     kind: 17,
                 },
@@ -125,21 +125,21 @@ describe("Indexer", () => {
             // need to mock the passage text parser to create a reference
             const mockFunction = ImportMock.mockFunction(
                 ptpModule,
-                "getStoryFormatParser"
+                "getStoryFormatParser",
             ).callsFake(() => {
                 return {
                     id: "FakeFormat",
                     parsePassageText: (
                         passageText: string,
                         textIndex: number,
-                        state: ParsingState
+                        state: ParsingState,
                     ) => {
                         if (passageText === "Yup\n\n")
                             state.callbacks.onSymbolReference({
                                 contents: "Other Passage",
                                 location: Location.create(
                                     "test-uri",
-                                    Range.create(1, 2, 3, 4)
+                                    Range.create(1, 2, 3, 4),
                                 ),
                                 kind: 1,
                             });
@@ -172,21 +172,21 @@ describe("Indexer", () => {
             // need to mock the passage text parser to create a reference
             const mockFunction = ImportMock.mockFunction(
                 ptpModule,
-                "getStoryFormatParser"
+                "getStoryFormatParser",
             ).callsFake(() => {
                 return {
                     id: "FakeFormat",
                     parsePassageText: (
                         passageText: string,
                         textIndex: number,
-                        state: ParsingState
+                        state: ParsingState,
                     ) => {
                         if (passageText === "Yup\n\n") {
                             state.callbacks.onSymbolReference({
                                 contents: "passage",
                                 location: Location.create(
                                     "test-uri",
-                                    Range.create(1, 2, 3, 4)
+                                    Range.create(1, 2, 3, 4),
                                 ),
                                 kind: 1,
                             });
@@ -194,7 +194,7 @@ describe("Indexer", () => {
                                 contents: "passage",
                                 location: Location.create(
                                     "test-uri",
-                                    Range.create(1, 2, 3, 4)
+                                    Range.create(1, 2, 3, 4),
                                 ),
                                 kind: 2,
                             });
@@ -299,7 +299,7 @@ describe("Indexer", () => {
             const [result] = [...index.getEmbeddedDocuments("test-uri")];
 
             expect(result.document.getText()).to.eql(
-                '{ "ifid": "11111111-DEFA-4F70-B7A2-27742230C0FC" }\n'
+                '{ "ifid": "11111111-DEFA-4F70-B7A2-27742230C0FC" }\n',
             );
             expect(result.document.languageId).to.eql("json");
             expect(result.range).to.eql(Range.create(1, 0, 2, 0));
@@ -331,14 +331,14 @@ describe("Indexer", () => {
             // need to mock the passage text parser to create a reference
             const mockFunction = ImportMock.mockFunction(
                 ptpModule,
-                "getStoryFormatParser"
+                "getStoryFormatParser",
             ).callsFake(() => {
                 return {
                     id: "FakeFormat",
                     parsePassageText: (
                         passageText: string,
                         textIndex: number,
-                        state: ParsingState
+                        state: ParsingState,
                     ) => {
                         if (passageText === "Yup\n\n")
                             state.callbacks.onDecorationRange({
@@ -373,7 +373,7 @@ describe("Indexer", () => {
 
             expect(result.length).to.equal(1);
             expect(result[0].message).to.include(
-                "Tags aren't formatted correctly"
+                "Tags aren't formatted correctly",
             );
         });
     });
@@ -395,7 +395,7 @@ describe("Indexer", () => {
             expect(result[0].range.start).to.eql(Position.create(4, 0));
             expect(result[0].range.end).to.eql(Position.create(4, 9));
             expect(result[0].message).to.include(
-                "This replaces an existing StoryTitle. Is that intentional?"
+                "This replaces an existing StoryTitle. Is that intentional?",
             );
         });
 
@@ -429,7 +429,7 @@ describe("Indexer", () => {
             expect(result[0].range.start).to.eql(Position.create(4, 0));
             expect(result[0].range.end).to.eql(Position.create(4, 50));
             expect(result[0].message).to.include(
-                "This replaces existing StoryData. Is that intentional?"
+                "This replaces existing StoryData. Is that intentional?",
             );
         });
 

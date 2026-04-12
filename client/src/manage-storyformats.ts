@@ -34,13 +34,13 @@ let cachedStoryFormat: CachedStoryFormat | undefined;
  */
 export async function cacheStoryFormat(
     format: StoryFormat,
-    workspaceProvider: WorkspaceProvider
+    workspaceProvider: WorkspaceProvider,
 ) {
     cachedStoryFormat = { format };
     try {
         cachedStoryFormat.contents = await readLocalStoryFormat(
             format,
-            workspaceProvider
+            workspaceProvider,
         );
     } catch {
         // If we fail, we don't care
@@ -60,7 +60,7 @@ export function getCachedStoryFormat(): CachedStoryFormat | undefined {
  */
 export function storyFormatToLanguageID(
     storyFormat: StoryFormat,
-    languages: string[]
+    languages: string[],
 ): string {
     let languageId = "twee3"; // The generic twee3 language ID
 
@@ -111,7 +111,7 @@ export function storyFormatToLanguageID(
  * @returns Tweego ID for the story format, or undefined if it can't be created.
  */
 export function storyFormatToTweegoID(
-    storyFormat: StoryFormat
+    storyFormat: StoryFormat,
 ): string | undefined {
     if (storyFormat.formatVersion === undefined) {
         return undefined;
@@ -128,7 +128,7 @@ export function storyFormatToTweegoID(
  */
 export function storyFormatToWorkspacePath(
     storyFormat: StoryFormat,
-    workspaceProvider: WorkspaceProvider
+    workspaceProvider: WorkspaceProvider,
 ): string | undefined {
     const tweegoId = storyFormatToTweegoID(storyFormat);
     if (tweegoId === undefined) {
@@ -137,12 +137,12 @@ export function storyFormatToWorkspacePath(
     const storyFormatDirectory =
         workspaceProvider.getConfigurationItem<string>(
             Configuration.BaseSection,
-            Configuration.StoryFormatsDirectory
+            Configuration.StoryFormatsDirectory,
         ) ?? ".";
     const path = Utils.joinPath(
         URI.file(storyFormatDirectory),
         tweegoId,
-        "format.js"
+        "format.js",
     ).path;
     if (path.startsWith("/") && !storyFormatDirectory.startsWith("/")) {
         return path.slice(1);
@@ -176,7 +176,7 @@ export enum StoryFormatDownloadSupport {
  * @returns Enum indicating whether or not we support downloading the story format.
  */
 export function storyFormatSupportsDownloading(
-    storyFormat: StoryFormat
+    storyFormat: StoryFormat,
 ): StoryFormatDownloadSupport {
     if (storyFormat.formatVersion === undefined) {
         return StoryFormatDownloadSupport.MissingVersion;
@@ -200,7 +200,7 @@ export function storyFormatSupportsDownloading(
  */
 export async function readLocalStoryFormat(
     storyFormat: StoryFormat,
-    workspaceProvider: WorkspaceProvider
+    workspaceProvider: WorkspaceProvider,
 ): Promise<string> {
     const currentStoryFormat = {
         format: storyFormat.format,
@@ -209,11 +209,11 @@ export async function readLocalStoryFormat(
     while (currentStoryFormat.formatVersion) {
         const path = storyFormatToWorkspacePath(
             currentStoryFormat,
-            workspaceProvider
+            workspaceProvider,
         );
         if (path === undefined) {
             throw new Error(
-                `Couldn't create a local path for story format ${currentStoryFormat.format} version ${currentStoryFormat.formatVersion}`
+                `Couldn't create a local path for story format ${currentStoryFormat.format} version ${currentStoryFormat.formatVersion}`,
             );
         }
         const storyFormatUri = (
@@ -231,12 +231,12 @@ export async function readLocalStoryFormat(
                 .join(".");
         } else {
             return Buffer.from(
-                await workspaceProvider.fs.readFile(storyFormatUri)
+                await workspaceProvider.fs.readFile(storyFormatUri),
             ).toString("utf-8");
         }
     }
     throw new Error(
-        `Couldn't find a local copy of story format ${currentStoryFormat.format} version ${currentStoryFormat.formatVersion}`
+        `Couldn't find a local copy of story format ${currentStoryFormat.format} version ${currentStoryFormat.formatVersion}`,
     );
 }
 
@@ -249,7 +249,7 @@ export async function readLocalStoryFormat(
  */
 export async function localStoryFormatExists(
     storyFormat: StoryFormat,
-    workspaceProvider: WorkspaceProvider
+    workspaceProvider: WorkspaceProvider,
 ): Promise<boolean> {
     const path = storyFormatToWorkspacePath(storyFormat, workspaceProvider);
     if (path === undefined) {
@@ -261,7 +261,7 @@ export async function localStoryFormatExists(
 
 export const ChapbookMainPage = "https://klembot.github.io/chapbook/";
 export const ChapbookArchiveUri = URI.parse(
-    "https://github.com/klembot/chapbook/blob/develop/previous-versions/"
+    "https://github.com/klembot/chapbook/blob/develop/previous-versions/",
 ); // This is a URI since we have to do path math with it
 
 /**
@@ -271,7 +271,7 @@ export const ChapbookArchiveUri = URI.parse(
  * @returns The format, or an error if it failed.
  */
 async function downloadChapbookFormat(
-    version: string
+    version: string,
 ): Promise<string | Error> {
     // Chapbook formats are in two locations. The most recent is listed on the
     // main Chapbook page, while the previous versions are archived on Github.
@@ -280,7 +280,7 @@ async function downloadChapbookFormat(
     const url = Utils.joinPath(
         ChapbookArchiveUri,
         version,
-        "format.js"
+        "format.js",
     ).toString();
     try {
         const responseFormat = await fetch(url);
@@ -307,7 +307,7 @@ async function downloadChapbookFormat(
                 }
             } else if (m === null) {
                 return new Error(
-                    "Couldn't find the link to the latest Chapbook version to download"
+                    "Couldn't find the link to the latest Chapbook version to download",
                 );
             }
         }
@@ -326,7 +326,7 @@ async function downloadChapbookFormat(
  * @returns The format, or an error if it failed.
  */
 async function downloadSugarCubeFormat(
-    version: string
+    version: string,
 ): Promise<string | Error> {
     // We try to get the SugarCube format from Github
     const url = `https://github.com/tmedwards/sugarcube-2/releases/download/v${version}/sugarcube-${version}-for-twine-2.1-local.zip`;
@@ -334,7 +334,7 @@ async function downloadSugarCubeFormat(
         const responseZipFile = await fetch(url);
         if (responseZipFile.ok) {
             const zip = new AdmZip(
-                Buffer.from(await responseZipFile.arrayBuffer())
+                Buffer.from(await responseZipFile.arrayBuffer()),
             );
             const formatEntry = zip
                 .getEntries()
@@ -343,7 +343,7 @@ async function downloadSugarCubeFormat(
                 return zip.readAsText(formatEntry);
             } else {
                 return new Error(
-                    `Couldn't find the format.js file in the downloaded SugarCube ${version} zip archive`
+                    `Couldn't find the format.js file in the downloaded SugarCube ${version} zip archive`,
                 );
             }
         }
@@ -364,7 +364,7 @@ async function downloadSugarCubeFormat(
  * @returns The story format, or Error if it fails.
  */
 export async function downloadStoryFormat(
-    storyFormat: StoryFormat
+    storyFormat: StoryFormat,
 ): Promise<string | Error> {
     if (storyFormat.formatVersion === undefined) {
         return new Error("Story format downloads require a format version");
@@ -378,6 +378,6 @@ export async function downloadStoryFormat(
     }
 
     return new Error(
-        `Downloading story format ${storyFormat.format} isn't currently supported`
+        `Downloading story format ${storyFormat.format} isn't currently supported`,
     );
 }

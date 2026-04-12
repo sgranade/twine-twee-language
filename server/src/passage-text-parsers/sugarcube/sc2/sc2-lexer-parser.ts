@@ -34,7 +34,7 @@ export function parseSugarCubePassageRefOrTwinescriptExpr(
     text: string,
     textIndex: number,
     state: ParsingState,
-    sugarcubeState: StoryFormatParsingState
+    sugarcubeState: StoryFormatParsingState,
 ) {
     // SC2 treats a link expression or data-passage attribute as a passage reference
     // unless and until it's not found, at which point it's treated as if it's
@@ -49,9 +49,9 @@ export function parseSugarCubePassageRefOrTwinescriptExpr(
                 text,
                 textIndex,
                 state.textDocument,
-                sugarcubeState
+                sugarcubeState,
             ),
-            state
+            state,
         );
     } else {
         parsePassageReference(text, textIndex, state, sugarcubeState);
@@ -73,7 +73,7 @@ export function parseSugarCubeTwineLink(
     linkIndex: number,
     textIndex: number,
     state: ParsingState,
-    sugarcubeState: StoryFormatParsingState
+    sugarcubeState: StoryFormatParsingState,
 ): LinkMarkupData {
     const markupData = parseSquareBracketedMarkup(text, linkIndex);
     const error = markupData.error;
@@ -86,7 +86,7 @@ export function parseSugarCubeTwineLink(
             markupData.link.text,
             markupData.link.at + textIndex,
             state,
-            sugarcubeState
+            sugarcubeState,
         );
         if (markupData.text !== undefined) {
             capturePreSemanticTokenFor(
@@ -94,7 +94,7 @@ export function parseSugarCubeTwineLink(
                 markupData.text.at + textIndex,
                 ETokenType.string,
                 [],
-                sugarcubeState
+                sugarcubeState,
             );
         }
         if (markupData.delim !== undefined) {
@@ -103,7 +103,7 @@ export function parseSugarCubeTwineLink(
                 markupData.delim.at + textIndex,
                 ETokenType.keyword,
                 [],
-                sugarcubeState
+                sugarcubeState,
             );
         }
         if (markupData.setter !== undefined) {
@@ -112,9 +112,9 @@ export function parseSugarCubeTwineLink(
                     markupData.setter.text,
                     markupData.setter.at + textIndex,
                     state.textDocument,
-                    sugarcubeState
+                    sugarcubeState,
                 ),
-                state
+                state,
             );
         }
     } else if (error !== undefined) {
@@ -339,7 +339,7 @@ export interface ArgumentToken extends Token {
  */
 export function tokenizeMacroArguments(
     source: string,
-    sourceIndex: number
+    sourceIndex: number,
 ): ArgumentToken[] {
     const tokens: ArgumentToken[] = [];
 
@@ -410,7 +410,7 @@ export interface LinkMarkupData {
  */
 export function parseSquareBracketedMarkup(
     source: string,
-    matchStart: number
+    matchStart: number,
 ): LinkMarkupData {
     // Initialize the lexer.
     const lexer = new Lexer(source, SquareBracketParsing.lexLeftMeta);
@@ -522,7 +522,7 @@ export namespace MacroParse {
     // SRG added to consume a one-line array [] or JS object {}
     function slurpBracket(
         lexer: Lexer<Item>,
-        startBracket: string
+        startBracket: string,
     ): EOFT | number {
         const endBracket = startBracket === "{" ? "}" : "]";
         let depth = 1;
@@ -647,7 +647,7 @@ export namespace MacroParse {
                 case "\n":
                     return lexer.error(
                         Item.Error,
-                        `unterminated ${what} markup`
+                        `unterminated ${what} markup`,
                     );
 
                 case "[":
@@ -660,7 +660,7 @@ export namespace MacroParse {
                     if (lexer.depth < 0) {
                         return lexer.error(
                             Item.Error,
-                            "unexpected right square bracket ']'"
+                            "unexpected right square bracket ']'",
                         );
                     }
 
@@ -765,7 +765,7 @@ namespace SquareBracketParsing {
             ) {
                 return lexer.error(
                     Item.Error,
-                    "malformed square-bracketed markup"
+                    "malformed square-bracketed markup",
                 );
             }
 
@@ -787,7 +787,7 @@ namespace SquareBracketParsing {
                 case "\n":
                     return lexer.error(
                         Item.Error,
-                        `unterminated ${what} markup`
+                        `unterminated ${what} markup`,
                     );
 
                 case '"':
@@ -800,7 +800,7 @@ namespace SquareBracketParsing {
                     if (slurpQuote(lexer, '"') === EOF) {
                         return lexer.error(
                             Item.Error,
-                            `unterminated double quoted string in ${what} markup`
+                            `unterminated double quoted string in ${what} markup`,
                         );
                     }
                     break;
@@ -857,7 +857,7 @@ namespace SquareBracketParsing {
                                     lexer.emit(
                                         lexer.data.isLink
                                             ? Item.Link
-                                            : Item.Source
+                                            : Item.Source,
                                     );
                                 }
 
@@ -878,7 +878,7 @@ namespace SquareBracketParsing {
                                     lexer.emit(
                                         lexer.data.isLink
                                             ? Item.Link
-                                            : Item.Source
+                                            : Item.Source,
                                     );
                                 }
 
@@ -890,7 +890,7 @@ namespace SquareBracketParsing {
                             default:
                                 return lexer.error(
                                     Item.Error,
-                                    `malformed ${what} markup`
+                                    `malformed ${what} markup`,
                                 );
                         }
                     }
@@ -908,7 +908,7 @@ namespace SquareBracketParsing {
                 case "\n":
                     return lexer.error(
                         Item.Error,
-                        `unterminated ${what} markup`
+                        `unterminated ${what} markup`,
                     );
 
                 case '"':
@@ -921,7 +921,7 @@ namespace SquareBracketParsing {
                     if (slurpQuote(lexer, '"') === EOF) {
                         return lexer.error(
                             Item.Error,
-                            `unterminated double quoted string in ${what} markup link component`
+                            `unterminated double quoted string in ${what} markup link component`,
                         );
                     }
                     break;
@@ -956,7 +956,7 @@ namespace SquareBracketParsing {
                             default:
                                 return lexer.error(
                                     Item.Error,
-                                    `malformed ${what} markup`
+                                    `malformed ${what} markup`,
                                 );
                         }
                     }
@@ -974,14 +974,14 @@ namespace SquareBracketParsing {
                 case "\n":
                     return lexer.error(
                         Item.Error,
-                        `unterminated ${what} markup`
+                        `unterminated ${what} markup`,
                     );
 
                 case '"':
                     if (slurpQuote(lexer, '"') === EOF) {
                         return lexer.error(
                             Item.Error,
-                            `unterminated double quoted string in ${what} markup setter component`
+                            `unterminated double quoted string in ${what} markup setter component`,
                         );
                     }
                     break;
@@ -990,7 +990,7 @@ namespace SquareBracketParsing {
                     if (slurpQuote(lexer, "'") === EOF) {
                         return lexer.error(
                             Item.Error,
-                            `unterminated single quoted string in ${what} markup setter component`
+                            `unterminated single quoted string in ${what} markup setter component`,
                         );
                     }
                     break;
@@ -1006,7 +1006,7 @@ namespace SquareBracketParsing {
                         if (lexer.peek() !== "]") {
                             return lexer.error(
                                 Item.Error,
-                                `malformed ${what} markup`
+                                `malformed ${what} markup`,
                             );
                         }
 

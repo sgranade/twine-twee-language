@@ -27,7 +27,7 @@ function generateVariableAndPropertyCompletions(
     document: TextDocument,
     text: string,
     textOffset: number,
-    index: ProjectIndex
+    index: ProjectIndex,
 ): CompletionList | null {
     const completions: string[] = [];
 
@@ -40,7 +40,7 @@ function generateVariableAndPropertyCompletions(
             ? undefined
             : Range.create(
                   document.positionAt(textOffset + text.length - m[3].length),
-                  document.positionAt(textOffset + text.length)
+                  document.positionAt(textOffset + text.length),
               );
     for (const uri of index.getIndexedUris()) {
         if (context !== undefined) {
@@ -50,8 +50,8 @@ function generateVariableAndPropertyCompletions(
                     .getReferences(uri, OSugarCubeSymbolKind.Property)
                     ?.filter((ref) => ref.contents.startsWith(context))
                     .map(
-                        (ref) => ref.contents.split(".").pop() ?? ref.contents
-                    ) ?? [])
+                        (ref) => ref.contents.split(".").pop() ?? ref.contents,
+                    ) ?? []),
             );
         } else {
             // Get all variables that start with the same sigil ($ or _)
@@ -59,7 +59,7 @@ function generateVariableAndPropertyCompletions(
                 ...(index
                     .getReferences(uri, OSugarCubeSymbolKind.Variable)
                     ?.filter((x) => x.contents.startsWith(text[0]))
-                    .map((x) => x.contents) ?? [])
+                    .map((x) => x.contents) ?? []),
             );
         }
     }
@@ -71,7 +71,7 @@ function generateVariableAndPropertyCompletions(
                     kind: CompletionItemKind.Property,
                     textEdit: TextEdit.replace(range, c),
                 };
-            })
+            }),
         );
     } else {
         const completionList = CompletionList.create(
@@ -81,12 +81,12 @@ function generateVariableAndPropertyCompletions(
                     kind: CompletionItemKind.Variable,
                     textEditText: c,
                 };
-            })
+            }),
         );
         completionList.itemDefaults = {
             editRange: Range.create(
                 document.positionAt(textOffset),
-                document.positionAt(textOffset + text.length)
+                document.positionAt(textOffset + text.length),
             ),
         };
         return completionList;
@@ -100,7 +100,7 @@ function generateVariableAndPropertyCompletions(
  * @returns Completion list.
  */
 function generateMacroContainerCloseCompletions(
-    text: string
+    text: string,
 ): CompletionList | null {
     // Find the start and end of the macro name
     let macroNameStart: number | undefined;
@@ -156,7 +156,7 @@ function generateMacroNameCompletions(
     text: string,
     textOffset: number,
     completionPointOffset: number,
-    index: ProjectIndex
+    index: ProjectIndex,
 ): CompletionList | null {
     const completions: CompletionItem[] = [];
 
@@ -177,7 +177,7 @@ function generateMacroNameCompletions(
     if (closingBracketsIndex === -1) {
         containerMacroReplacementRange = Range.create(
             document.positionAt(textOffset),
-            document.positionAt(textOffset + macroNameEnd)
+            document.positionAt(textOffset + macroNameEnd),
         );
     } else {
         // Only add a closing macro if there's no text between the macro name and the >>
@@ -185,7 +185,7 @@ function generateMacroNameCompletions(
         if (middleText.length === 0 || /^\s+$/.test(middleText)) {
             containerMacroReplacementRange = Range.create(
                 document.positionAt(textOffset),
-                document.positionAt(textOffset + closingBracketsIndex + 2) // + 2 to include the >>
+                document.positionAt(textOffset + closingBracketsIndex + 2), // + 2 to include the >>
             );
         }
     }
@@ -208,17 +208,17 @@ function generateMacroNameCompletions(
                     if (info.arguments) {
                         completionItem.textEdit = TextEdit.replace(
                             containerMacroReplacementRange,
-                            `${info.name} \${0}>><</${info.name}>>`
+                            `${info.name} \${0}>><</${info.name}>>`,
                         );
                     } else {
                         completionItem.textEdit = TextEdit.replace(
                             containerMacroReplacementRange,
-                            `${info.name}>>\${0}<</${info.name}>>`
+                            `${info.name}>>\${0}<</${info.name}>>`,
                         );
                     }
                 }
                 return completionItem;
-            })
+            }),
     );
 
     // Add macro definitions
@@ -238,11 +238,11 @@ function generateMacroNameCompletions(
                     // Add a closing container macro.
                     completionItem.textEdit = TextEdit.replace(
                         containerMacroReplacementRange,
-                        `${def.contents}>>\${0}<</${def.contents}>>`
+                        `${def.contents}>>\${0}<</${def.contents}>>`,
                     );
                 }
                 return completionItem;
-            })
+            }),
     );
 
     if (completions.length > 0) {
@@ -256,12 +256,12 @@ function generateMacroNameCompletions(
                 }
                 seenCompletions.add(c.label);
                 return true;
-            })
+            }),
         );
         completionList.itemDefaults = {
             editRange: Range.create(
                 document.positionAt(textOffset),
-                document.positionAt(textOffset + macroNameEnd)
+                document.positionAt(textOffset + macroNameEnd),
             ),
         };
         return completionList;
@@ -274,14 +274,14 @@ export function generateCompletions(
     document: TextDocument,
     position: Position,
     deferredEmbeddedDocuments: EmbeddedDocument[],
-    index: ProjectIndex
+    index: ProjectIndex,
 ): CompletionList | null {
     const lineStartPosition = Position.create(position.line, 0);
     const lineEndPosition = Position.create(position.line + 1, 0);
     const lineOffset = document.offsetAt(lineStartPosition);
     const completionRelativeOffset = document.offsetAt(position) - lineOffset; // Relative to the start of the line
     const line = document.getText(
-        Range.create(lineStartPosition, lineEndPosition)
+        Range.create(lineStartPosition, lineEndPosition),
     );
 
     let i = completionRelativeOffset - 1;
@@ -296,7 +296,7 @@ export function generateCompletions(
                 document,
                 line.slice(i, completionRelativeOffset),
                 lineOffset + i,
-                index
+                index,
             );
         }
         if (line[i] === "<" && i >= 1 && line[i - 1] === "<") {
@@ -305,7 +305,7 @@ export function generateCompletions(
                 line.slice(i + 1),
                 lineOffset + i + 1,
                 completionRelativeOffset - (i + 1),
-                index
+                index,
             );
         }
         // Once we run out of word characters or periods, bail

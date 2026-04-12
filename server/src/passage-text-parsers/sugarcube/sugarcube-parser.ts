@@ -61,7 +61,7 @@ Object.values(allMacros()).map((macro) => {
  */
 export function getSugarCubeDefinitions(
     kind: SugarCubeSymbolKind,
-    index: ProjectIndex
+    index: ProjectIndex,
 ): ProjSymbol[] {
     const symbols: ProjSymbol[] = [];
     for (const uri of index.getIndexedUris()) {
@@ -95,7 +95,7 @@ const bareVariableRegex = new RegExp(
         ].join("|"),
         `)*`,
     ].join(""),
-    "g"
+    "g",
 );
 
 /**
@@ -110,7 +110,7 @@ function parseBareVariables(
     passageText: string,
     textIndex: number,
     state: ParsingState,
-    sugarcubeState: StoryFormatParsingState
+    sugarcubeState: StoryFormatParsingState,
 ): void {
     for (const m of passageText.matchAll(bareVariableRegex)) {
         createVariableAndPropertyReferences(
@@ -118,9 +118,9 @@ function parseBareVariables(
                 m[0],
                 m.index + textIndex,
                 state.textDocument,
-                sugarcubeState
+                sugarcubeState,
             ),
-            state
+            state,
         );
     }
 }
@@ -141,7 +141,7 @@ function parseCustomStyles(
     passageText: string,
     textIndex: number,
     state: ParsingState,
-    sugarcubeState: StoryFormatParsingState
+    sugarcubeState: StoryFormatParsingState,
 ): void {
     for (const m of passageText.matchAll(customStyleRegex)) {
         // Capture tokens for the custom style tokens
@@ -150,14 +150,14 @@ function parseCustomStyles(
             m.index + textIndex,
             ETokenType.decorator,
             [],
-            sugarcubeState
+            sugarcubeState,
         );
         capturePreSemanticTokenFor(
             "@@",
             m.index + m[0].length - 2 + textIndex,
             ETokenType.decorator,
             [],
-            sugarcubeState
+            sugarcubeState,
         );
         // Parse the inline CSS, which has to be contiguous
         let nextIndex = 0; // Where the next match should be for it to be contiguous
@@ -176,7 +176,7 @@ function parseCustomStyles(
                     curNdx,
                     ETokenType.property,
                     [],
-                    sugarcubeState
+                    sugarcubeState,
                 );
                 // This isn't necessarily a string, but go with that for simplicity
                 capturePreSemanticTokenFor(
@@ -184,7 +184,7 @@ function parseCustomStyles(
                     curNdx + cssMatch[2].length + cssMatch[3].length,
                     ETokenType.string,
                     [],
-                    sugarcubeState
+                    sugarcubeState,
                 );
             } else {
                 // Groups 5, 6:       [space] #id.classname.otherClass; <- can have spaces in between IDs and classnames
@@ -192,14 +192,14 @@ function parseCustomStyles(
                 // Parse each ID or class
                 singleCssIdOrClass.lastIndex = 0;
                 for (const idOrClassMatch of cssMatch[6].matchAll(
-                    singleCssIdOrClass
+                    singleCssIdOrClass,
                 )) {
                     capturePreSemanticTokenFor(
                         idOrClassMatch[0].trimEnd(),
                         curNdx + idOrClassMatch.index,
                         ETokenType.class,
                         [],
-                        sugarcubeState
+                        sugarcubeState,
                     );
                 }
             }
@@ -222,7 +222,7 @@ function parseAndRemoveTwineLinks(
     passageText: string,
     textIndex: number,
     state: ParsingState,
-    sugarcubeState: StoryFormatParsingState
+    sugarcubeState: StoryFormatParsingState,
 ): string {
     // Twine links in SugarCube can include TwineScript, which can have all
     // kinds of array reference shenanigans, so we can't do a simple regex
@@ -233,7 +233,7 @@ function parseAndRemoveTwineLinks(
             m.index,
             textIndex,
             state,
-            sugarcubeState
+            sugarcubeState,
         );
         if (
             markupData.error === undefined &&
@@ -294,7 +294,7 @@ function parseMacroArgs(
     argsIndex: number,
     macroInfo: MacroInfo | undefined,
     state: ParsingState,
-    sugarcubeState: StoryFormatParsingState
+    sugarcubeState: StoryFormatParsingState,
 ): void {
     // If we have information about a macro and it has a custom parser function, call it
     if (macroInfo?.parse !== undefined) {
@@ -323,7 +323,7 @@ function parseMacroArgs(
     if (macroInfo?.parsedArguments !== undefined) {
         // We got arguments definitions we can validate against
         const t3ltArgsAndErrors = sc2ArgumentTokens.map((t) =>
-            macroArgumentTokenToT3LTArg(t, state, sugarcubeState)
+            macroArgumentTokenToT3LTArg(t, state, sugarcubeState),
         );
 
         // Since `macroArgumentTokenToT3LTArg()` can produce undefined values if
@@ -344,7 +344,7 @@ function parseMacroArgs(
         const validationInfo = macroInfo.parsedArguments.validate(t3ltArgs);
         // eslint-disable-next-line prefer-const
         for (let [t3ltArgNdxStr, t3ltArgFormatType] of Object.entries(
-            validationInfo.info.argFormatTypes
+            validationInfo.info.argFormatTypes,
         )) {
             const t3ltArgNdx = Number(t3ltArgNdxStr);
             const t3ltArg = t3ltArgs[t3ltArgNdx];
@@ -370,7 +370,7 @@ function parseMacroArgs(
                     sc2Token.at,
                     ETokenType.keyword,
                     [],
-                    sugarcubeState
+                    sugarcubeState,
                 );
             } else if (t3ltArgFormatType === "number") {
                 // number
@@ -379,7 +379,7 @@ function parseMacroArgs(
                     sc2Token.at,
                     ETokenType.number,
                     [],
-                    sugarcubeState
+                    sugarcubeState,
                 );
             } else if (t3ltArgFormatType === "string") {
                 // string
@@ -388,7 +388,7 @@ function parseMacroArgs(
                     sc2Token.at,
                     ETokenType.string,
                     [],
-                    sugarcubeState
+                    sugarcubeState,
                 );
             } else if (t3ltArgFormatType === "var") {
                 // variable
@@ -397,15 +397,15 @@ function parseMacroArgs(
                         sc2Token.text,
                         sc2Token.at,
                         OSugarCubeSymbolKind.Variable,
-                        state.textDocument
-                    )
+                        state.textDocument,
+                    ),
                 );
                 capturePreSemanticTokenFor(
                     sc2Token.text,
                     sc2Token.at,
                     ETokenType.variable,
                     [],
-                    sugarcubeState
+                    sugarcubeState,
                 );
             } else if (
                 t3ltArgFormatType === "link" ||
@@ -424,15 +424,15 @@ function parseMacroArgs(
                             varName,
                             varAt,
                             OSugarCubeSymbolKind.Variable,
-                            state.textDocument
-                        )
+                            state.textDocument,
+                        ),
                     );
                     capturePreSemanticTokenFor(
                         varName,
                         varAt,
                         ETokenType.variable,
                         [],
-                        sugarcubeState
+                        sugarcubeState,
                     );
                 } else {
                     // Non-string receivers are okay, but often are a mistake
@@ -447,9 +447,9 @@ function parseMacroArgs(
                                 sc2Token.text.slice(1, -1),
                                 sc2Token.at + 1,
                                 state.textDocument,
-                                sugarcubeState
+                                sugarcubeState,
                             ),
-                            state
+                            state,
                         );
                     } else {
                         logWarningFor(
@@ -457,16 +457,16 @@ function parseMacroArgs(
                             sc2Token.at,
                             "Do you mean for this receiver value to be a bare variable? " +
                                 `If so, consider surrounding it with back-ticks: \`${sc2Token.text}\``,
-                            state
+                            state,
                         );
                         createVariableAndPropertyReferences(
                             tokenizeTwineScriptExpression(
                                 sc2Token.text,
                                 sc2Token.at,
                                 state.textDocument,
-                                sugarcubeState
+                                sugarcubeState,
                             ),
-                            state
+                            state,
                         );
                     }
                 }
@@ -490,7 +490,7 @@ function parseMacroArgs(
                         passageName,
                         passageAt,
                         state,
-                        sugarcubeState
+                        sugarcubeState,
                     );
                 }
             } else if (t3ltArg.type === T3LTArgType.Expression) {
@@ -500,9 +500,9 @@ function parseMacroArgs(
                         sc2Token.text.slice(1, -1), // Remove the backticks
                         sc2Token.at + 1,
                         state.textDocument,
-                        sugarcubeState
+                        sugarcubeState,
                     ),
-                    state
+                    state,
                 );
             }
         }
@@ -526,7 +526,7 @@ function parseMacroArgs(
                     warningToken.text,
                     warningToken.at,
                     warning.warning,
-                    state
+                    state,
                 );
             }
         }
@@ -540,14 +540,14 @@ function parseMacroArgs(
                 arg.text,
                 arg.at,
                 arg.message ?? "Unknown macro argument parsing error",
-                state
+                state,
             );
         } else if (arg.type === MacroParse.Item.Bareword) {
             let [vars, props] = tokenizeTwineScriptExpression(
                 arg.text,
                 arg.at,
                 state.textDocument,
-                sugarcubeState
+                sugarcubeState,
             );
 
             // Discard any variables that don't start with `$` or `_` (or `settings` or `setup`) and properties whose
@@ -560,7 +560,7 @@ function parseMacroArgs(
                 return isVar;
             });
             props = props.filter(
-                (p) => p.prefix && startIsVarRegexp.test(p.prefix)
+                (p) => p.prefix && startIsVarRegexp.test(p.prefix),
             );
 
             createVariableAndPropertyReferences([vars, props], state);
@@ -571,9 +571,9 @@ function parseMacroArgs(
                     arg.text.slice(1, -1),
                     arg.at + 1,
                     state.textDocument,
-                    sugarcubeState
+                    sugarcubeState,
                 ),
-                state
+                state,
             );
         } else if (arg.type === MacroParse.Item.String) {
             capturePreSemanticTokenFor(
@@ -581,7 +581,7 @@ function parseMacroArgs(
                 arg.at,
                 ETokenType.string,
                 [],
-                sugarcubeState
+                sugarcubeState,
             );
         } else if (arg.type === MacroParse.Item.SquareBracket) {
             // If the macro arguments won't later be parsed to be compared to the
@@ -595,9 +595,9 @@ function parseMacroArgs(
                     arg.text,
                     arg.at,
                     state.textDocument,
-                    sugarcubeState
+                    sugarcubeState,
                 ),
-                state
+                state,
             );
         }
     }
@@ -608,7 +608,7 @@ function parseMacroArgs(
                 macroName,
                 macroNameIndex,
                 "Expected arguments",
-                state
+                state,
             );
         }
     } else if (macroInfo?.arguments === false) {
@@ -635,7 +635,7 @@ function captureMacroRefAndTokens(
     macroIndex: number,
     macroInfo: MacroInfo | undefined,
     state: ParsingState,
-    sugarcubeState: StoryFormatParsingState
+    sugarcubeState: StoryFormatParsingState,
 ) {
     if (makeMacroRef) {
         state.callbacks.onSymbolReference(
@@ -645,8 +645,8 @@ function captureMacroRefAndTokens(
                 macroInfo !== undefined
                     ? OSugarCubeSymbolKind.KnownMacro
                     : OSugarCubeSymbolKind.UnknownMacro,
-                state.textDocument
-            )
+                state.textDocument,
+            ),
         );
     }
 
@@ -661,7 +661,7 @@ function captureMacroRefAndTokens(
         macroIndex,
         ETokenType.function,
         deprecated ? [ETokenModifier.deprecated] : [],
-        sugarcubeState
+        sugarcubeState,
     );
 }
 
@@ -678,7 +678,7 @@ function parseMacros(
     passageText: string,
     textIndex: number,
     state: ParsingState,
-    sugarcubeState: StoryFormatParsingState
+    sugarcubeState: StoryFormatParsingState,
 ): string {
     // To erase the macros from the passage text, we'll carve it into substrings
     // that we concatenate at the end for speed
@@ -698,7 +698,7 @@ function parseMacros(
             m.index + 2 + textIndex,
             knownMacros["script"],
             state,
-            sugarcubeState
+            sugarcubeState,
         );
         // and tokens for the closing script macro
         captureMacroRefAndTokens(
@@ -708,7 +708,7 @@ function parseMacros(
             m.index + m[0].length - 2 - 6 + textIndex,
             knownMacros["script"],
             state,
-            sugarcubeState
+            sugarcubeState,
         );
 
         if (!m.groups) return;
@@ -723,9 +723,9 @@ function parseMacros(
                     contents,
                     contentsIndex + textIndex,
                     state.textDocument,
-                    sugarcubeState
+                    sugarcubeState,
                 ),
-                state
+                state,
             );
         } else {
             // Tokenize as a JavaScript program but don't capture vars
@@ -734,7 +734,7 @@ function parseMacros(
                 contents,
                 contentsIndex + textIndex,
                 state.textDocument,
-                sugarcubeState
+                sugarcubeState,
             );
         }
     });
@@ -775,7 +775,7 @@ function parseMacros(
                         m[0],
                         m.index + textIndex,
                         `<<end${macroName}>> is deprecated; use <</${macroName}>> instead`,
-                        state
+                        state,
                     );
                 } else if (knownMacros[endAddedName] === undefined) {
                     name = endAddedName; // double check there's no known macro with "end" at the start
@@ -797,7 +797,7 @@ function parseMacros(
             textIndex + macroIndex,
             macroInfo,
             state,
-            sugarcubeState
+            sugarcubeState,
         );
 
         if (macroInfo !== undefined) {
@@ -812,7 +812,7 @@ function parseMacros(
                         m[0],
                         m.index + textIndex,
                         `\`${macroInfo.name}\` isn't available until SugarCube version ${macroInfo.since} but your StoryFormat version is ${storyFormatVersion}`,
-                        state
+                        state,
                     );
                 } else if (
                     macroInfo.removed !== undefined &&
@@ -822,7 +822,7 @@ function parseMacros(
                         m[0],
                         m.index + textIndex,
                         `\`${macroInfo.name}\` was removed in SugarCube version ${macroInfo.removed} and your StoryFormat version is ${storyFormatVersion}`,
-                        state
+                        state,
                     );
                 }
             }
@@ -852,7 +852,7 @@ function parseMacros(
                                 macroInfo.parseChildren(
                                     children,
                                     state,
-                                    sugarcubeState
+                                    sugarcubeState,
                                 );
                             }
                             delete macroChildren[unclosedMacros[i].id];
@@ -866,7 +866,7 @@ function parseMacros(
                             m[0],
                             m.index + textIndex,
                             `Opening macro <<${macroInfo.name}>> not found`,
-                            state
+                            state,
                         );
                     }
                 }
@@ -876,7 +876,7 @@ function parseMacros(
                     m[0],
                     m.index + textIndex,
                     `<<${macroInfo.name}>> macro isn't a container and so doesn't have a closing macro`,
-                    state
+                    state,
                 );
             }
 
@@ -884,7 +884,7 @@ function parseMacros(
             if (macroInfo.parents) {
                 // Make sure we're within our parent
                 const parentNames = macroInfo.parents.map((p) =>
-                    MacroParent.is(p) ? p.name : p
+                    MacroParent.is(p) ? p.name : p,
                 );
                 let parentMacroInfo: MacroLocationInfo | undefined;
                 for (let i = unclosedMacros.length - 1; i >= 0; --i) {
@@ -906,7 +906,8 @@ function parseMacros(
                     });
                     const macroParent = macroInfo.parents.find(
                         (p) =>
-                            MacroParent.is(p) && p.name === parentMacroInfo.name
+                            MacroParent.is(p) &&
+                            p.name === parentMacroInfo.name,
                     );
                     if (MacroParent.is(macroParent)) {
                         // Make sure we don't have too many of the same kind of child macro
@@ -918,7 +919,7 @@ function parseMacros(
                                 m[0],
                                 m.index + textIndex,
                                 `Child macro <<${macroName}>> can be used at most ${macroParent.max} time${macroParent.max > 1 ? "s" : ""}`,
-                                state
+                                state,
                             );
                         }
                     }
@@ -944,21 +945,21 @@ function parseMacros(
                 macroBodyIndex + textIndex,
                 macroInfo,
                 state,
-                sugarcubeState
+                sugarcubeState,
             );
         } else if (macroBody.trim()) {
             logWarningFor(
                 macroBody,
                 macroBodyIndex + textIndex,
                 "Closing macros don't take arguments",
-                state
+                state,
             );
         }
 
         // Collect substrings with the macro erased so we don't double-parse its contents
         macrolessStrings.push(
             passageText.slice(lastIndex, m.index),
-            " ".repeat(m[0].length)
+            " ".repeat(m[0].length),
         );
         lastIndex = m.index + m[0].length;
     }
@@ -969,7 +970,7 @@ function parseMacros(
             openTag.fullText,
             openTag.at + textIndex,
             `Closing macro <</${openTag.name}>> not found`,
-            state
+            state,
         );
     }
 
@@ -982,10 +983,10 @@ function parseMacros(
 const htmlTagRegex = new RegExp(SC2Patterns.htmlTag, "gm");
 const sc2AttrsAndDirectives = new RegExp(
     `(data-(?:passage|setter)|(@|sc-eval:)${SC2Patterns.htmlAttrName})\\s*=\\s*(${SC2Patterns.htmlAttrValue})`,
-    "g"
+    "g",
 );
 const hrefAttr = new RegExp(
-    `\\bhref(?:\\s*=\\s*${SC2Patterns.htmlAttrValue})?`
+    `\\bhref(?:\\s*=\\s*${SC2Patterns.htmlAttrValue})?`,
 );
 
 /**
@@ -1001,7 +1002,7 @@ function parseHtmlAttributesAndDirectives(
     passageText: string,
     textIndex: number,
     state: ParsingState,
-    sugarcubeState: StoryFormatParsingState
+    sugarcubeState: StoryFormatParsingState,
 ): string {
     for (const m of passageText.matchAll(htmlTagRegex)) {
         const tag = m[0];
@@ -1025,7 +1026,7 @@ function parseHtmlAttributesAndDirectives(
                     attrContents,
                     textIndex + attrContentsIndex,
                     state,
-                    sugarcubeState
+                    sugarcubeState,
                 );
                 // Make sure we don't have an href attribute, too
                 if (hrefAttr.test(tag)) {
@@ -1033,7 +1034,7 @@ function parseHtmlAttributesAndDirectives(
                         attrName,
                         textIndex + attrIndex,
                         `Both "data-passage" and "href" attributes aren't allowed`,
-                        state
+                        state,
                     );
                 }
             } else {
@@ -1042,9 +1043,9 @@ function parseHtmlAttributesAndDirectives(
                         attrContents,
                         textIndex + attrContentsIndex,
                         state.textDocument,
-                        sugarcubeState
+                        sugarcubeState,
                     ),
-                    state
+                    state,
                 );
                 // Make sure we don't have an evaluation directive on a data-setter attribute
                 if (
@@ -1055,7 +1056,7 @@ function parseHtmlAttributesAndDirectives(
                         evalDirective,
                         textIndex + attrIndex,
                         `"data-setter" can't have an evaluation directive`,
-                        state
+                        state,
                     );
                 }
             }
@@ -1072,7 +1073,7 @@ function parseHtmlAttributesAndDirectives(
 
 const noParseRegex = new RegExp(
     [SC2Patterns.noWikiBlock, SC2Patterns.htmlScriptStyleBlock].join("|"),
-    "gmi"
+    "gmi",
 );
 
 const commentRegex = new RegExp(SC2Patterns.commentBlock, "gmi");
@@ -1097,7 +1098,7 @@ const commentRegex = new RegExp(SC2Patterns.commentBlock, "gmi");
 function removeNonParsedText(
     text: string,
     textIndex: number,
-    sugarcubeState: StoryFormatParsingState
+    sugarcubeState: StoryFormatParsingState,
 ): string {
     text = eraseMatches(text, noParseRegex);
 
@@ -1109,7 +1110,7 @@ function removeNonParsedText(
                 m.index + textIndex,
                 ETokenType.comment,
                 [],
-                sugarcubeState
+                sugarcubeState,
             );
         }
     });
@@ -1136,8 +1137,8 @@ function checkForSpecialPassages(state: ParsingState): boolean {
                     `StoryDisplayTitle isn't supported in SugarCube version ${state.storyFormat.formatVersion}`,
                     DiagnosticSeverity.Warning,
                     undefined,
-                    "Twine"
-                )
+                    "Twine",
+                ),
             );
         }
 
@@ -1151,8 +1152,8 @@ function checkForSpecialPassages(state: ParsingState): boolean {
                     `StoryInterface isn't supported in SugarCube version ${state.storyFormat.formatVersion}`,
                     DiagnosticSeverity.Warning,
                     undefined,
-                    "Twine"
-                )
+                    "Twine",
+                ),
             );
         }
 
@@ -1166,8 +1167,8 @@ function checkForSpecialPassages(state: ParsingState): boolean {
                     `StoryShare is deprecated as of SugarCube version 2.37.0`,
                     DiagnosticSeverity.Warning,
                     undefined,
-                    "Twine"
-                )
+                    "Twine",
+                ),
             );
         }
     }
@@ -1199,7 +1200,7 @@ function checkPassageTags(
     passageText: string,
     textIndex: number,
     state: ParsingState,
-    sugarcubeState: StoryFormatParsingState
+    sugarcubeState: StoryFormatParsingState,
 ): void {
     let isHtmlPassage = true;
 
@@ -1214,7 +1215,7 @@ function checkPassageTags(
             passageText,
             textIndex,
             state.textDocument,
-            sugarcubeState
+            sugarcubeState,
         );
         isHtmlPassage = false;
     } else if (tagNames.includes("stylesheet")) {
@@ -1224,8 +1225,8 @@ function checkPassageTags(
                 "css",
                 passageText,
                 textIndex,
-                state.textDocument
-            )
+                state.textDocument,
+            ),
         );
         isHtmlPassage = false;
     } else if (mediaTags.length === 1) {
@@ -1243,8 +1244,8 @@ function checkPassageTags(
                     `${mediaTags[0].contents} isn't supported in SugarCube version ${state.storyFormat.formatVersion}`,
                     DiagnosticSeverity.Warning,
                     undefined,
-                    "Twine"
-                )
+                    "Twine",
+                ),
             );
         }
     } else if (mediaTags.length > 1) {
@@ -1257,8 +1258,8 @@ function checkPassageTags(
                     `Multiple media passage tags aren't allowed`,
                     DiagnosticSeverity.Error,
                     undefined,
-                    "Twine"
-                )
+                    "Twine",
+                ),
             );
         }
     } else if (
@@ -1273,8 +1274,8 @@ function checkPassageTags(
                 `bookmark is deprecated as of SugarCube version 2.37.0`,
                 DiagnosticSeverity.Warning,
                 undefined,
-                "Twine"
-            )
+                "Twine",
+            ),
         );
     }
 
@@ -1284,14 +1285,14 @@ function checkPassageTags(
             EmbeddedDocument.create(
                 (state.currentPassage?.name.contents ?? "placeholder").replace(
                     " ",
-                    "-"
+                    "-",
                 ),
                 "html",
                 passageText,
                 textIndex,
                 state.textDocument,
-                true
-            )
+                true,
+            ),
         );
 }
 
@@ -1305,7 +1306,7 @@ function checkPassageTags(
 export function parsePassageText(
     passageText: string,
     textIndex: number,
-    state: ParsingState
+    state: ParsingState,
 ): void {
     // Nothing to do if we're not doing a full parse, or if the passage
     // is a script passage
@@ -1339,7 +1340,7 @@ export function parsePassageText(
         passageText,
         textIndex,
         state,
-        sugarcubeState
+        sugarcubeState,
     );
 
     passageText = parseMacros(passageText, textIndex, state, sugarcubeState);
@@ -1348,7 +1349,7 @@ export function parsePassageText(
         passageText,
         textIndex,
         state,
-        sugarcubeState
+        sugarcubeState,
     );
 
     parseCustomStyles(passageText, textIndex, state, sugarcubeState);

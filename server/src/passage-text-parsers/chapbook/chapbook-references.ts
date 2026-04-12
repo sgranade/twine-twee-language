@@ -14,7 +14,7 @@ export function getReferencesToSymbolAt(
     documentUri: string,
     position: Position,
     index: ProjectIndex,
-    includeDeclaration: boolean
+    includeDeclaration: boolean,
 ): Location[] | undefined {
     // Because we track variable references separately from variable-being-set locations,
     // when getting references to one of those (like a variable), we have to add in
@@ -22,7 +22,7 @@ export function getReferencesToSymbolAt(
     const refs = index.getReferencesToSymbolAt(
         documentUri,
         position,
-        includeDeclaration
+        includeDeclaration,
     );
     const kind = refs?.kind;
     if (

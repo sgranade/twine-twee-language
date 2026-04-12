@@ -38,7 +38,7 @@ class ListenerManager extends DisposeWithFlag {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     handleNotification(manager: ListenerManager, ...params: any[]) {
         manager.listenMethods = manager.listenMethods.filter(
-            (v) => !v.disposed
+            (v) => !v.disposed,
         );
         for (const listenMethod of manager.listenMethods) {
             listenMethod.handler(...params);
@@ -57,7 +57,7 @@ class ListenerManager extends DisposeWithFlag {
  * @returns Disposable encapsulating all listeners.
  */
 export function initNotifications(
-    newClient: BaseLanguageClient
+    newClient: BaseLanguageClient,
 ): vscode.Disposable {
     if (client !== undefined) {
         throw "Tried to double-initialize notifications";
@@ -80,7 +80,7 @@ export function initNotifications(
  */
 export function addNotificationHandler(
     method: string,
-    handler: GenericNotificationHandler
+    handler: GenericNotificationHandler,
 ): vscode.Disposable {
     if (client === undefined) {
         throw "Notifications not initialized before being added to";

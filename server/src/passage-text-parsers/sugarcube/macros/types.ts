@@ -116,7 +116,7 @@ export interface MacroInfo {
         args: string | undefined,
         argsIndex: number,
         state: ParsingState,
-        sugarcubeState: StoryFormatParsingState
+        sugarcubeState: StoryFormatParsingState,
     ) => boolean;
     /**
      * Parses a container macro's child macros.
@@ -128,7 +128,7 @@ export interface MacroInfo {
     parseChildren?: (
         children: MacroLocationInfo[],
         state: ParsingState,
-        sugarcubeState: StoryFormatParsingState
+        sugarcubeState: StoryFormatParsingState,
     ) => void;
 }
 
@@ -145,7 +145,7 @@ export function parseArgsAsTwineScriptExpression(
     args: string | undefined,
     argsIndex: number,
     state: ParsingState,
-    sugarcubeState: StoryFormatParsingState
+    sugarcubeState: StoryFormatParsingState,
 ): boolean {
     if (args !== undefined) {
         createVariableAndPropertyReferences(
@@ -153,9 +153,9 @@ export function parseArgsAsTwineScriptExpression(
                 args,
                 argsIndex,
                 state.textDocument,
-                sugarcubeState
+                sugarcubeState,
             ),
-            state
+            state,
         );
     }
     return true;

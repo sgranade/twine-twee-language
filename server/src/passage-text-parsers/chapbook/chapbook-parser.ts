@@ -198,7 +198,7 @@ const varInsertRegex = /^({\s*)(\S+)\s*}$/;
  */
 export function getChapbookDefinitions(
     kind: ChapbookSymbolKind,
-    index: ProjectIndex
+    index: ProjectIndex,
 ): ChapbookSymbol[] {
     const customSymbols: ChapbookSymbol[] = [];
     for (const uri of index.getIndexedUris()) {
@@ -206,8 +206,8 @@ export function getChapbookDefinitions(
             ...(index
                 .getDefinitions(uri, kind)
                 ?.filter<ChapbookSymbol>((x): x is ChapbookSymbol =>
-                    ChapbookSymbol.is(x)
-                ) ?? [])
+                    ChapbookSymbol.is(x),
+                ) ?? []),
         );
     }
     return customSymbols;
@@ -223,7 +223,7 @@ export function getChapbookDefinitions(
 function createVariableAndPropertyReferences(
     varsAndProps: [Label[], JSPropertyLabel[]],
     state: ParsingState,
-    isSet: boolean = false
+    isSet: boolean = false,
 ): void {
     const varKind = isSet
         ? OChapbookSymbolKind.VariableSet
@@ -264,7 +264,7 @@ const parenMatch = /[({['")]/g; // For a nopening "("
  */
 function findClosingDelimeterIndex(
     contents: string,
-    startIndex: number
+    startIndex: number,
 ): number | undefined {
     const c = contents[startIndex];
 
@@ -321,7 +321,7 @@ function findClosingDelimeterIndex(
  */
 export function findStartOfModifierOrInsert(
     text: string,
-    startOffset: number
+    startOffset: number,
 ): number | undefined {
     let start: number | undefined;
 
@@ -350,7 +350,7 @@ export function findStartOfModifierOrInsert(
  */
 export function findEndOfPartialInsert(
     text: string,
-    startOffset: number
+    startOffset: number,
 ): number | undefined {
     // This partially duplicates code from parseTextSubsection() below so
     // that the diagnostics code can get access to insert parsing.
@@ -414,7 +414,7 @@ export function findEndOfPartialInsert(
  */
 export function findEndOfPartialModifier(
     text: string,
-    startOffset: number
+    startOffset: number,
 ): number | undefined {
     // Look for the end bracket or end of line
     const regex = /]|\r?\n/gm;
@@ -458,7 +458,7 @@ function parseCustomFunctionArguments(
     argsNode: acorn.Node,
     contentsIndex: number,
     symbolKind: ChapbookSymbolKind,
-    state: ParsingState
+    state: ParsingState,
 ): FunctionArguments | undefined {
     let firstArgRequired: ArgumentRequirement | undefined;
     const args: FunctionArguments = {
@@ -669,11 +669,11 @@ function parseCustomFunctionArguments(
                         state.textDocument,
                         contentsIndex + errorNode.start,
                         contentsIndex + errorNode.end,
-                        errorMessage
-                    )
+                        errorMessage,
+                    ),
                 );
             }
-        }
+        },
     );
 
     if (firstArgRequired !== undefined) {
@@ -711,7 +711,7 @@ function parseCustomInsertOrModifierDefinition(
     contents: string,
     contentsIndex: number,
     symbolKind: ChapbookSymbolKind,
-    state: ParsingState
+    state: ParsingState,
 ): void {
     const props: CustomInsertOrModifierInformation = {
         match: undefined,
@@ -737,7 +737,7 @@ function parseCustomInsertOrModifierDefinition(
                             node.value,
                             contentsIndex,
                             symbolKind,
-                            state
+                            state,
                         );
                         props.firstArgument = insertArguments?.firstArgument;
                         if (symbolKind === OChapbookSymbolKind.CustomInsert) {
@@ -770,8 +770,8 @@ function parseCustomInsertOrModifierDefinition(
                                             state.textDocument,
                                             contentsIndex + elem.start,
                                             contentsIndex + elem.end,
-                                            "Completions must be a string or an array of strings"
-                                        )
+                                            "Completions must be a string or an array of strings",
+                                        ),
                                     );
                                 }
                             }
@@ -783,8 +783,8 @@ function parseCustomInsertOrModifierDefinition(
                                     state.textDocument,
                                     contentsIndex + node.value.start,
                                     contentsIndex + node.value.end,
-                                    "Completions must be a string or an array of strings"
-                                )
+                                    "Completions must be a string or an array of strings",
+                                ),
                             );
                         }
                     }
@@ -823,8 +823,8 @@ function parseCustomInsertOrModifierDefinition(
                                     "Must be a " +
                                         (isMatch
                                             ? "regular expression"
-                                            : "string")
-                                )
+                                            : "string"),
+                                ),
                             );
                         }
                     }
@@ -848,7 +848,7 @@ function parseCustomInsertOrModifierDefinition(
                 props.match.source,
                 props.matchIndex + 1 + contentsIndex, // + 1 to skip the leading "/"
                 "Custom inserts must have a space in their match",
-                state
+                state,
             );
         }
 
@@ -859,7 +859,7 @@ function parseCustomInsertOrModifierDefinition(
             location: createLocationFor(
                 props.match.source,
                 props.matchIndex + 1 + contentsIndex, // + 1 to skip the leading "/"
-                state.textDocument
+                state.textDocument,
             ),
             kind: symbolKind,
             match: props.match,
@@ -893,8 +893,8 @@ function parseCustomInsertOrModifierDefinition(
                     state.textDocument,
                     pos,
                     raisedAt,
-                    err.message
-                )
+                    err.message,
+                ),
             );
         }
     }
@@ -910,7 +910,7 @@ function parseCustomInsertOrModifierDefinition(
 function parseEngineExtension(
     contents: string,
     contentsIndex: number,
-    state: ParsingState
+    state: ParsingState,
 ): void {
     // The contents should be ('version', function())
     // where the function adds the new insert or modifier
@@ -919,7 +919,7 @@ function parseEngineExtension(
         contents,
         contents[0],
         contents[0],
-        1
+        1,
     );
     if (version === undefined) return;
 
@@ -931,7 +931,7 @@ function parseEngineExtension(
                 version,
                 contentsIndex + 1,
                 "The extension's version must be a number like '2.0.0'",
-                state
+                state,
             );
             return;
         }
@@ -948,7 +948,7 @@ function parseEngineExtension(
                     version,
                     contentsIndex + 1,
                     `The current story format version is ${state.storyFormat.formatVersion}, so this extension will be ignored`,
-                    state
+                    state,
                 );
                 return;
             } else if (curVersion[ndx] > minVersion[ndx]) {
@@ -962,7 +962,7 @@ function parseEngineExtension(
                 version,
                 contentsIndex + 1,
                 `The current story format version is ${state.storyFormat.formatVersion}, so this extension will be ignored`,
-                state
+                state,
             );
             return;
         }
@@ -976,7 +976,7 @@ function parseEngineExtension(
             contents,
             "(",
             ")",
-            engineTemplateRegex.lastIndex
+            engineTemplateRegex.lastIndex,
         );
         if (addedContents === undefined) continue;
 
@@ -991,14 +991,14 @@ function parseEngineExtension(
                 addedContents,
                 contentsIndex + engineTemplateRegex.lastIndex,
                 symbolKind,
-                state
+                state,
             );
         } else {
             logWarningFor(
                 `engine.template.${m[1]}`,
                 contentsIndex + m.index,
                 "Unrecognized engine template function",
-                state
+                state,
             );
         }
 
@@ -1016,7 +1016,7 @@ function parseEngineExtension(
 function findEngineExtensions(
     contents: string,
     contentsIndex: number,
-    state: ParsingState
+    state: ParsingState,
 ): void {
     for (const m of contents.matchAll(/engine.extend\(/g)) {
         let ndx = m.index + m[0].length;
@@ -1024,7 +1024,7 @@ function findEngineExtensions(
             contents,
             "(",
             ")",
-            ndx
+            ndx,
         );
         if (extendContents !== undefined) {
             [extendContents, ndx] = skipSpaces(extendContents, ndx);
@@ -1044,7 +1044,7 @@ function findEngineExtensions(
  */
 function extractInsertArgument(
     contents: string,
-    contentsIndex: number
+    contentsIndex: number,
 ): [string, string, number] {
     let endIndex: number | undefined = 0;
     const c = contents[0];
@@ -1084,7 +1084,7 @@ function validateFunctionVersion(
     text: string,
     at: number,
     storyFormatVersion: string | undefined,
-    doc: TextDocument
+    doc: TextDocument,
 ): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];
 
@@ -1099,8 +1099,8 @@ function validateFunctionVersion(
                     doc,
                     text,
                     at,
-                    `\`${funcInfo.name}\` isn't available until Chapbook version ${funcInfo.since} but your StoryFormat version is ${storyFormatVersion}`
-                )
+                    `\`${funcInfo.name}\` isn't available until Chapbook version ${funcInfo.since} but your StoryFormat version is ${storyFormatVersion}`,
+                ),
             );
         } else if (
             funcInfo.removed !== undefined &&
@@ -1112,8 +1112,8 @@ function validateFunctionVersion(
                     doc,
                     text,
                     at,
-                    `\`${funcInfo.name}\` was removed in Chapbook version ${funcInfo.removed} and your StoryFormat version is ${storyFormatVersion}`
-                )
+                    `\`${funcInfo.name}\` was removed in Chapbook version ${funcInfo.removed} and your StoryFormat version is ${storyFormatVersion}`,
+                ),
             );
         }
     }
@@ -1133,7 +1133,7 @@ function parseFunctionArgument(
     token: Token | undefined,
     argType: ValueType | undefined,
     state: ParsingState,
-    chapbookState: ChapbookParsingState
+    chapbookState: ChapbookParsingState,
 ): void {
     if (
         token !== undefined &&
@@ -1153,7 +1153,7 @@ function parseFunctionArgument(
                 token.text.slice(1, -1),
                 token.at + 1,
                 state,
-                chapbookState
+                chapbookState,
             );
         }
     }
@@ -1174,7 +1174,7 @@ export function validateFunctionAndFirstArgument(
     name: Token,
     firstArgument: Token | undefined,
     storyFormatVersion: string | undefined,
-    doc: TextDocument
+    doc: TextDocument,
 ): Diagnostic[] {
     // Check the story format against insert since/removed version information
     const diagnostics = validateFunctionVersion(
@@ -1182,7 +1182,7 @@ export function validateFunctionAndFirstArgument(
         name.text,
         name.at,
         storyFormatVersion,
-        doc
+        doc,
     );
 
     // Check for required and unknown arguments
@@ -1197,8 +1197,8 @@ export function validateFunctionAndFirstArgument(
                 doc,
                 name.text,
                 name.at,
-                `\`${funcInfo.name}\` requires a first argument`
-            )
+                `\`${funcInfo.name}\` requires a first argument`,
+            ),
         );
     } else if (
         funcInfo.firstArgument?.required === ArgumentRequirement.ignored &&
@@ -1211,8 +1211,8 @@ export function validateFunctionAndFirstArgument(
                 doc,
                 firstArgument.text,
                 firstArgument.at,
-                `\`${funcInfo.name}\` will ignore this first argument`
-            )
+                `\`${funcInfo.name}\` will ignore this first argument`,
+            ),
         );
     }
 
@@ -1236,7 +1236,7 @@ export function validateInsertContents(
     insert: ChapbookFunctionInfo,
     tokens: InsertTokens,
     doc: TextDocument,
-    storyFormatVersion?: string
+    storyFormatVersion?: string,
 ): Diagnostic[] {
     // Check the story format against insert since/removed version information
     // as well as the first argument's existence (or lack thereof)
@@ -1245,7 +1245,7 @@ export function validateInsertContents(
         tokens.name,
         tokens.firstArgument,
         storyFormatVersion,
-        doc
+        doc,
     );
 
     // Check for required and unknown properties
@@ -1268,13 +1268,13 @@ export function validateInsertContents(
                         doc,
                         propNameToken.text,
                         propNameToken.at,
-                        `Insert {${insert.name}} will ignore this property`
-                    )
+                        `Insert {${insert.name}} will ignore this property`,
+                    ),
                 );
         }
     }
     const unseenProperties = Object.keys(insert.requiredProps ?? {}).filter(
-        (k) => !seenProperties.has(k)
+        (k) => !seenProperties.has(k),
     );
     if (unseenProperties.length > 0) {
         diagnostics.push(
@@ -1283,8 +1283,8 @@ export function validateInsertContents(
                 doc,
                 tokens.name.text,
                 tokens.name.at,
-                `Insert {${insert.name}} missing expected properties: ${unseenProperties.join(", ")}`
-            )
+                `Insert {${insert.name}} missing expected properties: ${unseenProperties.join(", ")}`,
+            ),
         );
     }
 
@@ -1301,7 +1301,7 @@ export function validateInsertContents(
 function parseInsertContents(
     tokens: InsertTokens,
     state: ParsingState,
-    chapbookState: ChapbookParsingState
+    chapbookState: ChapbookParsingState,
 ): void {
     // See if we match a built-in insert
     const insert = allInserts().find((i) => i.match.test(tokens.name.text));
@@ -1313,8 +1313,8 @@ function parseInsertContents(
             insert !== undefined
                 ? OChapbookSymbolKind.BuiltInInsert
                 : OChapbookSymbolKind.CustomInsert,
-            state.textDocument
-        )
+            state.textDocument,
+        ),
     );
 
     // Capture semantic tokens for the insert's info
@@ -1328,7 +1328,7 @@ function parseInsertContents(
         tokens.name.at,
         ETokenType.function,
         deprecated ? [ETokenModifier.deprecated] : [],
-        chapbookState
+        chapbookState,
     );
     for (const [propName, [propNameToken]] of Object.entries(tokens.props) as [
         string,
@@ -1339,7 +1339,7 @@ function parseInsertContents(
             propNameToken.at,
             ETokenType.property,
             [],
-            chapbookState
+            chapbookState,
         );
     }
 
@@ -1353,7 +1353,7 @@ function parseInsertContents(
         insert,
         tokens,
         state.textDocument,
-        state.storyFormat?.formatVersion
+        state.storyFormat?.formatVersion,
     )) {
         state.callbacks.onParseError(diagnostic);
     }
@@ -1363,12 +1363,12 @@ function parseInsertContents(
         tokens.firstArgument,
         insert.firstArgument.type,
         state,
-        chapbookState
+        chapbookState,
     );
 
     // Capture any tokens associated with property arguments
     for (const [propName, [, propValueToken]] of Object.entries(
-        tokens.props
+        tokens.props,
     ) as [string, [Token, Token]][]) {
         const propInfo: string | InsertProperty | null | undefined =
             insert.requiredProps[propName] ?? insert.optionalProps[propName];
@@ -1378,7 +1378,7 @@ function parseInsertContents(
                 propValueToken,
                 propInfo.type,
                 state,
-                chapbookState
+                chapbookState,
             );
         }
     }
@@ -1403,7 +1403,7 @@ function parseInsertContents(
 export function tokenizeInsert(
     insert: string,
     insertIndex: number,
-    state?: ParsingState
+    state?: ParsingState,
 ): InsertTokens {
     // Functional inserts follow the form: {function name: arg, property1: value1, property2: value2}
     // Get rid of the {} in the insert
@@ -1443,7 +1443,7 @@ export function tokenizeInsert(
         // Save the tokens and parse the argument as a JS expression
         insertTokens.firstArgument = Token.create(
             argument,
-            insertIndex + argumentIndex
+            insertIndex + argumentIndex,
         );
     }
 
@@ -1462,7 +1462,7 @@ export function tokenizeInsert(
             let currentPropertyIndex = remainingContentsIndex;
             [currentProperty, currentPropertyIndex] = skipSpaces(
                 currentProperty,
-                currentPropertyIndex
+                currentPropertyIndex,
             );
             remainingContentsIndex += colonIndex + 1; // To skip the ":"
             remainingContents = remainingContents.slice(colonIndex + 1);
@@ -1474,7 +1474,7 @@ export function tokenizeInsert(
                     currentProperty,
                     insertIndex + currentPropertyIndex,
                     "Properties can't have spaces",
-                    state
+                    state,
                 );
             }
 
@@ -1484,7 +1484,7 @@ export function tokenizeInsert(
             let currentValue = remainingContents;
             [currentValue, currentValueIndex] = skipSpaces(
                 currentValue,
-                currentValueIndex
+                currentValueIndex,
             );
 
             [currentValue, remainingContents, remainingContentsIndex] =
@@ -1495,7 +1495,7 @@ export function tokenizeInsert(
                 insertTokens.props[currentProperty] = [
                     Token.create(
                         currentProperty,
-                        insertIndex + currentPropertyIndex
+                        insertIndex + currentPropertyIndex,
                     ),
                     Token.create(currentValue, insertIndex + currentValueIndex),
                 ];
@@ -1521,7 +1521,7 @@ function parseInsertOrVariable(
     insert: string,
     insertIndex: number,
     state: ParsingState,
-    chapbookState: ChapbookParsingState
+    chapbookState: ChapbookParsingState,
 ): void {
     // A single word insert is a variable
     const m = varInsertRegex.exec(insert);
@@ -1533,7 +1533,7 @@ function parseInsertOrVariable(
             insertIndex + invocationIndex,
             ETokenType.variable,
             [],
-            chapbookState
+            chapbookState,
         );
 
         // Parse the value as a JavaScript expression
@@ -1543,9 +1543,9 @@ function parseInsertOrVariable(
                 invocation,
                 insertIndex + invocationIndex,
                 state.textDocument,
-                chapbookState
+                chapbookState,
             ),
-            state
+            state,
         );
 
         // Variables only allow array dereferencing at the end
@@ -1555,7 +1555,7 @@ function parseInsertOrVariable(
                 bracketMatch[1],
                 insertIndex + invocationIndex + bracketMatch.index,
                 "Array dereferencing can only be at the end (that is, myVar[2] is okay but myVar[2].color isn't)",
-                state
+                state,
             );
         }
 
@@ -1577,9 +1577,9 @@ function parseInsertOrVariable(
                 insertTokens.firstArgument.text,
                 insertTokens.firstArgument.at,
                 state.textDocument,
-                chapbookState
+                chapbookState,
             ),
-            state
+            state,
         );
     }
     for (const [, propValueToken] of Object.values(insertTokens.props) as [
@@ -1593,9 +1593,9 @@ function parseInsertOrVariable(
                 propValueToken.text,
                 propValueToken.at,
                 state.textDocument,
-                chapbookState
+                chapbookState,
             ),
-            state
+            state,
         );
     }
 
@@ -1615,7 +1615,7 @@ function parseScript(
     text: string,
     textIndex: number,
     state: ParsingState,
-    chapbookState: ChapbookParsingState
+    chapbookState: ChapbookParsingState,
 ): void {
     findEngineExtensions(text, textIndex, state);
     // We don't have a language server for JS, so we create an embedded document
@@ -1628,7 +1628,7 @@ function parseScript(
         text,
         textIndex,
         state.textDocument,
-        chapbookState
+        chapbookState,
     );
     state.callbacks.onEmbeddedDocument(
         EmbeddedDocument.create(
@@ -1638,8 +1638,8 @@ function parseScript(
             textIndex,
             state.textDocument,
             false,
-            true
-        )
+            true,
+        ),
     );
 }
 
@@ -1658,7 +1658,7 @@ function parseTextSubsection(
     subsection: string,
     subsectionIndex: number,
     state: ParsingState,
-    chapbookState: ChapbookParsingState
+    chapbookState: ChapbookParsingState,
 ): void {
     if (chapbookState.modifierKind === ModifierKind.Javascript) {
         parseScript(subsection, subsectionIndex, state, chapbookState);
@@ -1669,8 +1669,8 @@ function parseTextSubsection(
                 "css",
                 subsection,
                 subsectionIndex,
-                state.textDocument
-            )
+                state.textDocument,
+            ),
         );
     } else if (chapbookState.modifierKind === ModifierKind.Note) {
         capturePreSemanticTokenFor(
@@ -1678,7 +1678,7 @@ function parseTextSubsection(
             subsectionIndex,
             ETokenType.comment,
             [],
-            chapbookState
+            chapbookState,
         );
     } else {
         // Parse Twine links first
@@ -1688,7 +1688,7 @@ function parseTextSubsection(
             subsection,
             subsectionIndex,
             state,
-            chapbookState
+            chapbookState,
         );
 
         // Parse specific HTML tags
@@ -1742,13 +1742,13 @@ function parseTextSubsection(
                             // Extract the raw insert text to parse
                             const insertSrc = subsection.substring(
                                 startCurly,
-                                i + 1
+                                i + 1,
                             );
                             parseInsertOrVariable(
                                 insertSrc,
                                 subsectionIndex + startCurly,
                                 state,
-                                chapbookState
+                                chapbookState,
                             );
 
                             // Advance start variables for the next match.
@@ -1780,19 +1780,19 @@ function parseTextSubsection(
 export function tokenizeModifier(
     modifierText: string,
     modifierIndex: number,
-    modifierInfo: ChapbookFunctionInfo | undefined
+    modifierInfo: ChapbookFunctionInfo | undefined,
 ): ModifierTokens | undefined {
     const match = modifierInfo?.match.exec(modifierText) ?? undefined;
     if (match !== undefined) {
         const modifierName = match[0];
         modifierIndex += match.index;
         let modifierArg = modifierText.substring(
-            match.index + modifierName.length
+            match.index + modifierName.length,
         );
         let modifierArgIndex = modifierIndex + modifierName.length;
         [modifierArg, modifierArgIndex] = skipSpaces(
             modifierArg,
-            modifierArgIndex
+            modifierArgIndex,
         );
         return {
             name: Token.create(modifierName, modifierIndex),
@@ -1818,7 +1818,7 @@ function parseModifier(
     modifierText: string,
     modifierIndex: number,
     state: ParsingState,
-    chapbookState: ChapbookParsingState
+    chapbookState: ChapbookParsingState,
 ): void {
     [modifierText, modifierIndex] = skipSpaces(modifierText, modifierIndex);
     if (modifierText === "") {
@@ -1830,7 +1830,7 @@ function parseModifier(
     const modifierTokens = tokenizeModifier(
         modifierText,
         modifierIndex,
-        modifier
+        modifier,
     );
     // If we recognize the modifier, check its version and let it parse the contents,
     // which can set the text block state in chapbookState
@@ -1841,8 +1841,8 @@ function parseModifier(
                 modifierTokens.name.text,
                 modifierTokens.name.at,
                 OChapbookSymbolKind.BuiltInModifier,
-                state.textDocument
-            )
+                state.textDocument,
+            ),
         );
 
         // Handle modifier-specific parsing, which can set the text block state in chapbookState
@@ -1856,7 +1856,7 @@ function parseModifier(
             modifier?.deprecated !== undefined &&
             versionCompare(
                 state.storyFormat.formatVersion,
-                modifier.deprecated
+                modifier.deprecated,
             ) <= 0;
         capturePreSemanticTokenFor(
             modifierTokens.name.text,
@@ -1865,7 +1865,7 @@ function parseModifier(
                 ? ETokenType.comment
                 : ETokenType.macro,
             deprecated ? [ETokenModifier.deprecated] : [],
-            chapbookState
+            chapbookState,
         );
 
         // Validate the function information and its first argument
@@ -1874,7 +1874,7 @@ function parseModifier(
             modifierTokens.name,
             modifierTokens.firstArgument,
             state.storyFormat?.formatVersion,
-            state.textDocument
+            state.textDocument,
         )) {
             state.callbacks.onParseError(diagnostic);
         }
@@ -1890,9 +1890,9 @@ function parseModifier(
                         modifierTokens.firstArgument.text,
                         modifierTokens.firstArgument.at,
                         state.textDocument,
-                        chapbookState
+                        chapbookState,
                     ),
-                    state
+                    state,
                 );
             } else {
                 // Tokenize
@@ -1901,7 +1901,7 @@ function parseModifier(
                     modifierTokens.firstArgument.at,
                     ETokenType.parameter,
                     [],
-                    chapbookState
+                    chapbookState,
                 );
             }
 
@@ -1911,7 +1911,7 @@ function parseModifier(
                 modifierTokens.firstArgument,
                 modifier.firstArgument?.type,
                 state,
-                chapbookState
+                chapbookState,
             );
         }
     } else {
@@ -1921,8 +1921,8 @@ function parseModifier(
                 modifierText,
                 modifierIndex,
                 OChapbookSymbolKind.CustomModifier,
-                state.textDocument
-            )
+                state.textDocument,
+            ),
         );
 
         // Tokenize the entire thing as a function
@@ -1931,7 +1931,7 @@ function parseModifier(
             modifierIndex,
             ETokenType.function,
             [],
-            chapbookState
+            chapbookState,
         );
     }
 }
@@ -1956,7 +1956,7 @@ function captureModifierRanges(
     modifierStartIndex: number,
     modifierEndIndex: number,
     state: ParsingState,
-    chapbookState: ChapbookParsingState
+    chapbookState: ChapbookParsingState,
 ): void {
     // Back up before any final runs of \r?\n
     for (
@@ -1971,7 +1971,7 @@ function captureModifierRanges(
 
     const range = Range.create(
         state.textDocument.positionAt(modifierStartIndex + sectionIndex),
-        state.textDocument.positionAt(modifierEndIndex + sectionIndex)
+        state.textDocument.positionAt(modifierEndIndex + sectionIndex),
     );
     if (!nonFoldedModifiers.includes(chapbookState.modifierKind)) {
         state.callbacks.onFoldingRange(range);
@@ -2004,7 +2004,7 @@ function parseTextSection(
     section: string,
     sectionIndex: number,
     state: ParsingState,
-    chapbookState: ChapbookParsingState
+    chapbookState: ChapbookParsingState,
 ): void {
     // Go through the text modifier block by modifier block,
     // starting with no modifier
@@ -2022,7 +2022,7 @@ function parseTextSection(
                 previousModifierStartIndex,
                 m.index,
                 state,
-                chapbookState
+                chapbookState,
             );
         }
 
@@ -2031,7 +2031,7 @@ function parseTextSection(
             section.slice(previousModifierEndIndex, m.index),
             sectionIndex + previousModifierEndIndex,
             state,
-            chapbookState
+            chapbookState,
         );
 
         // Reset the modifier type
@@ -2043,7 +2043,7 @@ function parseTextSection(
                 m[1],
                 sectionIndex + m.index,
                 "Modifiers can't have spaces before them",
-                state
+                state,
             );
         }
         if (m[3] !== "") {
@@ -2052,7 +2052,7 @@ function parseTextSection(
                 m[3],
                 sectionIndex + m.index + 2 + m[1].length + m[2].length,
                 "Modifiers can't have spaces after them",
-                state
+                state,
             );
         }
 
@@ -2082,7 +2082,7 @@ function parseTextSection(
                     modifier,
                     sectionIndex + rawModifiersIndex + i - modifier.length,
                     state,
-                    chapbookState
+                    chapbookState,
                 );
                 modifier = "";
             } else {
@@ -2094,7 +2094,7 @@ function parseTextSection(
                 modifier,
                 sectionIndex + rawModifiersIndex + i - modifier.length,
                 state,
-                chapbookState
+                chapbookState,
             );
         }
 
@@ -2119,7 +2119,7 @@ function parseTextSection(
             previousModifierStartIndex,
             section.length,
             state,
-            chapbookState
+            chapbookState,
         );
     }
 
@@ -2128,7 +2128,7 @@ function parseTextSection(
         section.slice(previousModifierEndIndex),
         sectionIndex + previousModifierEndIndex,
         state,
-        chapbookState
+        chapbookState,
     );
 }
 
@@ -2142,7 +2142,7 @@ function parseTextSection(
 function parseVarsSectionForSetVarsAndPropsOnly(
     section: string,
     sectionIndex: number,
-    state: ParsingState
+    state: ParsingState,
 ): void {
     // Parse line by line
     varsLineVarOnlyExtractionRegex.lastIndex = 0;
@@ -2157,7 +2157,7 @@ function parseVarsSectionForSetVarsAndPropsOnly(
                     location: createLocationFor(
                         elem,
                         ndx + scope.length,
-                        state.textDocument
+                        state.textDocument,
                     ),
                     kind:
                         i == 0
@@ -2181,7 +2181,7 @@ function parseVarsSection(
     section: string,
     sectionIndex: number,
     state: ParsingState,
-    chapbookState: ChapbookParsingState
+    chapbookState: ChapbookParsingState,
 ): void {
     // Decorate the vars section minus the end \r?\n
     let varsEndIndex = section.length;
@@ -2193,7 +2193,7 @@ function parseVarsSection(
     if (varsEndIndex > 0) {
         const range = Range.create(
             state.textDocument.positionAt(0 + sectionIndex),
-            state.textDocument.positionAt(varsEndIndex + sectionIndex)
+            state.textDocument.positionAt(varsEndIndex + sectionIndex),
         );
         // Since this decorator encompasses the whole line, make the end character
         // super large. Otherwise, as the user types at the end of the line, the
@@ -2220,7 +2220,7 @@ function parseVarsSection(
                 m[0],
                 sectionIndex + m.index,
                 "Missing colon; this line will be ignored",
-                state
+                state,
             );
             continue;
         }
@@ -2242,7 +2242,7 @@ function parseVarsSection(
                         conditionMatchIndex +
                         conditionMatch[0].length,
                     "Missing a close parenthesis",
-                    state
+                    state,
                 );
             } else {
                 createVariableAndPropertyReferences(
@@ -2253,9 +2253,9 @@ function parseVarsSection(
                             conditionMatchIndex +
                             conditionMatch[0].indexOf(conditionMatch[3]),
                         state.textDocument,
-                        chapbookState
+                        chapbookState,
                     ),
-                    state
+                    state,
                 );
 
                 // Check for ignored text
@@ -2266,7 +2266,7 @@ function parseVarsSection(
                             conditionMatchIndex +
                             conditionMatch[1].length,
                         "This will be ignored",
-                        state
+                        state,
                     );
                 }
             }
@@ -2279,7 +2279,7 @@ function parseVarsSection(
                 spaceMatch[0],
                 sectionIndex + nameIndex + spaceMatch.index,
                 "Variable names can't have spaces",
-                state
+                state,
             );
             name = name.slice(0, spaceMatch.index);
         }
@@ -2292,10 +2292,10 @@ function parseVarsSection(
                 name,
                 sectionIndex + nameIndex,
                 state.textDocument,
-                chapbookState
+                chapbookState,
             ),
             state,
-            true
+            true,
         );
         // Capture tokens for variables and properties
         const varsAndProps = name.split(".");
@@ -2305,7 +2305,7 @@ function parseVarsSection(
                 sectionIndex + ndx,
                 i == 0 ? ETokenType.variable : ETokenType.property,
                 [ETokenModifier.modification],
-                chapbookState
+                chapbookState,
             );
             ndx += varsAndProps[i].length + 1; // + 1 for the period
         }
@@ -2313,7 +2313,7 @@ function parseVarsSection(
         // Handle the value
         const [value, valueIndex] = skipSpaces(
             m[2].slice(colonIndex + 1),
-            m.index + m[1].length + colonIndex + 1
+            m.index + m[1].length + colonIndex + 1,
         );
         createVariableAndPropertyReferences(
             tokenizeJavaScript(
@@ -2321,9 +2321,9 @@ function parseVarsSection(
                 value,
                 sectionIndex + valueIndex,
                 state.textDocument,
-                chapbookState
+                chapbookState,
             ),
-            state
+            state,
         );
     }
 }
@@ -2347,7 +2347,7 @@ interface ChapbookPassageParts {
  * @returns Information about the vars section, or undefined if there is no vars section.
  */
 export function divideChapbookPassage(
-    passageText: string
+    passageText: string,
 ): ChapbookPassageParts {
     const passageParts: ChapbookPassageParts = {
         content: passageText,
@@ -2359,7 +2359,7 @@ export function divideChapbookPassage(
         passageParts.contentIndex =
             varSeparatorMatch.index + varSeparatorMatch[0].length;
         passageParts.content = passageParts.content.slice(
-            passageParts.contentIndex
+            passageParts.contentIndex,
         );
     }
     return passageParts;
@@ -2375,7 +2375,7 @@ export function divideChapbookPassage(
 export function parsePassageText(
     passageText: string,
     textIndex: number,
-    state: ParsingState
+    state: ParsingState,
 ): void {
     if (state.parseLevel !== ParseLevel.Full) {
         if (state.parseLevel === ParseLevel.PassageNames) {
@@ -2388,7 +2388,7 @@ export function parsePassageText(
                 parseVarsSectionForSetVarsAndPropsOnly(
                     passageParts.vars,
                     textIndex,
-                    state
+                    state,
                 );
             }
         }
@@ -2410,7 +2410,7 @@ export function parsePassageText(
                 passageParts.vars,
                 textIndex + 0,
                 state,
-                chapbookState
+                chapbookState,
             );
         }
         // Generate an embedded HTML document for the entire passage
@@ -2418,21 +2418,21 @@ export function parsePassageText(
             EmbeddedDocument.create(
                 (state.currentPassage?.name.contents ?? "placeholder").replace(
                     " ",
-                    "-"
+                    "-",
                 ),
                 "html",
                 passageParts.content,
                 textIndex + passageParts.contentIndex,
                 state.textDocument,
-                true
-            )
+                true,
+            ),
         );
 
         parseTextSection(
             passageParts.content,
             textIndex + passageParts.contentIndex,
             state,
-            chapbookState
+            chapbookState,
         );
     }
 
