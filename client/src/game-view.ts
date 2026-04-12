@@ -29,35 +29,6 @@ enum WebviewMessageCommands {
 }
 
 /**
- * Turn a file URI or path from an HTML tag into a webview-approved URI.
- *
- * @param rootUri Root URI for local file references.
- * @param uriOrPath Either a full URI or a path (like `path/to/file.css`).
- * @returns Webview-approved URI.
- */
-function uriOrPathToWebviewUri(rootUri: vscode.Uri, uriOrPath: string): string {
-    try {
-        // If it's already a URI, only change it if it's a file URI
-        const uri = vscode.Uri.parse(uriOrPath, true);
-        if (uri.scheme === "file") {
-            // We'll assume the URI's authority is part of the path
-            uriOrPath = panel.webview
-                .asWebviewUri(
-                    vscode.Uri.joinPath(rootUri, uri.authority, uri.path)
-                )
-                .toString();
-        }
-    } catch {
-        // It's not a URI, so assume it's a raw path
-        uriOrPath = panel.webview
-            .asWebviewUri(vscode.Uri.joinPath(rootUri, uriOrPath))
-            .toString();
-    }
-
-    return uriOrPath;
-}
-
-/**
  * Prepare raw HTML to be displayed in a webview.
  *
  * Handles security policies, updating Javascript calls that won't
@@ -66,19 +37,26 @@ function uriOrPathToWebviewUri(rootUri: vscode.Uri, uriOrPath: string): string {
  *
  * @param rootUri Root URI to local file resources.
  * @param src HTML source.
+ * @param context Extension context.
  * @returns Webviewified HTML.
  */
-function webviewifyHtml(rootUri: vscode.Uri, src: string): string {
+function webviewifyHtml(
+    rootUri: vscode.Uri,
+    src: string,
+    context: vscode.ExtensionContext,
+): string {
     const cspSource = panel?.webview.cspSource || "";
 
     // Create a content security policy, even though it's super lenient.
     // (It has to be, since e.g. SugarCube 2 uses `eval()`, sigh.)
     const securityPolicies = {
         "default-src": ["'none'"],
+        "img-src": [cspSource, "data:", "https:", "blob:"],
+        "media-src": [cspSource, "data:", "https:", "blob:"],
         "font-src": [cspSource, "data:", "https:"],
-        "img-src": [cspSource, "data:", "https:", "'unsafe-inline'"],
-        "script-src": [cspSource, "https:", "'unsafe-inline'", "'unsafe-eval'"],
         "style-src": [cspSource, "https:", "'unsafe-inline'"],
+        "script-src": [cspSource, "https:", "'unsafe-inline'", "'unsafe-eval'"],
+        "connect-src": [cspSource, "https:", "data:"],
     };
     const securityPoliciesContent = Object.entries(securityPolicies)
         .map(([k, v]) => `${k} ${v.join(" ")}`)
@@ -92,68 +70,82 @@ function webviewifyHtml(rootUri: vscode.Uri, src: string): string {
     // Add a function that, when it receives a message from the extension, tries
     // to reset SugarCube/Chapbook state.
     const customScriptTag = `
-    <script id="webview-support" type="text/javascript">
-    const vscode = acquireVsCodeApi();
-    const requestWebviewReload = () => {
-        vscode.postMessage({ command: '${WebviewMessageCommands.Reload}' });
-    }
-    window.addEventListener('message', event => {
-        if (event.data.command === '${WebviewMessageCommands.ResetState}') {
-            try {
-                if (typeof SugarCube !== 'undefined' && SugarCube.Engine !== undefined) {
-                    SugarCube.Engine.restart();
-                }
-                else if (typeof restart === 'function') {
-                    restart();
-                }
-                else {
-                    requestWebviewReload();
-                }
+<script id="webview-support" type="text/javascript">
+const vscode = acquireVsCodeApi();
+const requestWebviewReload = () => {
+    vscode.postMessage({ command: '${WebviewMessageCommands.Reload}' });
+}
+window.addEventListener('message', event => {
+    if (event.data.command === '${WebviewMessageCommands.ResetState}') {
+        try {
+            if (typeof SugarCube !== 'undefined' && SugarCube.Engine !== undefined) {
+                SugarCube.Engine.restart();
             }
-            catch {}
+            else if (typeof restart === 'function') {
+                restart();
+            }
+            else {
+                requestWebviewReload();
+            }
         }
-    });
-    </script>`;
+        catch {}
+    }
+});
+</script>`;
 
     src = src.replace(
         "<head>",
-        `<head>\n${securityPolicyTag}\n${customScriptTag}`
+        `<head>\n${securityPolicyTag}\n${customScriptTag}`,
     );
 
     // Add an invisible timestamp to the end of the body, so we can
     // update it on a re-run and force the webview to refresh.
     src = src.replace(
         "</body>",
-        `<div style='display: none;' id='time-cache'>${new Date().getTime()}</div>\n</body>`
+        `<div style='display: none;' id='time-cache'>${new Date().getTime()}</div>\n</body>`,
     );
 
     // Replace window.location.reload() calls with the above-defined messaging fn
     src = src.replace(
         /\bwindow\.location\.reload\(\)/g,
-        "requestWebviewReload();"
+        "requestWebviewReload();",
     );
 
-    // Turn src, href, and URL() references into webview URIs
-    src = src.replace(
-        /(src|href)=("|&quot;)(file:.*?|(?:[\w\-._~/ ]|%[0-9a-fA-F]{2})*?)("|&quot;)/g,
-        (_substr, attribute, openQuote, uriOrPath, closeQuote) =>
-            `${attribute}=${openQuote}${uriOrPathToWebviewUri(rootUri, uriOrPath)}${closeQuote}`
-    );
-    src = src.replace(
-        /url\(("?)((?:[\w\-._~/]|%[0-9a-fA-F]{2})*?)\1\)/g,
-        (_substr, quote, uriOrPath) =>
-            `url(${quote}${uriOrPathToWebviewUri(rootUri, uriOrPath)}${quote})`
-    );
+    if (panel) {
+        // Inject a script to re-write all media source links to webview-allowed URIs
+        const rootWebviewUri = panel.webview.asWebviewUri(rootUri);
+        const scriptUri = panel.webview.asWebviewUri(
+            vscode.Uri.joinPath(
+                context.extensionUri,
+                "dist",
+                "client",
+                "src",
+                "media-rewriter.js",
+            ),
+        );
+        src = src.replace(
+            "</body>",
+            `
+<script>
+window.__MEDIA_BASE__ = "${rootWebviewUri.toString()}/";
+</script>
+<script src="${scriptUri}"></script>
+</body>
+        `,
+        );
+    }
 
     return src;
 }
 
 /**
  * Reload a running game from disk and restart it.
+ *
+ * @param context Extension context.
  */
-export async function reloadRunningGame() {
+export async function reloadRunningGame(context: vscode.ExtensionContext) {
     if (panel !== undefined && gameUri !== undefined) {
-        viewCompiledGame(gameUri, true);
+        viewCompiledGame(gameUri, true, context);
     }
 }
 
@@ -162,44 +154,53 @@ export async function reloadRunningGame() {
  *
  * @param htmlUri URI to the local HTML file.
  * @param restart Whether to restart the game or not.
+ * @param context Extension context.
  */
 export async function viewCompiledGame(
     htmlUri: vscode.Uri,
-    restart: boolean = false
+    restart: boolean = false,
+    context: vscode.ExtensionContext,
 ) {
     gameUri = htmlUri;
 
     try {
         if (!panel) {
+            // Limit to our workspace only and our injected media-rewriting script
+            const resourceRoots: vscode.Uri[] = [context.extensionUri];
+
+            if (vscode.workspace.workspaceFolders) {
+                resourceRoots.push(vscode.workspace.workspaceFolders[0].uri);
+            }
             panel = vscode.window.createWebviewPanel(
                 "TwineGameView",
                 "Game",
                 vscode.ViewColumn.Beside,
                 {
                     enableScripts: true,
-                    localResourceRoots: [
-                        vscode.workspace.workspaceFolders[0].uri,
-                    ], // Limit to our workspace only
-                }
+                    localResourceRoots: resourceRoots,
+                },
             );
             panel.webview.onDidReceiveMessage(
                 (message) => {
-                    if (message.command === WebviewMessageCommands.Reload) {
+                    if (
+                        message.command === WebviewMessageCommands.Reload &&
+                        panel
+                    ) {
                         // Update the contents to force a reload
                         panel.webview.html = panel.webview.html.replace(
                             /<div style='display: none;' id='time-cache'>.*?<\/div>/g,
-                            `<div style='display: none;' id='time-cache'>${new Date().getTime()}</div>`
+                            `<div style='display: none;' id='time-cache'>${new Date().getTime()}</div>`,
                         );
                     }
                 },
                 undefined,
-                panelDisposables
+                panelDisposables,
             );
             signalContextEvent("runStarts");
             await vscode.commands.executeCommand(
                 "setContext",
                 CustomWhenContext.Running,
-                true
+                true,
             );
             panel.onDidDispose(() => {
                 panel = undefined;
@@ -212,7 +213,7 @@ export async function viewCompiledGame(
                 vscode.commands.executeCommand(
                     "setContext",
                     CustomWhenContext.Running,
-                    false
+                    false,
                 );
             });
             panelDisposables.push(
@@ -220,19 +221,20 @@ export async function viewCompiledGame(
                     const updateOption = vscode.workspace
                         .getConfiguration(Configuration.BaseSection)
                         .get(
-                            Configuration.RunningGameUpdate
+                            Configuration.RunningGameUpdate,
                         ) as RunningGameUpdateOptions;
                     if (updateOption !== "no update") {
                         const restart = updateOption === "restart";
-                        viewCompiledGame(params[0], restart);
+                        viewCompiledGame(params[0], restart, context);
                     }
-                })
+                }),
             );
         }
 
         const htmlContents = webviewifyHtml(
             UriUtils.dirname(htmlUri),
-            (await vscode.workspace.fs.readFile(htmlUri)).toString()
+            (await vscode.workspace.fs.readFile(htmlUri)).toString(),
+            context,
         );
 
         // Get the game's name from the <tw-storydata> tag
@@ -251,8 +253,10 @@ export async function viewCompiledGame(
         }
         panel.reveal();
     } catch (error) {
+        const message =
+            error instanceof Error ? error.message : "Unknown error";
         vscode.window.showErrorMessage(
-            `Could not open the compiled Twine game at ${htmlUri}: ${error.message}`
+            `Could not open the compiled Twine game at ${htmlUri}: ${message}`,
         );
     }
 }

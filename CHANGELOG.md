@@ -8,6 +8,7 @@ Changes to the extension.
 
 - Build system no longer percent-encodes spaces in included files' filenames. (issue #7)
 - Spaces are now allowed in local image paths when running games.
+- SugarCube: `[img]` markup images now show properly in running games. (issue #9)
 - Chapbook: Inserts with a quote mark in the text between them (such as `{var1} ' {var2}`) no longer ignore the second insert.
 
 ## [1.1.4] - 2025 06 25
