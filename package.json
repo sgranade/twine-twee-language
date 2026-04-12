@@ -28,7 +28,7 @@
         "interactive fiction"
     ],
     "engines": {
-        "vscode": "^1.75.0"
+        "vscode": "^1.90.0"
     },
     "icon": "images/icon.png",
     "capabilities": {
