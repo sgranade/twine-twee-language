@@ -41,7 +41,8 @@
         }
     },
     "activationEvents": [
-        "workspaceContains:**/*.{tw,twee}"
+        "workspaceContains:**/*.{tw,twee}",
+        "onStartupFinished"
     ],
     "main": "./dist/client/src/extension",
     "contributes": {

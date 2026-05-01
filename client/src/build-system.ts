@@ -118,7 +118,7 @@ export function getBuildAndStoryUris(
  *
  * @param workspaceProvider Workspace provider.
  */
-export async function checkForProjectDirectories(
+export async function buildProjectDirectoriesIfNeeded(
     workspaceProvider: WorkspaceProvider,
 ) {
     // If the user doesn't want to create project directories, don't offer
@@ -196,7 +196,7 @@ export async function checkForProjectDirectories(
  * @param allowRedownloading If true, allow re-downloading even if it exists.
  * @param workspaceProvider Workspace provider.
  */
-export async function checkForLocalStoryFormat(
+export async function downloadLocalStoryFormatIfNeeded(
     storyFormat: StoryFormat,
     allowRedownloading: boolean,
     workspaceProvider: WorkspaceProvider,
@@ -323,7 +323,7 @@ export async function readLocalStoryFormatOrAskToDownload(
             `Couldn't find a local copy of the story format ${storyFormat.format}`,
         );
         // Don't await this call so we don't wait around for the user to make up their mind
-        checkForLocalStoryFormat(storyFormat, true, workspaceProvider);
+        downloadLocalStoryFormatIfNeeded(storyFormat, true, workspaceProvider);
         return undefined;
     }
 }

@@ -11,8 +11,8 @@ import {
 import { clearAnnotationOnChangeEvent } from "./annotations";
 import {
     build,
-    checkForLocalStoryFormat,
-    checkForProjectDirectories,
+    downloadLocalStoryFormatIfNeeded,
+    buildProjectDirectoriesIfNeeded,
     getBuildAndStoryUris,
 } from "./build-system";
 import {
@@ -39,10 +39,11 @@ import { createStatusBarItems } from "./status-bar-items";
 import { TwineTaskProvider } from "./tasks";
 import { VSCodeWorkspaceProvider } from "./vscode-workspace-provider";
 
-let client: LanguageClient;
+let client: LanguageClient | undefined;
 let currentStoryTitle: string;
 let currentStoryFormatLanguageID: string;
 let currentStoryFormatLanguageConfiguration: vscode.Disposable | undefined; // Any current language settings
+let directoryBuildPromise: Promise<void> | undefined;
 
 const workspaceProvider = new VSCodeWorkspaceProvider();
 
@@ -78,7 +79,7 @@ function registerCommands(context: vscode.ExtensionContext) {
                         `Can't download the project's Twine story format because it isn't known`,
                     );
                 } else {
-                    checkForLocalStoryFormat(
+                    downloadLocalStoryFormatIfNeeded(
                         format.format,
                         true,
                         workspaceProvider,
@@ -159,7 +160,7 @@ async function onUpdatedStoryFormat(e: StoryFormat) {
 
     // Offer to download the story format, but only if it hasn't
     // already been downloaded. Once done, cache the story format.
-    checkForLocalStoryFormat(e, false, workspaceProvider).then(() =>
+    downloadLocalStoryFormatIfNeeded(e, false, workspaceProvider).then(() =>
         cacheStoryFormat(e, workspaceProvider),
     );
 }
@@ -237,6 +238,41 @@ const storyFilesGlob = (): string => {
 };
 
 export function activate(context: vscode.ExtensionContext) {
+    // We activate both on workspace load finished and if there's a `.twee` file.
+    // In either case we check whether the workspace needs setting up, but we
+    // only fully start our server when we detect an open `.twee` file.
+    if (directoryBuildPromise === undefined) {
+        // Only fire this off once
+        directoryBuildPromise =
+            buildProjectDirectoriesIfNeeded(workspaceProvider);
+    }
+
+    const tweeFileOpen = vscode.workspace.textDocuments.some(
+        (doc) =>
+            doc.languageId === "twee3" || doc.languageId.startsWith("twee3-"),
+    );
+    if (tweeFileOpen) {
+        startClient(context);
+    } else {
+        context.subscriptions.push(
+            vscode.workspace.onDidOpenTextDocument((doc) => {
+                if (
+                    doc.languageId === "twee3" ||
+                    doc.languageId.startsWith("twee3-")
+                ) {
+                    startClient(context);
+                }
+            }),
+        );
+    }
+}
+
+export function startClient(context: vscode.ExtensionContext) {
+    // If the `client` variable exists, we've already started the client
+    if (client) {
+        return;
+    }
+
     // The server is implemented in node
     const serverModule = context.asAbsolutePath(
         path.join("dist", "server", "src", "server.js"),
@@ -314,7 +350,7 @@ export function activate(context: vscode.ExtensionContext) {
                     `${Configuration.BaseSection}.${Configuration.StoryFilesDirectory}`,
                 )
             ) {
-                client.sendNotification(CustomMessages.RequestReindex);
+                client?.sendNotification(CustomMessages.RequestReindex);
             }
         }),
     );
@@ -325,7 +361,7 @@ export function activate(context: vscode.ExtensionContext) {
             async (e: vscode.TextEditor | undefined) => {
                 if (e !== undefined) {
                     await updateTweeDocumentLanguage(e.document);
-                    client.sendNotification(
+                    client?.sendNotification(
                         CustomMessages.RequestDecorationRanges,
                         e.document.uri.toString(),
                     );
@@ -383,12 +419,9 @@ export function activate(context: vscode.ExtensionContext) {
     );
 
     // Start the client. This will also launch the server
-    client.start().then(() => checkForProjectDirectories(workspaceProvider));
+    client.start();
 }
 
 export function deactivate(): Thenable<void> | undefined {
-    if (!client) {
-        return undefined;
-    }
-    return client.stop();
+    return client?.stop();
 }

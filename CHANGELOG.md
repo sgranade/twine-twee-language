@@ -2,6 +2,12 @@
 
 Changes to the extension.
 
+## Unreleased
+
+### Changed
+
+- The extension now offers to set up the workspace's directories when the extension starts instead of waiting until a `.twee` file is opened.
+
 ## [1.1.5] - 2026 04 12
 
 ### Fixed
