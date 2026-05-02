@@ -8,6 +8,10 @@ Changes to the extension.
 
 - The extension now offers to set up the workspace's directories when the extension starts instead of waiting until a `.twee` file is opened.
 
+### Fixed
+
+- SugarCube: Improved syntax highlighting of twee links.
+
 ## [1.1.5] - 2026 04 12
 
 ### Fixed

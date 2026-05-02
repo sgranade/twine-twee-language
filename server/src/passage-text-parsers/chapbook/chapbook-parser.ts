@@ -25,7 +25,7 @@ import {
 } from "../../parser";
 import { Label, ProjectIndex } from "../../project-index";
 import { ETokenType, ETokenModifier } from "../../semantic-tokens";
-import { Token } from "../types";
+import { Token } from "../../types";
 import {
     skipSpaces,
     extractToMatchingDelimiter,

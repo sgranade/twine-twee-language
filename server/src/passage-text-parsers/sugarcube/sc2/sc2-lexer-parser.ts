@@ -11,7 +11,7 @@ import {
 import { ETokenType } from "../../../semantic-tokens";
 import { skipSpaces } from "../../../utilities";
 import { capturePreSemanticTokenFor, StoryFormatParsingState } from "../..";
-import { Token } from "../../types";
+import { Token } from "../../../types";
 import { createVariableAndPropertyReferences } from "../sugarcube-utils";
 import {
     isTwineScriptExpression,
@@ -82,6 +82,22 @@ export function parseSugarCubeTwineLink(
         markupData.isLink &&
         markupData.link !== undefined
     ) {
+        // Capture semantic tokens for the brackets
+        capturePreSemanticTokenFor(
+            "[[",
+            linkIndex + textIndex,
+            ETokenType.operator,
+            [],
+            sugarcubeState,
+        );
+        capturePreSemanticTokenFor(
+            "]]",
+            textIndex + markupData.endPosition - 2, // markupData positions include linkIndex
+            ETokenType.operator,
+            [],
+            sugarcubeState,
+        );
+
         parseSugarCubePassageRefOrTwinescriptExpr(
             markupData.link.text,
             markupData.link.at + textIndex,
@@ -115,6 +131,15 @@ export function parseSugarCubeTwineLink(
                     sugarcubeState,
                 ),
                 state,
+            );
+        }
+        if (markupData.innerMeta !== undefined) {
+            capturePreSemanticTokenFor(
+                markupData.innerMeta.text,
+                markupData.innerMeta.at + textIndex,
+                ETokenType.operator,
+                [],
+                sugarcubeState,
             );
         }
     } else if (error !== undefined) {
@@ -396,6 +421,10 @@ export interface LinkMarkupData {
      * Delimiter (`|`, `<-`, or `->`)
      */
     delim?: Token;
+    /**
+     * Inner meta (`][`)
+     */
+    innerMeta?: Token;
 }
 
 /**
@@ -470,6 +499,10 @@ export function parseSquareBracketedMarkup(
 
                 case SquareBracketParsing.Item.Text:
                     markup.text = { text: text, at: at };
+                    break;
+
+                case SquareBracketParsing.Item.InnerMeta:
+                    markup.innerMeta = { text: text, at: at };
                     break;
 
                 case SquareBracketParsing.Item.DelimLTR:

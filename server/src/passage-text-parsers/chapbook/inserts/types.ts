@@ -1,7 +1,7 @@
 import { ChapbookParsingState } from "../chapbook-parser";
 import { ChapbookFunctionInfo, FirstArgument, InsertProperty } from "../types";
 import { ParsingState } from "../../../parser";
-import { Token } from "../../types";
+import { Token } from "../../../types";
 
 /**
  * Tokenized modifier information.

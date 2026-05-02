@@ -536,7 +536,7 @@ describe("SugarCube Parser", () => {
     });
 
     describe("links", () => {
-        it("should produce no semantic tokens for an empty [[]] link", () => {
+        it("should produce semantic tokens for the brackets in an empty [[]] link", () => {
             const header = ":: Passage\n";
             const passage =
                 "We shall introduce: a link!\n" + "Here it is: [[]]\n";
@@ -548,8 +548,23 @@ describe("SugarCube Parser", () => {
             const parser = uut.getSugarCubeParser(undefined);
 
             parser?.parsePassageText(passage, header.length, state);
+            const [leftBracketToken, rightBracketToken] = callbacks.tokens;
 
-            expect(callbacks.tokens).to.be.empty;
+            expect(callbacks.tokens.length).to.equal(2);
+            expect(leftBracketToken).to.eql({
+                line: 2,
+                char: 12,
+                length: 2,
+                tokenType: ETokenType.operator,
+                tokenModifiers: [],
+            });
+            expect(rightBracketToken).to.eql({
+                line: 2,
+                char: 14,
+                length: 2,
+                tokenType: ETokenType.operator,
+                tokenModifiers: [],
+            });
         });
 
         it("should set semantic tokens for a [[target]] link", () => {
@@ -565,9 +580,24 @@ describe("SugarCube Parser", () => {
             const parser = uut.getSugarCubeParser(undefined);
 
             parser?.parsePassageText(passage, header.length, state);
-            const [targetToken] = callbacks.tokens;
+            const [leftBracketToken, targetToken, rightBracketToken] =
+                callbacks.tokens;
 
-            expect(callbacks.tokens.length).to.equal(1);
+            expect(callbacks.tokens.length).to.equal(3);
+            expect(leftBracketToken).to.eql({
+                line: 2,
+                char: 12,
+                length: 2,
+                tokenType: ETokenType.operator,
+                tokenModifiers: [],
+            });
+            expect(rightBracketToken).to.eql({
+                line: 2,
+                char: 30,
+                length: 2,
+                tokenType: ETokenType.operator,
+                tokenModifiers: [],
+            });
             expect(targetToken).to.eql({
                 line: 2,
                 char: 15,
@@ -595,6 +625,13 @@ describe("SugarCube Parser", () => {
             expect(result).to.eql([
                 {
                     line: 2,
+                    char: 12,
+                    length: 2,
+                    tokenType: ETokenType.operator,
+                    tokenModifiers: [],
+                },
+                {
+                    line: 2,
                     char: 15,
                     length: 7,
                     tokenType: ETokenType.string,
@@ -612,6 +649,13 @@ describe("SugarCube Parser", () => {
                     char: 25,
                     length: 6,
                     tokenType: ETokenType.variable,
+                    tokenModifiers: [],
+                },
+                {
+                    line: 2,
+                    char: 32,
+                    length: 2,
+                    tokenType: ETokenType.operator,
                     tokenModifiers: [],
                 },
             ]);
@@ -705,9 +749,22 @@ describe("SugarCube Parser", () => {
             const parser = uut.getSugarCubeParser(undefined);
 
             parser?.parsePassageText(passage, header.length, state);
-            const [displayToken, barToken, targetToken] = callbacks.tokens;
+            const [
+                leftBracketToken,
+                displayToken,
+                barToken,
+                targetToken,
+                rightBracketToken,
+            ] = callbacks.tokens;
 
-            expect(callbacks.tokens.length).to.equal(3);
+            expect(callbacks.tokens.length).to.equal(5);
+            expect(leftBracketToken).to.eql({
+                line: 2,
+                char: 12,
+                length: 2,
+                tokenType: ETokenType.operator,
+                tokenModifiers: [],
+            });
             expect(displayToken).to.eql({
                 line: 2,
                 char: 14,
@@ -727,6 +784,13 @@ describe("SugarCube Parser", () => {
                 char: 35,
                 length: 14,
                 tokenType: ETokenType.class,
+                tokenModifiers: [],
+            });
+            expect(rightBracketToken).to.eql({
+                line: 2,
+                char: 49,
+                length: 2,
+                tokenType: ETokenType.operator,
                 tokenModifiers: [],
             });
         });
@@ -791,9 +855,22 @@ describe("SugarCube Parser", () => {
             const parser = uut.getSugarCubeParser(undefined);
 
             parser?.parsePassageText(passage, header.length, state);
-            const [displayToken, arrowToken, targetToken] = callbacks.tokens;
+            const [
+                leftBracketToken,
+                displayToken,
+                arrowToken,
+                targetToken,
+                rightBracketToken,
+            ] = callbacks.tokens;
 
-            expect(callbacks.tokens.length).to.equal(3);
+            expect(callbacks.tokens.length).to.equal(5);
+            expect(leftBracketToken).to.eql({
+                line: 2,
+                char: 12,
+                length: 2,
+                tokenType: ETokenType.operator,
+                tokenModifiers: [],
+            });
             expect(displayToken).to.eql({
                 line: 2,
                 char: 14,
@@ -813,6 +890,13 @@ describe("SugarCube Parser", () => {
                 char: 36,
                 length: 14,
                 tokenType: ETokenType.class,
+                tokenModifiers: [],
+            });
+            expect(rightBracketToken).to.eql({
+                line: 2,
+                char: 50,
+                length: 2,
+                tokenType: ETokenType.operator,
                 tokenModifiers: [],
             });
         });
@@ -877,9 +961,22 @@ describe("SugarCube Parser", () => {
             const parser = uut.getSugarCubeParser(undefined);
 
             parser?.parsePassageText(passage, header.length, state);
-            const [targetToken, arrowToken, displayToken] = callbacks.tokens;
+            const [
+                leftBracketToken,
+                targetToken,
+                arrowToken,
+                displayToken,
+                rightBracketToken,
+            ] = callbacks.tokens;
 
-            expect(callbacks.tokens.length).to.equal(3);
+            expect(callbacks.tokens.length).to.equal(5);
+            expect(leftBracketToken).to.eql({
+                line: 2,
+                char: 12,
+                length: 2,
+                tokenType: ETokenType.operator,
+                tokenModifiers: [],
+            });
             expect(targetToken).to.eql({
                 line: 2,
                 char: 15,
@@ -899,6 +996,13 @@ describe("SugarCube Parser", () => {
                 char: 33,
                 length: 18,
                 tokenType: ETokenType.string,
+                tokenModifiers: [],
+            });
+            expect(rightBracketToken).to.eql({
+                line: 2,
+                char: 52,
+                length: 2,
+                tokenType: ETokenType.operator,
                 tokenModifiers: [],
             });
         });
@@ -968,9 +1072,23 @@ describe("SugarCube Parser", () => {
             expect(results).to.eql([
                 {
                     line: 2,
+                    char: 12,
+                    length: 2,
+                    tokenType: ETokenType.operator,
+                    tokenModifiers: [],
+                },
+                {
+                    line: 2,
                     char: 15,
                     length: 14,
                     tokenType: ETokenType.class,
+                    tokenModifiers: [],
+                },
+                {
+                    line: 2,
+                    char: 30,
+                    length: 2,
+                    tokenType: ETokenType.operator,
                     tokenModifiers: [],
                 },
                 {
@@ -992,6 +1110,13 @@ describe("SugarCube Parser", () => {
                     char: 42,
                     length: 1,
                     tokenType: ETokenType.number,
+                    tokenModifiers: [],
+                },
+                {
+                    line: 2,
+                    char: 43,
+                    length: 2,
+                    tokenType: ETokenType.operator,
                     tokenModifiers: [],
                 },
             ]);
@@ -1079,6 +1204,13 @@ describe("SugarCube Parser", () => {
             expect(result).to.eql([
                 {
                     line: 2,
+                    char: 12,
+                    length: 2,
+                    tokenType: ETokenType.operator,
+                    tokenModifiers: [],
+                },
+                {
+                    line: 2,
                     char: 14,
                     length: 18,
                     tokenType: ETokenType.string,
@@ -1100,6 +1232,13 @@ describe("SugarCube Parser", () => {
                 },
                 {
                     line: 2,
+                    char: 49,
+                    length: 2,
+                    tokenType: ETokenType.operator,
+                    tokenModifiers: [],
+                },
+                {
+                    line: 2,
                     char: 51,
                     length: 6,
                     tokenType: ETokenType.variable,
@@ -1117,6 +1256,13 @@ describe("SugarCube Parser", () => {
                     char: 61,
                     length: 1,
                     tokenType: ETokenType.number,
+                    tokenModifiers: [],
+                },
+                {
+                    line: 2,
+                    char: 62,
+                    length: 2,
+                    tokenType: ETokenType.operator,
                     tokenModifiers: [],
                 },
             ]);
@@ -1204,6 +1350,13 @@ describe("SugarCube Parser", () => {
             expect(results).to.eql([
                 {
                     line: 2,
+                    char: 12,
+                    length: 2,
+                    tokenType: ETokenType.operator,
+                    tokenModifiers: [],
+                },
+                {
+                    line: 2,
                     char: 14,
                     length: 18,
                     tokenType: ETokenType.string,
@@ -1225,6 +1378,13 @@ describe("SugarCube Parser", () => {
                 },
                 {
                     line: 2,
+                    char: 50,
+                    length: 2,
+                    tokenType: ETokenType.operator,
+                    tokenModifiers: [],
+                },
+                {
+                    line: 2,
                     char: 52,
                     length: 6,
                     tokenType: ETokenType.variable,
@@ -1242,6 +1402,13 @@ describe("SugarCube Parser", () => {
                     char: 62,
                     length: 1,
                     tokenType: ETokenType.number,
+                    tokenModifiers: [],
+                },
+                {
+                    line: 2,
+                    char: 63,
+                    length: 2,
+                    tokenType: ETokenType.operator,
                     tokenModifiers: [],
                 },
             ]);
@@ -1329,6 +1496,13 @@ describe("SugarCube Parser", () => {
             expect(result).to.eql([
                 {
                     line: 2,
+                    char: 12,
+                    length: 2,
+                    tokenType: ETokenType.operator,
+                    tokenModifiers: [],
+                },
+                {
+                    line: 2,
                     char: 15,
                     length: 14,
                     tokenType: ETokenType.class,
@@ -1350,6 +1524,13 @@ describe("SugarCube Parser", () => {
                 },
                 {
                     line: 2,
+                    char: 52,
+                    length: 2,
+                    tokenType: ETokenType.operator,
+                    tokenModifiers: [],
+                },
+                {
+                    line: 2,
                     char: 54,
                     length: 6,
                     tokenType: ETokenType.variable,
@@ -1367,6 +1548,13 @@ describe("SugarCube Parser", () => {
                     char: 64,
                     length: 1,
                     tokenType: ETokenType.number,
+                    tokenModifiers: [],
+                },
+                {
+                    line: 2,
+                    char: 65,
+                    length: 2,
+                    tokenType: ETokenType.operator,
                     tokenModifiers: [],
                 },
             ]);

@@ -50,6 +50,7 @@ import {
     removeAndCountPadding,
     skipSpaces,
 } from "./utilities";
+import { Token } from "./types";
 
 /**
  * At what level of detail to parse a Twee document.
@@ -302,37 +303,25 @@ export function parsePassageReference(
 
 /**
  * A parsed Twine link, of the form [[target]], [[display|target]],
- * [[display->target]], or [[target->display]]
+ * [[display->target]], [[target->display]], or
  */
 export interface TwineLink {
     /**
-     * String containing the target text.
+     * The link's target.
      */
-    target: string;
-    /**
-     * Index of the target text in the document.
-     */
-    targetIndex: number;
+    target: Token;
     /**
      * Optional display section
      */
     displaySection?: {
         /**
-         * The divider character(s) (`|`, `->`, or `<-`), if present.
+         * The divider (`|`, `->`, or `<-`), if present.
          */
-        divider: string;
+        divider: Token;
         /**
-         * Index of the divider in the document.
+         * The text to be displayed, if present.
          */
-        dividerIndex: number;
-        /**
-         * String containing the text to be displayed, if present.
-         */
-        display: string;
-        /**
-         * Index of the display text in the document.
-         */
-        displayIndex: number;
+        display: Token;
     };
 }
 
@@ -383,17 +372,14 @@ function parseLink(linkText: string, linkIndex: number): TwineLink {
     let indexDelta;
     [target, targetIndex] = skipSpaces(target, targetIndex);
     const ret: TwineLink = {
-        target: target,
-        targetIndex: linkIndex + targetIndex,
+        target: Token.create(target, linkIndex + targetIndex),
     };
     if (dividerIndex !== -1) {
         [display, indexDelta] = removeAndCountPadding(display);
         displayIndex += indexDelta;
         ret.displaySection = {
-            divider: divider,
-            dividerIndex: linkIndex + dividerIndex,
-            display: display,
-            displayIndex: linkIndex + displayIndex,
+            divider: Token.create(divider, linkIndex + dividerIndex),
+            display: Token.create(display, linkIndex + displayIndex),
         };
     }
 
@@ -406,7 +392,7 @@ function parseLink(linkText: string, linkIndex: number): TwineLink {
  * Story formats are responsible for calling this, but since the Twine link style is shared
  * among story formats, it's part of the main parsing code.
  *
- * Semantic tokens are captured in the passage text parsing state for them to submit
+ * Semantic tokens are captured in the story format parsing state for them to submit
  * to the index later, as semantic tokens have to be in document order, and links
  * may be interspersed with other semantic tokens in a passage.
  *
@@ -432,25 +418,25 @@ export function findAndParseLinks(
         // Parse the link's contents. (The + 2 in the match is for the opening braces)
         const link = parseLink(m[1], subsectionIndex + m.index + 2);
         // Only capture target as a passage reference if it's not a URL
-        if (!/^https?:\/\//.test(link.target))
+        if (!/^https?:\/\//.test(link.target.text))
             parsePassageReference(
-                link.target,
-                link.targetIndex,
+                link.target.text,
+                link.target.at,
                 state,
                 storyFormatParsingState,
             );
 
         if (link.displaySection !== undefined) {
             capturePreSemanticTokenFor(
-                link.displaySection.divider,
-                link.displaySection.dividerIndex,
+                link.displaySection.divider.text,
+                link.displaySection.divider.at,
                 ETokenType.keyword,
                 [],
                 storyFormatParsingState,
             );
             capturePreSemanticTokenFor(
-                link.displaySection.display,
-                link.displaySection.displayIndex,
+                link.displaySection.display.text,
+                link.displaySection.display.at,
                 ETokenType.string,
                 [],
                 storyFormatParsingState,

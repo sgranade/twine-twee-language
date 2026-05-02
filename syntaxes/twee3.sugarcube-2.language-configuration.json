@@ -6,10 +6,11 @@
 	},
     // symbols used as brackets
     // For SugarCube 2, we don't treat Twee links (`[[...]]`) as brackets
-    // since it supports mid-link setters (`[[...][...]]`)
+    // since it supports mid-link setters (`[[...][...]]`). We also don't
+    // treat `[` or `]` as brackets so we don't get weird colors on Twine
+    // links if the user has bracket coloring turned on
     "brackets": [
         ["{", "}"],
-        ["[", "]"],
         ["(", ")"]
     ],
     // symbols that are auto closed when typing
