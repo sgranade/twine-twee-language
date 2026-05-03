@@ -3877,6 +3877,35 @@ describe("SugarCube Parser", () => {
                 expect(result.range).to.eql(Range.create(1, 10, 1, 19));
             });
 
+            it("should error on a macro inside a link setter", () => {
+                const header = ":: Passage\n";
+                const passage = "Let's go: [[passage][<<testy>>]]\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const parser = uut.getSugarCubeParser(undefined);
+                const macro = buildMacroInfo({
+                    name: "testy",
+                });
+                const mockFunction = ImportMock.mockFunction(
+                    macrosModule,
+                    "allMacros",
+                ).returns({ testy: macro });
+
+                parser?.parsePassageText(passage, header.length, state);
+                mockFunction.restore();
+                const [result] = callbacks.errors;
+
+                expect(callbacks.errors.length).to.equal(1);
+                expect(result.severity).to.eql(DiagnosticSeverity.Warning);
+                expect(result.message).to.include(
+                    "Macros aren't evaluated inside link setters",
+                );
+                expect(result.range).to.eql(Range.create(1, 21, 1, 30));
+            });
+
             it("should error on a closing macro that isn't a container", () => {
                 const header = ":: Passage\n";
                 const passage = "Let's go: <</testy>>\n";

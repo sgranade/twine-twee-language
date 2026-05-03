@@ -253,6 +253,10 @@ function parseAndRemoveTwineLinks(
 
 const macroRegex = new RegExp(SC2Patterns.fullMacro, "gm");
 const scriptMacroRegex = new RegExp(SC2Patterns.scriptMacroBlock, "gm");
+const macroInASetterRegex = new RegExp(
+    `(\\[\\[[^\\]]*\\]\\[.*?)((?:(?:${SC2Patterns.fullMacro}).*?)+)\\]`,
+    "gm",
+);
 
 /**
  * Location information about a macro
@@ -674,7 +678,7 @@ function captureMacroRefAndTokens(
  * @param sugarcubeState SugarCube-specific parsing state.
  * @returns The passage text with macros removed.
  */
-function parseMacros(
+function parseAndRemoveMacros(
     passageText: string,
     textIndex: number,
     state: ParsingState,
@@ -738,6 +742,16 @@ function parseMacros(
             );
         }
     });
+
+    // Warn on any macro that's inside of the setter portion of a link
+    for (const m of passageText.matchAll(macroInASetterRegex)) {
+        logWarningFor(
+            m[2],
+            m.index + m[1].length + textIndex,
+            "Macros aren't evaluated inside link setters",
+            state,
+        );
+    }
 
     let macroId = 0;
     const unclosedMacros: MacroLocationInfo[] = [];
@@ -1297,7 +1311,7 @@ function checkPassageTags(
 }
 
 /**
- * Parse the text of a Chapbook passage.
+ * Parse the text of a SugarCube passage.
  *
  * @param passageText Passage text to parse.
  * @param textIndex Index of the text in the document (zero-based).
@@ -1343,7 +1357,12 @@ export function parsePassageText(
         sugarcubeState,
     );
 
-    passageText = parseMacros(passageText, textIndex, state, sugarcubeState);
+    passageText = parseAndRemoveMacros(
+        passageText,
+        textIndex,
+        state,
+        sugarcubeState,
+    );
 
     passageText = parseAndRemoveTwineLinks(
         passageText,

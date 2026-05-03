@@ -4,6 +4,10 @@ Changes to the extension.
 
 ## Unreleased
 
+### Added
+
+- SugarCube: Macros inside link setters (such as `[[passage][<<set $var to 1>>]]`) now generate a warning about them not being evaluated.
+
 ### Changed
 
 - The extension now offers to set up the workspace's directories when the extension starts instead of waiting until a `.twee` file is opened.
