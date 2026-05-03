@@ -10,6 +10,7 @@ Changes to the extension.
 
 ### Fixed
 
+- When running a game in VS Code, error modals are now shown in VS Code instead of being silently swallowed.
 - SugarCube: Improved syntax highlighting of twee links.
 
 ## [1.1.5] - 2026 04 12

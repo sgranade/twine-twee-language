@@ -24,6 +24,7 @@ export function gameRunning(): boolean {
  * Commands between the game webview and the extension.
  */
 enum WebviewMessageCommands {
+    Alert = "twine-iframe-alert", // Alert message
     Reload = "twine-iframe-requests-reload", // Request from iframe to reload
     ResetState = "twine-extension-requests-state-reset", // Request from extension to reset story state
 }
@@ -69,11 +70,15 @@ function webviewifyHtml(
     // Also, SugarCube and Chapbook save state in ways that survives a reload().
     // Add a function that, when it receives a message from the extension, tries
     // to reset SugarCube/Chapbook state.
-    const customScriptTag = `
-<script id="webview-support" type="text/javascript">
+    // Finally, add a function to forward `alert()` calls to VS Code
+    const vsCodeMessagesScriptTag = `
+<script id="webview-support-game-reloading" type="text/javascript">
 const vscode = acquireVsCodeApi();
 const requestWebviewReload = () => {
     vscode.postMessage({ command: '${WebviewMessageCommands.Reload}' });
+}
+const sendAlertToVSCode = (msg) => {
+    vscode.postMessage({ command: '${WebviewMessageCommands.Alert}', text: msg });
 }
 window.addEventListener('message', event => {
     if (event.data.command === '${WebviewMessageCommands.ResetState}') {
@@ -95,7 +100,7 @@ window.addEventListener('message', event => {
 
     src = src.replace(
         "<head>",
-        `<head>\n${securityPolicyTag}\n${customScriptTag}`,
+        `<head>\n${securityPolicyTag}\n${vsCodeMessagesScriptTag}`,
     );
 
     // Add an invisible timestamp to the end of the body, so we can
@@ -105,11 +110,14 @@ window.addEventListener('message', event => {
         `<div style='display: none;' id='time-cache'>${new Date().getTime()}</div>\n</body>`,
     );
 
-    // Replace window.location.reload() calls with the above-defined messaging fn
+    // Replace window.location.reload() calls with the above-defined reload messaging fn
     src = src.replace(
         /\bwindow\.location\.reload\(\)/g,
         "requestWebviewReload();",
     );
+
+    // Replace window.alert() calls with the above-defined alert messaging fn
+    src = src.replace(/\bwindow\.alert\(/g, "sendAlertToVSCode(");
 
     if (panel) {
         // Inject a script to re-write all media source links to webview-allowed URIs
@@ -190,6 +198,13 @@ export async function viewCompiledGame(
                         panel.webview.html = panel.webview.html.replace(
                             /<div style='display: none;' id='time-cache'>.*?<\/div>/g,
                             `<div style='display: none;' id='time-cache'>${new Date().getTime()}</div>`,
+                        );
+                    } else if (
+                        message.command === WebviewMessageCommands.Alert &&
+                        panel
+                    ) {
+                        vscode.window.showErrorMessage(
+                            `Your game experienced an error: ${message.text}`,
                         );
                     }
                 },
