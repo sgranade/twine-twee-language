@@ -20,6 +20,9 @@ const typeofToSemantic: Record<string, TokenType> = {
     boolean: ETokenType.keyword,
 };
 
+/**
+ * Unprocessed token from the Javascript AST.
+ */
 interface astUnprocessedToken {
     text: string;
     at: number;
@@ -76,28 +79,249 @@ const builtInJSObjects = new Set([
 ]);
 
 /**
- * Determine the scope of a property.
+ * Helper type for capturing the full path of a property's scope.
+ */
+type ScopePath = {
+    root: string;
+    path: string[];
+};
+
+/**
+ * Convert a scope path to a string.
+ *
+ * @param scope Scope's full path.
+ * @returns String representation of the scope path.
+ */
+function scopePathToString(scope: ScopePath): string {
+    return [scope.root, ...scope.path].join(".");
+}
+
+/**
+ * A member property, including its full scope.
+ */
+type MemberProperty = {
+    name: string;
+    at: number;
+    scope?: string;
+};
+
+/**
+ * Get the static name of a property (if it exists).
+ *
+ * @param property Node that contains the property.
+ * @param computed Whether the property is a computed one.
+ * @returns The static property name, or undefined if there is none.
+ */
+function getStaticPropertyName(
+    property: acorn.AnyNode,
+    computed: boolean,
+): string | undefined {
+    if (!computed && property.type === "Identifier") {
+        return property.name;
+    }
+
+    if (
+        computed &&
+        property.type === "Literal" &&
+        typeof property.value === "string"
+    ) {
+        return property.value;
+    }
+
+    return undefined;
+}
+
+/**
+ * Determine the scope of a property in a member expression.
  *
  * A member expression for `subprop` from `var.prop.subprop` will result in a scope of `var.prop`.
  *
- * If the scope includes any computed proeprties (i.e. `var['prop'].subprop`) then no scope
+ * If the scope includes any computed non-static proeprties (i.e. `var[othervar].subprop`), then no scope
  * will be returned.
  *
  * @param node Member expression node containing the property.
  * @returns The property's scope, or undefined if it can't be statically determined.
  */
-function propertyScope(node: acorn.MemberExpression): string | undefined {
-    const scope: string[] = [];
-    while (node.object.type === "MemberExpression") {
-        node = node.object;
-        // Give up if we hit a computed or non-identifier property
-        if (node.computed || node.property.type !== "Identifier")
+function resolveMemberExpressionScope(
+    node: acorn.MemberExpression,
+): ScopePath | undefined {
+    const path: string[] = [];
+
+    let current: acorn.MemberExpression = node;
+
+    // Walk upward through chained member expressions
+    while (true) {
+        const propName = getStaticPropertyName(
+            current.property,
+            current.computed,
+        );
+        if (propName === undefined) {
             return undefined;
-        scope.push(node.property.name);
+        }
+
+        path.unshift(propName);
+
+        if (current.object.type === "Identifier") {
+            return {
+                root: current.object.name,
+                path: path.slice(0, -1), // exclude node's property from the path
+            };
+        }
+
+        if (current.object.type !== "MemberExpression") {
+            return undefined;
+        }
+
+        current = current.object;
     }
-    if (node.object.type !== "Identifier") return undefined;
-    scope.push(node.object.name);
-    return scope.reverse().join(".");
+}
+
+/**
+ * Determine the scope of a property in an object property scope.
+ *
+ * A member expression for `subprop` from `var.prop = {subprop: val}` will result in a scope of `var.prop`.
+ *
+ * If the scope includes any computed non-static properties (i.e. `var[othervar].subprop`), then no scope
+ * will be returned.
+ *
+ * @param node Member expression node containing the property.
+ * @returns The property's scope, or undefined if it can't be statically determined.
+ */
+function resolveObjectPropertyScope(
+    ancestors: acorn.Node[],
+): ScopePath | undefined {
+    const path: string[] = [];
+
+    // Skip current node
+    for (let i = ancestors.length - 2; i >= 0; --i) {
+        const ancestor = ancestors[i] as acorn.AnyNode;
+
+        // Parent object property -- save it in the path
+        if (ancestor.type === "Property") {
+            const propName = getStaticPropertyName(
+                ancestor.key,
+                ancestor.computed ?? false,
+            );
+            if (propName === undefined) {
+                return undefined;
+            }
+
+            path.unshift(propName);
+            continue;
+        }
+
+        // Assignment target -- grab the left for part of the scope
+        if (ancestor.type === "AssignmentExpression") {
+            // foo = { ... }
+            if (ancestor.left.type === "Identifier") {
+                return {
+                    root: ancestor.left.name,
+                    path,
+                };
+            }
+
+            // foo.bar = { ... }
+            if (ancestor.left.type === "MemberExpression") {
+                const memberScope = resolveMemberExpressionScope(ancestor.left);
+                if (memberScope === undefined) {
+                    return undefined;
+                }
+
+                const propName = getStaticPropertyName(
+                    ancestor.left.property,
+                    ancestor.left.computed,
+                );
+
+                return {
+                    root: memberScope.root,
+                    path: [
+                        ...memberScope.path,
+                        propName ? propName : "",
+                        ...path,
+                    ],
+                };
+            }
+
+            return undefined;
+        }
+
+        // const foo = { ... }
+        if (ancestor.type === "VariableDeclarator") {
+            if (ancestor.id.type === "Identifier") {
+                return {
+                    root: ancestor.id.name,
+                    path,
+                };
+            }
+
+            return undefined;
+        }
+    }
+
+    return undefined;
+}
+
+/**
+ * Capture object properties within a member expression.
+ *
+ * @param node Node containing the member expression.
+ * @returns List of member properties within the expression.
+ */
+function captureMemberExpressionProperties(
+    node: acorn.MemberExpression,
+): MemberProperty[] {
+    const chain: {
+        name: string;
+        at: number;
+    }[] = [];
+
+    let current: acorn.MemberExpression = node;
+
+    while (true) {
+        const propName = getStaticPropertyName(
+            current.property,
+            current.computed,
+        );
+        if (propName === undefined) {
+            return [];
+        }
+
+        // Handle how computed properties' locations start with the quote mark
+        let start = current.property.start;
+        if (
+            current.computed &&
+            current.property.type === "Literal" &&
+            typeof current.property.value === "string"
+        ) {
+            start++;
+        }
+
+        chain.unshift({
+            name: propName,
+            at: start,
+        });
+
+        if (current.object.type === "Identifier") {
+            const root = current.object.name;
+
+            return chain.map((prop, index) => ({
+                ...prop,
+                scope:
+                    index === 0
+                        ? root
+                        : [
+                              root,
+                              ...chain.slice(0, index).map((p) => p.name),
+                          ].join("."),
+            }));
+        }
+
+        if (current.object.type !== "MemberExpression") {
+            return [];
+        }
+
+        current = current.object;
+    }
 }
 
 /**
@@ -176,25 +400,24 @@ function fullAncestorTokenizingCallback(
                 modifiers: [],
             };
         }
-    } else if (
-        node.type === "MemberExpression" &&
-        !node.computed &&
-        node.property.type === "Identifier"
-    ) {
-        const token: astUnprocessedToken = {
-            text: node.property.name,
-            at: node.property.start,
-            type: ETokenType.property,
-            modifiers: [],
-        };
-        const scope = propertyScope(node);
-        if (scope !== undefined) {
-            const varName = scope.split(".", 1)[0];
-            // Don't save a property belonging to a built-in function
-            if (builtInJSObjects.has(varName)) return;
-            token.scope = scope;
+    } else if (node.type === "MemberExpression") {
+        const properties = captureMemberExpressionProperties(node);
+
+        for (const property of properties) {
+            const root = property.scope?.split(".", 1)[0];
+            // Don't capture properties of a built-in JS object
+            if (root !== undefined && builtInJSObjects.has(root)) {
+                continue;
+            }
+
+            unprocessedTokens[property.at] = {
+                text: property.name,
+                at: property.at,
+                type: ETokenType.property,
+                modifiers: [],
+                scope: property.scope,
+            };
         }
-        unprocessedTokens[token.at] = token;
     } else if (
         node.type === "UnaryExpression" ||
         node.type === "UpdateExpression"
@@ -206,13 +429,33 @@ function fullAncestorTokenizingCallback(
             type: ETokenType.operator,
             modifiers: [],
         };
-    } else if (node.type === "Property" && node.key.type === "Identifier") {
-        unprocessedTokens[node.start] = {
-            text: node.key.name,
-            at: node.start,
+    } else if (node.type === "Property") {
+        const propName = getStaticPropertyName(
+            node.key,
+            node.computed ?? false,
+        );
+        if (propName === undefined) {
+            return;
+        }
+
+        const token: astUnprocessedToken = {
+            text: propName,
+            at: node.key.start,
             type: ETokenType.property,
             modifiers: [],
         };
+
+        const scope = resolveObjectPropertyScope(ancestors);
+
+        if (scope !== undefined) {
+            if (builtInJSObjects.has(scope.root)) {
+                return;
+            }
+
+            token.scope = scopePathToString(scope);
+        }
+
+        unprocessedTokens[token.at] = token;
     } else if (node.type === "VariableDeclaration") {
         unprocessedTokens[node.start] = {
             text: node.kind,

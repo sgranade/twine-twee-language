@@ -485,6 +485,41 @@ describe("JS Parser", () => {
         expect(result[1]).to.be.empty;
     });
 
+    it("should return apparent variables in object assignments", () => {
+        const expression = " var1 = {prop1: val1, prop2: 'val2'}";
+        const offset = 12;
+        const state = buildParsingState({
+            uri: "fake-uri",
+            content: "0123456789\n1 var1 = {prop1: val1, prop2: 'val2'}",
+            callbacks: new MockCallbacks(),
+        });
+        const storyState: StoryFormatParsingState = {
+            passageTokens: {},
+        };
+
+        const result = uut.tokenizeJavaScript(
+            false,
+            expression,
+            offset,
+            state.textDocument,
+            storyState,
+        );
+
+        expect(result[0]).to.eql([
+            {
+                contents: "var1",
+                location: Location.create("fake-uri", Range.create(1, 2, 1, 6)),
+            },
+            {
+                contents: "val1",
+                location: Location.create(
+                    "fake-uri",
+                    Range.create(1, 17, 1, 21),
+                ),
+            },
+        ]);
+    });
+
     it("should return apparent variables in complex statements", () => {
         const expression = " var1['prop'] = {prop1: val1, prop2: 'val2'}";
         const offset = 12;
@@ -519,10 +554,9 @@ describe("JS Parser", () => {
                 ),
             },
         ]);
-        expect(result[1]).to.be.empty; // Because the properties can't be traced back to a root variable
     });
 
-    it("should return apparent properties that trace back to a root variable", () => {
+    it("should return properties that trace back to a root variable", () => {
         const expression =
             " var1.rootprop1.rootprop2 = {prop1: val1, prop2: 'val2'}";
         const offset = 12;
@@ -560,6 +594,80 @@ describe("JS Parser", () => {
                     Range.create(1, 17, 1, 26),
                 ),
                 prefix: "var1.rootprop1",
+            },
+            {
+                contents: "prop1",
+                location: Location.create(
+                    "fake-uri",
+                    Range.create(1, 30, 1, 35),
+                ),
+                prefix: "var1.rootprop1.rootprop2",
+            },
+            {
+                contents: "prop2",
+                location: Location.create(
+                    "fake-uri",
+                    Range.create(1, 43, 1, 48),
+                ),
+                prefix: "var1.rootprop1.rootprop2",
+            },
+        ]);
+    });
+
+    it("should return properties that trace back to a root variable with a computed property", () => {
+        const expression =
+            ' var1["rootprop1"].rootprop2 = {prop1: val1, prop2: "val2"}';
+        const offset = 12;
+        const state = buildParsingState({
+            uri: "fake-uri",
+            content:
+                '0123456789\n1 var1["rootprop1"].rootprop2 = {prop1: val1, prop2: "val2"}',
+            callbacks: new MockCallbacks(),
+        });
+        const storyState: StoryFormatParsingState = {
+            passageTokens: {},
+        };
+
+        const result = uut.tokenizeJavaScript(
+            false,
+            expression,
+            offset,
+            state.textDocument,
+            storyState,
+        );
+
+        expect(result[1]).to.eql([
+            {
+                contents: "rootprop1",
+                location: Location.create(
+                    "fake-uri",
+                    Range.create(1, 8, 1, 17),
+                ),
+                prefix: "var1",
+            },
+            {
+                contents: "rootprop2",
+                location: Location.create(
+                    "fake-uri",
+                    Range.create(1, 20, 1, 29),
+                ),
+                prefix: "var1.rootprop1",
+            },
+            {
+                contents: "prop1",
+                location: Location.create(
+                    "fake-uri",
+                    Range.create(1, 33, 1, 38),
+                ),
+                prefix: "var1.rootprop1.rootprop2",
+            },
+            {
+                contents: "prop2",
+                location: Location.create(
+                    "fake-uri",
+                    Range.create(1, 46, 1, 51),
+                ),
+                prefix: "var1.rootprop1.rootprop2",
             },
         ]);
     });
