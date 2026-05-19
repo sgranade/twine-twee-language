@@ -8,6 +8,7 @@ import { DecorationType } from "../../client-server";
 import { EmbeddedDocument } from "../../embedded-languages";
 import {
     JSPropertyLabel,
+    JSVariableLabel,
     parseJSStrict,
     tokenizeJavaScript,
 } from "../../js-parser";
@@ -23,7 +24,7 @@ import {
     findAndParseHtml,
     ParseLevel,
 } from "../../parser";
-import { Label, ProjectIndex } from "../../project-index";
+import { ProjectIndex } from "../../project-index";
 import { ETokenType, ETokenModifier } from "../../semantic-tokens";
 import { Token } from "../../types";
 import {
@@ -216,28 +217,27 @@ export function getChapbookDefinitions(
 /**
  * Create symbol references for parsed variables and properties.
  *
+ * `isSet` overrides the individual label's set (defined) information.
+ *
  * @param varsAndProps Tuple with separate lists of variables and properties.
  * @param state Parsing state.
  * @param isSet True if the variables and properties are being set (assigned to).
  */
 function createVariableAndPropertyReferences(
-    varsAndProps: [Label[], JSPropertyLabel[]],
+    varsAndProps: [JSVariableLabel[], JSPropertyLabel[]],
     state: ParsingState,
-    isSet: boolean = false,
+    isSet?: boolean,
 ): void {
-    const varKind = isSet
-        ? OChapbookSymbolKind.VariableSet
-        : OChapbookSymbolKind.Variable;
     for (const v of varsAndProps[0]) {
         state.callbacks.onSymbolReference({
             contents: v.contents,
             location: v.location,
-            kind: varKind,
+            kind:
+                isSet || v.defined
+                    ? OChapbookSymbolKind.VariableSet
+                    : OChapbookSymbolKind.Variable,
         });
     }
-    const propKind = isSet
-        ? OChapbookSymbolKind.PropertySet
-        : OChapbookSymbolKind.Property;
     for (const p of varsAndProps[1]) {
         // If there's a prefix, add it to the name, b/c we save properties in their
         // full object context (ex: `var.prop.subprop`).
@@ -246,7 +246,10 @@ function createVariableAndPropertyReferences(
         state.callbacks.onSymbolReference({
             contents: contents,
             location: p.location,
-            kind: propKind,
+            kind:
+                isSet || p.defined
+                    ? OChapbookSymbolKind.PropertySet
+                    : OChapbookSymbolKind.Property,
         });
     }
 }
@@ -1620,15 +1623,16 @@ function parseScript(
     findEngineExtensions(text, textIndex, state);
     // We don't have a language server for JS, so we create an embedded document
     // for it that gets passed to our completions and hover functions, but we also
-    // separately tokenize it. We don't capture variable and property references,
-    // though, as they mostly won't be set in Chapbook vars sections and thus would
-    // cause a lot of spurious warnings.
-    tokenizeJavaScript(
-        true,
-        text,
-        textIndex,
-        state.textDocument,
-        chapbookState,
+    // separately tokenize it.
+    createVariableAndPropertyReferences(
+        tokenizeJavaScript(
+            true,
+            text,
+            textIndex,
+            state.textDocument,
+            chapbookState,
+        ),
+        state,
     );
     state.callbacks.onEmbeddedDocument(
         EmbeddedDocument.create(

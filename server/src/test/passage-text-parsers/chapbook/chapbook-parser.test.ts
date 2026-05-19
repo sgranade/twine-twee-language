@@ -144,7 +144,7 @@ describe("Chapbook Parser", () => {
             });
         });
 
-        it("should not parse vars in script passages", () => {
+        it("should not parse vars in script passages that are formatted like Chapbook var section", () => {
             const header = ":: Passage [script]\n";
             const passage = "\n var1: 17\n--\n";
             const callbacks = new MockCallbacks();
@@ -160,6 +160,45 @@ describe("Chapbook Parser", () => {
             const result = callbacks.references;
 
             expect(result).to.be.empty;
+        });
+
+        it("should parse variables in script passages", () => {
+            const header = ":: Passage [script]\n";
+            const passage = "\n var1['prop'] = { other: 1}\n--\n";
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                uri: "fake-uri",
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            state.currentPassage = buildPassage({ isScript: true });
+            const parser = uut.getChapbookParser(undefined);
+
+            parser?.parsePassageText(passage, header.length, state);
+            const result = callbacks.references;
+
+            expect(result.length).to.eql(3);
+            expect(result[0]).to.eql({
+                contents: "var1",
+                location: Location.create("fake-uri", Range.create(2, 1, 2, 5)),
+                kind: OChapbookSymbolKind.VariableSet,
+            });
+            expect(result[1]).to.eql({
+                contents: "var1.prop",
+                location: Location.create(
+                    "fake-uri",
+                    Range.create(2, 7, 2, 11),
+                ),
+                kind: OChapbookSymbolKind.PropertySet,
+            });
+            expect(result[2]).to.eql({
+                contents: "var1.prop.other",
+                location: Location.create(
+                    "fake-uri",
+                    Range.create(2, 18, 2, 23),
+                ),
+                kind: OChapbookSymbolKind.PropertySet,
+            });
         });
     });
 
@@ -1295,7 +1334,7 @@ describe("Chapbook Parser", () => {
                     });
                 });
 
-                it("should not capture variables in a javascript modifier", () => {
+                it("should capture variables in a javascript modifier", () => {
                     const header = ":: Passage\n";
                     const passage = "Stuff\n\n[javascript]\n  newVar = 1;\n";
                     const callbacks = new MockCallbacks();
@@ -1316,6 +1355,14 @@ describe("Chapbook Parser", () => {
                                 Range.create(3, 1, 3, 11),
                             ),
                             kind: OChapbookSymbolKind.BuiltInModifier,
+                        },
+                        {
+                            contents: "newVar",
+                            location: Location.create(
+                                "fake-uri",
+                                Range.create(4, 2, 4, 8),
+                            ),
+                            kind: OChapbookSymbolKind.VariableSet,
                         },
                     ]);
                 });

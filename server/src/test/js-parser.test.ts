@@ -480,6 +480,7 @@ describe("JS Parser", () => {
             {
                 contents: "var1",
                 location: Location.create("fake-uri", Range.create(1, 2, 1, 6)),
+                defined: true,
             },
         ]);
         expect(result[1]).to.be.empty;
@@ -509,6 +510,7 @@ describe("JS Parser", () => {
             {
                 contents: "var1",
                 location: Location.create("fake-uri", Range.create(1, 2, 1, 6)),
+                defined: true,
             },
             {
                 contents: "val1",
@@ -516,6 +518,7 @@ describe("JS Parser", () => {
                     "fake-uri",
                     Range.create(1, 17, 1, 21),
                 ),
+                defined: false,
             },
         ]);
     });
@@ -545,6 +548,7 @@ describe("JS Parser", () => {
             {
                 contents: "var1",
                 location: Location.create("fake-uri", Range.create(1, 2, 1, 6)),
+                defined: true,
             },
             {
                 contents: "val1",
@@ -552,6 +556,7 @@ describe("JS Parser", () => {
                     "fake-uri",
                     Range.create(1, 25, 1, 29),
                 ),
+                defined: false,
             },
         ]);
     });
@@ -586,6 +591,7 @@ describe("JS Parser", () => {
                     Range.create(1, 7, 1, 16),
                 ),
                 prefix: "var1",
+                defined: true,
             },
             {
                 contents: "rootprop2",
@@ -594,6 +600,7 @@ describe("JS Parser", () => {
                     Range.create(1, 17, 1, 26),
                 ),
                 prefix: "var1.rootprop1",
+                defined: true,
             },
             {
                 contents: "prop1",
@@ -602,6 +609,7 @@ describe("JS Parser", () => {
                     Range.create(1, 30, 1, 35),
                 ),
                 prefix: "var1.rootprop1.rootprop2",
+                defined: true,
             },
             {
                 contents: "prop2",
@@ -610,6 +618,7 @@ describe("JS Parser", () => {
                     Range.create(1, 43, 1, 48),
                 ),
                 prefix: "var1.rootprop1.rootprop2",
+                defined: true,
             },
         ]);
     });
@@ -644,6 +653,7 @@ describe("JS Parser", () => {
                     Range.create(1, 8, 1, 17),
                 ),
                 prefix: "var1",
+                defined: true,
             },
             {
                 contents: "rootprop2",
@@ -652,6 +662,7 @@ describe("JS Parser", () => {
                     Range.create(1, 20, 1, 29),
                 ),
                 prefix: "var1.rootprop1",
+                defined: true,
             },
             {
                 contents: "prop1",
@@ -660,6 +671,7 @@ describe("JS Parser", () => {
                     Range.create(1, 33, 1, 38),
                 ),
                 prefix: "var1.rootprop1.rootprop2",
+                defined: true,
             },
             {
                 contents: "prop2",
@@ -668,6 +680,7 @@ describe("JS Parser", () => {
                     Range.create(1, 46, 1, 51),
                 ),
                 prefix: "var1.rootprop1.rootprop2",
+                defined: true,
             },
         ]);
     });
@@ -700,6 +713,7 @@ describe("JS Parser", () => {
                     Range.create(1, 7, 1, 16),
                 ),
                 prefix: "var1",
+                defined: false,
             },
             {
                 contents: "rootprop2",
@@ -708,6 +722,7 @@ describe("JS Parser", () => {
                     Range.create(1, 17, 1, 26),
                 ),
                 prefix: "var1.rootprop1",
+                defined: false,
             },
         ]);
     });
@@ -736,6 +751,7 @@ describe("JS Parser", () => {
             {
                 contents: "var1",
                 location: Location.create("fake-uri", Range.create(1, 2, 1, 6)),
+                defined: true,
             },
         ]);
     });
@@ -764,6 +780,7 @@ describe("JS Parser", () => {
             {
                 contents: "var1",
                 location: Location.create("fake-uri", Range.create(1, 2, 1, 6)),
+                defined: true,
             },
         ]);
     });
@@ -792,6 +809,7 @@ describe("JS Parser", () => {
             {
                 contents: "var1",
                 location: Location.create("fake-uri", Range.create(1, 2, 1, 6)),
+                defined: true,
             },
             {
                 contents: "var2",
@@ -799,6 +817,37 @@ describe("JS Parser", () => {
                     "fake-uri",
                     Range.create(1, 9, 1, 13),
                 ),
+                defined: false,
+            },
+        ]);
+        expect(result[1]).to.be.empty;
+    });
+
+    it("should not return a read/write variable assignment as a created variable", () => {
+        const expression = " var1++;";
+        const offset = 12;
+        const state = buildParsingState({
+            uri: "fake-uri",
+            content: "0123456789\n1 var1++",
+            callbacks: new MockCallbacks(),
+        });
+        const storyState: StoryFormatParsingState = {
+            passageTokens: {},
+        };
+
+        const result = uut.tokenizeJavaScript(
+            true,
+            expression,
+            offset,
+            state.textDocument,
+            storyState,
+        );
+
+        expect(result[0]).to.eql([
+            {
+                contents: "var1",
+                location: Location.create("fake-uri", Range.create(1, 2, 1, 6)),
+                defined: false,
             },
         ]);
         expect(result[1]).to.be.empty;

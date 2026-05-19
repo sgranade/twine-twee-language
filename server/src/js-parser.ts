@@ -24,11 +24,22 @@ const typeofToSemantic: Record<string, TokenType> = {
  * Unprocessed token from the Javascript AST.
  */
 interface astUnprocessedToken {
-    text: string;
-    at: number;
-    type: TokenType;
-    scope?: string;
-    modifiers: TokenModifier[];
+    text: string; // Actual token text
+    at: number; // Token location
+    type: TokenType; // Type of the token
+    scope?: string; // Token scope for properties (e.g. for `baz` in `foo.bar.baz`, it's `foo.bar`)
+    defined?: boolean; // Is the token being defined?
+    modifiers: TokenModifier[]; // Modifiers for the token
+}
+
+/**
+ * Label for a parsed javascript variable.
+ */
+export interface JSVariableLabel extends Label {
+    /**
+     * Whether the variable is being defined.
+     */
+    defined?: boolean;
 }
 
 /**
@@ -40,6 +51,10 @@ export interface JSPropertyLabel extends Label {
      * have a prefix of `var.prop`.
      */
     prefix?: string;
+    /**
+     * Whether the property is being defined.
+     */
+    defined?: boolean;
 }
 export namespace JSPropertyLabel {
     /**
@@ -48,7 +63,12 @@ export namespace JSPropertyLabel {
     export function is(val: unknown): val is JSPropertyLabel {
         if (typeof val !== "object" || Array.isArray(val) || val === null)
             return false;
-        return (val as JSPropertyLabel).prefix !== undefined;
+        return (
+            (val as JSPropertyLabel).contents !== undefined &&
+            (val as JSPropertyLabel).location !== undefined &&
+            ((val as JSPropertyLabel).prefix !== undefined ||
+                (val as JSPropertyLabel).defined !== undefined)
+        );
     }
 }
 
@@ -129,6 +149,74 @@ function getStaticPropertyName(
     }
 
     return undefined;
+}
+
+/**
+ * Determine if a node contains a variable definition such as `const var` or `var =`
+ *
+ * @param node Node being inspected.
+ * @param ancestors The node's ancestors.
+ * @returns True if the node is defining stuff.
+ */
+function isDefinitionContext(
+    node: acorn.AnyNode,
+    ancestors: acorn.Node[],
+): boolean {
+    const parent = ancestors[ancestors.length - 2] as acorn.AnyNode | undefined;
+    if (!parent) {
+        return false;
+    }
+
+    // var = ...  and var.prop = ...
+    if (parent.type === "AssignmentExpression") {
+        return parent.left === node;
+    }
+
+    // const var = ...
+    if (parent.type === "VariableDeclarator") {
+        return parent.id === node;
+    }
+
+    return false;
+}
+
+/**
+ * Determine if a member expression is defining stuff (i.e. is part of an assignment expression).
+ *
+ * @param node Member expression being inspected.
+ * @param ancestors The node's ancestors.
+ * @returns True if the member expression is defining stuff.
+ */
+function isMemberExpressionDefinition(
+    node: acorn.MemberExpression,
+    ancestors: acorn.Node[],
+): boolean {
+    const parent = ancestors[ancestors.length - 2] as acorn.AnyNode | undefined;
+    return parent?.type === "AssignmentExpression" && parent.left === node;
+}
+
+/**
+ * Get the root identifier of a member expression, if any.
+ *
+ * @param node Member expression to get the root identifier of.
+ * @returns The identifier at the root, or undefined if none.
+ */
+function getMemberExpressionRootIdentifier(
+    node: acorn.MemberExpression,
+): acorn.Identifier | undefined {
+    let current: acorn.MemberExpression = node;
+
+    while (true) {
+        if (current.object.type === "Identifier") {
+            return current.object;
+        }
+
+        if (current.object.type !== "MemberExpression") {
+            return undefined;
+        }
+
+        current = current.object;
+    }
 }
 
 /**
@@ -357,6 +445,7 @@ function fullAncestorTokenizingCallback(
                 at: node.start,
                 type: ETokenType.variable,
                 modifiers: [],
+                defined: isDefinitionContext(node, ancestors),
             };
         }
     } else if (node.type === "Literal" && node.raw !== undefined) {
@@ -402,6 +491,26 @@ function fullAncestorTokenizingCallback(
         }
     } else if (node.type === "MemberExpression") {
         const properties = captureMemberExpressionProperties(node);
+        const defined = isMemberExpressionDefinition(node, ancestors);
+
+        // The root variable identifier, if any, will have already been marked by
+        // this callback as not being part of an expression that defines it. Fix
+        // that for any member expression that's a definition.
+        if (defined) {
+            const root = getMemberExpressionRootIdentifier(node);
+            if (root !== undefined && !builtInJSObjects.has(root.name)) {
+                const existing = unprocessedTokens[root.start];
+
+                unprocessedTokens[root.start] = {
+                    ...(existing ?? {}),
+                    text: root.name,
+                    at: root.start,
+                    type: ETokenType.variable,
+                    modifiers: existing?.modifiers ?? [],
+                    defined: true,
+                };
+            }
+        }
 
         for (const property of properties) {
             const root = property.scope?.split(".", 1)[0];
@@ -416,6 +525,7 @@ function fullAncestorTokenizingCallback(
                 type: ETokenType.property,
                 modifiers: [],
                 scope: property.scope,
+                defined: defined,
             };
         }
     } else if (
@@ -453,6 +563,7 @@ function fullAncestorTokenizingCallback(
             }
 
             token.scope = scopePathToString(scope);
+            token.defined = true; // b/c scopes only exist for property definitions
         }
 
         unprocessedTokens[token.at] = token;
@@ -557,8 +668,8 @@ export function tokenizeJavaScript(
     offset: number,
     document: TextDocument,
     storyFormatState: StoryFormatParsingState,
-): [Label[], JSPropertyLabel[]] {
-    const vars: Label[] = [];
+): [JSVariableLabel[], JSPropertyLabel[]] {
+    const vars: JSVariableLabel[] = [];
     const props: JSPropertyLabel[] = [];
 
     const ast = parseJS(text, isProgram);
@@ -574,6 +685,7 @@ export function tokenizeJavaScript(
                         offset + token.at,
                         document,
                     ),
+                    defined: token.defined,
                 });
             } else if (
                 token.type === ETokenType.property &&
@@ -587,6 +699,7 @@ export function tokenizeJavaScript(
                         document,
                     ),
                     prefix: token.scope,
+                    defined: token.defined,
                 });
             }
             capturePreSemanticTokenFor(
