@@ -1,3 +1,5 @@
+import { tokenizeTwineScriptExpression } from "../sc2/sc2-twinescript";
+import { createVariableAndPropertyReferences } from "../sugarcube-utils";
 import { MacroInfo, parseArgsAsTwineScriptExpression } from "./types";
 
 export const captureMacro: MacroInfo = {
@@ -25,4 +27,5 @@ export const unsetMacro: MacroInfo = {
     syntax: "<<unset variableList>>",
     description: "Unsets story `$variables` and temporary `_variables`.",
     since: "2.0.0",
+    parse: parseArgsAsTwineScriptExpression,
 };
