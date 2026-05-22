@@ -1,6 +1,7 @@
 import { Diagnostic, DiagnosticSeverity } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
+import { isBuiltinJSObjectInstanceProperty } from "../../js-parser";
 import { ProjectIndex } from "../../project-index";
 import { DiagnosticsOptions } from "../../server-options";
 import {
@@ -233,7 +234,10 @@ export function generateDiagnostics(
         document.uri,
         OChapbookSymbolKind.Property,
     ) ?? []) {
-        if (!propSetNames.has(propRef.contents)) {
+        if (
+            !propSetNames.has(propRef.contents) &&
+            !isBuiltinJSObjectInstanceProperty(propRef.contents)
+        ) {
             const message = `"${propRef.contents}" isn't set in any vars section. Make sure you've spelled it correctly.`;
             diagnostics.push(
                 ...propRef.locations.map((loc) =>

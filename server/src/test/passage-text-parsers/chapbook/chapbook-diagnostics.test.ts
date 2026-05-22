@@ -95,6 +95,35 @@ describe("Chapbook Diagnostics", () => {
             expect(results).to.be.empty;
         });
 
+        it("should not warn on a property with no matching property setting if it matches a built-in JS object's instance property", () => {
+            const doc = TextDocument.create(
+                "fake-uri",
+                "",
+                0,
+                "Let's try {arrayvar.length}",
+            );
+            const index = new Index();
+            index.setReferences("fake-uri", [
+                {
+                    contents: "arrayvar.length",
+                    locations: [
+                        Location.create("fake-uri", Range.create(1, 2, 3, 4)),
+                    ],
+                    kind: OChapbookSymbolKind.Property,
+                },
+            ]);
+            const diagnosticOptions = defaultDiagnosticsOptions;
+            const parser = uut.getChapbookParser(undefined);
+
+            const results = parser?.generateDiagnostics(
+                doc,
+                index,
+                diagnosticOptions,
+            );
+
+            expect(results).to.be.empty;
+        });
+
         it("should not warn on a reference to a built-in lookup variable", () => {
             const doc = TextDocument.create(
                 "fake-uri",

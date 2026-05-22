@@ -169,6 +169,18 @@ function isBuiltinObjectScope(scope: string): boolean {
 }
 
 /**
+ * Determine if a property corresponds to a built-in JS object's instance property.
+ *
+ * @param property Property to inspect, including full path (e.g. `var.prop1.prop2` for `prop2`).
+ * @returns True if the property matches a built-in JS object's instance property.
+ */
+export function isBuiltinJSObjectInstanceProperty(property: string): boolean {
+    return builtInJSObjectInstanceProperties.has(
+        property.split(".").pop() || "",
+    );
+}
+
+/**
  * Get the static name of a node that is a property.
  *
  * @param property Node that contains the property.
