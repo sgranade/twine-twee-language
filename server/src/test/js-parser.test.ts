@@ -561,6 +561,43 @@ describe("JS Parser", () => {
         ]);
     });
 
+    it("should return apparent variables in assignment statements with dynamic computed properties", () => {
+        const expression = " var1[var2] = 1";
+        const offset = 12;
+        const state = buildParsingState({
+            uri: "fake-uri",
+            content: "0123456789\n1 var1[var2] = 1",
+            callbacks: new MockCallbacks(),
+        });
+        const storyState: StoryFormatParsingState = {
+            passageTokens: {},
+        };
+
+        const result = uut.tokenizeJavaScript(
+            false,
+            expression,
+            offset,
+            state.textDocument,
+            storyState,
+        );
+
+        expect(result[0]).to.eql([
+            {
+                contents: "var1",
+                location: Location.create("fake-uri", Range.create(1, 2, 1, 6)),
+                defined: true,
+            },
+            {
+                contents: "var2",
+                location: Location.create(
+                    "fake-uri",
+                    Range.create(1, 7, 1, 11),
+                ),
+                defined: false,
+            },
+        ]);
+    });
+
     it("should return properties that trace back to a root variable", () => {
         const expression =
             " var1.rootprop1.rootprop2 = {prop1: val1, prop2: 'val2'}";
@@ -623,7 +660,7 @@ describe("JS Parser", () => {
         ]);
     });
 
-    it("should return properties that trace back to a root variable with a computed property", () => {
+    it("should return properties that trace back to a root variable with a static computed property", () => {
         const expression =
             ' var1["rootprop1"].rootprop2 = {prop1: val1, prop2: "val2"}';
         const offset = 12;
@@ -680,6 +717,41 @@ describe("JS Parser", () => {
                     Range.create(1, 46, 1, 51),
                 ),
                 prefix: "var1.rootprop1.rootprop2",
+                defined: true,
+            },
+        ]);
+    });
+
+    it("should return properties that trace back to a root variable that are before a computed property", () => {
+        const expression =
+            ' var1.rootprop1[var2].rootprop2 = {prop1: val1, prop2: "val2"}';
+        const offset = 12;
+        const state = buildParsingState({
+            uri: "fake-uri",
+            content:
+                '0123456789\n var1.rootprop1[var2].rootprop2 = {prop1: val1, prop2: "val2"}',
+            callbacks: new MockCallbacks(),
+        });
+        const storyState: StoryFormatParsingState = {
+            passageTokens: {},
+        };
+
+        const result = uut.tokenizeJavaScript(
+            false,
+            expression,
+            offset,
+            state.textDocument,
+            storyState,
+        );
+
+        expect(result[1]).to.eql([
+            {
+                contents: "rootprop1",
+                location: Location.create(
+                    "fake-uri",
+                    Range.create(1, 7, 1, 16),
+                ),
+                prefix: "var1",
                 defined: true,
             },
         ]);
@@ -752,6 +824,85 @@ describe("JS Parser", () => {
                 contents: "var1",
                 location: Location.create("fake-uri", Range.create(1, 2, 1, 6)),
                 defined: true,
+            },
+        ]);
+    });
+
+    it("should not return properties from a LHS expression", () => {
+        const expression = ' {prop1: "invalid"} = 17';
+        const offset = 12;
+        const state = buildParsingState({
+            uri: "fake-uri",
+            content: '0123456789\n1 {prop1: "invalid"} = 17;',
+            callbacks: new MockCallbacks(),
+        });
+        const storyState: StoryFormatParsingState = {
+            passageTokens: {},
+        };
+
+        const result = uut.tokenizeJavaScript(
+            false,
+            expression,
+            offset,
+            state.textDocument,
+            storyState,
+        );
+
+        expect(result[1]).to.be.empty;
+    });
+
+    it("should not return properties on a built-in JavaScript object", () => {
+        const expression = " Number.EPSILON";
+        const offset = 12;
+        const state = buildParsingState({
+            uri: "fake-uri",
+            content: "0123456789\n1 Number.EPSILON",
+            callbacks: new MockCallbacks(),
+        });
+        const storyState: StoryFormatParsingState = {
+            passageTokens: {},
+        };
+
+        const result = uut.tokenizeJavaScript(
+            false,
+            expression,
+            offset,
+            state.textDocument,
+            storyState,
+        );
+
+        expect(result[1]).to.be.empty;
+    });
+
+    it("should return properties whose names match those of a built-in JavaScript object's instance property", () => {
+        const expression = " var1.length";
+        const offset = 12;
+        const state = buildParsingState({
+            uri: "fake-uri",
+            content: "0123456789\n1 var1.length",
+            callbacks: new MockCallbacks(),
+        });
+        const storyState: StoryFormatParsingState = {
+            passageTokens: {},
+        };
+
+        const result = uut.tokenizeJavaScript(
+            false,
+            expression,
+            offset,
+            state.textDocument,
+            storyState,
+        );
+
+        expect(result[1]).to.eql([
+            {
+                contents: "length",
+                location: Location.create(
+                    "fake-uri",
+                    Range.create(1, 7, 1, 13),
+                ),
+                prefix: "var1",
+                defined: false,
             },
         ]);
     });
