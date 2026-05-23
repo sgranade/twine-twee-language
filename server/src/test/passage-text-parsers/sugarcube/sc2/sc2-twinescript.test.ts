@@ -288,13 +288,14 @@ describe("SugarCube TwineScript", () => {
                         "fake-uri",
                         Range.create(1, 0, 1, 6),
                     ),
+                    defined: true,
                 },
             ]);
             expect(result[1]).to.be.empty;
         });
 
         it("should return apparent properties for variable assignment", () => {
-            const expression = "$varbl.rootprop1.rootprop2 to 'testy'";
+            const expression = "$varbl['rootprop1'].rootprop2 to 'testy'";
             const offset = 13;
             const textDocument = TextDocument.create(
                 "fake-uri",
@@ -318,17 +319,19 @@ describe("SugarCube TwineScript", () => {
                     contents: "rootprop1",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(1, 7, 1, 16),
+                        Range.create(1, 8, 1, 17),
                     ),
                     prefix: "$varbl",
+                    defined: true,
                 },
                 {
                     contents: "rootprop2",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(1, 17, 1, 26),
+                        Range.create(1, 20, 1, 29),
                     ),
                     prefix: "$varbl.rootprop1",
+                    defined: true,
                 },
             ]);
         });

@@ -7,7 +7,11 @@ export const OSugarCubeSymbolKind = {
     KnownMacro: TwineSymbolKind._end + 1,
     UnknownMacro: TwineSymbolKind._end + 2,
     Variable: TwineSymbolKind._end + 3,
-    Property: TwineSymbolKind._end + 4,
+    // Additional symbol for a variable being set (the
+    // regular variable symbol will also be captured)
+    VariableSet: TwineSymbolKind._end + 4,
+    Property: TwineSymbolKind._end + 5,
+    PropertySet: TwineSymbolKind._end + 6,
 };
 export type SugarCubeSymbolKind =
     (typeof OSugarCubeSymbolKind)[keyof typeof OSugarCubeSymbolKind];

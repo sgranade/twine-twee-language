@@ -2,13 +2,13 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 
 import {
     JSPropertyLabel,
+    JSVariableLabel,
     parseJSStrict,
     tokenizeJavaScript,
     tokenizeParsedJS,
 } from "../../../js-parser";
 import { ETokenType } from "../../../semantic-tokens";
 import { createLocationFor } from "../../../parser";
-import { Label } from "../../../project-index";
 import { capturePreSemanticTokenFor, StoryFormatParsingState } from "../..";
 
 /**
@@ -84,8 +84,8 @@ interface DesugarResult {
  * Replace TwineScript syntactic sugar with its Javascript equivalents.
  *
  * Note that `def` and `ndef` aren't properly translated to
- * `"undefined" !== typeof` and `"undefined" === typeof`, variable
- * sigils `$` and `_` are replaced by `X`
+ * `"undefined" !== typeof` and `"undefined" === typeof`, while
+ * variable sigils `$` and `_` are replaced by `X`
  *
  * @param str TwineScript string to desugar.
  * @returns The desugared string and mapping of old to new positions.
@@ -233,7 +233,7 @@ export function tokenizeTwineScriptExpression(
     offset: number,
     textDocument: TextDocument,
     storyFormatState: StoryFormatParsingState,
-): [Label[], JSPropertyLabel[]] {
+): [JSVariableLabel[], JSPropertyLabel[]] {
     const { desugared, positionMapping } = desugar(expression);
 
     // Turning TwineScript into JavaScript changes positions within a string.

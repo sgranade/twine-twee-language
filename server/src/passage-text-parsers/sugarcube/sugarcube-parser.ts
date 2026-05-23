@@ -670,6 +670,46 @@ function captureMacroRefAndTokens(
 }
 
 /**
+ * Parse text as a JavaScript script.
+ *
+ * @param text Text to parse.
+ * @param textIndex Index in the document where the text begins (zero-based).
+ * @param state Parsing state.
+ * @param sugarcubeState SugarCube-specific parsing state.
+ */
+function parseScript(
+    text: string,
+    textIndex: number,
+    state: ParsingState,
+    sugarcubeState: StoryFormatParsingState,
+): void {
+    // We don't have a language server for JS, so we create an embedded document
+    // for it that gets passed to our completions and hover functions, but we also
+    // separately tokenize it.
+    createVariableAndPropertyReferences(
+        tokenizeJavaScript(
+            true,
+            text,
+            textIndex,
+            state.textDocument,
+            sugarcubeState,
+        ),
+        state,
+    );
+    state.callbacks.onEmbeddedDocument(
+        EmbeddedDocument.create(
+            "script",
+            "javascript",
+            text,
+            textIndex,
+            state.textDocument,
+            false,
+            true,
+        ),
+    );
+}
+
+/**
  * Parse SugarCube macros.
  *
  * @param passageText Passage text to parse.
@@ -732,12 +772,11 @@ function parseAndRemoveMacros(
                 state,
             );
         } else {
-            // Tokenize as a JavaScript program but don't capture vars
-            tokenizeJavaScript(
-                true,
+            // Tokenize as a JavaScript program
+            parseScript(
                 contents,
                 contentsIndex + textIndex,
-                state.textDocument,
+                state,
                 sugarcubeState,
             );
         }
@@ -1322,12 +1361,8 @@ export function parsePassageText(
     textIndex: number,
     state: ParsingState,
 ): void {
-    // Nothing to do if we're not doing a full parse, or if the passage
-    // is a script passage
-    if (
-        state.parseLevel !== ParseLevel.Full ||
-        state.currentPassage?.isScript
-    ) {
+    // Nothing to do if we're not doing a full parse
+    if (state.parseLevel !== ParseLevel.Full) {
         return;
     }
 
@@ -1335,45 +1370,54 @@ export function parsePassageText(
         passageTokens: {},
     };
 
-    // Check for special tags and create any needed embedded documents
-    checkPassageTags(passageText, textIndex, state, sugarcubeState);
+    if (state.currentPassage?.isScript) {
+        // If it's a script passage, parse it as a script instead of Sugarcube
+        parseScript(passageText, textIndex, state, sugarcubeState);
+    } else {
+        // Check for special tags and create any needed embedded documents
+        checkPassageTags(passageText, textIndex, state, sugarcubeState);
 
-    // Check for special passages, and stop processing if the special passage processing is done
-    if (checkForSpecialPassages(state)) return;
+        // Check for special passages, and stop processing if the special passage processing is done
+        if (checkForSpecialPassages(state)) return;
 
-    // This parsing order mostly matches that of the SC2 Wikifier Parser (`parserlib.js`)
+        // This parsing order mostly matches that of the SC2 Wikifier Parser (`parserlib.js`)
 
-    passageText = findAndParseHtml(passageText, textIndex, state);
+        passageText = findAndParseHtml(passageText, textIndex, state);
 
-    // The above gets rid of pure <style> tags; now take care
-    // of <script>, verbatim <html>, no-wiki text, and comments
+        // The above gets rid of pure <style> tags; now take care
+        // of <script>, verbatim <html>, no-wiki text, and comments
 
-    passageText = removeNonParsedText(passageText, textIndex, sugarcubeState);
+        passageText = removeNonParsedText(
+            passageText,
+            textIndex,
+            sugarcubeState,
+        );
 
-    passageText = parseHtmlAttributesAndDirectives(
-        passageText,
-        textIndex,
-        state,
-        sugarcubeState,
-    );
+        passageText = parseHtmlAttributesAndDirectives(
+            passageText,
+            textIndex,
+            state,
+            sugarcubeState,
+        );
 
-    passageText = parseAndRemoveMacros(
-        passageText,
-        textIndex,
-        state,
-        sugarcubeState,
-    );
+        passageText = parseAndRemoveMacros(
+            passageText,
+            textIndex,
+            state,
+            sugarcubeState,
+        );
 
-    passageText = parseAndRemoveTwineLinks(
-        passageText,
-        textIndex,
-        state,
-        sugarcubeState,
-    );
+        passageText = parseAndRemoveTwineLinks(
+            passageText,
+            textIndex,
+            state,
+            sugarcubeState,
+        );
 
-    parseCustomStyles(passageText, textIndex, state, sugarcubeState);
+        parseCustomStyles(passageText, textIndex, state, sugarcubeState);
 
-    parseBareVariables(passageText, textIndex, state, sugarcubeState);
+        parseBareVariables(passageText, textIndex, state, sugarcubeState);
+    }
 
     // Submit semantic tokens in document order
     // (taking advantage of object own key enumeration order)

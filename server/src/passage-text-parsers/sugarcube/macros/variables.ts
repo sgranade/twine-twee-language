@@ -1,5 +1,3 @@
-import { tokenizeTwineScriptExpression } from "../sc2/sc2-twinescript";
-import { createVariableAndPropertyReferences } from "../sugarcube-utils";
 import { MacroInfo, parseArgsAsTwineScriptExpression } from "./types";
 
 export const captureMacro: MacroInfo = {

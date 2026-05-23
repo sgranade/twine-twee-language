@@ -7,6 +7,7 @@ Changes to the extension.
 ### Added
 
 - Now auto-completes object properties from expressions like `var['prop'] = { prop1: 2 }`.
+- SugarCube: Variables and properties in script passages and `<<script>>` macros are now properly indexed.
 - SugarCube: Macros inside link setters (such as `[[passage][<<set $var to 1>>]]`) now generate a warning about them not being evaluated.
 - Chapbook: Added parsing variables and properties in script passages and `[JavaScript]` modifier blocks.
 

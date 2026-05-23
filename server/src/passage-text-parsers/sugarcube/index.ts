@@ -1,8 +1,9 @@
-import { SC2MacroInfo } from "../../client-server";
 import { StoryFormatParser } from "..";
+import { SC2MacroInfo } from "../../client-server";
 import { generateCompletions } from "./sugarcube-completions";
 import { generateDiagnostics } from "./sugarcube-diagnostics";
 import { generateHover } from "./sugarcube-hover";
+import { getReferencesToSymbolAt } from "./sugarcube-references";
 import { parsePassageText } from "./sugarcube-parser";
 import { allMacros } from "./macros";
 
@@ -38,6 +39,6 @@ export function getSugarCubeParser(
         generateDiagnostics: generateDiagnostics,
         generateHover: generateHover,
         getDefinitionAt: () => undefined, // Unneeded -- the index will find all definitions
-        getReferencesToSymbolAt: () => undefined, // Unneeded -- the index will find all references
+        getReferencesToSymbolAt: getReferencesToSymbolAt,
     };
 }
