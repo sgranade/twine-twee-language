@@ -216,12 +216,19 @@ export interface ProjectIndex {
      */
     getDefinitionAt(uri: string, position: Position): ProjSymbol | undefined;
     /**
-     * Get the symbol reference at a location in a document.
+     * Get the reference (if any) at a location in a document.
+     * @param uri Document URI.
+     * @param position Position in the document.
+     * @returns Reference, or undefined if none is found.
+     */
+    getReferenceAt(uri: string, position: Position): ProjSymbol | undefined;
+    /**
+     * Get the reference at a location in a document along with all of the related references.
      * @param uri Document URI.
      * @param position Position in the document.
      * @returns References at that location, or undefined if none are found.
      */
-    getReferencesAt(uri: string, position: Position): References | undefined;
+    getAllReferencesAt(uri: string, position: Position): References | undefined;
     /**
      * Get the location of a symbol's definition based on a symbol or single reference at a location in a document.
      * @param uri Document URI.
@@ -434,7 +441,29 @@ export class Index implements ProjectIndex {
 
         return undefined;
     }
-    getReferencesAt(uri: string, position: Position): References | undefined {
+    getReferenceAt(uri: string, position: Position): ProjSymbol | undefined {
+        // Do we have a reference at the position?
+        const referencesPerKind = this._references[uri] ?? {};
+        for (const localReferences of Object.values(referencesPerKind)) {
+            for (const ref of localReferences) {
+                const match = ref.locations.find((loc) =>
+                    positionInRange(position, loc.range),
+                );
+                if (match !== undefined) {
+                    return {
+                        contents: ref.contents,
+                        kind: ref.kind,
+                        location: match,
+                    };
+                }
+            }
+        }
+        return undefined;
+    }
+    getAllReferencesAt(
+        uri: string,
+        position: Position,
+    ): References | undefined {
         // Do we have a reference at the position?
         const referencesPerKind = this._references[uri] ?? {};
         for (const localReferences of Object.values(referencesPerKind)) {
@@ -454,7 +483,7 @@ export class Index implements ProjectIndex {
         position: Position,
     ): ProjSymbol | undefined {
         // Do we have a reference at the position?
-        const ref = this.getReferencesAt(uri, position);
+        const ref = this.getAllReferencesAt(uri, position);
         if (ref !== undefined) {
             // See if we have a matching symbol for this reference
             const symbolLocation = this.getSymbolDefinitionByName(
@@ -486,7 +515,7 @@ export class Index implements ProjectIndex {
         };
 
         // See if there's a reference at this position
-        const initialReferences = this.getReferencesAt(uri, position);
+        const initialReferences = this.getAllReferencesAt(uri, position);
         if (initialReferences !== undefined) {
             references.contents = initialReferences.contents;
             references.kind = initialReferences.kind;

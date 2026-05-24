@@ -1,5 +1,6 @@
 import { JSPropertyLabel, JSVariableLabel } from "../../js-parser";
 import { ParsingState } from "../../parser";
+import { builtinVars, builtInVarsAndProperties } from "./sugarcube-variables";
 import { OSugarCubeSymbolKind } from "./types";
 
 /**
@@ -17,27 +18,74 @@ export function createVariableAndPropertyReferences(
     isSet = false,
 ): void {
     for (const v of varsAndProps[0]) {
-        state.callbacks.onSymbolReference({
-            contents: v.contents,
-            location: v.location,
-            kind:
-                isSet || v.defined
-                    ? OSugarCubeSymbolKind.VariableSet
-                    : OSugarCubeSymbolKind.Variable,
-        });
+        // Don't save any references to SugarCube-specific variables
+        if (!builtinVars.has(v.contents))
+            state.callbacks.onSymbolReference({
+                contents: v.contents,
+                location: v.location,
+                kind:
+                    isSet || v.defined
+                        ? OSugarCubeSymbolKind.VariableSet
+                        : OSugarCubeSymbolKind.Variable,
+            });
     }
     for (const p of varsAndProps[1]) {
         // If there's a prefix, add it to the name, b/c we save properties in their
         // full object context (ex: `var.prop.subprop`).
-        const contents =
+        let contents =
             p.prefix !== undefined ? `${p.prefix}.${p.contents}` : p.contents;
-        state.callbacks.onSymbolReference({
-            contents: contents,
-            location: p.location,
-            kind:
-                isSet || p.defined
-                    ? OSugarCubeSymbolKind.PropertySet
-                    : OSugarCubeSymbolKind.Property,
-        });
+
+        // Handle `State.temporary.<var>` and `State.variables.<var>`, which in
+        // JavaScript correspond to Twinescript `_var` and `$var`, respectively.
+        if (contents.startsWith("State.")) {
+            let isVariable = false;
+            let isTemporary = false;
+            if (contents.startsWith("State.temporary.")) {
+                isVariable = true;
+                isTemporary = true;
+            } else if (contents.startsWith("State.variables.")) {
+                isVariable = true;
+                isTemporary = false;
+            }
+            if (isVariable) {
+                const varPrefix = isTemporary ? "_" : "$";
+                contents = contents.slice(16);
+                const firstPeriodNdx = contents.indexOf(".");
+                if (firstPeriodNdx === -1) {
+                    // This is the property corresponding to the root variable: State.variable.var
+                    state.callbacks.onSymbolReference({
+                        contents: varPrefix + contents,
+                        location: p.location,
+                        kind:
+                            isSet || p.defined
+                                ? OSugarCubeSymbolKind.VariableSet
+                                : OSugarCubeSymbolKind.Variable,
+                    });
+                } else {
+                    // This corresponds to a property: State.variable.var.prop
+                    state.callbacks.onSymbolReference({
+                        contents: varPrefix + contents,
+                        location: p.location,
+                        kind:
+                            isSet || p.defined
+                                ? OSugarCubeSymbolKind.PropertySet
+                                : OSugarCubeSymbolKind.Property,
+                    });
+                }
+
+                continue;
+            }
+        }
+
+        // Don't save any references to SugarCube-specific properties
+        if (!builtInVarsAndProperties.has(contents))
+            state.callbacks.onSymbolReference({
+                contents: contents,
+                location: p.location,
+                kind:
+                    isSet || p.defined
+                        ? OSugarCubeSymbolKind.PropertySet
+                        : OSugarCubeSymbolKind.Property,
+            });
     }
 }

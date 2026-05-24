@@ -2,9 +2,11 @@ import {
     CompletionList,
     Definition,
     Diagnostic,
+    DocumentUri,
     Hover,
     Location,
     Position,
+    TextEdit,
 } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
@@ -90,6 +92,9 @@ export interface StoryFormatParser {
     /**
      * Get a symbol's definition by a position in a document.
      *
+     * This is a fallback function: Story formats can define this if the default index logic
+     * won't find all of the format's definitions. Otherwise, they can simply return undefined.
+     *
      * @param document Document to get definition at.
      * @param position Position in the document to find the definition from.
      * @param index Twine project index.
@@ -107,6 +112,8 @@ export interface StoryFormatParser {
      * the project index does by default, such as if they track variable-setting references
      * differently than variable-reading references.
      *
+     * If it returns null, then the server will use the default reference-finding logic.
+     *
      * @param documentUri URI to the document to get references at.
      * @param position Position in the document to find the references from.
      * @param index Twine project index.
@@ -118,7 +125,27 @@ export interface StoryFormatParser {
         position: Position,
         index: ProjectIndex,
         includeDeclaration: boolean,
-    ): Location[] | undefined;
+    ): Location[] | undefined | null;
+    /**
+     * Generate renames for a symbol as referenced by its position in a document.
+     *
+     * Story formats can define this if they need to handle how renames occur, such as
+     * if they have variables that have different prefixes in different locations.
+     *
+     * If it returns null, then the server will use the default rename generation logic.
+     *
+     * @param documentUri URI to the document with the original reference.
+     * @param position Reference's position in the document.
+     * @param newName Reference's new name.
+     * @param index Twine project index.
+     * @returns Edits to perform the rename, or undefined if the rename isn't possible.
+     */
+    generateRenamesAt(
+        documentUri: string,
+        position: Position,
+        newName: string,
+        index: ProjectIndex,
+    ): { [uri: DocumentUri]: TextEdit[] } | undefined | null;
 }
 
 /**

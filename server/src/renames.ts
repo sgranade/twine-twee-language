@@ -1,13 +1,15 @@
 import {
+    DocumentUri,
     Position,
     Range,
     TextEdit,
     WorkspaceEdit,
 } from "vscode-languageserver";
 
+import { getStoryFormatParser } from "./passage-text-parsers";
 import { ProjectIndex } from "./project-index";
+import { getReferencesToSymbolAt } from "./references";
 import { positionInRange } from "./utilities";
-import { getReferencesToSymbolAt } from "./passage-text-parsers/chapbook/chapbook-references";
 
 /**
  * Prepare for a rename request by seeing if a renamable symbol is at the location.
@@ -27,7 +29,7 @@ export function prepareRename(
         return symbol.location.range;
     }
 
-    const refs = index.getReferencesAt(uri, position);
+    const refs = index.getAllReferencesAt(uri, position);
     if (refs !== undefined) {
         const match = refs.locations.find((loc) =>
             positionInRange(position, loc.range),
@@ -54,6 +56,16 @@ export function generateRenames(
     newName: string,
     index: ProjectIndex,
 ): WorkspaceEdit | null {
+    // Check the story format's changes, followed by the default index
+    // Note that the story parser's function can return changes, undefined (no change
+    // possible), or null (not implemented).
+    const parser = getStoryFormatParser(index.getStoryData()?.storyFormat);
+    if (parser) {
+        const changes = parser.generateRenamesAt(uri, position, newName, index);
+        if (changes === undefined) return null;
+        if (changes !== null) return { changes: changes };
+    }
+
     // Get locations of symbols to change
     const locationsToChange = getReferencesToSymbolAt(
         uri,
@@ -65,26 +77,15 @@ export function generateRenames(
         return null;
     }
 
-    const changes: Map<string, TextEdit[]> = new Map();
+    const changes: { [uri: DocumentUri]: TextEdit[] } = {};
 
     for (const location of locationsToChange) {
         const change = TextEdit.replace(location.range, newName);
-        let edits = changes.get(location.uri);
-        if (edits === undefined) {
-            edits = [];
-            changes.set(location.uri, edits);
+        if (!changes[location.uri]) {
+            changes[location.uri] = [];
         }
-        edits.push(change);
+        changes[location.uri].push(change);
     }
 
-    const workspaceEdit: WorkspaceEdit = {
-        changes: {},
-    };
-    for (const [uri, edits] of changes) {
-        if (workspaceEdit.changes) {
-            workspaceEdit.changes[uri] = edits;
-        }
-    }
-
-    return workspaceEdit;
+    return { changes: changes };
 }

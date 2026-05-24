@@ -13,7 +13,7 @@ export function getDefinitionAt(
     // It won't work for custom inserts and modifiers, however, as they're
     // matched through a regex test.
 
-    const ref = index.getReferencesAt(document.uri, position);
+    const ref = index.getAllReferencesAt(document.uri, position);
     if (ref !== undefined) {
         const definition = getChapbookDefinitions(ref.kind, index).find((def) =>
             def.match.test(ref.contents),

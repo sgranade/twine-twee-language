@@ -44,7 +44,7 @@ import { updateProjectIndex } from "./indexer";
 import { ParseLevel } from "./parser";
 import { Index } from "./project-index";
 import { getReferencesToSymbolAt } from "./references";
-import { generateRenames, prepareRename } from "./searches";
+import { generateRenames, prepareRename } from "./renames";
 import {
     DiagnosticsOptions,
     defaultDiagnosticsOptions,

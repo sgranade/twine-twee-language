@@ -24,5 +24,6 @@ export function getChapbookParser(
         generateHover: generateHover,
         getDefinitionAt: getDefinitionAt,
         getReferencesToSymbolAt: getReferencesToSymbolAt,
+        generateRenamesAt: () => null, // Unneeded -- the default logic works for us
     };
 }

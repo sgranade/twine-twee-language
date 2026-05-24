@@ -15,7 +15,7 @@ export function generateHover(
 ): Hover | null {
     // See if we have any references to a macro. If so, return its
     // description (if it exists) as the hover information.
-    const refs = index.getReferencesAt(document.uri, position);
+    const refs = index.getAllReferencesAt(document.uri, position);
     if (refs !== undefined && refs.kind === OSugarCubeSymbolKind.KnownMacro) {
         const macro = allMacros()[refs.contents];
         if (macro?.description !== undefined) {

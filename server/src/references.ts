@@ -9,15 +9,29 @@ export function getReferencesToSymbolAt(
     index: ProjectIndex,
     includeDeclaration: boolean,
 ): Location[] | undefined {
+    let refLocations: Location[] | undefined | null = null;
+
     // Check the story format's references, followed by the default index
-    const refLocations =
-        getStoryFormatParser(
-            index.getStoryData()?.storyFormat,
-        )?.getReferencesToSymbolAt(uri, position, index, includeDeclaration) ||
-        index.getReferencesToSymbolAt(uri, position, includeDeclaration)
-            ?.locations;
+    // Note that the story parser's function can return locations, undefined (not found),
+    // or null (not implemented).
+    const parser = getStoryFormatParser(index.getStoryData()?.storyFormat);
+    if (parser) {
+        refLocations = parser.getReferencesToSymbolAt(
+            uri,
+            position,
+            index,
+            includeDeclaration,
+        );
+    }
+    // If refLocations is null, either the parser doesn't exist or doesn't have
+    // an implementation.
+    if (refLocations === null) {
+        refLocations = index.getReferencesToSymbolAt(
+            uri,
+            position,
+            includeDeclaration,
+        )?.locations;
+    }
 
-    if (refLocations === undefined) return undefined;
-
-    return [...(refLocations ?? [])];
+    return refLocations ? [...refLocations] : undefined;
 }

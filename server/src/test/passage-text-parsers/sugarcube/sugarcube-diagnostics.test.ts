@@ -16,6 +16,199 @@ import { OSugarCubeSymbolKind } from "../../../passage-text-parsers/sugarcube/ty
 import * as uut from "../../../passage-text-parsers/sugarcube";
 
 describe("SugarCube Diagnostics", () => {
+    describe("variables", () => {
+        it("should warn on a variable with no matching variable setting", () => {
+            const doc = TextDocument.create(
+                "fake-uri",
+                "",
+                0,
+                "Let's try {var1}",
+            );
+            const index = new Index();
+            index.setReferences("fake-uri", [
+                {
+                    contents: "var1",
+                    locations: [
+                        Location.create("fake-uri", Range.create(1, 2, 3, 4)),
+                    ],
+                    kind: OSugarCubeSymbolKind.Variable,
+                },
+            ]);
+            const diagnosticOptions = defaultDiagnosticsOptions;
+            const parser = uut.getSugarCubeParser(undefined);
+
+            const results = parser?.generateDiagnostics(
+                doc,
+                index,
+                diagnosticOptions,
+            );
+
+            expect(results).to.eql([
+                Diagnostic.create(
+                    Range.create(1, 2, 3, 4),
+                    "\"var1\" isn't set in any <<set>> macro, setter link, or JavaScript section. Make sure you've spelled it correctly.",
+                    DiagnosticSeverity.Warning,
+                    undefined,
+                    "Twine",
+                ),
+            ]);
+        });
+
+        it("should not warn on a variable with a matching variable setting", () => {
+            const doc = TextDocument.create(
+                "fake-uri",
+                "",
+                0,
+                "Let's try {var1}",
+            );
+            const index = new Index();
+            index.setReferences("fake-uri", [
+                {
+                    contents: "var1",
+                    locations: [
+                        Location.create("fake-uri", Range.create(1, 2, 3, 4)),
+                    ],
+                    kind: OSugarCubeSymbolKind.Variable,
+                },
+            ]);
+            index.setReferences("other-uri", [
+                {
+                    contents: "var1",
+                    locations: [
+                        Location.create("other-uri", Range.create(5, 6, 7, 8)),
+                    ],
+                    kind: OSugarCubeSymbolKind.VariableSet,
+                },
+            ]);
+            const diagnosticOptions = defaultDiagnosticsOptions;
+            const parser = uut.getSugarCubeParser(undefined);
+
+            const results = parser?.generateDiagnostics(
+                doc,
+                index,
+                diagnosticOptions,
+            );
+
+            expect(results).to.be.empty;
+        });
+
+        it("should not warn on a variable with no matching set variable that is a built-in SugarCube variable", () => {
+            const doc = TextDocument.create(
+                "fake-uri",
+                "",
+                0,
+                "Let's try {State.passage}",
+            );
+            const index = new Index();
+            index.setReferences("fake-uri", [
+                {
+                    contents: "State",
+                    locations: [
+                        Location.create("fake-uri", Range.create(1, 2, 3, 4)),
+                    ],
+                    kind: OSugarCubeSymbolKind.Variable,
+                },
+            ]);
+            const diagnosticOptions = defaultDiagnosticsOptions;
+            const parser = uut.getSugarCubeParser(undefined);
+
+            const results = parser?.generateDiagnostics(
+                doc,
+                index,
+                diagnosticOptions,
+            );
+
+            expect(results).to.be.empty;
+        });
+
+        it("should not warn on a property with no matching set property if it matches a built-in JS object's instance property", () => {
+            const doc = TextDocument.create(
+                "fake-uri",
+                "",
+                0,
+                "Let's try {arrayvar.length}",
+            );
+            const index = new Index();
+            index.setReferences("fake-uri", [
+                {
+                    contents: "arrayvar.length",
+                    locations: [
+                        Location.create("fake-uri", Range.create(1, 2, 3, 4)),
+                    ],
+                    kind: OSugarCubeSymbolKind.Property,
+                },
+            ]);
+            const diagnosticOptions = defaultDiagnosticsOptions;
+            const parser = uut.getSugarCubeParser(undefined);
+
+            const results = parser?.generateDiagnostics(
+                doc,
+                index,
+                diagnosticOptions,
+            );
+
+            expect(results).to.be.empty;
+        });
+
+        it("should not warn on a property with no matching set property if it matches a SugarCube object's property", () => {
+            const doc = TextDocument.create(
+                "fake-uri",
+                "",
+                0,
+                "Let's try {State.bottom}",
+            );
+            const index = new Index();
+            index.setReferences("fake-uri", [
+                {
+                    contents: "State.bottom",
+                    locations: [
+                        Location.create("fake-uri", Range.create(1, 2, 3, 4)),
+                    ],
+                    kind: OSugarCubeSymbolKind.Property,
+                },
+            ]);
+            const diagnosticOptions = defaultDiagnosticsOptions;
+            const parser = uut.getSugarCubeParser(undefined);
+
+            const results = parser?.generateDiagnostics(
+                doc,
+                index,
+                diagnosticOptions,
+            );
+
+            expect(results).to.be.empty;
+        });
+
+        it("should not warn on a property with no matching set property if it matches a SugarCube object's instance property", () => {
+            const doc = TextDocument.create(
+                "fake-uri",
+                "",
+                0,
+                "Let's try {any.parser}",
+            );
+            const index = new Index();
+            index.setReferences("fake-uri", [
+                {
+                    contents: "any.parser",
+                    locations: [
+                        Location.create("fake-uri", Range.create(1, 2, 3, 4)),
+                    ],
+                    kind: OSugarCubeSymbolKind.Property,
+                },
+            ]);
+            const diagnosticOptions = defaultDiagnosticsOptions;
+            const parser = uut.getSugarCubeParser(undefined);
+
+            const results = parser?.generateDiagnostics(
+                doc,
+                index,
+                diagnosticOptions,
+            );
+
+            expect(results).to.be.empty;
+        });
+    });
+
     describe("macros", () => {
         it("should warn on an unrecognized macro", () => {
             const doc = TextDocument.create(

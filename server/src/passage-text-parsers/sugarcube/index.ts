@@ -1,11 +1,12 @@
 import { StoryFormatParser } from "..";
 import { SC2MacroInfo } from "../../client-server";
+import { allMacros } from "./macros";
 import { generateCompletions } from "./sugarcube-completions";
 import { generateDiagnostics } from "./sugarcube-diagnostics";
 import { generateHover } from "./sugarcube-hover";
 import { getReferencesToSymbolAt } from "./sugarcube-references";
+import { generateRenames } from "./sugarcube-renames";
 import { parsePassageText } from "./sugarcube-parser";
-import { allMacros } from "./macros";
 
 /**
  * Get the names of all the known SugarCube 2 macros.
@@ -40,5 +41,6 @@ export function getSugarCubeParser(
         generateHover: generateHover,
         getDefinitionAt: () => undefined, // Unneeded -- the index will find all definitions
         getReferencesToSymbolAt: getReferencesToSymbolAt,
+        generateRenamesAt: generateRenames,
     };
 }

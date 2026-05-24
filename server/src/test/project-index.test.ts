@@ -482,7 +482,69 @@ describe("Project Index", () => {
         });
     });
 
-    describe("References At", () => {
+    describe("Reference At", () => {
+        it("should return undefined for a position with no reference", () => {
+            const references = [
+                {
+                    contents: "one",
+                    locations: [
+                        Location.create("fake-uri", Range.create(1, 2, 3, 4)),
+                    ],
+                    kind: 8,
+                },
+            ];
+            const index = new uut.Index();
+            index.setReferences("fake-uri", references);
+
+            const result = index.getReferenceAt(
+                "fake-uri",
+                Position.create(10, 2),
+            );
+
+            expect(result).to.be.undefined;
+        });
+
+        it("should return a reference for a position in that reference's location", () => {
+            const references = [
+                {
+                    contents: "one",
+                    locations: [
+                        Location.create("fake-uri", Range.create(1, 2, 3, 4)),
+                    ],
+                    kind: 8,
+                },
+                {
+                    contents: "two",
+                    locations: [
+                        Location.create("fake-uri", Range.create(5, 6, 7, 8)),
+                        Location.create(
+                            "fake-uri",
+                            Range.create(9, 10, 11, 12),
+                        ),
+                    ],
+                    kind: 12,
+                },
+            ];
+            const index = new uut.Index();
+            index.setReferences("fake-uri", references);
+
+            const result = index.getReferenceAt(
+                "fake-uri",
+                Position.create(10, 2),
+            );
+
+            expect(result).to.eql({
+                contents: "two",
+                location: Location.create(
+                    "fake-uri",
+                    Range.create(9, 10, 11, 12),
+                ),
+                kind: 12,
+            });
+        });
+    });
+
+    describe("All References At", () => {
         it("should return references for a position in one of that references' locations", () => {
             const references = [
                 {
@@ -507,7 +569,7 @@ describe("Project Index", () => {
             const index = new uut.Index();
             index.setReferences("fake-uri", references);
 
-            const result = index.getReferencesAt(
+            const result = index.getAllReferencesAt(
                 "fake-uri",
                 Position.create(10, 2),
             );

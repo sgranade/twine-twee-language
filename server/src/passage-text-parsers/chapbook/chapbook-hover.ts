@@ -35,7 +35,7 @@ export function generateHover(
 ): Hover | null {
     // See if we have any references to an insert or modifier. If so,
     // return its description (if it exists) as the hover information.
-    const refs = index.getReferencesAt(document.uri, position);
+    const refs = index.getAllReferencesAt(document.uri, position);
     if (refs !== undefined) {
         let matchedObjects: readonly ChapbookFunctionInfo[] = [];
         if (refs.kind === OChapbookSymbolKind.BuiltInInsert) {
