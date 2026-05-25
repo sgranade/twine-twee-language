@@ -1,4 +1,4 @@
-import { Diagnostic, DiagnosticSeverity } from "vscode-languageserver";
+import { Diagnostic, DiagnosticSeverity, Range } from "vscode-languageserver";
 
 import { capturePreSemanticTokenFor, StoryFormatParsingState } from "..";
 import { EmbeddedDocument } from "../../embedded-languages";
@@ -99,6 +99,83 @@ const bareVariableRegex = new RegExp(
 );
 
 /**
+ * Location information about a macro
+ */
+export interface MacroLocationInfo {
+    /**
+     * The macro's name (ex: "if")
+     */
+    name: string;
+    /**
+     * The full text of a macro (ex: "<<if $v > 1>>")
+     */
+    fullText: string;
+    /**
+     * Index where the full text occurs.
+     */
+    at: number;
+    /**
+     * Macro ID, to disambiguate macros with the same name
+     */
+    id: number;
+}
+
+/**
+ * SugarCube-specific parsing state information.
+ */
+export interface SugarCubeParsingState extends StoryFormatParsingState {
+    /**
+     * Container macros that are open (i.e. no close macro has been encountered).
+     */
+    unclosedMacros: MacroLocationInfo[];
+    /**
+     * Ranges of <<widget>> macros in the document, since they create variables.
+     */
+    widgetMacroRanges: Range[];
+}
+
+/**
+ * Parse text as a JavaScript script.
+ *
+ * @param text Text to parse.
+ * @param textIndex Index in the document where the text begins (zero-based).
+ * @param state Parsing state.
+ * @param sugarcubeState SugarCube-specific parsing state.
+ */
+function parseAsJavaScript(
+    text: string,
+    textIndex: number,
+    state: ParsingState,
+    sugarcubeState: SugarCubeParsingState,
+): void {
+    // We don't have a language server for JS, so we create an embedded document
+    // for it that gets passed to our completions and hover functions, but we also
+    // separately tokenize it.
+    createVariableAndPropertyReferences(
+        tokenizeJavaScript(
+            true,
+            text,
+            textIndex,
+            state.textDocument,
+            sugarcubeState,
+        ),
+        state,
+        sugarcubeState,
+    );
+    state.callbacks.onEmbeddedDocument(
+        EmbeddedDocument.create(
+            "script",
+            "javascript",
+            text,
+            textIndex,
+            state.textDocument,
+            false,
+            true,
+        ),
+    );
+}
+
+/**
  * Parse bare variables.
  *
  * @param passageText Passage text to parse.
@@ -110,7 +187,7 @@ function parseBareVariables(
     passageText: string,
     textIndex: number,
     state: ParsingState,
-    sugarcubeState: StoryFormatParsingState,
+    sugarcubeState: SugarCubeParsingState,
 ): void {
     for (const m of passageText.matchAll(bareVariableRegex)) {
         createVariableAndPropertyReferences(
@@ -121,6 +198,7 @@ function parseBareVariables(
                 sugarcubeState,
             ),
             state,
+            sugarcubeState,
         );
     }
 }
@@ -141,7 +219,7 @@ function parseCustomStyles(
     passageText: string,
     textIndex: number,
     state: ParsingState,
-    sugarcubeState: StoryFormatParsingState,
+    sugarcubeState: SugarCubeParsingState,
 ): void {
     for (const m of passageText.matchAll(customStyleRegex)) {
         // Capture tokens for the custom style tokens
@@ -222,7 +300,7 @@ function parseAndRemoveTwineLinks(
     passageText: string,
     textIndex: number,
     state: ParsingState,
-    sugarcubeState: StoryFormatParsingState,
+    sugarcubeState: SugarCubeParsingState,
 ): string {
     // Twine links in SugarCube can include TwineScript, which can have all
     // kinds of array reference shenanigans, so we can't do a simple regex
@@ -259,28 +337,6 @@ const macroInASetterRegex = new RegExp(
 );
 
 /**
- * Location information about a macro
- */
-export interface MacroLocationInfo {
-    /**
-     * The macro's name (ex: "if")
-     */
-    name: string;
-    /**
-     * The full text of a macro (ex: "<<if $v > 1>>")
-     */
-    fullText: string;
-    /**
-     * Index where the full text occurs.
-     */
-    at: number;
-    /**
-     * Macro ID, to disambiguate macros with the same name
-     */
-    id: number;
-}
-
-/**
  * Parse the arguments to a macro.
  *
  * @param macroName The name of the macro being parsed.
@@ -298,11 +354,11 @@ function parseMacroArgs(
     argsIndex: number,
     macroInfo: MacroInfo | undefined,
     state: ParsingState,
-    sugarcubeState: StoryFormatParsingState,
+    sugarcubeState: SugarCubeParsingState,
 ): void {
     // If we have information about a macro and it has a custom parser function, call it
-    if (macroInfo?.parse !== undefined) {
-        if (macroInfo.parse(args, argsIndex, state, sugarcubeState)) {
+    if (macroInfo?.parseArgs !== undefined) {
+        if (macroInfo.parseArgs(args, argsIndex, state, sugarcubeState)) {
             return; // A return of true means we're done parsing
         }
     }
@@ -454,6 +510,7 @@ function parseMacroArgs(
                                 sugarcubeState,
                             ),
                             state,
+                            sugarcubeState,
                         );
                     } else {
                         logWarningFor(
@@ -471,6 +528,7 @@ function parseMacroArgs(
                                 sugarcubeState,
                             ),
                             state,
+                            sugarcubeState,
                         );
                     }
                 }
@@ -507,6 +565,7 @@ function parseMacroArgs(
                         sugarcubeState,
                     ),
                     state,
+                    sugarcubeState,
                 );
             }
         }
@@ -567,7 +626,11 @@ function parseMacroArgs(
                 (p) => p.prefix && startIsVarRegexp.test(p.prefix),
             );
 
-            createVariableAndPropertyReferences([vars, props], state);
+            createVariableAndPropertyReferences(
+                [vars, props],
+                state,
+                sugarcubeState,
+            );
         } else if (arg.type === MacroParse.Item.Expression) {
             // TwineScript code inside backticks
             createVariableAndPropertyReferences(
@@ -578,6 +641,7 @@ function parseMacroArgs(
                     sugarcubeState,
                 ),
                 state,
+                sugarcubeState,
             );
         } else if (arg.type === MacroParse.Item.String) {
             capturePreSemanticTokenFor(
@@ -602,6 +666,7 @@ function parseMacroArgs(
                     sugarcubeState,
                 ),
                 state,
+                sugarcubeState,
             );
         }
     }
@@ -623,6 +688,7 @@ function parseMacroArgs(
 }
 
 /**
+ * Capture a reference to and semantic tokens for a macro.
  *
  * @param makeMacroRef Whether to make a macro reference.
  * @param macroName Name of the macro.
@@ -639,7 +705,7 @@ function captureMacroRefAndTokens(
     macroIndex: number,
     macroInfo: MacroInfo | undefined,
     state: ParsingState,
-    sugarcubeState: StoryFormatParsingState,
+    sugarcubeState: SugarCubeParsingState,
 ) {
     if (makeMacroRef) {
         state.callbacks.onSymbolReference(
@@ -670,43 +736,109 @@ function captureMacroRefAndTokens(
 }
 
 /**
- * Parse text as a JavaScript script.
+ * Parse the contents of a <<script>> macro.
  *
- * @param text Text to parse.
- * @param textIndex Index in the document where the text begins (zero-based).
+ * @param match Matches from scriptMacroRegex.
+ * @param scriptMacro Information about the <<script>> macro.
+ * @param textIndex Index of the text in the document (zero-based).
  * @param state Parsing state.
  * @param sugarcubeState SugarCube-specific parsing state.
+ * @returns
  */
-function parseScript(
-    text: string,
+function parseScriptMacro(
+    match: RegExpExecArray,
+    scriptMacro: MacroInfo,
     textIndex: number,
     state: ParsingState,
-    sugarcubeState: StoryFormatParsingState,
+    sugarcubeState: SugarCubeParsingState,
 ): void {
-    // We don't have a language server for JS, so we create an embedded document
-    // for it that gets passed to our completions and hover functions, but we also
-    // separately tokenize it.
-    createVariableAndPropertyReferences(
-        tokenizeJavaScript(
-            true,
-            text,
-            textIndex,
-            state.textDocument,
-            sugarcubeState,
-        ),
+    // Capture a reference to and tokens for the opening script macro
+    captureMacroRefAndTokens(
+        true,
+        "script",
+        "script",
+        match.index + 2 + textIndex,
+        scriptMacro,
         state,
+        sugarcubeState,
     );
-    state.callbacks.onEmbeddedDocument(
-        EmbeddedDocument.create(
-            "script",
-            "javascript",
-            text,
-            textIndex,
-            state.textDocument,
-            false,
-            true,
-        ),
+    // and tokens for the closing script macro
+    captureMacroRefAndTokens(
+        false,
+        "script",
+        "script",
+        match.index + match[0].length - 2 - 6 + textIndex,
+        scriptMacro,
+        state,
+        sugarcubeState,
     );
+
+    if (!match.groups) return;
+    const isTwinescript =
+        (match.groups.language ?? "").toLowerCase() === "twinescript";
+    const open = match.groups.open ?? "";
+    const contents = match.groups.contents ?? "";
+    const contentsIndex = match.index + open.length;
+    if (isTwinescript) {
+        createVariableAndPropertyReferences(
+            tokenizeTwineScriptExpression(
+                contents,
+                contentsIndex + textIndex,
+                state.textDocument,
+                sugarcubeState,
+            ),
+            state,
+            sugarcubeState,
+        );
+    } else {
+        // Tokenize as a JavaScript program
+        parseAsJavaScript(
+            contents,
+            contentsIndex + textIndex,
+            state,
+            sugarcubeState,
+        );
+    }
+}
+
+/**
+ * Determine if a macro is available given the SugarCube version.
+ *
+ * @param macroText The macro's name.
+ * @param macroIndex The macro's index in the larger document.
+ * @param macroInfo Information about the macro.
+ * @param state Parsing state.
+ */
+function checkMacroAvailability(
+    macroText: string,
+    macroIndex: number,
+    macroInfo: MacroInfo,
+    state: ParsingState,
+): void {
+    const storyFormatVersion = state.storyFormat?.formatVersion;
+    if (storyFormatVersion !== undefined) {
+        if (
+            macroInfo.since !== undefined &&
+            versionCompare(storyFormatVersion, macroInfo.since) < 0
+        ) {
+            logErrorFor(
+                macroText,
+                macroIndex,
+                `\`${macroInfo.name}\` isn't available until SugarCube version ${macroInfo.since} but your StoryFormat version is ${storyFormatVersion}`,
+                state,
+            );
+        } else if (
+            macroInfo.removed !== undefined &&
+            versionCompare(storyFormatVersion, macroInfo.removed) >= 0
+        ) {
+            logErrorFor(
+                macroText,
+                macroIndex,
+                `\`${macroInfo.name}\` was removed in SugarCube version ${macroInfo.removed} and your StoryFormat version is ${storyFormatVersion}`,
+                state,
+            );
+        }
+    }
 }
 
 /**
@@ -722,7 +854,7 @@ function parseAndRemoveMacros(
     passageText: string,
     textIndex: number,
     state: ParsingState,
-    sugarcubeState: StoryFormatParsingState,
+    sugarcubeState: SugarCubeParsingState,
 ): string {
     // To erase the macros from the passage text, we'll carve it into substrings
     // that we concatenate at the end for speed
@@ -733,53 +865,13 @@ function parseAndRemoveMacros(
     // Special case the <<script>> container, as its contents are treated as raw JavaScript/TwineScript
     passageText = eraseMatches(passageText, scriptMacroRegex, (m) => {
         if (m === null) return;
-
-        // Capture a reference to and tokens for the opening script macro
-        captureMacroRefAndTokens(
-            true,
-            "script",
-            "script",
-            m.index + 2 + textIndex,
+        parseScriptMacro(
+            m,
             knownMacros["script"],
+            textIndex,
             state,
             sugarcubeState,
         );
-        // and tokens for the closing script macro
-        captureMacroRefAndTokens(
-            false,
-            "script",
-            "script",
-            m.index + m[0].length - 2 - 6 + textIndex,
-            knownMacros["script"],
-            state,
-            sugarcubeState,
-        );
-
-        if (!m.groups) return;
-        const isTwinescript =
-            (m.groups.language ?? "").toLowerCase() === "twinescript";
-        const open = m.groups.open ?? "";
-        const contents = m.groups.contents ?? "";
-        const contentsIndex = m.index + open.length;
-        if (isTwinescript) {
-            createVariableAndPropertyReferences(
-                tokenizeTwineScriptExpression(
-                    contents,
-                    contentsIndex + textIndex,
-                    state.textDocument,
-                    sugarcubeState,
-                ),
-                state,
-            );
-        } else {
-            // Tokenize as a JavaScript program
-            parseScript(
-                contents,
-                contentsIndex + textIndex,
-                state,
-                sugarcubeState,
-            );
-        }
     });
 
     // Warn on any macro that's inside of the setter portion of a link
@@ -793,7 +885,9 @@ function parseAndRemoveMacros(
     }
 
     let macroId = 0;
-    const unclosedMacros: MacroLocationInfo[] = [];
+    // If we ever go away from linear parsing and add recursion, we'll need
+    // to revisit how we're tracking unclosed macros.
+    sugarcubeState.unclosedMacros = [];
     const macroChildren: Record<number, MacroLocationInfo[]> = {}; // Map of parent macro ID to list of child macros
     for (const m of passageText.matchAll(macroRegex)) {
         const macroIndex = m.index + 2; // Index of the start of the macro (inside the <<)
@@ -840,9 +934,8 @@ function parseAndRemoveMacros(
 
         const macroInfo = knownMacros[name];
 
-        if (macroEnd === "/" || endVariant) isOpenMacro = false; // Note if we know this is a closing macro
+        if (macroEnd === "/" || endVariant) isOpenMacro = false; // This is a closing macro
 
-        // Capture a reference to the macro
         captureMacroRefAndTokens(
             isOpenMacro,
             name,
@@ -854,49 +947,41 @@ function parseAndRemoveMacros(
         );
 
         if (macroInfo !== undefined) {
-            // Check for macros that have been removed or aren't yet available
-            const storyFormatVersion = state.storyFormat?.formatVersion;
-            if (storyFormatVersion !== undefined && isOpenMacro) {
-                if (
-                    macroInfo.since !== undefined &&
-                    versionCompare(storyFormatVersion, macroInfo.since) < 0
-                ) {
-                    logErrorFor(
-                        m[0],
-                        m.index + textIndex,
-                        `\`${macroInfo.name}\` isn't available until SugarCube version ${macroInfo.since} but your StoryFormat version is ${storyFormatVersion}`,
-                        state,
-                    );
-                } else if (
-                    macroInfo.removed !== undefined &&
-                    versionCompare(storyFormatVersion, macroInfo.removed) >= 0
-                ) {
-                    logErrorFor(
-                        m[0],
-                        m.index + textIndex,
-                        `\`${macroInfo.name}\` was removed in SugarCube version ${macroInfo.removed} and your StoryFormat version is ${storyFormatVersion}`,
-                        state,
-                    );
-                }
-            }
+            // Check the availability (only for opening/self-closing macros)
+            if (isOpenMacro)
+                checkMacroAvailability(
+                    m[0],
+                    m.index + textIndex,
+                    macroInfo,
+                    state,
+                );
 
             // Handle open/close macros
             if (macroInfo.container) {
                 if (isOpenMacro) {
-                    unclosedMacros.push({
+                    sugarcubeState.unclosedMacros.push({
                         name: macroInfo.name,
                         at: m.index,
                         fullText: m[0],
                         id: macroId++,
                     });
                 } else {
-                    let openingMacroFound = false;
-                    for (let i = unclosedMacros.length - 1; i >= 0; --i) {
-                        if (unclosedMacros[i].name === macroInfo.name) {
+                    let openingMacroAt: number | undefined = undefined;
+                    for (
+                        let i = sugarcubeState.unclosedMacros.length - 1;
+                        i >= 0;
+                        --i
+                    ) {
+                        if (
+                            sugarcubeState.unclosedMacros[i].name ===
+                            macroInfo.name
+                        ) {
                             // If the macro has a container parser, pass it the kids.
                             if (macroInfo.parseChildren !== undefined) {
                                 const children =
-                                    macroChildren[unclosedMacros[i].id] ?? [];
+                                    macroChildren[
+                                        sugarcubeState.unclosedMacros[i].id
+                                    ] ?? [];
                                 // Shift the kids' locations to be relative to
                                 // the document instead of the passage text
                                 for (const child of children) {
@@ -908,18 +993,37 @@ function parseAndRemoveMacros(
                                     sugarcubeState,
                                 );
                             }
-                            delete macroChildren[unclosedMacros[i].id];
-                            openingMacroFound = true;
-                            unclosedMacros.splice(i, 1);
+                            delete macroChildren[
+                                sugarcubeState.unclosedMacros[i].id
+                            ];
+                            openingMacroAt =
+                                sugarcubeState.unclosedMacros[i].at;
+                            sugarcubeState.unclosedMacros.splice(i, 1);
                             break;
                         }
                     }
-                    if (!openingMacroFound) {
+                    if (openingMacroAt === undefined) {
                         logErrorFor(
                             m[0],
                             m.index + textIndex,
                             `Opening macro <<${macroInfo.name}>> not found`,
                             state,
+                        );
+                    }
+                    // If this is a <<widget>> macro, capture its range
+                    else if (
+                        macroInfo.name ===
+                        (knownMacros["widget"]?.name || "widget")
+                    ) {
+                        sugarcubeState.widgetMacroRanges.push(
+                            Range.create(
+                                state.textDocument.positionAt(
+                                    openingMacroAt + textIndex,
+                                ),
+                                state.textDocument.positionAt(
+                                    m.index + textIndex,
+                                ),
+                            ),
                         );
                     }
                 }
@@ -940,9 +1044,17 @@ function parseAndRemoveMacros(
                     MacroParent.is(p) ? p.name : p,
                 );
                 let parentMacroInfo: MacroLocationInfo | undefined;
-                for (let i = unclosedMacros.length - 1; i >= 0; --i) {
-                    if (parentNames.includes(unclosedMacros[i].name)) {
-                        parentMacroInfo = unclosedMacros[i];
+                for (
+                    let i = sugarcubeState.unclosedMacros.length - 1;
+                    i >= 0;
+                    --i
+                ) {
+                    if (
+                        parentNames.includes(
+                            sugarcubeState.unclosedMacros[i].name,
+                        )
+                    ) {
+                        parentMacroInfo = sugarcubeState.unclosedMacros[i];
                         break;
                     }
                 }
@@ -1018,7 +1130,18 @@ function parseAndRemoveMacros(
     }
 
     // If we have any lingering open tags, they're missing their close tags
-    for (const openTag of unclosedMacros) {
+    for (const openTag of sugarcubeState.unclosedMacros) {
+        // If it's a widget, capture the range as being from its opening to the passage's end
+        if (openTag.name === (knownMacros["widget"]?.name || "widget")) {
+            sugarcubeState.widgetMacroRanges.push(
+                Range.create(
+                    state.textDocument.positionAt(openTag.at + textIndex),
+                    state.textDocument.positionAt(
+                        passageText.length + textIndex,
+                    ),
+                ),
+            );
+        }
         logErrorFor(
             openTag.fullText,
             openTag.at + textIndex,
@@ -1026,6 +1149,7 @@ function parseAndRemoveMacros(
             state,
         );
     }
+    sugarcubeState.unclosedMacros = [];
 
     // Include all text after the last macro
     macrolessStrings.push(passageText.slice(lastIndex));
@@ -1055,7 +1179,7 @@ function parseHtmlAttributesAndDirectives(
     passageText: string,
     textIndex: number,
     state: ParsingState,
-    sugarcubeState: StoryFormatParsingState,
+    sugarcubeState: SugarCubeParsingState,
 ): string {
     for (const m of passageText.matchAll(htmlTagRegex)) {
         const tag = m[0];
@@ -1099,6 +1223,7 @@ function parseHtmlAttributesAndDirectives(
                         sugarcubeState,
                     ),
                     state,
+                    sugarcubeState,
                 );
                 // Make sure we don't have an evaluation directive on a data-setter attribute
                 if (
@@ -1151,7 +1276,7 @@ const commentRegex = new RegExp(SC2Patterns.commentBlock, "gmi");
 function removeNonParsedText(
     text: string,
     textIndex: number,
-    sugarcubeState: StoryFormatParsingState,
+    sugarcubeState: SugarCubeParsingState,
 ): string {
     text = eraseMatches(text, noParseRegex);
 
@@ -1253,7 +1378,7 @@ function checkPassageTags(
     passageText: string,
     textIndex: number,
     state: ParsingState,
-    sugarcubeState: StoryFormatParsingState,
+    sugarcubeState: SugarCubeParsingState,
 ): void {
     let isHtmlPassage = true;
 
@@ -1366,13 +1491,15 @@ export function parsePassageText(
         return;
     }
 
-    const sugarcubeState: StoryFormatParsingState = {
+    const sugarcubeState: SugarCubeParsingState = {
         passageTokens: {},
+        unclosedMacros: [],
+        widgetMacroRanges: [],
     };
 
     if (state.currentPassage?.isScript) {
         // If it's a script passage, parse it as a script instead of Sugarcube
-        parseScript(passageText, textIndex, state, sugarcubeState);
+        parseAsJavaScript(passageText, textIndex, state, sugarcubeState);
     } else {
         // Check for special tags and create any needed embedded documents
         checkPassageTags(passageText, textIndex, state, sugarcubeState);

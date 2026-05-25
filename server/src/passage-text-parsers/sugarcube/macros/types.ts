@@ -1,6 +1,5 @@
 import { ParsingState } from "../../../parser";
-import { StoryFormatParsingState } from "../..";
-import { MacroLocationInfo } from "../sugarcube-parser";
+import { MacroLocationInfo, SugarCubeParsingState } from "../sugarcube-parser";
 import { createVariableAndPropertyReferences } from "../sugarcube-utils";
 import { tokenizeTwineScriptExpression } from "../sc2/sc2-twinescript";
 import { Parameters } from "../sc2/t3lt-parameters";
@@ -112,11 +111,11 @@ export interface MacroInfo {
      * @param sugarcubeState SugarCube-specific parsing state.
      * @returns True to indicate that parsing is complete, or false to let parsing continue.
      */
-    parse?: (
+    parseArgs?: (
         args: string | undefined,
         argsIndex: number,
         state: ParsingState,
-        sugarcubeState: StoryFormatParsingState,
+        sugarcubeState: SugarCubeParsingState,
     ) => boolean;
     /**
      * Parses a container macro's child macros.
@@ -128,7 +127,7 @@ export interface MacroInfo {
     parseChildren?: (
         children: MacroLocationInfo[],
         state: ParsingState,
-        sugarcubeState: StoryFormatParsingState,
+        sugarcubeState: SugarCubeParsingState,
     ) => void;
 }
 
@@ -145,7 +144,7 @@ export function parseArgsAsTwineScriptExpression(
     args: string | undefined,
     argsIndex: number,
     state: ParsingState,
-    sugarcubeState: StoryFormatParsingState,
+    sugarcubeState: SugarCubeParsingState,
 ): boolean {
     if (args !== undefined) {
         createVariableAndPropertyReferences(
@@ -156,6 +155,7 @@ export function parseArgsAsTwineScriptExpression(
                 sugarcubeState,
             ),
             state,
+            sugarcubeState,
         );
     }
     return true;

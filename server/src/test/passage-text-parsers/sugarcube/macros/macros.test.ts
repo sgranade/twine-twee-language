@@ -13,7 +13,6 @@ import {
 } from "../../../builders";
 import { buildMacroInfo } from "./macro-builders";
 
-import { buildStoryFormatParsingState } from "../../builders";
 import { MacroLocationInfo } from "../../../../passage-text-parsers/sugarcube/sugarcube-parser";
 import { OSugarCubeSymbolKind } from "../../../../passage-text-parsers/sugarcube/types";
 
@@ -49,10 +48,14 @@ describe("SugarCube Macros", () => {
                         Range.create(1, 2, 3, 4),
                     ),
                 });
-                const storyFormatState = buildStoryFormatParsingState();
+                const storyFormatState = {
+                    passageTokens: {},
+                    unclosedMacros: [],
+                    widgetMacroRanges: [],
+                };
                 const macro = uut.allMacros()["widget"];
 
-                macro.parse!("testy", 12, state, storyFormatState);
+                macro.parseArgs!("testy", 12, state, storyFormatState);
                 const result = callbacks.definitions;
 
                 expect(result).to.eql([
@@ -80,10 +83,19 @@ describe("SugarCube Macros", () => {
                         Range.create(1, 2, 3, 4),
                     ),
                 });
-                const storyFormatState = buildStoryFormatParsingState();
+                const storyFormatState = {
+                    passageTokens: {},
+                    unclosedMacros: [],
+                    widgetMacroRanges: [],
+                };
                 const macro = uut.allMacros()["widget"];
 
-                macro.parse!("testy  container", 12, state, storyFormatState);
+                macro.parseArgs!(
+                    "testy  container",
+                    12,
+                    state,
+                    storyFormatState,
+                );
                 const result = callbacks.definitions;
 
                 expect(result).to.eql([
@@ -110,10 +122,14 @@ describe("SugarCube Macros", () => {
                         Range.create(1, 2, 3, 4),
                     ),
                 });
-                const storyFormatState = buildStoryFormatParsingState();
+                const storyFormatState = {
+                    passageTokens: {},
+                    unclosedMacros: [],
+                    widgetMacroRanges: [],
+                };
                 const macro = uut.allMacros()["widget"];
 
-                macro.parse!(undefined, 0, state, storyFormatState);
+                macro.parseArgs!(undefined, 0, state, storyFormatState);
                 const [result] = callbacks.errors;
 
                 expect(callbacks.errors.length).to.equal(1);
@@ -138,7 +154,11 @@ describe("SugarCube Macros", () => {
                         Range.create(1, 2, 3, 4),
                     ),
                 });
-                const storyFormatState = buildStoryFormatParsingState();
+                const storyFormatState = {
+                    passageTokens: {},
+                    unclosedMacros: [],
+                    widgetMacroRanges: [],
+                };
                 const macro = uut.allMacros()["if"];
                 const kids: MacroLocationInfo[] = [
                     { name: "else", at: 11, fullText: "<<else>>", id: 2 },

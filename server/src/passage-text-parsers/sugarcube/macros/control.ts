@@ -16,7 +16,7 @@ export const ifMacro: MacroInfo = {
     description:
         "Executes its contents if the given conditional expression evaluates to true. If the condition evaluates to false and an `<<elseif>>` or `<<else>>` exists, then other contents can be executed.",
     since: "2.0.0",
-    parse: parseArgsAsTwineScriptExpression,
+    parseArgs: parseArgsAsTwineScriptExpression,
     parseChildren(children, state) {
         // An <<elseif>> after an <<else>> is an error
         let elseifMacro: MacroLocationInfo | undefined;
@@ -68,7 +68,7 @@ export const elseifMacro: MacroInfo = {
     description:
         "Executes its contents if the given conditional expression evaluates to true.",
     since: "2.0.0",
-    parse: parseArgsAsTwineScriptExpression,
+    parseArgs: parseArgsAsTwineScriptExpression,
 };
 
 export const elseMacro: MacroInfo = {
@@ -123,7 +123,7 @@ export const switchMacro: MacroInfo = {
     description:
         "Evaluates the given expression and compares it to the value(s) within its `<<case>>` children. The value(s) within each case are compared to the result of the expression given to the parent `<<switch>>`. Upon a successful match, the matching case will have its contents executed. If no cases match and an optional `<<default>>` case exists, which must be the final case, then its contents will be executed. At most one case will execute.",
     since: "2.7.2",
-    parse: parseArgsAsTwineScriptExpression,
+    parseArgs: parseArgsAsTwineScriptExpression,
 };
 
 export const caseMacro: MacroInfo = {

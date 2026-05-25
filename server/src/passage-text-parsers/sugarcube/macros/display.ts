@@ -6,7 +6,7 @@ export const equalsMacro: MacroInfo = {
     description:
         "Outputs a string representation of the result of the given expression. This macro is an alias for `<<print>>`.",
     since: "2.0.0",
-    parse: parseArgsAsTwineScriptExpression,
+    parseArgs: parseArgsAsTwineScriptExpression,
 };
 
 export const minusMacro: MacroInfo = {
@@ -15,7 +15,7 @@ export const minusMacro: MacroInfo = {
     description:
         "Outputs a string representation of the result of the given expression. This macro is functionally identical to `<<print>>`, save that it also encodes HTML special characters in the output.",
     since: "2.0.0",
-    parse: parseArgsAsTwineScriptExpression,
+    parseArgs: parseArgsAsTwineScriptExpression,
 };
 
 export const doMacro: MacroInfo = {
@@ -53,7 +53,7 @@ export const printMacro: MacroInfo = {
     description:
         "Outputs a string representation of the result of the given expression.",
     since: "2.0.0",
-    parse: parseArgsAsTwineScriptExpression,
+    parseArgs: parseArgsAsTwineScriptExpression,
 };
 
 export const redoMacro: MacroInfo = {

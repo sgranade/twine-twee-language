@@ -6,7 +6,7 @@
 import { Range } from "vscode-languageserver";
 
 import { ParsingState } from "../../../parser";
-import { StoryFormatParsingState } from "../..";
+import { SugarCubeParsingState } from "../sugarcube-parser";
 import {
     ArgumentToken,
     MacroParse,
@@ -224,7 +224,7 @@ const varTestRegexp: RegExp = /^[$_][$A-Z_a-z][$0-9A-Z_a-z]*/;
 export function macroArgumentTokenToT3LTArg(
     token: ArgumentToken,
     state: ParsingState,
-    sugarCubeState: StoryFormatParsingState,
+    sugarCubeState: SugarCubeParsingState,
 ): Arg | undefined {
     let arg = token.text;
     const range = Range.create(

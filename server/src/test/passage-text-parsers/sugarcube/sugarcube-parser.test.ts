@@ -509,6 +509,23 @@ describe("SugarCube Parser", () => {
             expect(result).to.be.empty;
         });
 
+        it("should not capture the built-in variables _args or _contents (for widgets)", () => {
+            const header = ":: Passage\n";
+            const passage =
+                "Some content.\n" + "Built-in variables _args and _contents.\n";
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            const parser = uut.getSugarCubeParser(undefined);
+
+            parser?.parsePassageText(passage, header.length, state);
+            const result = callbacks.references;
+
+            expect(result).to.be.empty;
+        });
+
         it("should produce a semantic token for a bare variable", () => {
             const header = ":: Passage\n";
             const passage = "Some content.\n" + "This is a $bareVariable.\n";
@@ -2018,7 +2035,7 @@ describe("SugarCube Parser", () => {
             });
             let macroArgs: string | undefined;
             let macroArgsIndex: number | undefined;
-            macro.parse = (args, argsIndex) => {
+            macro.parseArgs = (args, argsIndex) => {
                 macroArgs = args;
                 macroArgsIndex = argsIndex;
                 return true;
@@ -2566,7 +2583,7 @@ describe("SugarCube Parser", () => {
                     name: "a",
                 });
                 const allArgs: string[] = [];
-                macro.parse = (args) => {
+                macro.parseArgs = (args) => {
                     allArgs.push(args ?? "UNDEFINED");
                     return true;
                 };
@@ -2594,7 +2611,7 @@ describe("SugarCube Parser", () => {
                     name: "a",
                 });
                 macro.arguments = true;
-                macro.parse = () => {
+                macro.parseArgs = () => {
                     return true;
                 };
                 const mockFunction = ImportMock.mockFunction(
@@ -2640,7 +2657,7 @@ describe("SugarCube Parser", () => {
                     name: "a",
                 });
                 macro.arguments = true;
-                macro.parse = () => {
+                macro.parseArgs = () => {
                     return false;
                 };
                 const mockFunction = ImportMock.mockFunction(
@@ -4069,6 +4086,90 @@ describe("SugarCube Parser", () => {
                     "bookmark is deprecated as of SugarCube version 2.37.0",
                 );
                 expect(result.range).to.eql(Range.create(0, 12, 0, 23));
+            });
+        });
+
+        describe("variables", () => {
+            it("should warn on the variable _args used outside of a <<widget>> macro", () => {
+                const header = ":: Passage\n";
+                const passage = "Let's go: _args\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const parser = uut.getSugarCubeParser(undefined);
+
+                parser?.parsePassageText(passage, header.length, state);
+                const [result] = callbacks.errors;
+
+                expect(callbacks.errors.length).to.equal(1);
+                expect(result.severity).to.eql(DiagnosticSeverity.Warning);
+                expect(result.message).to.include(
+                    "_args typically only exists inside <<widget>>",
+                );
+                expect(result.range).to.eql(Range.create(1, 10, 1, 15));
+            });
+
+            it("should warn on the variable _contents used outside of a <<widget>> macro", () => {
+                const header = ":: Passage\n";
+                const passage = "Let's go: _contents\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const parser = uut.getSugarCubeParser(undefined);
+
+                parser?.parsePassageText(passage, header.length, state);
+                const [result] = callbacks.errors;
+
+                expect(callbacks.errors.length).to.equal(1);
+                expect(result.severity).to.eql(DiagnosticSeverity.Warning);
+                expect(result.message).to.include(
+                    "_contents typically only exists inside <<widget>>",
+                );
+                expect(result.range).to.eql(Range.create(1, 10, 1, 19));
+            });
+
+            it("should not warn on the variable _args used inside of a <<widget>> macro", () => {
+                const header = ":: Passage [widget]\n";
+                // Test _args both in child macros and as a bare variable
+                const passage =
+                    'Let\'s go: <<widget "name">><<if _args>>_args<</if>><</widget>>\n';
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const parser = uut.getSugarCubeParser(undefined);
+
+                parser?.parsePassageText(passage, header.length, state);
+                const result = callbacks.errors;
+
+                expect(result).to.be.empty;
+            });
+
+            it("should not warn on the variable _args used inside of an unclosed <<widget>> macro", () => {
+                const header = ":: Passage [widget]\n";
+                // Test _args both in child macros and as a bare variable
+                const passage =
+                    'Let\'s go: <<widget "name">><<if _args>>_args<</if>>\n';
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const parser = uut.getSugarCubeParser(undefined);
+
+                parser?.parsePassageText(passage, header.length, state);
+                const [result] = callbacks.errors;
+
+                expect(callbacks.errors.length).to.equal(1);
+                expect(result.severity).to.eql(DiagnosticSeverity.Error);
+                expect(result.message).to.include(
+                    "Closing macro <</widget>> not found",
+                );
             });
         });
 

@@ -10,8 +10,9 @@ import {
 } from "../../../parser";
 import { ETokenType } from "../../../semantic-tokens";
 import { skipSpaces } from "../../../utilities";
-import { capturePreSemanticTokenFor, StoryFormatParsingState } from "../..";
+import { capturePreSemanticTokenFor } from "../..";
 import { Token } from "../../../types";
+import { SugarCubeParsingState } from "../sugarcube-parser";
 import { createVariableAndPropertyReferences } from "../sugarcube-utils";
 import {
     isTwineScriptExpression,
@@ -34,7 +35,7 @@ export function parseSugarCubePassageRefOrTwinescriptExpr(
     text: string,
     textIndex: number,
     state: ParsingState,
-    sugarcubeState: StoryFormatParsingState,
+    sugarcubeState: SugarCubeParsingState,
 ) {
     // SC2 treats a link expression or data-passage attribute as a passage reference
     // unless and until it's not found, at which point it's treated as if it's
@@ -52,6 +53,7 @@ export function parseSugarCubePassageRefOrTwinescriptExpr(
                 sugarcubeState,
             ),
             state,
+            sugarcubeState,
         );
     } else {
         parsePassageReference(text, textIndex, state, sugarcubeState);
@@ -73,7 +75,7 @@ export function parseSugarCubeTwineLink(
     linkIndex: number,
     textIndex: number,
     state: ParsingState,
-    sugarcubeState: StoryFormatParsingState,
+    sugarcubeState: SugarCubeParsingState,
 ): LinkMarkupData {
     const markupData = parseSquareBracketedMarkup(text, linkIndex);
     const error = markupData.error;
@@ -131,6 +133,7 @@ export function parseSugarCubeTwineLink(
                     sugarcubeState,
                 ),
                 state,
+                sugarcubeState,
             );
         }
         if (markupData.innerMeta !== undefined) {

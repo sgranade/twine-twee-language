@@ -5,9 +5,10 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { EmbeddedDocument } from "../embedded-languages";
 import { Index, TwineSymbolKind } from "../project-index";
+import { defaultDiagnosticsOptions } from "../server-options";
+
 import * as uut from "../validator";
 import { buildPassage } from "./builders";
-import { defaultDiagnosticsOptions } from "../server-options";
 
 describe("Validator", () => {
     describe("Parse Error", () => {

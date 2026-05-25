@@ -16,7 +16,7 @@ export const setMacro: MacroInfo = {
     description:
         "Sets story `$variables` and temporary `_variables` based on the given expression.",
     since: "2.0.0",
-    parse: parseArgsAsTwineScriptExpression,
+    parseArgs: parseArgsAsTwineScriptExpression,
 };
 
 export const unsetMacro: MacroInfo = {
@@ -25,5 +25,5 @@ export const unsetMacro: MacroInfo = {
     syntax: "<<unset variableList>>",
     description: "Unsets story `$variables` and temporary `_variables`.",
     since: "2.0.0",
-    parse: parseArgsAsTwineScriptExpression,
+    parseArgs: parseArgsAsTwineScriptExpression,
 };

@@ -1,5 +1,8 @@
+import { Diagnostic, DiagnosticSeverity } from "vscode-languageserver";
 import { JSPropertyLabel, JSVariableLabel } from "../../js-parser";
 import { ParsingState } from "../../parser";
+import { positionInRange } from "../../utilities";
+import { SugarCubeParsingState } from "./sugarcube-parser";
 import { builtinVars, builtInVarsAndProperties } from "./sugarcube-variables";
 import { OSugarCubeSymbolKind } from "./types";
 
@@ -15,11 +18,37 @@ import { OSugarCubeSymbolKind } from "./types";
 export function createVariableAndPropertyReferences(
     varsAndProps: [JSVariableLabel[], JSPropertyLabel[]],
     state: ParsingState,
+    sugarcubeState: SugarCubeParsingState,
     isSet = false,
 ): void {
     for (const v of varsAndProps[0]) {
+        // Special case the built-in variables _args and _contents, which only
+        // exist inside of a <<widget>> container macro. The vars can show up in child
+        // macros (in which case there will be an open widget macro in the state) or
+        // as bare variables (which are parsed later and thus require checking the
+        // stored ranges of widget macros)
+        if (v.contents === "_args" || v.contents === "_contents") {
+            if (
+                !sugarcubeState.unclosedMacros.find(
+                    (p) => p.name === "widget",
+                ) &&
+                !sugarcubeState.widgetMacroRanges.find((r) =>
+                    positionInRange(v.location.range.start, r),
+                )
+            ) {
+                state.callbacks.onParseError(
+                    Diagnostic.create(
+                        v.location.range,
+                        `${v.contents} typically only exists inside <<widget>> macros. If this variable name is correct, consider renaming it.`,
+                        DiagnosticSeverity.Warning,
+                        undefined,
+                        "Twine",
+                    ),
+                );
+            }
+        }
         // Don't save any references to SugarCube-specific variables
-        if (!builtinVars.has(v.contents))
+        else if (!builtinVars.has(v.contents))
             state.callbacks.onSymbolReference({
                 contents: v.contents,
                 location: v.location,
