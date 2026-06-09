@@ -7,11 +7,10 @@ Changes to the extension.
 ### Added
 
 - Now auto-completes object properties from expressions like `var['prop'] = { prop1: 2 }`.
-- SugarCube: Variables and properties in script passages and `<<script>>` macros are now properly indexed.
-- SugarCube: `State.variables.var` and `State.temporary.temp` are now handled the same as `$var` and `_temp`, including supporting renames.
+- SugarCube: Variables and properties in script passages and `<<script>>` macros are now properly indexed, including `State.variables.var` and `state.temporary.temp` variables.
 - SugarCube: Special variables `_args` and `_contents` now produce warnings if used outside of `<<widget>>` macros.
 - SugarCube: Macros inside link setters (such as `[[passage][<<set $var to 1>>]]`) now generate a warning about them not being evaluated.
-- Chapbook: Added parsing variables and properties in script passages and `[JavaScript]` modifier blocks.
+- Chapbook: Added parsing variables and properties in script passages and `[JavaScript]` modifier blocks, including variables set in calls to `engine.state.set()`.
 
 ### Changed
 

@@ -17,9 +17,9 @@ import {
 import { OChapbookSymbolKind } from "./types";
 
 /**
- * Built-in lookup values in Chapbook.
+ * Built-in variable properties in Chapbook.
  */
-const lookupValues: readonly string[] = [
+const chapbookProperties: readonly string[] = [
     "browser.darkTheme",
     "browser.darkSystemTheme",
     "browser.height",
@@ -92,6 +92,10 @@ const lookupValues: readonly string[] = [
     "config.style.page.theme.override",
     "config.style.page.verticalAlign",
     "config.testing",
+    "engine.state",
+    "engine.template",
+    "engine.template.inserts",
+    "engine.template.modifiers",
     "engine.version",
     "now.datestamp",
     "now.day",
@@ -126,7 +130,9 @@ const lookupValues: readonly string[] = [
     "trail",
 ];
 
-const builtinVars = [...new Set(lookupValues.map((x) => x.split(".", 1)[0]))];
+const builtinVars = [
+    ...new Set(chapbookProperties.map((x) => x.split(".", 1)[0])),
+];
 
 /**
  * Generate diagnostics involving custom inserts.
@@ -301,7 +307,7 @@ export function generateDiagnostics(
     const text = document.getText();
 
     // Check for variables and properties that don't have a matching set statement in a vars section
-    const propSetNamesWithDuplicates: string[] = [...lookupValues];
+    const propSetNamesWithDuplicates: string[] = [...chapbookProperties];
     for (const uri of index.getIndexedUris()) {
         propSetNamesWithDuplicates.push(
             ...(index

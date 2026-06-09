@@ -144,6 +144,69 @@ describe("Chapbook Parser", () => {
             });
         });
 
+        it("should parse engine state set calls in script passages", () => {
+            const header = ":: Passage [script]\n";
+            const passage = "engine.state.set('v[\"p1\"].p2', 'value');\n";
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                uri: "fake-uri",
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            state.currentPassage = buildPassage({ isScript: true });
+            state.storyFormat = {
+                format: "Chapbook",
+                formatVersion: "2.0.1",
+            };
+            const parser = uut.getChapbookParser(undefined);
+
+            parser?.parsePassageText(passage, header.length, state);
+            const result = callbacks.references;
+
+            expect(result).to.eql([
+                {
+                    contents: "v",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(1, 18, 1, 19),
+                    ),
+                    kind: OChapbookSymbolKind.VariableSet,
+                },
+                {
+                    contents: "v.p1",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(1, 21, 1, 23),
+                    ),
+                    kind: OChapbookSymbolKind.PropertySet,
+                },
+                {
+                    contents: "v.p1.p2",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(1, 26, 1, 28),
+                    ),
+                    kind: OChapbookSymbolKind.PropertySet,
+                },
+                {
+                    contents: "engine",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(1, 0, 1, 6),
+                    ),
+                    kind: OChapbookSymbolKind.Variable,
+                },
+                {
+                    contents: "engine.state",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(1, 7, 1, 12),
+                    ),
+                    kind: OChapbookSymbolKind.Property,
+                },
+            ]);
+        });
+
         it("should not parse vars in script passages that are formatted like Chapbook var section", () => {
             const header = ":: Passage [script]\n";
             const passage = "\n var1: 17\n--\n";
@@ -181,7 +244,7 @@ describe("Chapbook Parser", () => {
             expect(result[0]).to.eql({
                 contents: "var1",
                 location: Location.create("fake-uri", Range.create(2, 1, 2, 5)),
-                kind: OChapbookSymbolKind.VariableSet,
+                kind: OChapbookSymbolKind.Variable,
             });
             expect(result[1]).to.eql({
                 contents: "var1.prop",
@@ -1362,7 +1425,7 @@ describe("Chapbook Parser", () => {
                                 "fake-uri",
                                 Range.create(4, 2, 4, 8),
                             ),
-                            kind: OChapbookSymbolKind.VariableSet,
+                            kind: OChapbookSymbolKind.Variable,
                         },
                     ]);
                 });
@@ -4114,7 +4177,7 @@ describe("Chapbook Parser", () => {
 
             it("should error on an unclosed parenthesis before a colon", () => {
                 const header = ":: Passage\n";
-                const passage = "var(cond: 17\n--\n";
+                const passage = "var1(cond: 17\n--\n";
                 const callbacks = new MockCallbacks();
                 const state = buildParsingState({
                     content: header + passage,
@@ -4130,12 +4193,12 @@ describe("Chapbook Parser", () => {
                 expect(result.message).to.include(
                     "Missing a close parenthesis",
                 );
-                expect(result.range).to.eql(Range.create(1, 8, 1, 8));
+                expect(result.range).to.eql(Range.create(1, 9, 1, 9));
             });
 
             it("should warn on text after a condition parentheses but before the colon", () => {
                 const header = ":: Passage\n";
-                const passage = "var (cond) ignored: 17\n--\n";
+                const passage = "var1 (cond) ignored: 17\n--\n";
                 const callbacks = new MockCallbacks();
                 const state = buildParsingState({
                     content: header + passage,
@@ -4149,7 +4212,7 @@ describe("Chapbook Parser", () => {
                 expect(callbacks.errors.length).to.equal(1);
                 expect(result.severity).to.eql(DiagnosticSeverity.Warning);
                 expect(result.message).to.include("This will be ignored");
-                expect(result.range).to.eql(Range.create(1, 11, 1, 18));
+                expect(result.range).to.eql(Range.create(1, 12, 1, 19));
             });
         });
 
@@ -4376,7 +4439,7 @@ describe("Chapbook Parser", () => {
                 it("should error on an array dereference in the middle of a var insert", () => {
                     const header = ":: Passage\r\n";
                     const passage =
-                        "var1: 17\r\n--\r\n" + " {var[0].color}  \r\n";
+                        "var1: 17\r\n--\r\n" + " {var1[0].color}  \r\n";
                     const callbacks = new MockCallbacks();
                     const state = buildParsingState({
                         content: header + passage,
@@ -4392,7 +4455,7 @@ describe("Chapbook Parser", () => {
                     expect(result.message).to.include(
                         "Array dereferencing can only be at the end",
                     );
-                    expect(result.range).to.eql(Range.create(3, 5, 3, 8));
+                    expect(result.range).to.eql(Range.create(3, 6, 3, 9));
                 });
 
                 it("should error on a function insert whose property has spaces", () => {

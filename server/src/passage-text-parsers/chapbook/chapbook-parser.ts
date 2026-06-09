@@ -906,7 +906,7 @@ function parseEngineExtension(
  * @param contentsIndex Index of the contents in the document (zero-based).
  * @param state Parsing state.
  */
-function findEngineExtensions(
+function findAndParseEngineExtensions(
     contents: string,
     contentsIndex: number,
     state: ParsingState,
@@ -922,6 +922,55 @@ function findEngineExtensions(
         if (extendContents !== undefined) {
             [extendContents, ndx] = skipSpaces(extendContents, ndx);
             parseEngineExtension(extendContents, contentsIndex + ndx, state);
+        }
+    }
+}
+
+/**
+ * Find and parse all calls to the Chapbook `engine.state.set()` function.
+ *
+ * @param contents Contents to search for engine extensions.
+ * @param contentsIndex Index of the contents in the document (zero-based).
+ * @param state Parsing state.
+ * @param chapbookState Chapbook parsing state.
+ */
+function findAndParseEngineStateSets(
+    contents: string,
+    contentsIndex: number,
+    state: ParsingState,
+    chapbookState: ChapbookParsingState,
+): void {
+    for (const m of contents.matchAll(/engine.state.set\(/g)) {
+        let ndx = m.index + m[0].length; // Just inside the function call's parens
+        let setContents = extractToMatchingDelimiter(contents, "(", ")", ndx);
+        if (setContents !== undefined) {
+            [setContents, ndx] = skipSpaces(setContents, ndx);
+            if (setContents[0] !== '"' && setContents[0] !== "'") continue;
+            // Grab what's inside the string
+            ndx++;
+            const varContents = extractToMatchingDelimiter(
+                setContents,
+                setContents[0],
+                setContents[0],
+                1,
+            );
+            if (varContents) {
+                // Parse the value as a JavaScript expression, but make every var/property a definition
+                const tokens = tokenizeJavaScript(
+                    false,
+                    varContents,
+                    ndx + contentsIndex,
+                    state.textDocument,
+                    chapbookState,
+                );
+                for (const v of tokens[0]) {
+                    v.defined = true;
+                }
+                for (const p of tokens[1]) {
+                    p.defined = true;
+                }
+                createVariableAndPropertyReferences(tokens, state);
+            }
         }
     }
 }
@@ -1510,7 +1559,8 @@ function parseScript(
     state: ParsingState,
     chapbookState: ChapbookParsingState,
 ): void {
-    findEngineExtensions(text, textIndex, state);
+    findAndParseEngineExtensions(text, textIndex, state);
+    findAndParseEngineStateSets(text, textIndex, state, chapbookState);
     // We don't have a language server for JS, so we create an embedded document
     // for it that gets passed to our completions and hover functions, but we also
     // separately tokenize it.
@@ -2272,11 +2322,23 @@ export function parsePassageText(
     textIndex: number,
     state: ParsingState,
 ): void {
+    const chapbookState: ChapbookParsingState = {
+        modifierKind: ModifierKind.None,
+        passageTokens: {},
+    };
+
     if (state.parseLevel !== ParseLevel.Full) {
         if (state.parseLevel === ParseLevel.PassageNames) {
             // Even if we don't parse passage contents, look for calls to
             // `engine.extend()` so we can capture custom inserts and modifiers
-            findEngineExtensions(passageText, textIndex, state);
+            findAndParseEngineExtensions(passageText, textIndex, state);
+            // and `engine.state.set()` to capture variables
+            findAndParseEngineStateSets(
+                passageText,
+                textIndex,
+                state,
+                chapbookState,
+            );
             // as well as variables being set
             const passageParts = divideChapbookPassage(passageText);
             if (passageParts.vars !== undefined) {
@@ -2289,11 +2351,6 @@ export function parsePassageText(
         }
         return;
     }
-
-    const chapbookState: ChapbookParsingState = {
-        modifierKind: ModifierKind.None,
-        passageTokens: {},
-    };
 
     if (state.currentPassage?.isScript) {
         // If it's a script passage, parse it as a script instead of Chapbook
