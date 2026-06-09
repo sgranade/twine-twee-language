@@ -509,10 +509,11 @@ describe("SugarCube Parser", () => {
             expect(result).to.be.empty;
         });
 
-        it("should not capture the built-in variables _args or _contents (for widgets)", () => {
+        it("should not capture the built-in variables $args, _args, or _contents (for widgets)", () => {
             const header = ":: Passage\n";
             const passage =
-                "Some content.\n" + "Built-in variables _args and _contents.\n";
+                "Some content.\n" +
+                "<<widget>> $args _args _contents <</widget>>\n";
             const callbacks = new MockCallbacks();
             const state = buildParsingState({
                 content: header + passage,
@@ -523,7 +524,16 @@ describe("SugarCube Parser", () => {
             parser?.parsePassageText(passage, header.length, state);
             const result = callbacks.references;
 
-            expect(result).to.be.empty;
+            expect(result).to.eql([
+                {
+                    contents: "widget",
+                    kind: OSugarCubeSymbolKind.KnownMacro,
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(2, 2, 2, 8),
+                    ),
+                },
+            ]);
         });
 
         it("should produce a semantic token for a bare variable", () => {
@@ -2279,7 +2289,35 @@ describe("SugarCube Parser", () => {
                             "fake-uri",
                             Range.create(3, 2, 3, 6),
                         ),
-                        kind: OSugarCubeSymbolKind.VariableSet,
+                    },
+                ]);
+            });
+
+            it("should not capture the variable `output` used in a JavaScript script macro", () => {
+                const header = ":: Passage\n";
+                const passage =
+                    "Macro: <<script>>\n" +
+                    "output.wiki('Added!');\n" +
+                    "<</script>>";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    uri: "fake-uri",
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const parser = uut.getSugarCubeParser(undefined);
+
+                parser?.parsePassageText(passage, header.length, state);
+                const result = callbacks.references;
+
+                expect(result).to.eql([
+                    {
+                        contents: "script",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(1, 9, 1, 15),
+                        ),
+                        kind: OSugarCubeSymbolKind.KnownMacro,
                     },
                 ]);
             });
@@ -4090,6 +4128,27 @@ describe("SugarCube Parser", () => {
         });
 
         describe("variables", () => {
+            it("should warn on the variable $args used outside of a <<widget>> macro", () => {
+                const header = ":: Passage\n";
+                const passage = "Let's go: $args\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const parser = uut.getSugarCubeParser(undefined);
+
+                parser?.parsePassageText(passage, header.length, state);
+                const [result] = callbacks.errors;
+
+                expect(callbacks.errors.length).to.equal(1);
+                expect(result.severity).to.eql(DiagnosticSeverity.Warning);
+                expect(result.message).to.include(
+                    "$args typically only exists inside <<widget>>",
+                );
+                expect(result.range).to.eql(Range.create(1, 10, 1, 15));
+            });
+
             it("should warn on the variable _args used outside of a <<widget>> macro", () => {
                 const header = ":: Passage\n";
                 const passage = "Let's go: _args\n";
@@ -4170,6 +4229,24 @@ describe("SugarCube Parser", () => {
                 expect(result.message).to.include(
                     "Closing macro <</widget>> not found",
                 );
+            });
+
+            it("should not warn on the variable State.variables.args used inside of a <<script>> inside a <<widget>> macro", () => {
+                const header = ":: Passage [widget]\n";
+                // Test _args both in child macros and as a bare variable
+                const passage =
+                    'Let\'s go: <<widget "name">><<script>>const v = State.variables.args[0];<</script>><</widget>>\n';
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const parser = uut.getSugarCubeParser(undefined);
+
+                parser?.parsePassageText(passage, header.length, state);
+                const result = callbacks.errors;
+
+                expect(result).to.be.empty;
             });
         });
 

@@ -1,6 +1,10 @@
 import { Diagnostic, DiagnosticSeverity } from "vscode-languageserver";
-import { JSPropertyLabel, JSVariableLabel } from "../../js-parser";
-import { ParsingState } from "../../parser";
+import {
+    JSDiagnostic,
+    JSPropertyLabel,
+    JSVariableLabel,
+} from "../../js-parser";
+import { logErrorFor, ParsingState } from "../../parser";
 import { positionInRange } from "../../utilities";
 import { SugarCubeParsingState } from "./sugarcube-parser";
 import { builtinVars, builtInVarsAndProperties } from "./sugarcube-variables";
@@ -16,18 +20,28 @@ import { OSugarCubeSymbolKind } from "./types";
  * @param isSet True if the variables and properties are being set (assigned to).
  */
 export function createVariableAndPropertyReferences(
-    varsAndProps: [JSVariableLabel[], JSPropertyLabel[]],
+    varsAndProps: [
+        JSVariableLabel[],
+        JSPropertyLabel[],
+        JSDiagnostic | undefined,
+    ],
     state: ParsingState,
     sugarcubeState: SugarCubeParsingState,
     isSet = false,
 ): void {
-    for (const v of varsAndProps[0]) {
-        // Special case the built-in variables _args and _contents, which only
+    const [vars, props, diagnostic] = varsAndProps;
+
+    for (const v of vars) {
+        // Special case the built-in variables `$args`, `_args`, and `_contents`, which only
         // exist inside of a <<widget>> container macro. The vars can show up in child
         // macros (in which case there will be an open widget macro in the state) or
         // as bare variables (which are parsed later and thus require checking the
         // stored ranges of widget macros)
-        if (v.contents === "_args" || v.contents === "_contents") {
+        if (
+            v.contents === "$args" ||
+            v.contents === "_args" ||
+            v.contents === "_contents"
+        ) {
             if (
                 !sugarcubeState.unclosedMacros.find(
                     (p) => p.name === "widget",
@@ -47,6 +61,13 @@ export function createVariableAndPropertyReferences(
                 );
             }
         }
+        // Don't capture the auto-generated variable `output` in a <<script>> macro
+        else if (
+            v.contents === "output" &&
+            sugarcubeState.unclosedMacros.find((p) => p.name === "script")
+        ) {
+            // Do nothing!
+        }
         // Don't save any references to SugarCube-specific variables
         else if (!builtinVars.has(v.contents))
             state.callbacks.onSymbolReference({
@@ -58,7 +79,7 @@ export function createVariableAndPropertyReferences(
                         : OSugarCubeSymbolKind.Variable,
             });
     }
-    for (const p of varsAndProps[1]) {
+    for (const p of props) {
         // If there's a prefix, add it to the name, b/c we save properties in their
         // full object context (ex: `var.prop.subprop`).
         let contents =
@@ -77,29 +98,26 @@ export function createVariableAndPropertyReferences(
                 isTemporary = false;
             }
             if (isVariable) {
-                const varPrefix = isTemporary ? "_" : "$";
-                contents = contents.slice(16);
-                const firstPeriodNdx = contents.indexOf(".");
+                const ref = {
+                    contents: (isTemporary ? "_" : "$") + contents.slice(16),
+                    location: p.location,
+                    defined: p.defined,
+                };
+                const firstPeriodNdx = ref.contents.indexOf(".");
                 if (firstPeriodNdx === -1) {
                     // This is the property corresponding to the root variable: State.variable.var
-                    state.callbacks.onSymbolReference({
-                        contents: varPrefix + contents,
-                        location: p.location,
-                        kind:
-                            isSet || p.defined
-                                ? OSugarCubeSymbolKind.VariableSet
-                                : OSugarCubeSymbolKind.Variable,
-                    });
+                    createVariableAndPropertyReferences(
+                        [[ref], [], undefined],
+                        state,
+                        sugarcubeState,
+                    );
                 } else {
                     // This corresponds to a property: State.variable.var.prop
-                    state.callbacks.onSymbolReference({
-                        contents: varPrefix + contents,
-                        location: p.location,
-                        kind:
-                            isSet || p.defined
-                                ? OSugarCubeSymbolKind.PropertySet
-                                : OSugarCubeSymbolKind.Property,
-                    });
+                    createVariableAndPropertyReferences(
+                        [[], [ref], undefined],
+                        state,
+                        sugarcubeState,
+                    );
                 }
 
                 continue;
@@ -116,5 +134,13 @@ export function createVariableAndPropertyReferences(
                         ? OSugarCubeSymbolKind.PropertySet
                         : OSugarCubeSymbolKind.Property,
             });
+    }
+    if (diagnostic) {
+        logErrorFor(
+            diagnostic.contents,
+            diagnostic.at,
+            diagnostic.message,
+            state,
+        );
     }
 }

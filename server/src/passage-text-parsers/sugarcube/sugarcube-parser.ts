@@ -330,7 +330,7 @@ function parseAndRemoveTwineLinks(
 }
 
 const macroRegex = new RegExp(SC2Patterns.fullMacro, "gm");
-const scriptMacroRegex = new RegExp(SC2Patterns.scriptMacroBlock, "gm");
+const scriptMacroRegex = new RegExp(SC2Patterns.scriptMacro);
 const macroInASetterRegex = new RegExp(
     `(\\[\\[[^\\]]*\\]\\[.*?)((?:(?:${SC2Patterns.fullMacro}).*?)+)\\]`,
     "gm",
@@ -738,52 +738,25 @@ function captureMacroRefAndTokens(
 /**
  * Parse the contents of a <<script>> macro.
  *
- * @param match Matches from scriptMacroRegex.
- * @param scriptMacro Information about the <<script>> macro.
- * @param textIndex Index of the text in the document (zero-based).
+ * @param contents Contents of the script macro.
+ * @param contentsIndex Index of the contents in the document (zero-based).
+ * @param isTwinescript True if it's a TwineScript macro; false if it's JavaScript.
  * @param state Parsing state.
  * @param sugarcubeState SugarCube-specific parsing state.
  * @returns
  */
 function parseScriptMacro(
-    match: RegExpExecArray,
-    scriptMacro: MacroInfo,
-    textIndex: number,
+    contents: string,
+    contentsIndex: number,
+    isTwinescript: boolean,
     state: ParsingState,
     sugarcubeState: SugarCubeParsingState,
 ): void {
-    // Capture a reference to and tokens for the opening script macro
-    captureMacroRefAndTokens(
-        true,
-        "script",
-        "script",
-        match.index + 2 + textIndex,
-        scriptMacro,
-        state,
-        sugarcubeState,
-    );
-    // and tokens for the closing script macro
-    captureMacroRefAndTokens(
-        false,
-        "script",
-        "script",
-        match.index + match[0].length - 2 - 6 + textIndex,
-        scriptMacro,
-        state,
-        sugarcubeState,
-    );
-
-    if (!match.groups) return;
-    const isTwinescript =
-        (match.groups.language ?? "").toLowerCase() === "twinescript";
-    const open = match.groups.open ?? "";
-    const contents = match.groups.contents ?? "";
-    const contentsIndex = match.index + open.length;
     if (isTwinescript) {
         createVariableAndPropertyReferences(
             tokenizeTwineScriptExpression(
                 contents,
-                contentsIndex + textIndex,
+                contentsIndex,
                 state.textDocument,
                 sugarcubeState,
             ),
@@ -792,12 +765,7 @@ function parseScriptMacro(
         );
     } else {
         // Tokenize as a JavaScript program
-        parseAsJavaScript(
-            contents,
-            contentsIndex + textIndex,
-            state,
-            sugarcubeState,
-        );
+        parseAsJavaScript(contents, contentsIndex, state, sugarcubeState);
     }
 }
 
@@ -862,18 +830,6 @@ function parseAndRemoveMacros(
     let lastIndex = 0;
     const knownMacros = allMacros();
 
-    // Special case the <<script>> container, as its contents are treated as raw JavaScript/TwineScript
-    passageText = eraseMatches(passageText, scriptMacroRegex, (m) => {
-        if (m === null) return;
-        parseScriptMacro(
-            m,
-            knownMacros["script"],
-            textIndex,
-            state,
-            sugarcubeState,
-        );
-    });
-
     // Warn on any macro that's inside of the setter portion of a link
     for (const m of passageText.matchAll(macroInASetterRegex)) {
         logWarningFor(
@@ -900,7 +856,7 @@ function parseAndRemoveMacros(
 
         const macroBodyIndex =
             macroIndex +
-            (macroEnd ?? "").length +
+            (macroEnd?.length ?? 0) +
             macroName.length +
             preMacroBodySpace.length;
 
@@ -936,6 +892,19 @@ function parseAndRemoveMacros(
 
         if (macroEnd === "/" || endVariant) isOpenMacro = false; // This is a closing macro
 
+        // If we're inside a <<script>> macro and the new macro isn't a
+        // <</script>>, then don't actually capture the macro.
+        // (We don't have to go thru the full list of unclosed macros as the script macro
+        // will be at the end of the list.
+        const enclosingMacro =
+            sugarcubeState.unclosedMacros[
+                sugarcubeState.unclosedMacros.length - 1
+            ];
+        const inScriptMacro =
+            enclosingMacro && enclosingMacro.name === "script";
+        const isScriptClose = macroInfo?.name === "script" && !isOpenMacro;
+        if (inScriptMacro && !isScriptClose) continue;
+
         captureMacroRefAndTokens(
             isOpenMacro,
             name,
@@ -947,6 +916,30 @@ function parseAndRemoveMacros(
         );
 
         if (macroInfo !== undefined) {
+            // Special case <</script>> to handle its contents
+            if (inScriptMacro && isScriptClose) {
+                const scriptMatch = scriptMacroRegex.exec(
+                    enclosingMacro.fullText,
+                );
+                const isTwinescript =
+                    scriptMatch?.groups?.language.toLowerCase() ===
+                    "twinescript";
+                // lastIndex points at the text right after the opening <<script>> macro
+                const scriptContents = passageText.slice(lastIndex, m.index);
+
+                parseScriptMacro(
+                    scriptContents,
+                    lastIndex + textIndex,
+                    isTwinescript,
+                    state,
+                    sugarcubeState,
+                );
+
+                // Erase its inner contents now that we've handled it
+                macrolessStrings.push(" ".repeat(scriptContents.length));
+                lastIndex = m.index;
+            }
+
             // Check the availability (only for opening/self-closing macros)
             if (isOpenMacro)
                 checkMacroAvailability(
