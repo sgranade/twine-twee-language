@@ -1231,12 +1231,13 @@ function parseHtmlAttributesAndDirectives(
                     );
                 }
             }
-
-            passageText =
-                passageText.slice(0, attrIndex) +
-                " ".repeat(m1[0].length) +
-                passageText.slice(attrIndex + m1[0].length);
         }
+        // Blank out the tag so we don't accidentally
+        // capture apparent variables in non-data attributes
+            passageText =
+            passageText.slice(0, tagIndex) +
+            " ".repeat(tag.length) +
+            passageText.slice(tagIndex + tag.length);
     }
 
     return passageText;
@@ -1513,14 +1514,14 @@ export function parsePassageText(
             sugarcubeState,
         );
 
-        passageText = parseHtmlAttributesAndDirectives(
+        passageText = parseAndRemoveMacros(
             passageText,
             textIndex,
             state,
             sugarcubeState,
         );
 
-        passageText = parseAndRemoveMacros(
+        passageText = parseHtmlAttributesAndDirectives(
             passageText,
             textIndex,
             state,

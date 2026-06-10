@@ -3615,6 +3615,23 @@ describe("SugarCube Parser", () => {
                 },
             ]);
         });
+
+        it("should not capture a variable reference in a plain attribute", () => {
+            const header = ":: Passage\n";
+            const passage =
+                "Some content.\n" + `<span id="'pre-' + _id + '-suf'">.\n`;
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            const parser = uut.getSugarCubeParser(undefined);
+
+            parser?.parsePassageText(passage, header.length, state);
+            const result = callbacks.references;
+
+            expect(result).to.be.empty;
+        });
     });
 
     describe("html", () => {
