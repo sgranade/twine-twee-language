@@ -138,6 +138,7 @@ export interface MacroInfo {
  * @param argsIndex Index of the unparsed arguments in the larger document (zero-based).
  * @param state Parsing state.
  * @param sugarcubeState SugarCube-specific parsing state.
+ * @param assignmentIsDefinition If true, variable assignment will be treated as variable definition. (Needed for e.g. SugarCube passage link setters.)
  * @returns True to indicate that parsing is complete, or false to let parsing continue.
  */
 export function parseArgsAsTwineScriptExpression(
@@ -145,6 +146,7 @@ export function parseArgsAsTwineScriptExpression(
     argsIndex: number,
     state: ParsingState,
     sugarcubeState: SugarCubeParsingState,
+    assignmentIsDefinition: boolean = false,
 ): boolean {
     if (args !== undefined) {
         createVariableAndPropertyReferences(
@@ -153,6 +155,7 @@ export function parseArgsAsTwineScriptExpression(
                 argsIndex,
                 state.textDocument,
                 sugarcubeState,
+                assignmentIsDefinition,
             ),
             state,
             sugarcubeState,

@@ -261,7 +261,7 @@ describe("SugarCube TwineScript", () => {
             });
         });
 
-        it("should return apparent variables for variable assignment", () => {
+        it("should return apparent variables for variable reference", () => {
             const expression = "$varbl to 'testy'";
             const offset = 13;
             const textDocument = TextDocument.create(
@@ -281,7 +281,41 @@ describe("SugarCube TwineScript", () => {
                 storyState,
             );
 
-            expect(result[0]).to.eql([
+            expect(result.variables).to.eql([
+                {
+                    contents: "$varbl",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(1, 0, 1, 6),
+                    ),
+                    defined: false,
+                },
+            ]);
+            expect(result.properties).to.be.empty;
+        });
+
+        it("should return apparent variables for variable assignment", () => {
+            const expression = "$varbl to 'testy'";
+            const offset = 13;
+            const textDocument = TextDocument.create(
+                "fake-uri",
+                "twine",
+                1,
+                `twinescript:\n${expression}`,
+            );
+            const storyState: StoryFormatParsingState = {
+                passageTokens: {},
+            };
+
+            const result = uut.tokenizeTwineScriptExpression(
+                expression,
+                offset,
+                textDocument,
+                storyState,
+                true,
+            );
+
+            expect(result.variables).to.eql([
                 {
                     contents: "$varbl",
                     location: Location.create(
@@ -291,7 +325,7 @@ describe("SugarCube TwineScript", () => {
                     defined: true,
                 },
             ]);
-            expect(result[1]).to.be.empty;
+            expect(result.properties).to.be.empty;
         });
 
         it("should return apparent properties for variable assignment", () => {
@@ -314,7 +348,7 @@ describe("SugarCube TwineScript", () => {
                 storyState,
             );
 
-            expect(result[1]).to.eql([
+            expect(result.properties).to.eql([
                 {
                     contents: "rootprop1",
                     location: Location.create(
@@ -620,6 +654,30 @@ describe("SugarCube TwineScript", () => {
                     modifiers: [],
                 },
             });
+        });
+
+        it("should capture diagnostic errors", () => {
+            const expression = "$var == ";
+            const offset = 133;
+            const textDocument = TextDocument.create(
+                "fake-uri",
+                "twine",
+                1,
+                `twinescript: ${expression}`,
+            );
+            const storyState: StoryFormatParsingState = {
+                passageTokens: {},
+            };
+
+            const result = uut.tokenizeTwineScriptExpression(
+                expression,
+                offset,
+                textDocument,
+                storyState,
+            ).error;
+
+            expect(result?.contents).to.equal("=");
+            expect(result?.at).to.equal(139);
         });
     });
 });

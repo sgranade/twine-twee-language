@@ -7,9 +7,8 @@ import { StoryFormatParsingState, capturePreSemanticTokenFor } from "..";
 import { DecorationType } from "../../client-server";
 import { EmbeddedDocument } from "../../embedded-languages";
 import {
-    JSPropertyLabel,
-    JSVariableLabel,
     parseJSStrict,
+    TokenizedJS,
     tokenizeJavaScript,
 } from "../../js-parser";
 import {
@@ -105,20 +104,20 @@ export function getChapbookDefinitions(
 }
 
 /**
- * Create symbol references for parsed variables and properties.
+ * Create symbol references for tokenized variables and properties, and log any tokenizing error.
  *
  * `isSet` overrides the individual label's set (defined) information.
  *
- * @param varsAndProps Tuple with separate lists of variables and properties.
+ * @param jsTokens Tuple with separate lists of variables and properties and potentially a parsing error.
  * @param state Parsing state.
  * @param isSet True if the variables and properties are being set (assigned to).
  */
 function createVariableAndPropertyReferences(
-    varsAndProps: [JSVariableLabel[], JSPropertyLabel[]],
+    jsTokens: TokenizedJS,
     state: ParsingState,
     isSet?: boolean,
 ): void {
-    for (const v of varsAndProps[0]) {
+    for (const v of jsTokens.variables) {
         state.callbacks.onSymbolReference({
             contents: v.contents,
             location: v.location,
@@ -128,7 +127,7 @@ function createVariableAndPropertyReferences(
                     : OChapbookSymbolKind.Variable,
         });
     }
-    for (const p of varsAndProps[1]) {
+    for (const p of jsTokens.properties) {
         // If there's a prefix, add it to the name, b/c we save properties in their
         // full object context (ex: `var.prop.subprop`).
         const contents =
@@ -141,6 +140,14 @@ function createVariableAndPropertyReferences(
                     ? OChapbookSymbolKind.PropertySet
                     : OChapbookSymbolKind.Property,
         });
+    }
+    if (jsTokens.error) {
+        logErrorFor(
+            jsTokens.error.contents,
+            jsTokens.error.at,
+            jsTokens.error.message,
+            state,
+        );
     }
 }
 
@@ -963,10 +970,10 @@ function findAndParseEngineStateSets(
                     state.textDocument,
                     chapbookState,
                 );
-                for (const v of tokens[0]) {
+                for (const v of tokens.variables) {
                     v.defined = true;
                 }
-                for (const p of tokens[1]) {
+                for (const p of tokens.properties) {
                     p.defined = true;
                 }
                 createVariableAndPropertyReferences(tokens, state);

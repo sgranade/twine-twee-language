@@ -2,8 +2,8 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 
 import {
     JSPropertyLabel,
-    JSVariableLabel,
     parseJSStrict,
+    TokenizedJS,
     tokenizeJavaScript,
     tokenizeParsedJS,
 } from "../../../js-parser";
@@ -226,14 +226,18 @@ export function isTwineScriptExpression(expression: string): boolean {
  * @param offset Offset into the document where the expression occurs.
  * @param state Parsing state.
  * @param storyFormatState Passage state object that will collect tokens.
- * @returns Two-tuple with separate lists of variable and property labels found in parsing.
+ * @param assignmentIsDefinition If true, variable assignment will be treated as variable definition. (Needed for e.g. SugarCube passage link setters.)
+ * @param isProgram True to parse as a full JS program; false to parse as an expression.
+ * @returns Tokenized variables and properties, and any parsing error.
  */
 export function tokenizeTwineScriptExpression(
     expression: string,
     offset: number,
     textDocument: TextDocument,
     storyFormatState: StoryFormatParsingState,
-): [JSVariableLabel[], JSPropertyLabel[]] {
+    assignmentIsDefinition: boolean = false,
+    isProgram: boolean = false,
+): TokenizedJS {
     const { desugared, positionMapping } = desugar(expression);
 
     // Turning TwineScript into JavaScript changes positions within a string.
@@ -252,17 +256,18 @@ export function tokenizeTwineScriptExpression(
         desugared,
     );
 
-    const [vars, props] = tokenizeJavaScript(
-        false,
+    const jsTokens = tokenizeJavaScript(
+        isProgram,
         desugared,
         0, // offset of 0 since the desugared expression starts at the start of the doc
         desugaredDocument,
         desugaredStoryFormatState,
+        assignmentIsDefinition,
     );
 
     // Adjust variable and property locations and (if needed) text
     const seenUnsugaredVars: Record<string, string> = {};
-    for (const v of [...vars, ...props]) {
+    for (const v of [...jsTokens.variables, ...jsTokens.properties]) {
         const desugaredOffset = desugaredDocument.offsetAt(
             v.location.range.start,
         );
@@ -299,6 +304,16 @@ export function tokenizeTwineScriptExpression(
         );
     }
 
+    // Adjust diagnostic location
+    if (jsTokens.error) {
+        const { sugaredPosition, sugaredText } = getSugaredPositionAndNewText(
+            jsTokens.error.at,
+            positionMapping,
+        );
+        jsTokens.error.at = offset + sugaredPosition;
+        jsTokens.error.contents = sugaredText ?? jsTokens.error.contents;
+    }
+
     // Adjust semantic token locations and (if needed) text
     for (const t of Object.values(desugaredStoryFormatState.passageTokens)) {
         const { sugaredPosition, sugaredText } = getSugaredPositionAndNewText(
@@ -320,5 +335,5 @@ export function tokenizeTwineScriptExpression(
         );
     }
 
-    return [vars, props];
+    return jsTokens;
 }

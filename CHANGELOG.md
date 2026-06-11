@@ -4,8 +4,11 @@ Changes to the extension.
 
 ## Unreleased
 
+The JavaScript parsing has been extensively re-worked, and now the extension warns you if your JavaScript is incorrect.
+
 ### Added
 
+- Variables and properties that haven't been defined now create a warning across both story format code (Chapbook/SugarCube) and JavaScript sections.
 - Now auto-completes object properties from expressions like `var['prop'] = { prop1: 2 }`.
 - SugarCube: Variables and properties in script passages and `<<script>>` macros are now properly indexed, including `State.variables.var` and `state.temporary.temp` variables.
 - SugarCube: Special variables `_args` and `_contents` now produce warnings if used outside of `<<widget>>` macros.

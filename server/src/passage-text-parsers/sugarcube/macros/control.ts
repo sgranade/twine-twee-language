@@ -5,8 +5,13 @@ import {
     Range,
 } from "vscode-languageserver";
 
-import { createDiagnosticFor } from "../../../utilities";
+import { TokenizedJS } from "../../../js-parser";
+import { logErrorFor } from "../../../parser";
+import { createDiagnosticFor, skipSpaces } from "../../../utilities";
 import { MacroLocationInfo } from "../sugarcube-parser";
+import { forMacroIsRange, forMacroRangeFormat } from "../sc2/sc2-patterns";
+import { tokenizeTwineScriptExpression } from "../sc2/sc2-twinescript";
+import { createVariableAndPropertyReferences } from "../sugarcube-utils";
 import { MacroInfo, parseArgsAsTwineScriptExpression } from "./types";
 
 export const ifMacro: MacroInfo = {
@@ -86,14 +91,127 @@ export const elseMacro: MacroInfo = {
     since: "2.0.0",
 };
 
+const forMacroIsRangeRegex = new RegExp(forMacroIsRange);
+const forMacroRangeFormatRegex = new RegExp(forMacroRangeFormat, "d");
+const forMacroInOfRegex = /^\S+\s+(in|of)\s+\S+/i;
+
 export const forMacro: MacroInfo = {
     name: "for",
     container: true,
-    arguments: true,
     syntax: "<<for [conditional]>> … <</for>>\n<<for [init] ; [conditional] ; [post]>> … <</for>>\n<<for [keyVariable ,] valueVariable range collection>> … <</for>>",
     description:
         "Repeatedly executes its contents. There are three forms: a conditional-only form, a 3-part conditional form, and a range form.",
     since: "2.0.0",
+    parseArgs(args, argsIndex, state, sugarcubeState) {
+        if (args) {
+            [args, argsIndex] = skipSpaces(args.trimEnd(), argsIndex);
+        }
+        if (!args) return true;
+
+        if (forMacroIsRangeRegex.test(args)) {
+            // Range form
+            const m = args.match(forMacroRangeFormatRegex);
+            if (m === null) {
+                logErrorFor(
+                    args,
+                    argsIndex,
+                    "Range format syntax is `[[index,] value] range collection`",
+                    state,
+                );
+            } else {
+                const jsTokens: TokenizedJS = { variables: [], properties: [] };
+                // Groups match `[[1], 2] range 3`
+                if (m[1]) {
+                    // index
+                    const indexTokens = tokenizeTwineScriptExpression(
+                        m[1],
+                        argsIndex + (m.indices?.at(1)?.at(0) ?? 0),
+                        state.textDocument,
+                        sugarcubeState,
+                    );
+                    jsTokens.variables = indexTokens.variables;
+                    jsTokens.properties = indexTokens.properties;
+                }
+                if (m[2]) {
+                    // value
+                    const valueTokens = tokenizeTwineScriptExpression(
+                        m[2],
+                        argsIndex + (m.indices?.at(2)?.at(0) ?? 0),
+                        state.textDocument,
+                        sugarcubeState,
+                    );
+                    jsTokens.variables = [
+                        ...jsTokens.variables,
+                        ...valueTokens.variables,
+                    ];
+                    jsTokens.properties = [
+                        ...jsTokens.properties,
+                        ...valueTokens.properties,
+                    ];
+                }
+                // We're creating the index and value variables/properties
+                for (const v of jsTokens.variables) {
+                    v.defined = true;
+                }
+                for (const p of jsTokens.properties) {
+                    p.defined = true;
+                }
+                createVariableAndPropertyReferences(
+                    jsTokens,
+                    state,
+                    sugarcubeState,
+                );
+
+                if (m[3]) {
+                    // collection
+                    createVariableAndPropertyReferences(
+                        tokenizeTwineScriptExpression(
+                            m[3],
+                            argsIndex + (m.indices?.at(3)?.at(0) ?? 0),
+                            state.textDocument,
+                            sugarcubeState,
+                        ),
+                        state,
+                        sugarcubeState,
+                    );
+                }
+            }
+        } else {
+            // Conditional forms
+            if (args.indexOf(";") === -1) {
+                // Single condition
+                // Make sure they didn't accidentally use "for x in y" or "for x of y" syntax
+                const m = args.match(forMacroInOfRegex);
+                if (m !== null) {
+                    logErrorFor(
+                        args,
+                        argsIndex + (m.index ?? 0),
+                        `\`for...${m[1]}\` syntax isn't supported; try \`for...range\``,
+                        state,
+                    );
+                    return true; // Bail out
+                }
+            } else {
+                // Three-part conditional. We'll turn it into a standard for() statement
+                // and let the TwineScript parser parse it
+                args = `for(${args}){}`;
+                argsIndex -= 4;
+            }
+            createVariableAndPropertyReferences(
+                tokenizeTwineScriptExpression(
+                    args,
+                    argsIndex,
+                    state.textDocument,
+                    sugarcubeState,
+                    true,
+                    true,
+                ),
+                state,
+                sugarcubeState,
+            );
+        }
+        return true;
+    },
 };
 
 export const breakMacro: MacroInfo = {

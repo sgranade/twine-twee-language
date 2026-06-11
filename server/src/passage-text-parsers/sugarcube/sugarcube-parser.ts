@@ -483,7 +483,7 @@ function parseMacroArgs(
                         createSymbolFor(
                             varName,
                             varAt,
-                            OSugarCubeSymbolKind.Variable,
+                            OSugarCubeSymbolKind.VariableSet,
                             state.textDocument,
                         ),
                     );
@@ -495,6 +495,7 @@ function parseMacroArgs(
                         sugarcubeState,
                     );
                 } else {
+                    let tokens;
                     // Non-string receivers are okay, but often are a mistake
                     // (see https://github.com/cyrusfirheir/twee3-language-tools/issues/65).
                     // We'll suggest that they should be in back-ticks if they're not
@@ -502,14 +503,10 @@ function parseMacroArgs(
                         sc2Token.text[0] === "`" &&
                         sc2Token.text[sc2Token.text.length - 1] === "`"
                     ) {
-                        createVariableAndPropertyReferences(
-                            tokenizeTwineScriptExpression(
-                                sc2Token.text.slice(1, -1),
-                                sc2Token.at + 1,
-                                state.textDocument,
-                                sugarcubeState,
-                            ),
-                            state,
+                        tokens = tokenizeTwineScriptExpression(
+                            sc2Token.text.slice(1, -1),
+                            sc2Token.at + 1,
+                            state.textDocument,
                             sugarcubeState,
                         );
                     } else {
@@ -520,17 +517,25 @@ function parseMacroArgs(
                                 `If so, consider surrounding it with back-ticks: \`${sc2Token.text}\``,
                             state,
                         );
-                        createVariableAndPropertyReferences(
-                            tokenizeTwineScriptExpression(
-                                sc2Token.text,
-                                sc2Token.at,
-                                state.textDocument,
-                                sugarcubeState,
-                            ),
-                            state,
+                        tokens = tokenizeTwineScriptExpression(
+                            sc2Token.text,
+                            sc2Token.at,
+                            state.textDocument,
                             sugarcubeState,
                         );
                     }
+                    // All references in a receiver are actually assignments
+                    for (const v of tokens.variables) {
+                        v.defined = true;
+                    }
+                    for (const p of tokens.properties) {
+                        p.defined = true;
+                    }
+                    createVariableAndPropertyReferences(
+                        tokens,
+                        state,
+                        sugarcubeState,
+                    );
                 }
             } else if (t3ltArgFormatType === "passage") {
                 // A bareword, string (the passage name is in the string), NaN, or number (sure)
@@ -606,7 +611,7 @@ function parseMacroArgs(
                 state,
             );
         } else if (arg.type === MacroParse.Item.Bareword) {
-            let [vars, props] = tokenizeTwineScriptExpression(
+            let jsTokens = tokenizeTwineScriptExpression(
                 arg.text,
                 arg.at,
                 state.textDocument,
@@ -615,19 +620,20 @@ function parseMacroArgs(
 
             // Discard any variables that don't start with `$` or `_` (or `settings` or `setup`) and properties whose
             // scope doesn't start with the same. If it's not a variable, also get rid of the associated semantic token
-            vars = vars.filter((v) => {
+            jsTokens.variables = jsTokens.variables.filter((v) => {
                 const isVar = startIsVarRegexp.test(v.contents);
                 if (!isVar) {
                     delete sugarcubeState.passageTokens[arg.at];
                 }
                 return isVar;
             });
-            props = props.filter(
+            jsTokens.properties = jsTokens.properties.filter(
                 (p) => p.prefix && startIsVarRegexp.test(p.prefix),
             );
+            jsTokens.error = undefined; // Get rid of any errors
 
             createVariableAndPropertyReferences(
-                [vars, props],
+                jsTokens,
                 state,
                 sugarcubeState,
             );
@@ -1208,6 +1214,8 @@ function parseHtmlAttributesAndDirectives(
                     );
                 }
             } else {
+                const isDataSetter = attrName.endsWith("data-setter");
+
                 createVariableAndPropertyReferences(
                     tokenizeTwineScriptExpression(
                         attrContents,
@@ -1217,12 +1225,10 @@ function parseHtmlAttributesAndDirectives(
                     ),
                     state,
                     sugarcubeState,
+                    isDataSetter, // data-setter acts like a <<set>> macro: variable assignment is also declaration
                 );
                 // Make sure we don't have an evaluation directive on a data-setter attribute
-                if (
-                    evalDirective !== undefined &&
-                    attrName.endsWith("data-setter")
-                ) {
+                if (evalDirective !== undefined && isDataSetter) {
                     logErrorFor(
                         evalDirective,
                         textIndex + attrIndex,
@@ -1234,7 +1240,7 @@ function parseHtmlAttributesAndDirectives(
         }
         // Blank out the tag so we don't accidentally
         // capture apparent variables in non-data attributes
-            passageText =
+        passageText =
             passageText.slice(0, tagIndex) +
             " ".repeat(tag.length) +
             passageText.slice(tagIndex + tag.length);

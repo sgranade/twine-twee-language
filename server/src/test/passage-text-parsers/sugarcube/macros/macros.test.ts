@@ -179,6 +179,255 @@ describe("SugarCube Macros", () => {
                 );
             });
         });
+
+        describe("for", () => {
+            it("should capture variables in the conditional-only format", () => {
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: "0123456789\n123456789\n123456",
+                    callbacks: callbacks,
+                });
+                state.currentPassage = buildPassage({
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(1, 2, 3, 4),
+                    ),
+                });
+                const storyFormatState = {
+                    passageTokens: {},
+                    unclosedMacros: [],
+                    widgetMacroRanges: [],
+                };
+                const macro = uut.allMacros()["for"];
+
+                macro.parseArgs!("_v + $q", 12, state, storyFormatState);
+                const result = callbacks.references;
+
+                expect(result).to.eql([
+                    {
+                        contents: "_v",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(1, 1, 1, 3),
+                        ),
+                        kind: OSugarCubeSymbolKind.Variable,
+                    },
+                    {
+                        contents: "$q",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(1, 6, 1, 8),
+                        ),
+                        kind: OSugarCubeSymbolKind.Variable,
+                    },
+                ]);
+            });
+
+            it("should capture variables in the init-conditional-post format", () => {
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: "0123456789\n123456789\n12345678901234",
+                    callbacks: callbacks,
+                });
+                state.currentPassage = buildPassage({
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(1, 2, 3, 4),
+                    ),
+                });
+                const storyFormatState = {
+                    passageTokens: {},
+                    unclosedMacros: [],
+                    widgetMacroRanges: [],
+                };
+                const macro = uut.allMacros()["for"];
+
+                macro.parseArgs!(
+                    "_v to 1; _v < 3; _v++",
+                    12,
+                    state,
+                    storyFormatState,
+                );
+                const result = callbacks.references;
+
+                expect(result).to.eql([
+                    {
+                        contents: "_v",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(1, 1, 1, 3),
+                        ),
+                        kind: OSugarCubeSymbolKind.VariableSet,
+                    },
+                    {
+                        contents: "_v",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(2, 0, 2, 2),
+                        ),
+                        kind: OSugarCubeSymbolKind.Variable,
+                    },
+                    {
+                        contents: "_v",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(2, 8, 2, 10),
+                        ),
+                        kind: OSugarCubeSymbolKind.Variable,
+                    },
+                ]);
+            });
+
+            it("should capture variables in the range format", () => {
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: "0123456789\n123456789\n12345678901234",
+                    callbacks: callbacks,
+                });
+                state.currentPassage = buildPassage({
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(1, 2, 3, 4),
+                    ),
+                });
+                const storyFormatState = {
+                    passageTokens: {},
+                    unclosedMacros: [],
+                    widgetMacroRanges: [],
+                };
+                const macro = uut.allMacros()["for"];
+
+                macro.parseArgs!(
+                    "_i, _n range $l",
+                    12,
+                    state,
+                    storyFormatState,
+                );
+                const result = callbacks.references;
+
+                expect(result).to.eql([
+                    {
+                        contents: "_i",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(1, 1, 1, 3),
+                        ),
+                        kind: OSugarCubeSymbolKind.VariableSet,
+                    },
+                    {
+                        contents: "_n",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(1, 5, 1, 7),
+                        ),
+                        kind: OSugarCubeSymbolKind.VariableSet,
+                    },
+                    {
+                        contents: "$l",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(2, 4, 2, 6),
+                        ),
+                        kind: OSugarCubeSymbolKind.Variable,
+                    },
+                ]);
+            });
+
+            it("should error on invalid range form syntax", () => {
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: "0123456789\n123456789\n12345678901234",
+                    callbacks: callbacks,
+                });
+                state.currentPassage = buildPassage({
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(1, 2, 3, 4),
+                    ),
+                });
+                const storyFormatState = {
+                    passageTokens: {},
+                    unclosedMacros: [],
+                    widgetMacroRanges: [],
+                };
+                const macro = uut.allMacros()["for"];
+
+                macro.parseArgs!(
+                    "not even range format",
+                    12,
+                    state,
+                    storyFormatState,
+                );
+                const result = callbacks.errors[0];
+
+                expect(callbacks.errors.length).to.equal(1);
+                expect(result.severity).to.eql(DiagnosticSeverity.Error);
+                expect(result.message).to.include(
+                    "Range format syntax is `[[index,] value] range collection`",
+                );
+                expect(result.range).to.eql(Range.create(1, 1, 2, 12));
+            });
+
+            it("should error on for...in syntax", () => {
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: "0123456789\n1234567890\n12345678901234",
+                    callbacks: callbacks,
+                });
+                state.currentPassage = buildPassage({
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(1, 2, 3, 4),
+                    ),
+                });
+                const storyFormatState = {
+                    passageTokens: {},
+                    unclosedMacros: [],
+                    widgetMacroRanges: [],
+                };
+                const macro = uut.allMacros()["for"];
+
+                macro.parseArgs!("_i in $l", 12, state, storyFormatState);
+                const result = callbacks.errors[0];
+
+                expect(callbacks.errors.length).to.equal(1);
+                expect(result.severity).to.eql(DiagnosticSeverity.Error);
+                expect(result.message).to.include(
+                    "`for...in` syntax isn't supported; try `for...range`",
+                );
+                expect(result.range).to.eql(Range.create(1, 1, 1, 9));
+            });
+
+            it("should error on for...of syntax", () => {
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: "0123456789\n1234567890\n12345678901234",
+                    callbacks: callbacks,
+                });
+                state.currentPassage = buildPassage({
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(1, 2, 3, 4),
+                    ),
+                });
+                const storyFormatState = {
+                    passageTokens: {},
+                    unclosedMacros: [],
+                    widgetMacroRanges: [],
+                };
+                const macro = uut.allMacros()["for"];
+
+                macro.parseArgs!("_i of $l", 12, state, storyFormatState);
+                const result = callbacks.errors[0];
+
+                expect(callbacks.errors.length).to.equal(1);
+                expect(result.severity).to.eql(DiagnosticSeverity.Error);
+                expect(result.message).to.include(
+                    "`for...of` syntax isn't supported; try `for...range`",
+                );
+                expect(result.range).to.eql(Range.create(1, 1, 1, 9));
+            });
+        });
     });
 
     describe("custom macros and enums", () => {

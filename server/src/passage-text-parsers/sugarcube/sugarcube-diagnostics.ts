@@ -5,11 +5,98 @@ import {
 } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
+import { isBuiltinJSObjectInstanceProperty } from "../../js-parser";
 import { ProjectIndex } from "../../project-index";
 import { DiagnosticsOptions } from "../../server-options";
 import { allBuiltInMacros, allMacros } from "./macros";
 import { getSugarCubeDefinitions } from "./sugarcube-parser";
+import {
+    builtinSugarCubeProperties,
+    builtinVars,
+    builtInVarsAndProperties,
+} from "./sugarcube-variables";
 import { OSugarCubeSymbolKind } from "./types";
+
+/**
+ * Generate diagnostics involving variables and macros.
+ *
+ * @param document Document to validate and generate diagnostics against.
+ * @param index Index of the Twine project.
+ * @returns List of diagnostic messages.
+ */
+function generateVariableAndPropertyDiagnostics(
+    document: TextDocument,
+    index: ProjectIndex,
+): Diagnostic[] {
+    const diagnostics: Diagnostic[] = [];
+
+    const propSetNamesWithDuplicates: string[] = [...builtInVarsAndProperties];
+    for (const uri of index.getIndexedUris()) {
+        propSetNamesWithDuplicates.push(
+            ...(index
+                .getReferences(uri, OSugarCubeSymbolKind.PropertySet)
+                ?.map((ref) => ref.contents) ?? []),
+        );
+    }
+    const propSetNames = new Set(propSetNamesWithDuplicates);
+
+    const varNamesWithDuplicates = [...builtinVars];
+    for (const uri of index.getIndexedUris()) {
+        varNamesWithDuplicates.push(
+            ...(index
+                .getReferences(uri, OSugarCubeSymbolKind.VariableSet)
+                ?.map((ref) => ref.contents) ?? []),
+        );
+    }
+    const varSetNames = new Set(varNamesWithDuplicates);
+
+    for (const varRef of index.getReferences(
+        document.uri,
+        OSugarCubeSymbolKind.Variable,
+    ) ?? []) {
+        if (!varSetNames.has(varRef.contents)) {
+            const message = `"${varRef.contents}" isn't set in any <<set>> macro, setter link, or JavaScript section. Make sure you've spelled it correctly.`;
+            diagnostics.push(
+                ...varRef.locations.map((loc) =>
+                    Diagnostic.create(
+                        loc.range,
+                        message,
+                        DiagnosticSeverity.Warning,
+                        undefined,
+                        "Twine",
+                    ),
+                ),
+            );
+        }
+    }
+    for (const propRef of index.getReferences(
+        document.uri,
+        OSugarCubeSymbolKind.Property,
+    ) ?? []) {
+        if (
+            !propSetNames.has(propRef.contents) &&
+            !isBuiltinJSObjectInstanceProperty(propRef.contents) &&
+            !builtinSugarCubeProperties.has(
+                propRef.contents.slice(propRef.contents.indexOf(".") + 1),
+            )
+        ) {
+            const message = `"${propRef.contents}" isn't set in any <<set>> macro, setter link, or JavaScript section. Make sure you've spelled it correctly.`;
+            diagnostics.push(
+                ...propRef.locations.map((loc) =>
+                    Diagnostic.create(
+                        loc.range,
+                        message,
+                        DiagnosticSeverity.Warning,
+                        undefined,
+                        "Twine",
+                    ),
+                ),
+            );
+        }
+    }
+
+    return diagnostics;
+}
 
 /**
  * Generate diagnostics involving macros.
@@ -129,6 +216,11 @@ export function generateDiagnostics(
     diagnosticsOptions: DiagnosticsOptions,
 ): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];
+
+    // Check for variables/properties that don't have a setter
+    diagnostics.push(
+        ...generateVariableAndPropertyDiagnostics(document, index),
+    );
 
     // Check for unrecognized macros (if that option is set)
     diagnostics.push(

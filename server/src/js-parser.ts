@@ -1,8 +1,10 @@
 import * as acorn from "acorn";
 import * as acornLoose from "acorn-loose";
 import * as acornWalk from "acorn-walk";
+import { DiagnosticSeverity } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
+import { improveAcornErrorMessage } from "./acorn-errors";
 import { createLocationFor } from "./parser";
 import {
     StoryFormatParsingState,
@@ -29,6 +31,7 @@ interface astUnprocessedToken {
     type: TokenType; // Type of the token
     scope?: string; // Token scope for properties (e.g. for `prop2` in `var.prop1.prop2`, it's `var.prop1`)
     defined?: boolean; // Is the token being defined?
+    global?: boolean; // Is the token at the global level of the AST? (for variables/properties)
     modifiers: TokenModifier[]; // Modifiers for the token
 }
 
@@ -56,6 +59,7 @@ export interface JSPropertyLabel extends Label {
      */
     defined?: boolean;
 }
+
 export namespace JSPropertyLabel {
     /**
      * Type guard for JSPropertyLabel.
@@ -72,11 +76,36 @@ export namespace JSPropertyLabel {
     }
 }
 
+/**
+ * Errors from javascript parsing.
+ */
+export interface JSDiagnostic {
+    /**
+     * Contents that the diagnostic refers to.
+     */
+    contents: string;
+    /**
+     * Index in the document where the diagnostic occurs.
+     */
+    at: number;
+    message: string;
+    severity: DiagnosticSeverity;
+}
+
+/**
+ * Results of tokenizing JavaScript
+ */
+export interface TokenizedJS {
+    variables: JSVariableLabel[];
+    properties: JSPropertyLabel[];
+    error?: JSDiagnostic;
+}
+
 let currentExpression: string = "";
 let unprocessedTokens: Record<number, astUnprocessedToken> = {};
 
-// Taken from https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects
-const builtInJSObjects = new Set([
+const builtInObjects = new Set([
+    // Taken from https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects
     "Object",
     "Function",
     "Boolean",
@@ -113,6 +142,13 @@ const builtInJSObjects = new Set([
     "Reflect",
     "Proxy",
     "Intl",
+    // These next are actually keywords
+    "undefined",
+    "null,",
+    // Commonly-referred-to API objects
+    "console",
+    "document",
+    "window",
 ]);
 
 // This is hacky, but we're going to ignore root properties whose names
@@ -150,26 +186,344 @@ const builtInJSObjectInstanceProperties = new Set([
 ]);
 
 /**
+ * Scope in which identifiers will be found and bound.
+ */
+interface Scope {
+    type: "global" | "function" | "block";
+    parent?: Scope;
+    bindings: Set<string>;
+}
+
+/**
+ * Add scope information to an Acorn identifier.
+ */
+interface ScopedIdentifier extends acorn.Identifier {
+    _isDefinition?: boolean;
+    _scopeType?: "global" | "function" | "block";
+}
+
+/**
+ * Create a scope.
+ *
+ * @param type Type of scope to create.
+ * @param parent The new scope's parent, if any.
+ */
+function createScope(type: Scope["type"], parent?: Scope): Scope {
+    return {
+        type,
+        parent,
+        bindings: new Set(),
+    };
+}
+
+/**
+ * Get the function (or global) scope that contains a block.
+ */
+function nearestFunctionScope(scope: Scope): Scope {
+    let current = scope;
+
+    while (current.type === "block") {
+        current = current.parent!; // Blocks should always have parents
+    }
+
+    return current;
+}
+
+/**
+ * Bind a declared identifier.
+ *
+ * @param scope Scope in which to declare the binding.
+ * @param name Identifier name.
+ * @param kind Kind of binding.
+ * @returns Scope to which the identifier was bound.
+ */
+function bindIdentifier(
+    scope: Scope,
+    name: string,
+    kind:
+        | "var"
+        | "let"
+        | "const"
+        | "param"
+        | "function"
+        | "using"
+        | "await using",
+): Scope {
+    const target = kind === "var" ? nearestFunctionScope(scope) : scope;
+
+    target.bindings.add(name);
+
+    return target;
+}
+
+/**
+ * Find the scope to which an identifier is bound.
+ *
+ * @param scope Scope to start with.
+ * @param name Identifier to find.
+ * @returns Scope to which the identifier is bound, or undefined if none.
+ */
+function findBindingScope(scope: Scope, name: string): Scope | undefined {
+    let current: Scope | undefined = scope;
+
+    while (current) {
+        if (current.bindings.has(name)) {
+            return current;
+        }
+
+        current = current.parent;
+    }
+
+    return undefined;
+}
+
+/**
+ * Collect identifiers from patterns such as destructuring and function params.
+ *
+ * @param pattern Pattern to collect identifiers from.
+ * @param callback Visitor function to call when an identifier is found.
+ */
+function collectPatternIdentifiers(
+    pattern: acorn.AnyNode,
+    callback: (id: acorn.Identifier) => void,
+): void {
+    switch (pattern.type) {
+        case "Identifier":
+            callback(pattern as ScopedIdentifier);
+            break;
+
+        case "ObjectPattern":
+            for (const prop of pattern.properties) {
+                if (prop.type === "Property") {
+                    collectPatternIdentifiers(
+                        prop.value as acorn.AnyNode,
+                        callback,
+                    );
+                } else {
+                    collectPatternIdentifiers(
+                        prop.argument as acorn.AnyNode,
+                        callback,
+                    );
+                }
+            }
+            break;
+
+        case "ArrayPattern":
+            for (const element of pattern.elements) {
+                if (element) {
+                    collectPatternIdentifiers(
+                        element as acorn.AnyNode,
+                        callback,
+                    );
+                }
+            }
+            break;
+
+        case "AssignmentPattern":
+            collectPatternIdentifiers(pattern.left, callback);
+            break;
+
+        case "RestElement":
+            collectPatternIdentifiers(pattern.argument, callback);
+            break;
+    }
+}
+
+/**
+ * Is an identifier a reference (i.e. not a declaration or a parameter)?
+ *
+ * @param node Node to test.
+ * @param ancestors Node's ancestors.
+ * @returns True if the identifier is a reference.
+ */
+function isReferenceIdentifier(
+    node: acorn.AnyNode,
+    ancestors: acorn.Node[],
+): boolean {
+    const parent = ancestors[ancestors.length - 2] as acorn.AnyNode | undefined;
+
+    // Consider parent-less identifiers as a reference for times when we just parse the tiniest snippet
+    if (!parent) return true;
+
+    switch (parent.type) {
+        case "VariableDeclarator":
+            return parent.id !== node;
+
+        case "FunctionDeclaration":
+        case "FunctionExpression":
+        case "ArrowFunctionExpression":
+            if (parent.id === node) return false; // function name is a definition
+            return !parent.params.includes(node as acorn.Pattern); // parameter is (maybe) a definition
+
+        case "Property":
+            if (parent.key === node && !parent.computed) return false; // static key isn't a reference
+            return true;
+
+        case "MemberExpression":
+            if (parent.property === node && !parent.computed) return false; // Non-computed property key
+            return true;
+
+        case "CatchClause":
+            if (parent.param === node) return false;
+            return true;
+
+        case "LabeledStatement":
+        case "BreakStatement":
+        case "ContinueStatement":
+            return false;
+
+        case "ImportSpecifier":
+        case "ImportDefaultSpecifier":
+        case "ImportNamespaceSpecifier":
+            return false;
+
+        default: // Treat all other cases as references
+            return true;
+    }
+}
+
+/**
+ * Annotate variable definitions or references along with their scope.
+ *
+ * @param ast AST to annotate.
+ */
+export function annotateVariableScopes(
+    ast: acorn.Node,
+    assignmentIsDefinition: boolean,
+) {
+    const globalScope = createScope("global");
+
+    function visit(node: acorn.AnyNode, scope: Scope, ancestors: acorn.Node[]) {
+        switch (node.type) {
+            case "Program":
+            case "BlockStatement": {
+                const newScope =
+                    node.type === "BlockStatement"
+                        ? createScope("block", scope)
+                        : scope;
+                for (const child of node.body)
+                    visit(child, newScope, [...ancestors, node]);
+                return;
+            }
+
+            case "FunctionDeclaration": {
+                if (node.id) {
+                    const boundScope = bindIdentifier(
+                        scope,
+                        node.id.name,
+                        "function",
+                    );
+                    (node.id as ScopedIdentifier)._isDefinition = true;
+                    (node.id as ScopedIdentifier)._scopeType = boundScope.type;
+                }
+                const fnScope = createScope("function", scope);
+                for (const param of node.params) {
+                    collectPatternIdentifiers(param as acorn.AnyNode, (id) => {
+                        bindIdentifier(fnScope, id.name, "param");
+                    });
+                }
+                visit(node.body, fnScope, [...ancestors, node]);
+                return;
+            }
+
+            case "FunctionExpression":
+            case "ArrowFunctionExpression": {
+                const fnScope = createScope("function", scope);
+                for (const param of node.params) {
+                    collectPatternIdentifiers(param as acorn.AnyNode, (id) => {
+                        bindIdentifier(fnScope, id.name, "param");
+                    });
+                }
+                visit(node.body, fnScope, [...ancestors, node]);
+                return;
+            }
+
+            case "VariableDeclaration": {
+                for (const decl of node.declarations) {
+                    collectPatternIdentifiers(
+                        decl.id as acorn.AnyNode,
+                        (id) => {
+                            const boundScope = bindIdentifier(
+                                scope,
+                                id.name,
+                                node.kind,
+                            );
+                            (id as ScopedIdentifier)._isDefinition = true;
+                            (id as ScopedIdentifier)._scopeType =
+                                boundScope.type;
+                        },
+                    );
+                    if (decl.init)
+                        visit(decl.init, scope, [...ancestors, node]);
+                }
+                return;
+            }
+
+            case "Identifier": {
+                const idNode = node as ScopedIdentifier;
+                if (!isReferenceIdentifier(node, ancestors)) break;
+
+                const resolved = findBindingScope(scope, node.name);
+                // The identifier is a reference...
+                idNode._isDefinition = false;
+                idNode._scopeType = resolved?.type ?? "global";
+
+                // ...unless it's the LHS of an assignment and we're forcing assignment to be definition
+                if (assignmentIsDefinition) {
+                    const parent = ancestors[ancestors.length - 1] as
+                        | acorn.AnyNode
+                        | undefined;
+                    if (
+                        parent &&
+                        parent.type === "AssignmentExpression" &&
+                        parent.left === node
+                    ) {
+                        idNode._isDefinition = true;
+                    }
+                }
+                break;
+            }
+        }
+
+        // Recursively visit all children
+        for (const key in node) {
+            const child = (node as any)[key];
+            if (!child || typeof child !== "object") continue;
+            if (Array.isArray(child)) {
+                for (const c of child) {
+                    if (c && typeof c === "object" && "type" in c)
+                        visit(c as acorn.AnyNode, scope, [...ancestors, node]);
+                }
+            } else if ("type" in child) {
+                visit(child as acorn.AnyNode, scope, [...ancestors, node]);
+            }
+        }
+    }
+
+    visit(ast as acorn.AnyNode, globalScope, []);
+}
+
+/**
  * Helper type for capturing the variable and all properties in a MemberExpression.
  */
 type MemberChain = {
-    root: string;
+    root: ScopedIdentifier;
     properties: { name: string; start: number }[];
     dynamic: boolean; // true if the chain includes any non-static computed property
 };
 
 /**
- * Determine if a property's scope corresponds to a built-in JS object.
+ * Does a property's scope correspond to a built-in JS object?
  *
  * @param scope Scope to inspect.
  * @returns True if the scope is for a built-in JS object.
  */
 function isBuiltinObjectScope(scope: string): boolean {
-    return builtInJSObjects.has(scope.split(".", 1)[0]);
+    return builtInObjects.has(scope.split(".", 1)[0]);
 }
 
 /**
- * Determine if a property corresponds to a built-in JS object's instance property.
+ * Does a property correspond to a built-in JS object's instance property?
  *
  * @param property Property to inspect, including full path (e.g. `var.prop1.prop2` for `prop2`).
  * @returns True if the property matches a built-in JS object's instance property.
@@ -207,35 +561,6 @@ function getStaticPropertyName(
 }
 
 /**
- * Determine if a node is the LHS of a variable definition such as `const var` or `var =`
- *
- * @param node Node being inspected.
- * @param ancestors The node's ancestors.
- * @returns True if the node is defining stuff.
- */
-function isDefinitionContext(
-    node: acorn.AnyNode,
-    ancestors: acorn.Node[],
-): boolean {
-    const parent = ancestors[ancestors.length - 2] as acorn.AnyNode | undefined;
-    if (!parent) {
-        return false;
-    }
-
-    // var = ...  and var.prop = ...
-    if (parent.type === "AssignmentExpression") {
-        return parent.left === node;
-    }
-
-    // const var = ...
-    if (parent.type === "VariableDeclarator") {
-        return parent.id === node;
-    }
-
-    return false;
-}
-
-/**
  * Determine if a member expression is defining stuff (i.e. is part of an assignment expression).
  *
  * @param node Member expression being inspected.
@@ -261,7 +586,7 @@ function captureMemberChain(
 ): MemberChain | undefined {
     const props: { name: string; start: number }[] = [];
     let current: acorn.Expression | acorn.Super = node;
-    let rootName: string | undefined;
+    let root: ScopedIdentifier | undefined;
     let dynamic = false;
 
     while (true) {
@@ -282,16 +607,16 @@ function captureMemberChain(
             props.unshift({ name: propName ?? "<dynamic>", start });
             current = current.object; // Head up the chain in the expression
         } else if (current.type === "Identifier") {
-            // This is the variable name at the root
-            rootName = current.name;
+            // This is the variable at the root
+            root = current as ScopedIdentifier;
             break;
         } else {
             return undefined; // Don't handle other object types
         }
     }
 
-    if (!rootName) return undefined;
-    return { root: rootName, properties: props, dynamic };
+    if (!root) return undefined;
+    return { root: root, properties: props, dynamic };
 }
 
 /**
@@ -366,13 +691,14 @@ function fullAncestorTokenizingCallback(
     // last-set semantic token is the one that's reported.
 
     // Helper function to add a variable to unprocessed tokens if it's not a built-in JS object
-    const captureVariable = (name: string, start: number, defined = false) => {
-        if (!name || builtInJSObjects.has(name)) return;
-        unprocessedTokens[start] = {
-            text: name,
-            at: start,
+    const captureVariable = (id: ScopedIdentifier) => {
+        if (!id.name || builtInObjects.has(id.name)) return;
+        unprocessedTokens[id.start] = {
+            text: id.name,
+            at: id.start,
             type: ETokenType.variable,
-            defined,
+            defined: !!id._isDefinition,
+            global: id._scopeType === "global",
             modifiers: [],
         };
     };
@@ -395,12 +721,6 @@ function fullAncestorTokenizingCallback(
         };
     };
 
-    // Helper function to find the start of the root variable of an expression
-    const findRootStart = (expr: acorn.Expression | acorn.Super): number => {
-        if (expr.type === "MemberExpression") return findRootStart(expr.object);
-        return expr.start;
-    };
-
     const node = rawNode as acorn.AnyNode;
     switch (node.type) {
         case "Identifier": {
@@ -410,13 +730,12 @@ function fullAncestorTokenizingCallback(
                 node.name !== "✖" &&
                 ancestor?.type !== "NewExpression" &&
                 ancestor?.type !== "CallExpression" &&
-                !builtInJSObjects.has(node.name)
+                ancestor?.type !== "FunctionExpression" &&
+                ancestor?.type !== "FunctionDefinition" &&
+                ancestor?.type !== "FunctionDeclaration" &&
+                !builtInObjects.has(node.name)
             ) {
-                captureVariable(
-                    node.name,
-                    node.start,
-                    isDefinitionContext(node, ancestors),
-                );
+                captureVariable(node as ScopedIdentifier);
             }
             break;
         }
@@ -491,12 +810,16 @@ function fullAncestorTokenizingCallback(
             const chain = captureMemberChain(node);
             if (!chain) break;
 
+            // If the root isn't in the global scope, bail out
+            if (chain.root._scopeType !== "global") {
+                break;
+            }
+
             const defined = isMemberExpressionDefinition(node, ancestors);
-            const isBuiltin = isBuiltinObjectScope(chain.root);
+            const isBuiltin = isBuiltinObjectScope(chain.root.name);
 
             // Add the root variable
-            const rootStart = findRootStart(node.object);
-            captureVariable(chain.root, rootStart, defined);
+            captureVariable(chain.root);
 
             // Track dynamic properties incrementally
             let dynamicEncountered = false;
@@ -512,14 +835,20 @@ function fullAncestorTokenizingCallback(
                 const scope =
                     !dynamicEncountered && !isBuiltin
                         ? [
-                              chain.root,
+                              chain.root.name,
                               ...chain.properties
                                   .slice(0, i)
                                   .map((p) => p.name),
                           ].join(".")
                         : undefined;
 
-                captureProperty(prop.name, prop.start, scope, defined);
+                // Only count the property as defined if it's being defined on a global variable
+                captureProperty(
+                    prop.name,
+                    prop.start,
+                    scope,
+                    defined && chain.root._scopeType === "global",
+                );
             });
             break;
         }
@@ -546,19 +875,27 @@ function fullAncestorTokenizingCallback(
                     // Get the scope from the left side to prepend to the property scopes
                     const left = ancestor.left;
                     if (left.type === "Identifier") {
-                        parentScope = left.name;
-                        captureObjectExpressionProperties(
-                            ancestor.right,
-                            parentScope,
-                            captureProperty,
-                        );
+                        if (
+                            (left as ScopedIdentifier)._scopeType === "global"
+                        ) {
+                            parentScope = left.name;
+                            captureObjectExpressionProperties(
+                                ancestor.right,
+                                parentScope,
+                                captureProperty,
+                            );
+                        }
                         break;
                     } else if (left.type === "MemberExpression") {
                         const chain = captureMemberChain(left);
-                        if (chain && !chain.dynamic) {
+                        if (
+                            chain &&
+                            !chain.dynamic &&
+                            chain.root._scopeType === "global"
+                        ) {
                             // If it's dynamic, then we don't save the properties
                             parentScope = [
-                                chain.root,
+                                chain.root.name,
                                 ...chain.properties.map((p) => p.name),
                             ].join(".");
                             captureObjectExpressionProperties(
@@ -577,12 +914,16 @@ function fullAncestorTokenizingCallback(
                     ancestor.id.type === "Identifier" &&
                     ancestor.init?.type === "ObjectExpression"
                 ) {
-                    parentScope = ancestor.id.name;
-                    captureObjectExpressionProperties(
-                        ancestor.init,
-                        parentScope,
-                        captureProperty,
-                    );
+                    const id = ancestor.id as ScopedIdentifier;
+
+                    if (id._scopeType === "global") {
+                        parentScope = id.name;
+                        captureObjectExpressionProperties(
+                            ancestor.init,
+                            parentScope,
+                            captureProperty,
+                        );
+                    }
                     break;
                 }
             }
@@ -650,19 +991,39 @@ export function parseJSStrict(text: string, isProgram: boolean): acorn.Node {
 export function parseJS(
     text: string,
     isProgram: boolean,
-): acorn.Node | undefined {
+): [acorn.Node | undefined, JSDiagnostic | undefined] {
+    // Don't do anything if no text is passed (as that would create an error)
+    if (!text.trim()) return [undefined, undefined];
+
+    let diagnostic: JSDiagnostic | undefined;
     try {
-        return parseJSStrict(text, isProgram);
+        return [parseJSStrict(text, isProgram), undefined];
     } catch (err) {
         if (!(err instanceof SyntaxError)) {
-            return undefined;
+            return [undefined, undefined];
         }
+        diagnostic = {
+            ...improveAcornErrorMessage(
+                text,
+                err as SyntaxError & {
+                    pos?: number;
+                    loc?: {
+                        line: number;
+                        column: number;
+                    };
+                },
+            ),
+            severity: DiagnosticSeverity.Error,
+        };
     }
 
     // Finally try whatever parsing we can get away with
-    return acornLoose.parse(text, {
-        ecmaVersion: 2020,
-    });
+    return [
+        acornLoose.parse(text, {
+            ecmaVersion: 2020,
+        }),
+        diagnostic,
+    ];
 }
 
 /**
@@ -695,7 +1056,8 @@ export function tokenizeParsedJS(
  * @param offset Offset into the document where the expression occurs.
  * @param document Document containing the expression.
  * @param storyFormatState Story format parsing state that will collect semantic tokens.
- * @returns Two-tuple with separate lists of variable and property labels found in parsing.
+ * @param assignmentIsDefinition If true, variable assignment will be treated as variable definition. (Needed for e.g. SugarCube passage link setters.)
+ * @returns Tokenized variables and properties and any parsing error.
  */
 export function tokenizeJavaScript(
     isProgram: boolean,
@@ -703,17 +1065,24 @@ export function tokenizeJavaScript(
     offset: number,
     document: TextDocument,
     storyFormatState: StoryFormatParsingState,
-): [JSVariableLabel[], JSPropertyLabel[]] {
-    const vars: JSVariableLabel[] = [];
-    const props: JSPropertyLabel[] = [];
+    assignmentIsDefinition?: boolean,
+): TokenizedJS {
+    const tokenized: TokenizedJS = {
+        variables: [],
+        properties: [],
+    };
 
-    const ast = parseJS(text, isProgram);
+    const [ast, diagnostic] = parseJS(text, isProgram);
+    tokenized.error = diagnostic;
     if (ast !== undefined) {
+        annotateVariableScopes(ast, !!assignmentIsDefinition);
+
         const tokens = tokenizeParsedJS(text, ast);
 
         for (const token of Object.values(tokens)) {
-            if (token.type === ETokenType.variable) {
-                vars.push({
+            // Capture global variables
+            if (token.type === ETokenType.variable && token.global) {
+                tokenized.variables.push({
                     contents: token.text,
                     location: createLocationFor(
                         token.text,
@@ -726,7 +1095,7 @@ export function tokenizeJavaScript(
                 token.type === ETokenType.property &&
                 token.scope !== undefined
             ) {
-                props.push({
+                tokenized.properties.push({
                     contents: token.text,
                     location: createLocationFor(
                         token.text,
@@ -746,6 +1115,9 @@ export function tokenizeJavaScript(
             );
         }
     }
+    if (tokenized.error !== undefined) {
+        tokenized.error.at += offset;
+    }
 
-    return [vars, props];
+    return tokenized;
 }

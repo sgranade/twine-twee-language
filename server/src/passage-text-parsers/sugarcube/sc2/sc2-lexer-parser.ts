@@ -124,13 +124,14 @@ export function parseSugarCubeTwineLink(
                 sugarcubeState,
             );
         }
-        if (markupData.setter !== undefined) {
+        if (markupData.setter !== undefined && markupData.setter.text) {
             createVariableAndPropertyReferences(
                 tokenizeTwineScriptExpression(
                     markupData.setter.text,
                     markupData.setter.at + textIndex,
                     state.textDocument,
                     sugarcubeState,
+                    true, // Link setters define variables on assignment
                 ),
                 state,
                 sugarcubeState,

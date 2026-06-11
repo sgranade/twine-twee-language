@@ -1,9 +1,5 @@
 import { Diagnostic, DiagnosticSeverity } from "vscode-languageserver";
-import {
-    JSDiagnostic,
-    JSPropertyLabel,
-    JSVariableLabel,
-} from "../../js-parser";
+import { TokenizedJS } from "../../js-parser";
 import { logErrorFor, ParsingState } from "../../parser";
 import { positionInRange } from "../../utilities";
 import { SugarCubeParsingState } from "./sugarcube-parser";
@@ -11,27 +7,21 @@ import { builtinVars, builtInVarsAndProperties } from "./sugarcube-variables";
 import { OSugarCubeSymbolKind } from "./types";
 
 /**
- * Create symbol references for parsed variables and properties.
+ * Create symbol references for tokenized variables and properties, and log any tokenizing error.
  *
  * `isSet` overrides the individual label's set (defined) information.
  *
- * @param varsAndProps Tuple with separate lists of variables and properties.
+ * @param jsTokens Tokenized JavaScript variables and properties, as well as any parsing error.
  * @param state Parsing state.
  * @param isSet True if the variables and properties are being set (assigned to).
  */
 export function createVariableAndPropertyReferences(
-    varsAndProps: [
-        JSVariableLabel[],
-        JSPropertyLabel[],
-        JSDiagnostic | undefined,
-    ],
+    jsTokens: TokenizedJS,
     state: ParsingState,
     sugarcubeState: SugarCubeParsingState,
     isSet = false,
 ): void {
-    const [vars, props, diagnostic] = varsAndProps;
-
-    for (const v of vars) {
+    for (const v of jsTokens.variables) {
         // Special case the built-in variables `$args`, `_args`, and `_contents`, which only
         // exist inside of a <<widget>> container macro. The vars can show up in child
         // macros (in which case there will be an open widget macro in the state) or
@@ -79,7 +69,7 @@ export function createVariableAndPropertyReferences(
                         : OSugarCubeSymbolKind.Variable,
             });
     }
-    for (const p of props) {
+    for (const p of jsTokens.properties) {
         // If there's a prefix, add it to the name, b/c we save properties in their
         // full object context (ex: `var.prop.subprop`).
         let contents =
@@ -107,14 +97,14 @@ export function createVariableAndPropertyReferences(
                 if (firstPeriodNdx === -1) {
                     // This is the property corresponding to the root variable: State.variable.var
                     createVariableAndPropertyReferences(
-                        [[ref], [], undefined],
+                        { variables: [ref], properties: [] },
                         state,
                         sugarcubeState,
                     );
                 } else {
                     // This corresponds to a property: State.variable.var.prop
                     createVariableAndPropertyReferences(
-                        [[], [ref], undefined],
+                        { variables: [], properties: [ref] },
                         state,
                         sugarcubeState,
                     );
@@ -135,11 +125,11 @@ export function createVariableAndPropertyReferences(
                         : OSugarCubeSymbolKind.Property,
             });
     }
-    if (diagnostic) {
+    if (jsTokens.error) {
         logErrorFor(
-            diagnostic.contents,
-            diagnostic.at,
-            diagnostic.message,
+            jsTokens.error.contents,
+            jsTokens.error.at,
+            jsTokens.error.message,
             state,
         );
     }

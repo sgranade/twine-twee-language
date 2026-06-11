@@ -217,7 +217,7 @@ describe("SugarCube Parser", () => {
             expect(result[0]).to.eql({
                 contents: "var1",
                 location: Location.create("fake-uri", Range.create(2, 1, 2, 5)),
-                kind: OSugarCubeSymbolKind.VariableSet,
+                kind: OSugarCubeSymbolKind.Variable,
             });
             expect(result[1]).to.eql({
                 contents: "var1.prop",
@@ -235,6 +235,105 @@ describe("SugarCube Parser", () => {
                 ),
                 kind: OSugarCubeSymbolKind.PropertySet,
             });
+        });
+
+        it("should parse variables that include line continuations in a script passage", () => {
+            const header = ":: Passage [script]\n";
+            const passage =
+                "\n var1 = { first: 'Example string\\\nwith line continuation and break', second: 1}\n";
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            state.currentPassage = buildPassage({
+                label: "Passage",
+                isScript: true,
+            });
+            const parser = uut.getSugarCubeParser(undefined);
+
+            parser?.parsePassageText(passage, header.length, state);
+            const result = callbacks.references;
+
+            expect(result.length).to.eql(3);
+            expect(result[0]).to.eql({
+                contents: "var1",
+                location: Location.create("fake-uri", Range.create(2, 1, 2, 5)),
+                kind: OSugarCubeSymbolKind.Variable,
+            });
+            expect(result[1]).to.eql({
+                contents: "var1.first",
+                location: Location.create(
+                    "fake-uri",
+                    Range.create(2, 10, 2, 15),
+                ),
+                kind: OSugarCubeSymbolKind.PropertySet,
+            });
+            expect(result[2]).to.eql({
+                contents: "var1.second",
+                location: Location.create(
+                    "fake-uri",
+                    Range.create(3, 35, 3, 41),
+                ),
+                kind: OSugarCubeSymbolKind.PropertySet,
+            });
+        });
+
+        it("should capture semantic tokens that include line continuations in a script passage", () => {
+            const header = ":: Passage [script]\n";
+            const passage =
+                "\n var1 = { first: 'Example string\\\nwith line continuation and break'}\n";
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            state.currentPassage = buildPassage({
+                label: "Passage",
+                isScript: true,
+            });
+            const parser = uut.getSugarCubeParser(undefined);
+
+            parser?.parsePassageText(passage, header.length, state);
+            const result = callbacks.tokens;
+            expect(result).to.eql([
+                {
+                    line: 2,
+                    char: 1,
+                    length: 4,
+                    tokenType: ETokenType.variable,
+                    tokenModifiers: [],
+                },
+                {
+                    line: 2,
+                    char: 6,
+                    length: 1,
+                    tokenType: ETokenType.operator,
+                    tokenModifiers: [],
+                },
+                {
+                    line: 2,
+                    char: 10,
+                    length: 5,
+                    tokenType: ETokenType.property,
+                    tokenModifiers: [],
+                },
+                // The string will be broken into two single-line semantic tokens
+                {
+                    line: 2,
+                    char: 17,
+                    length: 16,
+                    tokenType: ETokenType.string,
+                    tokenModifiers: [],
+                },
+                {
+                    line: 3,
+                    char: 0,
+                    length: 33,
+                    tokenType: ETokenType.string,
+                    tokenModifiers: [],
+                },
+            ]);
         });
 
         it("should capture State.temporary variables in a script passage", () => {
@@ -2242,7 +2341,7 @@ describe("SugarCube Parser", () => {
                             "fake-uri",
                             Range.create(3, 2, 3, 6),
                         ),
-                        kind: OSugarCubeSymbolKind.VariableSet,
+                        kind: OSugarCubeSymbolKind.Variable,
                     },
                 ]);
             });
@@ -2289,6 +2388,7 @@ describe("SugarCube Parser", () => {
                             "fake-uri",
                             Range.create(3, 2, 3, 6),
                         ),
+                        kind: OSugarCubeSymbolKind.Variable,
                     },
                 ]);
             });
@@ -3042,7 +3142,7 @@ describe("SugarCube Parser", () => {
                 ]);
             });
 
-            it("should capture variable references for receiver values", () => {
+            it("should capture a set variable for receiver values", () => {
                 const header = ":: Passage\n";
                 const passage = "Let's go: <<a bare '$testy'>>\n";
                 const callbacks = new MockCallbacks();
@@ -3071,12 +3171,12 @@ describe("SugarCube Parser", () => {
                             "fake-uri",
                             Range.create(1, 20, 1, 26),
                         ),
-                        kind: OSugarCubeSymbolKind.Variable,
+                        kind: OSugarCubeSymbolKind.VariableSet,
                     },
                 ]);
             });
 
-            it("should capture variable references for receiver values in backticks", () => {
+            it("should capture set variables for receiver values in backticks", () => {
                 const header = ":: Passage\n";
                 const passage = "Let's go: <<a bare `$testy`>>\n";
                 const callbacks = new MockCallbacks();
@@ -3105,7 +3205,7 @@ describe("SugarCube Parser", () => {
                             "fake-uri",
                             Range.create(1, 20, 1, 26),
                         ),
-                        kind: OSugarCubeSymbolKind.Variable,
+                        kind: OSugarCubeSymbolKind.VariableSet,
                     },
                 ]);
             });

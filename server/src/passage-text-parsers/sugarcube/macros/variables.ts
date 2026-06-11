@@ -16,7 +16,14 @@ export const setMacro: MacroInfo = {
     description:
         "Sets story `$variables` and temporary `_variables` based on the given expression.",
     since: "2.0.0",
-    parseArgs: parseArgsAsTwineScriptExpression,
+    parseArgs: (args, argsIndex, state, sugarcubeState) =>
+        parseArgsAsTwineScriptExpression(
+            args,
+            argsIndex,
+            state,
+            sugarcubeState,
+            true,
+        ),
 };
 
 export const unsetMacro: MacroInfo = {

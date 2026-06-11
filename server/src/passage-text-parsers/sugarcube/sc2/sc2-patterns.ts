@@ -22,6 +22,14 @@ const spaceNoTerminator =
 const anyLetter =
     "[0-9A-Z_a-z\\-\\u00c0-\\u00d6\\u00d8-\\u00f6\\u00f8-\\u00ff\\u0150\\u0170\\u0151\\u0171]";
 /**
+ * A character that terminates a line.
+ */
+const lineTerminator = "[\\n\\r\\u2028\\u2029]";
+/**
+ * Any character (non-capturing).
+ */
+const anyChar = `(?:.|${lineTerminator})`;
+/**
  * TwineScript variables with a single `$` (with no `$` before it) or `_` sigil.
  * Separate from the `variable` pattern b/c we don't accept `$$var` but do accept `_$var`.
  */
@@ -116,16 +124,18 @@ const conjoinedCssIdsOrClasses = `(${spaceNoTerminator}*)((?:${cssIdOrClassSigil
  */
 export const inlineCss = `${cssStyle}|${conjoinedCssIdsOrClasses}`;
 /**
- * Script macro block.
+ * Script macro.
  */
-export const scriptMacroBlock = [
-    ["<<script(?:\\s*(?<language>.*?)\\s*)>>", "<</script>>"],
-]
-    .map(
-        ([open, close]) =>
-            `(?:(?<open>${open})(?<contents>(?:.|\r?\n)*?)${close})`,
-    )
-    .join("|");
+export const scriptMacro = "<<script(?:\\s*(?<language>.*?)\\s*)>>";
+
+/**
+ * Do the internals of a for macro match the range format?
+ */
+export const forMacroIsRange = `^(?:\\S${anyChar}*?\\s+)?range\\s+\\S${anyChar}*?$`;
+/**
+ * The separated internals of a for macro that's using the range format.
+ */
+export const forMacroRangeFormat = `^(?:(?:(${variableWithSigil})\\s*,\\s)?(${variableWithSigil})\\s+)?range\\s+(\\S.*?)$`;
 
 // Most of the macro regexes are in `client-server.ts` because the client
 // needs access to them
