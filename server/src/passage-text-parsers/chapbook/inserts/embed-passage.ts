@@ -1,4 +1,5 @@
-import { logErrorFor } from "../../../parser";
+import { DiagnosticCodes } from "../../../diagnostics";
+import { logDiagnosticFor } from "../../../parser";
 import { ArgumentRequirement, ValueType } from "../types";
 import { InsertInfo } from "./types";
 
@@ -23,10 +24,10 @@ export const embedPassage: InsertInfo = {
                 !/^(['"])(.*)\1$/.test(args.firstArgument.text) &&
                 !/^\S*$/.test(args.firstArgument.text)
             ) {
-                logErrorFor(
+                logDiagnosticFor(
+                    DiagnosticCodes.ChapbookNotPassageStringOrVariable,
                     args.firstArgument.text,
                     args.firstArgument.at,
-                    "Must be a string or variable containing a passage name or a variable",
                     state,
                 );
             }

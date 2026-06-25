@@ -1,5 +1,7 @@
-import { Diagnostic, DiagnosticSeverity } from "vscode-languageserver";
-
+import {
+    createDiagnosticFromRange,
+    DiagnosticCodes,
+} from "../../../diagnostics";
 import { createLocationFor } from "../../../parser";
 import { ETokenModifier, ETokenType } from "../../../semantic-tokens";
 import { capturePreSemanticTokenFor } from "../..";
@@ -82,12 +84,9 @@ export const widgetMacro: MacroInfo = {
                 .includes("widget")
         ) {
             state.callbacks.onParseError(
-                Diagnostic.create(
+                createDiagnosticFromRange(
+                    DiagnosticCodes.SugarCubeMissingWidgetTag,
                     state.currentPassage.name.location.range,
-                    `This passage contains <<widget>> macros, so needs a "widget" passage tag`,
-                    DiagnosticSeverity.Warning,
-                    undefined,
-                    "Twine",
                 ),
             );
         }

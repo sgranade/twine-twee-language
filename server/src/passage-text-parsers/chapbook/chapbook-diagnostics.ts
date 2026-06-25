@@ -1,6 +1,7 @@
-import { Diagnostic, DiagnosticSeverity } from "vscode-languageserver";
+import { Diagnostic } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
+import { createDiagnosticFromRange, DiagnosticCodes } from "../../diagnostics";
 import { isBuiltinJSObjectInstanceProperty } from "../../js-parser";
 import { ProjectIndex } from "../../project-index";
 import { DiagnosticsOptions } from "../../server-options";
@@ -199,12 +200,9 @@ function generateCustomInsertDiagnostics(
         } else if (diagnosticsOptions.warnings.unknownMacro) {
             diagnostics.push(
                 ...insertRef.locations.map((loc) =>
-                    Diagnostic.create(
+                    createDiagnosticFromRange(
+                        DiagnosticCodes.ChapbookUnknownInsert,
                         loc.range,
-                        `Insert "${insertRef.contents}" not recognized`,
-                        DiagnosticSeverity.Warning,
-                        undefined,
-                        "Twine",
                     ),
                 ),
             );
@@ -275,12 +273,9 @@ function generateCustomModifierDiagnostics(
         } else if (diagnosticsOptions.warnings.unknownMacro) {
             diagnostics.push(
                 ...modRef.locations.map((loc) =>
-                    Diagnostic.create(
+                    createDiagnosticFromRange(
+                        DiagnosticCodes.ChapbookUnknownModifier,
                         loc.range,
-                        `Modifier "${modRef.contents}" not recognized`,
-                        DiagnosticSeverity.Warning,
-                        undefined,
-                        "Twine",
                     ),
                 ),
             );
@@ -332,15 +327,12 @@ export function generateDiagnostics(
         OChapbookSymbolKind.Variable,
     ) ?? []) {
         if (!varSetNames.has(varRef.contents)) {
-            const message = `"${varRef.contents}" isn't set in any vars section. Make sure you've spelled it correctly.`;
             diagnostics.push(
                 ...varRef.locations.map((loc) =>
-                    Diagnostic.create(
+                    createDiagnosticFromRange(
+                        DiagnosticCodes.VariableNeverSet,
                         loc.range,
-                        message,
-                        DiagnosticSeverity.Warning,
-                        undefined,
-                        "Twine",
+                        "This isn't set in any vars or JavaScript section; make sure it's spelled correctly",
                     ),
                 ),
             );
@@ -354,15 +346,12 @@ export function generateDiagnostics(
             !propSetNames.has(propRef.contents) &&
             !isBuiltinJSObjectInstanceProperty(propRef.contents)
         ) {
-            const message = `"${propRef.contents}" isn't set in any vars section. Make sure you've spelled it correctly.`;
             diagnostics.push(
                 ...propRef.locations.map((loc) =>
-                    Diagnostic.create(
+                    createDiagnosticFromRange(
+                        DiagnosticCodes.VariableNeverSet,
                         loc.range,
-                        message,
-                        DiagnosticSeverity.Warning,
-                        undefined,
-                        "Twine",
+                        "This isn't set in any vars or JavaScript section; make sure it's spelled correctly",
                     ),
                 ),
             );

@@ -46,9 +46,9 @@ describe("SugarCube Diagnostics", () => {
             expect(results).to.eql([
                 Diagnostic.create(
                     Range.create(1, 2, 3, 4),
-                    "\"var1\" isn't set in any <<set>> macro, setter link, or JavaScript section. Make sure you've spelled it correctly.",
+                    "This isn't set in any <<set>> macro, setter link, or JavaScript section; make sure you've spelled it correctly.",
                     DiagnosticSeverity.Warning,
-                    undefined,
+                    "variable-never-set",
                     "Twine",
                 ),
             ]);
@@ -240,9 +240,9 @@ describe("SugarCube Diagnostics", () => {
             expect(results).to.eql([
                 Diagnostic.create(
                     Range.create(1, 2, 3, 4),
-                    'Macro "this" not recognized',
+                    "Unrecognized macro",
                     DiagnosticSeverity.Warning,
-                    undefined,
+                    "unknown-macro",
                     "Twine",
                 ),
             ]);
@@ -342,9 +342,9 @@ describe("SugarCube Diagnostics", () => {
             expect(results).to.eql([
                 Diagnostic.create(
                     Range.create(1, 2, 3, 4),
-                    `Widget "if" can't have the same name as a built-in macro`,
+                    `Widgets can't have the same name as a built-in macro`,
                     DiagnosticSeverity.Error,
-                    undefined,
+                    "no-widget-with-built-in-macro-name",
                     "Twine",
                 ),
             ]);
@@ -384,9 +384,9 @@ describe("SugarCube Diagnostics", () => {
             expect(results).to.eql([
                 Diagnostic.create(
                     Range.create(1, 2, 3, 4),
-                    `Widget "testy" can't be defined more than once`,
+                    `Widgets can't be defined more than once`,
                     DiagnosticSeverity.Error,
-                    undefined,
+                    "no-multiple-widget-definitions",
                     "Twine",
                     [
                         DiagnosticRelatedInformation.create(

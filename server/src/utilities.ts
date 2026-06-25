@@ -1,9 +1,4 @@
-import {
-    Diagnostic,
-    DiagnosticSeverity,
-    Position,
-    Range,
-} from "vscode-languageserver";
+import { Position, Range } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 /**
@@ -28,14 +23,19 @@ export function* pairwise<T>(itr: Iterable<T>) {
  * @param ver1 First version number.
  * @param ver2 Second version number.
  * @returns -1 if ver1 < ver2, 0 if ver1 = ver2, and 1 if ver1 > ver2
+ * @throws TypeError if either version number contains non-numeric values.
  */
 export function versionCompare(ver1: string, ver2: string): number {
     const ver1Parts = ver1.split(".").map((n) => parseInt(n, 10));
     const ver2Parts = ver2.split(".").map((n) => parseInt(n, 10));
     const minLength = Math.min(ver1Parts.length, ver2Parts.length);
     for (let i = 0; i < minLength; ++i) {
-        if (Number.isNaN(ver1Parts[i])) return -1;
-        if (Number.isNaN(ver2Parts[i])) return 1;
+        if (Number.isNaN(ver1Parts[i])) {
+            throw new TypeError(`${ver1} contains non-numeric values`);
+        }
+        if (Number.isNaN(ver2Parts[i])) {
+            throw new TypeError(`${ver2} contains non-numeric values`);
+        }
         if (ver1Parts[i] < ver2Parts[i]) return -1;
         if (ver1Parts[i] > ver2Parts[i]) return 1;
     }
@@ -294,65 +294,5 @@ export function positionInRange(position: Position, range: Range): boolean {
     return (
         comparePositions(position, range.start) >= 0 &&
         comparePositions(position, range.end) <= 0
-    );
-}
-
-/** OBJECT CREATION **/
-
-/**
- * Generate a diagnostic message.
- *
- * Pass start and end locations as 0-based indexes into the document's text.
- *
- * @param severity Diagnostic severity
- * @param textDocument Document to which the diagnostic applies.
- * @param start Start location in the document of the diagnostic message.
- * @param end End location in the document of the diagnostic message.
- * @param message Diagnostic message.
- */
-export function createDiagnostic(
-    severity: DiagnosticSeverity,
-    textDocument: TextDocument,
-    start: number,
-    end: number,
-    message: string,
-): Diagnostic {
-    return Diagnostic.create(
-        Range.create(
-            textDocument.positionAt(start),
-            textDocument.positionAt(end),
-        ),
-        message,
-        severity,
-        undefined,
-        "Twine",
-    );
-}
-
-/**
- * Generate a diagnostic message for a given piece of text.
- *
- * Pass the text's location as a 0-based index into the document's text.
- *
- * @param severity Diagnostic severity
- * @param textDocument Document to which the diagnostic applies.
- * @param text Text to generate the diagnostic message about.
- * @param at Location in the document of the text.
- * @param message Diagnostic message.
- * @returns
- */
-export function createDiagnosticFor(
-    severity: DiagnosticSeverity,
-    textDocument: TextDocument,
-    text: string,
-    at: number,
-    message: string,
-): Diagnostic {
-    return createDiagnostic(
-        severity,
-        textDocument,
-        at,
-        at + text.length,
-        message,
     );
 }

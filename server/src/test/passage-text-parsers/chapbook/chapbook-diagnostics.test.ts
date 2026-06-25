@@ -49,9 +49,9 @@ describe("Chapbook Diagnostics", () => {
             expect(results).to.eql([
                 Diagnostic.create(
                     Range.create(1, 2, 3, 4),
-                    "\"var1\" isn't set in any vars section. Make sure you've spelled it correctly.",
+                    "This isn't set in any vars or JavaScript section; make sure it's spelled correctly",
                     DiagnosticSeverity.Warning,
-                    undefined,
+                    "variable-never-set",
                     "Twine",
                 ),
             ]);
@@ -198,9 +198,9 @@ describe("Chapbook Diagnostics", () => {
             expect(results).to.eql([
                 Diagnostic.create(
                     Range.create(5, 6, 7, 8),
-                    "\"var1.prop\" isn't set in any vars section. Make sure you've spelled it correctly.",
+                    "This isn't set in any vars or JavaScript section; make sure it's spelled correctly",
                     DiagnosticSeverity.Warning,
-                    undefined,
+                    "variable-never-set",
                     "Twine",
                 ),
             ]);
@@ -293,9 +293,9 @@ describe("Chapbook Diagnostics", () => {
             expect(results).to.eql([
                 Diagnostic.create(
                     Range.create(1, 2, 3, 4),
-                    'Insert "custom insert" not recognized',
+                    "Unrecognized insert",
                     DiagnosticSeverity.Warning,
-                    undefined,
+                    "unknown-insert",
                     "Twine",
                 ),
             ]);
@@ -419,7 +419,7 @@ describe("Chapbook Diagnostics", () => {
                     Range.create(0, 11, 0, 24),
                     "`custom insert` requires a first argument",
                     DiagnosticSeverity.Error,
-                    undefined,
+                    "function-missing-first-argument",
                     "Twine",
                 ),
             ]);
@@ -472,7 +472,7 @@ describe("Chapbook Diagnostics", () => {
                     Range.create(0, 26, 0, 32),
                     "`custom insert` will ignore this first argument",
                     DiagnosticSeverity.Warning,
-                    undefined,
+                    "function-will-ignore-first-argument",
                     "Twine",
                 ),
             ]);
@@ -527,7 +527,7 @@ describe("Chapbook Diagnostics", () => {
                     Range.create(0, 12, 0, 25),
                     "Insert {custom insert} missing expected properties: expected, also",
                     DiagnosticSeverity.Error,
-                    undefined,
+                    "insert-missing-properties",
                     "Twine",
                 ),
             ]);
@@ -580,7 +580,7 @@ describe("Chapbook Diagnostics", () => {
                     Range.create(0, 27, 0, 31),
                     "Insert {custom insert} will ignore this property",
                     DiagnosticSeverity.Warning,
-                    undefined,
+                    "insert-ignored-property",
                     "Twine",
                 ),
             ]);
@@ -616,9 +616,9 @@ describe("Chapbook Diagnostics", () => {
             expect(results).to.eql([
                 Diagnostic.create(
                     Range.create(1, 2, 3, 4),
-                    'Modifier "mod-me" not recognized',
+                    "Unrecognized modifier",
                     DiagnosticSeverity.Warning,
-                    undefined,
+                    "unknown-modifier",
                     "Twine",
                 ),
             ]);
@@ -742,7 +742,7 @@ describe("Chapbook Diagnostics", () => {
                     Range.create(0, 1, 0, 7),
                     "`mod-me` requires a first argument",
                     DiagnosticSeverity.Error,
-                    undefined,
+                    "function-missing-first-argument",
                     "Twine",
                 ),
             ]);
@@ -795,7 +795,7 @@ describe("Chapbook Diagnostics", () => {
                     Range.create(0, 8, 0, 11),
                     "`mod-me` will ignore this first argument",
                     DiagnosticSeverity.Warning,
-                    undefined,
+                    "function-will-ignore-first-argument",
                     "Twine",
                 ),
             ]);

@@ -3,7 +3,6 @@ import {
     Connection,
     DefinitionParams,
     Definition,
-    Diagnostic,
     DidChangeConfigurationNotification,
     DocumentSymbol,
     DocumentSymbolParams,
@@ -39,6 +38,7 @@ import {
 } from "./client-server";
 import { generateCompletions } from "./completions";
 import { getDefinitionAt } from "./definition";
+import { createDiagnosticFromRange, DiagnosticCodes } from "./diagnostics";
 import { generateHover } from "./hover";
 import { updateProjectIndex } from "./indexer";
 import { ParseLevel } from "./parser";
@@ -674,7 +674,8 @@ async function parseT3LTMacroFile(uri: string) {
         }
         if (parsedResults.errors.length) {
             const diagnostics = [
-                Diagnostic.create(
+                createDiagnosticFromRange(
+                    DiagnosticCodes.SugarCubeMacroFileError,
                     Range.create(0, 0, 1, 0),
                     `Problems with the configuration file: ${parsedResults.errors.join("\n")}`,
                 ),

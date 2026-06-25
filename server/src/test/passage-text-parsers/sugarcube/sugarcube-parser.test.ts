@@ -4976,7 +4976,7 @@ describe("SugarCube Parser", () => {
                     expect(results).to.be.empty;
                 });
 
-                it("should error on linkNoSetter values with a setter", () => {
+                it("should warn on linkNoSetter values with a setter", () => {
                     const header = ":: Passage\n";
                     const passage =
                         "Let's go: <<a [[Passage Name<-Display text][$testy to 7]]>>\n";
@@ -5000,7 +5000,7 @@ describe("SugarCube Parser", () => {
                     const [result] = callbacks.errors;
 
                     expect(callbacks.errors.length).to.equal(1);
-                    expect(result.severity).to.eql(DiagnosticSeverity.Error);
+                    expect(result.severity).to.eql(DiagnosticSeverity.Warning);
                     expect(result.message).to.include(
                         "Argument is a link, but does not allow setter syntax",
                     );

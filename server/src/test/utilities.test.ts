@@ -84,20 +84,32 @@ describe("Utilities", () => {
             expect(result).to.equal(1);
         });
 
-        it("should assume ver1 < ver2 when ver1 contains a non-number", () => {
+        it("should raise an exception when ver1 contains a non-number", () => {
             // No arrange
 
-            const result = uut.versionCompare("1.a.1", "1.1.1");
-
-            expect(result).to.equal(-1);
+            try {
+                uut.versionCompare("1.a.1", "1.1.1");
+            } catch (e) {
+                //
+                // Assert
+                expect(e).to.eql(
+                    new TypeError("1.a.1 contains non-numeric values"),
+                );
+            }
         });
 
-        it("should assume ver1 > ver2 when ver2 contains a non-number", () => {
+        it("should raise an exception when ver2 contains a non-number", () => {
             // No arrange
 
-            const result = uut.versionCompare("1.1.1", "1.a.1");
-
-            expect(result).to.equal(1);
+            try {
+                uut.versionCompare("1.1.1", "1.a.1");
+            } catch (e) {
+                //
+                // Assert
+                expect(e).to.eql(
+                    new TypeError("1.a.1 contains non-numeric values"),
+                );
+            }
         });
     });
 

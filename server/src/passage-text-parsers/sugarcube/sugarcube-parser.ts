@@ -1,16 +1,16 @@
-import { Diagnostic, DiagnosticSeverity, Range } from "vscode-languageserver";
+import { Range } from "vscode-languageserver";
 
 import { capturePreSemanticTokenFor, StoryFormatParsingState } from "..";
+import { createDiagnosticFromRange, DiagnosticCodes } from "../../diagnostics";
 import { EmbeddedDocument } from "../../embedded-languages";
 import { tokenizeJavaScript } from "../../js-parser";
 import {
     ParseLevel,
     ParsingState,
     createSymbolFor,
-    logErrorFor,
-    logSemanticTokenFor,
-    logWarningFor,
     findAndParseHtml,
+    logDiagnosticFor,
+    logSemanticTokenFor,
     parsePassageReference,
 } from "../../parser";
 import { ProjectIndex, ProjSymbol } from "../../project-index";
@@ -510,12 +510,13 @@ function parseMacroArgs(
                             sugarcubeState,
                         );
                     } else {
-                        logWarningFor(
+                        logDiagnosticFor(
+                            DiagnosticCodes.SugarCubeUnexpectedBareVariable,
                             sc2Token.text,
                             sc2Token.at,
+                            state,
                             "Do you mean for this receiver value to be a bare variable? " +
                                 `If so, consider surrounding it with back-ticks: \`${sc2Token.text}\``,
-                            state,
                         );
                         tokens = tokenizeTwineScriptExpression(
                             sc2Token.text,
@@ -579,22 +580,41 @@ function parseMacroArgs(
             const errorToken =
                 sc2ArgumentTokens[t3ltArgToSC2Token[error.index] ?? 0];
             if (errorToken === undefined) {
-                logErrorFor(args ?? "", argsIndex, error.error, state);
+                logDiagnosticFor(
+                    DiagnosticCodes.SugarCubeInvalidMacroArguments,
+                    args ?? "",
+                    argsIndex,
+                    state,
+                    error.error,
+                );
             } else {
-                logErrorFor(errorToken.text, errorToken.at, error.error, state);
+                logDiagnosticFor(
+                    DiagnosticCodes.SugarCubeInvalidMacroArguments,
+                    errorToken.text,
+                    errorToken.at,
+                    state,
+                    error.error,
+                );
             }
         }
         for (const warning of validationInfo.info.warnings) {
             const warningToken =
                 sc2ArgumentTokens[t3ltArgToSC2Token[warning.index] ?? 0];
             if (warningToken === undefined) {
-                logErrorFor(args ?? "", argsIndex, warning.warning, state);
+                logDiagnosticFor(
+                    DiagnosticCodes.SugarCubeMacroArgumentWarning,
+                    args ?? "",
+                    argsIndex,
+                    state,
+                    warning.warning,
+                );
             } else {
-                logErrorFor(
+                logDiagnosticFor(
+                    DiagnosticCodes.SugarCubeMacroArgumentWarning,
                     warningToken.text,
                     warningToken.at,
-                    warning.warning,
                     state,
+                    warning.warning,
                 );
             }
         }
@@ -604,11 +624,12 @@ function parseMacroArgs(
 
     for (const arg of sc2ArgumentTokens) {
         if (arg.type === MacroParse.Item.Error) {
-            logErrorFor(
+            logDiagnosticFor(
+                DiagnosticCodes.SugarCubeMacroArgumentParsingError,
                 arg.text,
                 arg.at,
-                arg.message ?? "Unknown macro argument parsing error",
                 state,
+                arg.message,
             );
         } else if (arg.type === MacroParse.Item.Bareword) {
             let jsTokens = tokenizeTwineScriptExpression(
@@ -679,16 +700,21 @@ function parseMacroArgs(
 
     if (macroInfo?.arguments === true) {
         if (args === undefined || !args.trim()) {
-            logWarningFor(
+            logDiagnosticFor(
+                DiagnosticCodes.SugarCubeExpectedArguments,
                 macroName,
                 macroNameIndex,
-                "Expected arguments",
                 state,
             );
         }
     } else if (macroInfo?.arguments === false) {
         if (args !== undefined && args.trim()) {
-            logWarningFor(args, argsIndex, "Expected no arguments", state);
+            logDiagnosticFor(
+                DiagnosticCodes.SugarCubeExpectedNoArguments,
+                args,
+                argsIndex,
+                state,
+            );
         }
     }
 }
@@ -727,11 +753,18 @@ function captureMacroRefAndTokens(
     }
 
     // Capture semantic tokens for the macro itself
-    const deprecated =
-        state.storyFormat?.formatVersion !== undefined &&
-        macroInfo?.deprecated !== undefined &&
-        versionCompare(state.storyFormat.formatVersion, macroInfo.deprecated) <=
-            0;
+    let deprecated;
+    try {
+        deprecated =
+            state.storyFormat?.formatVersion !== undefined &&
+            macroInfo?.deprecated !== undefined &&
+            versionCompare(
+                state.storyFormat.formatVersion,
+                macroInfo.deprecated,
+            ) <= 0;
+    } catch {
+        deprecated = false;
+    }
     capturePreSemanticTokenFor(
         macroNameWithEnd,
         macroIndex,
@@ -791,25 +824,39 @@ function checkMacroAvailability(
 ): void {
     const storyFormatVersion = state.storyFormat?.formatVersion;
     if (storyFormatVersion !== undefined) {
-        if (
-            macroInfo.since !== undefined &&
-            versionCompare(storyFormatVersion, macroInfo.since) < 0
-        ) {
-            logErrorFor(
+        let notYetAvailable = false,
+            wasRemoved = false;
+        if (macroInfo.since !== undefined) {
+            try {
+                notYetAvailable =
+                    versionCompare(storyFormatVersion, macroInfo.since) < 0;
+            } catch {
+                // Ignore if versionCompare() throws
+            }
+        }
+        if (macroInfo.removed !== undefined) {
+            try {
+                wasRemoved =
+                    versionCompare(storyFormatVersion, macroInfo.removed) >= 0;
+            } catch {
+                // Ignore if versionCompare() throws
+            }
+        }
+        if (notYetAvailable) {
+            logDiagnosticFor(
+                DiagnosticCodes.SugarCubeMacroNotAvailable,
                 macroText,
                 macroIndex,
+                state,
                 `\`${macroInfo.name}\` isn't available until SugarCube version ${macroInfo.since} but your StoryFormat version is ${storyFormatVersion}`,
-                state,
             );
-        } else if (
-            macroInfo.removed !== undefined &&
-            versionCompare(storyFormatVersion, macroInfo.removed) >= 0
-        ) {
-            logErrorFor(
+        } else if (wasRemoved) {
+            logDiagnosticFor(
+                DiagnosticCodes.SugarCubeMacroRemoved,
                 macroText,
                 macroIndex,
-                `\`${macroInfo.name}\` was removed in SugarCube version ${macroInfo.removed} and your StoryFormat version is ${storyFormatVersion}`,
                 state,
+                `\`${macroInfo.name}\` was removed in SugarCube version ${macroInfo.removed} and your StoryFormat version is ${storyFormatVersion}`,
             );
         }
     }
@@ -838,10 +885,10 @@ function parseAndRemoveMacros(
 
     // Warn on any macro that's inside of the setter portion of a link
     for (const m of passageText.matchAll(macroInASetterRegex)) {
-        logWarningFor(
+        logDiagnosticFor(
+            DiagnosticCodes.SugarCubeLinkSetterIgnoresMacros,
             m[2],
             m.index + m[1].length + textIndex,
-            "Macros aren't evaluated inside link setters",
             state,
         );
     }
@@ -880,11 +927,12 @@ function parseAndRemoveMacros(
                 // if it's a container, mark this macro as being an endVariant and mention that it's deprecated
                 if (defInList.container) {
                     endVariant = true;
-                    logWarningFor(
+                    logDiagnosticFor(
+                        DiagnosticCodes.SugarCubeEndmacroDeprecated,
                         m[0],
                         m.index + textIndex,
-                        `<<end${macroName}>> is deprecated; use <</${macroName}>> instead`,
                         state,
+                        `<<end${macroName}>> is deprecated; use <</${macroName}>> instead`,
                     );
                 } else if (knownMacros[endAddedName] === undefined) {
                     name = endAddedName; // double check there's no known macro with "end" at the start
@@ -1002,11 +1050,12 @@ function parseAndRemoveMacros(
                         }
                     }
                     if (openingMacroAt === undefined) {
-                        logErrorFor(
+                        logDiagnosticFor(
+                            DiagnosticCodes.SugarCubeMissingOpenMacro,
                             m[0],
                             m.index + textIndex,
-                            `Opening macro <<${macroInfo.name}>> not found`,
                             state,
+                            `Opening macro <<${macroInfo.name}>> not found`,
                         );
                     }
                     // If this is a <<widget>> macro, capture its range
@@ -1028,11 +1077,12 @@ function parseAndRemoveMacros(
                 }
             } else if (!isOpenMacro) {
                 // If a macro isn't a container, it can't have a closing macro
-                logErrorFor(
+                logDiagnosticFor(
+                    DiagnosticCodes.SugarCubeMacroHasNoClosingMacro,
                     m[0],
                     m.index + textIndex,
-                    `<<${macroInfo.name}>> macro isn't a container and so doesn't have a closing macro`,
                     state,
+                    `<<${macroInfo.name}>> macro isn't a container and so doesn't have a closing macro`,
                 );
             }
 
@@ -1079,11 +1129,12 @@ function parseAndRemoveMacros(
                             parentMacroInfo.id
                         ].filter((info) => info.name === macroInfo.name).length;
                         if (childCount > macroParent.max) {
-                            logErrorFor(
+                            logDiagnosticFor(
+                                DiagnosticCodes.SugarCubeTooManyChildMacros,
                                 m[0],
                                 m.index + textIndex,
-                                `Child macro <<${macroName}>> can be used at most ${macroParent.max} time${macroParent.max > 1 ? "s" : ""}`,
                                 state,
+                                `Child macro <<${macroName}>> can be used at most ${macroParent.max} time${macroParent.max > 1 ? "s" : ""}`,
                             );
                         }
                     }
@@ -1094,7 +1145,13 @@ function parseAndRemoveMacros(
                             "Must be inside one of the following macros: " +
                             parentNames.map((name) => `<<${name}>>`).join(", ");
                     }
-                    logErrorFor(m[0], m.index + textIndex, errorMessage, state);
+                    logDiagnosticFor(
+                        DiagnosticCodes.SugarCubeMissingParentMacro,
+                        m[0],
+                        m.index + textIndex,
+                        state,
+                        errorMessage,
+                    );
                 }
             }
         }
@@ -1112,11 +1169,12 @@ function parseAndRemoveMacros(
                 sugarcubeState,
             );
         } else if (macroBody.trim()) {
-            logWarningFor(
+            logDiagnosticFor(
+                DiagnosticCodes.SugarCubeExpectedNoArguments,
                 macroBody,
                 macroBodyIndex + textIndex,
-                "Closing macros don't take arguments",
                 state,
+                "Closing macros don't take arguments",
             );
         }
 
@@ -1141,11 +1199,12 @@ function parseAndRemoveMacros(
                 ),
             );
         }
-        logErrorFor(
+        logDiagnosticFor(
+            DiagnosticCodes.SugarCubeMissingCloseMacro,
             openTag.fullText,
             openTag.at + textIndex,
-            `Closing macro <</${openTag.name}>> not found`,
             state,
+            `Closing macro <</${openTag.name}>> not found`,
         );
     }
     sugarcubeState.unclosedMacros = [];
@@ -1206,10 +1265,10 @@ function parseHtmlAttributesAndDirectives(
                 );
                 // Make sure we don't have an href attribute, too
                 if (hrefAttr.test(tag)) {
-                    logErrorFor(
+                    logDiagnosticFor(
+                        DiagnosticCodes.SugarCubeEitherDataPassageOrHref,
                         attrName,
                         textIndex + attrIndex,
-                        `Both "data-passage" and "href" attributes aren't allowed`,
                         state,
                     );
                 }
@@ -1229,10 +1288,10 @@ function parseHtmlAttributesAndDirectives(
                 );
                 // Make sure we don't have an evaluation directive on a data-setter attribute
                 if (evalDirective !== undefined && isDataSetter) {
-                    logErrorFor(
+                    logDiagnosticFor(
+                        DiagnosticCodes.SugarCubeNoEvaluationDirective,
                         evalDirective,
                         textIndex + attrIndex,
-                        `"data-setter" can't have an evaluation directive`,
                         state,
                     );
                 }
@@ -1305,49 +1364,47 @@ function checkForSpecialPassages(state: ParsingState): boolean {
         state.currentPassage !== undefined &&
         state.storyFormat?.formatVersion !== undefined
     ) {
-        if (
-            state.currentPassage.name.contents === "StoryDisplayTitle" &&
-            versionCompare(state.storyFormat.formatVersion, "2.31.0") < 0
-        ) {
-            state.callbacks.onParseError(
-                Diagnostic.create(
-                    state.currentPassage.name.location.range,
-                    `StoryDisplayTitle isn't supported in SugarCube version ${state.storyFormat.formatVersion}`,
-                    DiagnosticSeverity.Warning,
-                    undefined,
-                    "Twine",
-                ),
-            );
-        }
+        try {
+            if (
+                state.currentPassage.name.contents === "StoryDisplayTitle" &&
+                versionCompare(state.storyFormat.formatVersion, "2.31.0") < 0
+            ) {
+                state.callbacks.onParseError(
+                    createDiagnosticFromRange(
+                        DiagnosticCodes.SugarCubeUnsupporedSpecialPassage,
+                        state.currentPassage.name.location.range,
+                        `StoryDisplayTitle isn't supported in SugarCube version ${state.storyFormat.formatVersion}`,
+                    ),
+                );
+            }
 
-        if (
-            state.currentPassage.name.contents === "StoryInterface" &&
-            versionCompare(state.storyFormat.formatVersion, "2.18.0") < 0
-        ) {
-            state.callbacks.onParseError(
-                Diagnostic.create(
-                    state.currentPassage.name.location.range,
-                    `StoryInterface isn't supported in SugarCube version ${state.storyFormat.formatVersion}`,
-                    DiagnosticSeverity.Warning,
-                    undefined,
-                    "Twine",
-                ),
-            );
-        }
+            if (
+                state.currentPassage.name.contents === "StoryInterface" &&
+                versionCompare(state.storyFormat.formatVersion, "2.18.0") < 0
+            ) {
+                state.callbacks.onParseError(
+                    createDiagnosticFromRange(
+                        DiagnosticCodes.SugarCubeUnsupporedSpecialPassage,
+                        state.currentPassage.name.location.range,
+                        `StoryInterface isn't supported in SugarCube version ${state.storyFormat.formatVersion}`,
+                    ),
+                );
+            }
 
-        if (
-            state.currentPassage.name.contents === "StoryShare" &&
-            versionCompare(state.storyFormat.formatVersion, "2.37.0") >= 0
-        ) {
-            state.callbacks.onParseError(
-                Diagnostic.create(
-                    state.currentPassage.name.location.range,
-                    `StoryShare is deprecated as of SugarCube version 2.37.0`,
-                    DiagnosticSeverity.Warning,
-                    undefined,
-                    "Twine",
-                ),
-            );
+            if (
+                state.currentPassage.name.contents === "StoryShare" &&
+                versionCompare(state.storyFormat.formatVersion, "2.37.0") >= 0
+            ) {
+                state.callbacks.onParseError(
+                    createDiagnosticFromRange(
+                        DiagnosticCodes.SugarCubeDeprecatedSpecialPassage,
+                        state.currentPassage.name.location.range,
+                        `StoryShare is deprecated as of SugarCube version 2.37.0`,
+                    ),
+                );
+            }
+        } catch {
+            // Ignore if versionCompare() throws
         }
     }
 
@@ -1411,50 +1468,53 @@ function checkPassageTags(
         isHtmlPassage = false;
         // Of the media tags, only Twine.image was originally in 2.0.0. The others
         // were added in 2.24.0
-        if (
-            mediaTags[0].contents !== "Twine.image" &&
-            state.storyFormat?.formatVersion !== undefined &&
-            versionCompare(state.storyFormat.formatVersion, "2.24.0") < 0
-        ) {
-            state.callbacks.onParseError(
-                Diagnostic.create(
-                    mediaTags[0].location.range,
-                    `${mediaTags[0].contents} isn't supported in SugarCube version ${state.storyFormat.formatVersion}`,
-                    DiagnosticSeverity.Warning,
-                    undefined,
-                    "Twine",
-                ),
-            );
+        try {
+            if (
+                mediaTags[0].contents !== "Twine.image" &&
+                state.storyFormat?.formatVersion !== undefined &&
+                versionCompare(state.storyFormat.formatVersion, "2.24.0") < 0
+            ) {
+                state.callbacks.onParseError(
+                    createDiagnosticFromRange(
+                        DiagnosticCodes.SugarCubeUnsupporedMediaPassageTags,
+                        mediaTags[0].location.range,
+                        `${mediaTags[0].contents} isn't supported in SugarCube version ${state.storyFormat.formatVersion}`,
+                    ),
+                );
+            }
+        } catch {
+            // Ignore if versionCompare() throws
         }
     } else if (mediaTags.length > 1) {
         isHtmlPassage = false;
         // We only allow one media tag
         for (const tag of mediaTags) {
             state.callbacks.onParseError(
-                Diagnostic.create(
+                createDiagnosticFromRange(
+                    DiagnosticCodes.SugarCubeNoMultipleMediaPassageTags,
                     tag.location.range,
-                    `Multiple media passage tags aren't allowed`,
-                    DiagnosticSeverity.Error,
-                    undefined,
-                    "Twine",
                 ),
             );
         }
-    } else if (
-        tagNames.includes("bookmark") &&
-        state.storyFormat?.formatVersion !== undefined &&
-        versionCompare(state.storyFormat.formatVersion, "2.37.0") >= 0
-    ) {
-        const ndx = tagNames.indexOf("bookmark");
-        state.callbacks.onParseError(
-            Diagnostic.create(
-                tags[ndx].location.range,
-                `bookmark is deprecated as of SugarCube version 2.37.0`,
-                DiagnosticSeverity.Warning,
-                undefined,
-                "Twine",
-            ),
-        );
+    } else {
+        try {
+            if (
+                tagNames.includes("bookmark") &&
+                state.storyFormat?.formatVersion !== undefined &&
+                versionCompare(state.storyFormat.formatVersion, "2.37.0") >= 0
+            ) {
+                const ndx = tagNames.indexOf("bookmark");
+                state.callbacks.onParseError(
+                    createDiagnosticFromRange(
+                        DiagnosticCodes.SugarCubeDeprecatedTag,
+                        tags[ndx].location.range,
+                        `bookmark is deprecated as of SugarCube version 2.37.0`,
+                    ),
+                );
+            }
+        } catch {
+            // Ignore if versionCompare() throws
+        }
     }
 
     // Generate an embedded HTML document for the entire passage if needed

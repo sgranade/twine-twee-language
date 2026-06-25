@@ -1,10 +1,10 @@
 import {
     Diagnostic,
     DiagnosticRelatedInformation,
-    DiagnosticSeverity,
 } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
+import { createDiagnosticFromRange, DiagnosticCodes } from "../../diagnostics";
 import { isBuiltinJSObjectInstanceProperty } from "../../js-parser";
 import { ProjectIndex } from "../../project-index";
 import { DiagnosticsOptions } from "../../server-options";
@@ -55,15 +55,14 @@ function generateVariableAndPropertyDiagnostics(
         OSugarCubeSymbolKind.Variable,
     ) ?? []) {
         if (!varSetNames.has(varRef.contents)) {
-            const message = `"${varRef.contents}" isn't set in any <<set>> macro, setter link, or JavaScript section. Make sure you've spelled it correctly.`;
+            const message =
+                "This isn't set in any <<set>> macro, setter link, or JavaScript section; make sure you've spelled it correctly.";
             diagnostics.push(
                 ...varRef.locations.map((loc) =>
-                    Diagnostic.create(
+                    createDiagnosticFromRange(
+                        DiagnosticCodes.VariableNeverSet,
                         loc.range,
                         message,
-                        DiagnosticSeverity.Warning,
-                        undefined,
-                        "Twine",
                     ),
                 ),
             );
@@ -80,15 +79,14 @@ function generateVariableAndPropertyDiagnostics(
                 propRef.contents.slice(propRef.contents.indexOf(".") + 1),
             )
         ) {
-            const message = `"${propRef.contents}" isn't set in any <<set>> macro, setter link, or JavaScript section. Make sure you've spelled it correctly.`;
+            const message =
+                "This isn't set in any <<set>> macro, setter link, or JavaScript section; make sure you've spelled it correctly.";
             diagnostics.push(
                 ...propRef.locations.map((loc) =>
-                    Diagnostic.create(
+                    createDiagnosticFromRange(
+                        DiagnosticCodes.VariableNeverSet,
                         loc.range,
                         message,
-                        DiagnosticSeverity.Warning,
-                        undefined,
-                        "Twine",
                     ),
                 ),
             );
@@ -131,12 +129,9 @@ function generateMacroDiagnostics(
             // See if we have the same name as a built-in macro
             if (builtInMacros[macroDef.contents] !== undefined) {
                 diagnostics.push(
-                    Diagnostic.create(
+                    createDiagnosticFromRange(
+                        DiagnosticCodes.SugarCubeNoWidgetWithBuiltInMacroName,
                         macroDef.location.range,
-                        `Widget "${macroDef.contents}" can't have the same name as a built-in macro`,
-                        DiagnosticSeverity.Error,
-                        undefined,
-                        "Twine",
                     ),
                 );
             } else {
@@ -144,12 +139,9 @@ function generateMacroDiagnostics(
                 const ndx1 = definedMacroNames.indexOf(macroDef.contents);
                 const ndx2 = definedMacroNames.lastIndexOf(macroDef.contents);
                 if (ndx1 !== ndx2) {
-                    const diagnostic = Diagnostic.create(
+                    const diagnostic = createDiagnosticFromRange(
+                        DiagnosticCodes.SugarCubeNoMultipleWidgetDefinitions,
                         macroDef.location.range,
-                        `Widget "${macroDef.contents}" can't be defined more than once`,
-                        DiagnosticSeverity.Error,
-                        undefined,
-                        "Twine",
                     );
                     // Find the other location where it's been defined
                     let loc = allMacroDefs[ndx1].location;
@@ -186,12 +178,9 @@ function generateMacroDiagnostics(
             ) {
                 diagnostics.push(
                     ...macroRef.locations.map((loc) =>
-                        Diagnostic.create(
+                        createDiagnosticFromRange(
+                            DiagnosticCodes.SugarCubeUnknownMacro,
                             loc.range,
-                            `Macro "${macroRef.contents}" not recognized`,
-                            DiagnosticSeverity.Warning,
-                            undefined,
-                            "Twine",
                         ),
                     ),
                 );

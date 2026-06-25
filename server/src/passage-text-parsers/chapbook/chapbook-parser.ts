@@ -1,10 +1,15 @@
 import * as acorn from "acorn";
 import * as acornWalk from "acorn-walk";
-import { Diagnostic, DiagnosticSeverity, Range } from "vscode-languageserver";
+import { Diagnostic, Range } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { StoryFormatParsingState, capturePreSemanticTokenFor } from "..";
 import { DecorationType } from "../../client-server";
+import {
+    createDiagnostic,
+    createDiagnosticFor,
+    DiagnosticCodes,
+} from "../../diagnostics";
 import { EmbeddedDocument } from "../../embedded-languages";
 import {
     parseJSStrict,
@@ -13,26 +18,23 @@ import {
 } from "../../js-parser";
 import {
     ParsingState,
-    logWarningFor,
-    logErrorFor,
-    logSemanticTokenFor,
-    findAndParseLinks,
-    parsePassageReference,
-    createSymbolFor,
     createLocationFor,
+    createSymbolFor,
     findAndParseHtml,
+    findAndParseLinks,
+    logDiagnosticFor,
+    logSemanticTokenFor,
+    parsePassageReference,
     ParseLevel,
 } from "../../parser";
 import { ProjectIndex } from "../../project-index";
 import { ETokenType, ETokenModifier } from "../../semantic-tokens";
 import { Token } from "../../types";
 import {
-    skipSpaces,
     extractToMatchingDelimiter,
-    versionCompare,
-    createDiagnostic,
     hasOwnProperty,
-    createDiagnosticFor,
+    skipSpaces,
+    versionCompare,
 } from "../../utilities";
 import { InsertTokens, ModifierTokens, all as allInserts } from "./inserts";
 import { all as allModifiers } from "./modifiers";
@@ -47,6 +49,7 @@ import {
     OChapbookSymbolKind,
     ValueType,
 } from "./types";
+import { improveAcornErrorMessage } from "../../acorn-errors";
 
 const varsSepRegex = /^--(\r?\n|$)/m;
 const conditionRegex = /((\((.+?)\)?)\s*)([^)]*)$/;
@@ -142,11 +145,12 @@ function createVariableAndPropertyReferences(
         });
     }
     if (jsTokens.error) {
-        logErrorFor(
+        logDiagnosticFor(
+            DiagnosticCodes.IncorrectJavaScript,
             jsTokens.error.contents,
             jsTokens.error.at,
-            jsTokens.error.message,
             state,
+            jsTokens.error.message,
         );
     }
 }
@@ -379,9 +383,7 @@ function parseCustomFunctionArguments(
                 return;
 
             let errorNode: acorn.Node | undefined;
-            let errorMessage = ""; // Placeholder
-            const errorSeverity: DiagnosticSeverity =
-                DiagnosticSeverity.Warning;
+            let errorMessage: string | undefined;
 
             // Handle the sub-properties of firstArgument, optionalProps, and requiredProps
             if (
@@ -473,8 +475,8 @@ function parseCustomFunctionArguments(
                     parentProp === "requiredProps"
                 ) {
                     if (symbolKind === OChapbookSymbolKind.CustomModifier) {
-                        errorMessage = `${parentProp} are ignored for a custom modifier`;
                         errorNode = parentPropNode.key;
+                        errorMessage = `${parentProp} are ignored for a custom modifier`;
                     } else {
                         const props =
                             parentProp === "optionalProps"
@@ -565,10 +567,10 @@ function parseCustomFunctionArguments(
             if (errorNode !== undefined) {
                 state.callbacks.onParseError(
                     createDiagnostic(
-                        errorSeverity,
-                        state.textDocument,
+                        DiagnosticCodes.ChapbookBadArgument,
                         contentsIndex + errorNode.start,
                         contentsIndex + errorNode.end,
+                        state.textDocument,
                         errorMessage,
                     ),
                 );
@@ -631,7 +633,7 @@ function parseCustomInsertOrModifierDefinition(
         acornWalk.simple(ast, {
             Property(node) {
                 if (node.key.type === "Identifier") {
-                    // Arguments for a custom insert
+                    // Arguments for a custom insert/modifier
                     if (node.key.name === "arguments") {
                         const insertArguments = parseCustomFunctionArguments(
                             node.value,
@@ -666,11 +668,10 @@ function parseCustomInsertOrModifierDefinition(
                                 } else {
                                     state.callbacks.onParseError(
                                         createDiagnostic(
-                                            DiagnosticSeverity.Warning,
-                                            state.textDocument,
+                                            DiagnosticCodes.ChapbookIncorrectCompletions,
                                             contentsIndex + elem.start,
                                             contentsIndex + elem.end,
-                                            "Completions must be a string or an array of strings",
+                                            state.textDocument,
                                         ),
                                     );
                                 }
@@ -679,11 +680,10 @@ function parseCustomInsertOrModifierDefinition(
                         } else {
                             state.callbacks.onParseError(
                                 createDiagnostic(
-                                    DiagnosticSeverity.Warning,
-                                    state.textDocument,
+                                    DiagnosticCodes.ChapbookIncorrectCompletions,
                                     contentsIndex + node.value.start,
                                     contentsIndex + node.value.end,
-                                    "Completions must be a string or an array of strings",
+                                    state.textDocument,
                                 ),
                             );
                         }
@@ -715,15 +715,11 @@ function parseCustomInsertOrModifierDefinition(
                             state.callbacks.onParseError(
                                 createDiagnostic(
                                     isMatch
-                                        ? DiagnosticSeverity.Error
-                                        : DiagnosticSeverity.Warning,
-                                    state.textDocument,
+                                        ? DiagnosticCodes.ChapbookMatchIsNotRegex
+                                        : DiagnosticCodes.ChapbookPropertyIsNotString,
                                     contentsIndex + node.value.start,
                                     contentsIndex + node.value.end,
-                                    "Must be a " +
-                                        (isMatch
-                                            ? "regular expression"
-                                            : "string"),
+                                    state.textDocument,
                                 ),
                             );
                         }
@@ -744,10 +740,10 @@ function parseCustomInsertOrModifierDefinition(
             props.match.source.indexOf(" ") === -1 &&
             props.match.source.indexOf("\\s") === -1
         ) {
-            logErrorFor(
+            logDiagnosticFor(
+                DiagnosticCodes.ChapbookNoSpacesInCustomInsertMatch,
                 props.match.source,
                 props.matchIndex + 1 + contentsIndex, // + 1 to skip the leading "/"
-                "Custom inserts must have a space in their match",
                 state,
             );
         }
@@ -779,22 +775,22 @@ function parseCustomInsertOrModifierDefinition(
         state.callbacks.onSymbolDefinition(symbol);
     } catch (err) {
         if (err instanceof SyntaxError) {
-            const pos =
-                contentsIndex +
-                (hasOwnProperty(err, "pos") ? (err.pos as number) : 0);
-            const raisedAt =
-                contentsIndex +
-                (hasOwnProperty(err, "raisedAt")
-                    ? (err.raisedAt as number)
-                    : 0);
-            state.callbacks.onParseError(
-                createDiagnostic(
-                    DiagnosticSeverity.Error,
-                    state.textDocument,
-                    pos,
-                    raisedAt,
-                    err.message,
-                ),
+            const errMessage = improveAcornErrorMessage(
+                contents,
+                err as SyntaxError & {
+                    pos?: number;
+                    loc?: {
+                        line: number;
+                        column: number;
+                    };
+                },
+            );
+            logDiagnosticFor(
+                DiagnosticCodes.IncorrectJavaScript,
+                errMessage.contents,
+                errMessage.at,
+                state,
+                errMessage.message,
             );
         }
     }
@@ -825,45 +821,27 @@ function parseEngineExtension(
 
     // Make sure the story format meets the extension's required minimum version
     if (state.storyFormat?.formatVersion !== undefined) {
-        const minVersion = version.split(".").map((n) => parseInt(n, 10));
-        if (minVersion.includes(NaN)) {
-            logErrorFor(
-                version,
-                contentsIndex + 1,
-                "The extension's version must be a number like '2.0.0'",
-                state,
-            );
-            return;
-        }
-
-        const curVersion = state.storyFormat.formatVersion
-            .split(".")
-            .map((n) => parseInt(n, 10));
-
-        const end = Math.min(minVersion.length, curVersion.length);
-        let curIsGreater = false;
-        for (let ndx = 0; ndx < end; ++ndx) {
-            if (curVersion[ndx] < minVersion[ndx]) {
-                logWarningFor(
+        try {
+            const v = versionCompare(version, state.storyFormat.formatVersion);
+            if (v > 0) {
+                logDiagnosticFor(
+                    DiagnosticCodes.ChapbookStoryFormatVersionMismatch,
                     version,
                     contentsIndex + 1,
-                    `The current story format version is ${state.storyFormat.formatVersion}, so this extension will be ignored`,
                     state,
+                    `The current story format version is ${state.storyFormat.formatVersion}, so this extension will be ignored`,
                 );
                 return;
-            } else if (curVersion[ndx] > minVersion[ndx]) {
-                curIsGreater = true;
-                break;
             }
-        }
-
-        if (!curIsGreater && curVersion.length < minVersion.length) {
-            logWarningFor(
-                version,
-                contentsIndex + 1,
-                `The current story format version is ${state.storyFormat.formatVersion}, so this extension will be ignored`,
-                state,
-            );
+        } catch (e) {
+            if (e instanceof TypeError) {
+                logDiagnosticFor(
+                    DiagnosticCodes.ChapbookNonNumericEngineExtensionVersion,
+                    version,
+                    contentsIndex + 1,
+                    state,
+                );
+            }
             return;
         }
     }
@@ -894,10 +872,10 @@ function parseEngineExtension(
                 state,
             );
         } else {
-            logWarningFor(
+            logDiagnosticFor(
+                DiagnosticCodes.ChapbookUnknownEngineTemplateFunction,
                 `engine.template.${m[1]}`,
                 contentsIndex + m.index,
-                "Unrecognized engine template function",
                 state,
             );
         }
@@ -1038,32 +1016,36 @@ function validateFunctionVersion(
     const diagnostics: Diagnostic[] = [];
 
     if (storyFormatVersion !== undefined) {
-        if (
-            funcInfo.since !== undefined &&
-            versionCompare(storyFormatVersion, funcInfo.since) <= 0
-        ) {
-            diagnostics.push(
-                createDiagnosticFor(
-                    DiagnosticSeverity.Error,
-                    doc,
-                    text,
-                    at,
-                    `\`${funcInfo.name}\` isn't available until Chapbook version ${funcInfo.since} but your StoryFormat version is ${storyFormatVersion}`,
-                ),
-            );
-        } else if (
-            funcInfo.removed !== undefined &&
-            versionCompare(storyFormatVersion, funcInfo.removed) >= 0
-        ) {
-            diagnostics.push(
-                createDiagnosticFor(
-                    DiagnosticSeverity.Error,
-                    doc,
-                    text,
-                    at,
-                    `\`${funcInfo.name}\` was removed in Chapbook version ${funcInfo.removed} and your StoryFormat version is ${storyFormatVersion}`,
-                ),
-            );
+        try {
+            if (
+                funcInfo.since !== undefined &&
+                versionCompare(storyFormatVersion, funcInfo.since) <= 0
+            ) {
+                diagnostics.push(
+                    createDiagnosticFor(
+                        DiagnosticCodes.ChapbookFunctionNotAvailable,
+                        text,
+                        at,
+                        doc,
+                        `\`${funcInfo.name}\` isn't available until Chapbook version ${funcInfo.since} but your StoryFormat version is ${storyFormatVersion}`,
+                    ),
+                );
+            } else if (
+                funcInfo.removed !== undefined &&
+                versionCompare(storyFormatVersion, funcInfo.removed) >= 0
+            ) {
+                diagnostics.push(
+                    createDiagnosticFor(
+                        DiagnosticCodes.ChapbookFunctionNotAvailable,
+                        text,
+                        at,
+                        doc,
+                        `\`${funcInfo.name}\` was removed in Chapbook version ${funcInfo.removed} and your StoryFormat version is ${storyFormatVersion}`,
+                    ),
+                );
+            }
+        } catch {
+            // Ignore if the version is broken
         }
     }
 
@@ -1142,10 +1124,10 @@ export function validateFunctionAndFirstArgument(
     ) {
         diagnostics.push(
             createDiagnosticFor(
-                DiagnosticSeverity.Error,
-                doc,
+                DiagnosticCodes.ChapbookFunctionMissingFirstArgument,
                 name.text,
                 name.at,
+                doc,
                 `\`${funcInfo.name}\` requires a first argument`,
             ),
         );
@@ -1156,10 +1138,10 @@ export function validateFunctionAndFirstArgument(
     ) {
         diagnostics.push(
             createDiagnosticFor(
-                DiagnosticSeverity.Warning,
-                doc,
+                DiagnosticCodes.ChapbookFunctionWillIgnoreFirstArgument,
                 firstArgument.text,
                 firstArgument.at,
+                doc,
                 `\`${funcInfo.name}\` will ignore this first argument`,
             ),
         );
@@ -1213,10 +1195,10 @@ export function validateInsertContents(
             if (propInfo === undefined)
                 diagnostics.push(
                     createDiagnosticFor(
-                        DiagnosticSeverity.Warning,
-                        doc,
+                        DiagnosticCodes.ChapbookInsertIgnoredProperty,
                         propNameToken.text,
                         propNameToken.at,
+                        doc,
                         `Insert {${insert.name}} will ignore this property`,
                     ),
                 );
@@ -1228,10 +1210,10 @@ export function validateInsertContents(
     if (unseenProperties.length > 0) {
         diagnostics.push(
             createDiagnosticFor(
-                DiagnosticSeverity.Error,
-                doc,
+                DiagnosticCodes.ChapbookInsertMissingProperties,
                 tokens.name.text,
                 tokens.name.at,
+                doc,
                 `Insert {${insert.name}} missing expected properties: ${unseenProperties.join(", ")}`,
             ),
         );
@@ -1268,10 +1250,18 @@ function parseInsertContents(
 
     // Capture semantic tokens for the insert's info
     // We wait until here b/c the insert may be deprecated, which affects the insert name's semantic token
-    const deprecated =
-        state.storyFormat?.formatVersion !== undefined &&
-        insert?.deprecated !== undefined &&
-        versionCompare(state.storyFormat.formatVersion, insert.deprecated) <= 0;
+    let deprecated = false;
+    try {
+        deprecated =
+            state.storyFormat?.formatVersion !== undefined &&
+            insert?.deprecated !== undefined &&
+            versionCompare(
+                state.storyFormat.formatVersion,
+                insert.deprecated,
+            ) <= 0;
+    } catch {
+        // If the formatVersion is broken, assume it's not deprecated
+    }
     capturePreSemanticTokenFor(
         tokens.name.text,
         tokens.name.at,
@@ -1419,10 +1409,10 @@ export function tokenizeInsert(
             // Properties can't have spaces bee tee dubs
             const spaceIndex = currentProperty.lastIndexOf(" ");
             if (spaceIndex !== -1 && state !== undefined) {
-                logErrorFor(
+                logDiagnosticFor(
+                    DiagnosticCodes.ChapbookNoSpacesInInsertProperty,
                     currentProperty,
                     insertIndex + currentPropertyIndex,
-                    "Properties can't have spaces",
                     state,
                 );
             }
@@ -1500,10 +1490,10 @@ function parseInsertOrVariable(
         // Variables only allow array dereferencing at the end
         const bracketMatch = /(\[.+\])\S+/.exec(invocation);
         if (bracketMatch !== null) {
-            logErrorFor(
+            logDiagnosticFor(
+                DiagnosticCodes.ChapbookNoArrayDeferencingMidExpression,
                 bracketMatch[1],
                 insertIndex + invocationIndex + bracketMatch.index,
-                "Array dereferencing can only be at the end (that is, myVar[2] is okay but myVar[2].color isn't)",
                 state,
             );
         }
@@ -1803,13 +1793,18 @@ function parseModifier(
 
         // Tokenize the first token as a macro, unless the modifier is a note.
         // Also capture whether or not the modifier is deprecated.
-        const deprecated =
-            state.storyFormat?.formatVersion !== undefined &&
-            modifier?.deprecated !== undefined &&
-            versionCompare(
-                state.storyFormat.formatVersion,
-                modifier.deprecated,
-            ) <= 0;
+        let deprecated = false;
+        try {
+            deprecated =
+                state.storyFormat?.formatVersion !== undefined &&
+                modifier?.deprecated !== undefined &&
+                versionCompare(
+                    state.storyFormat.formatVersion,
+                    modifier.deprecated,
+                ) <= 0;
+        } catch {
+            // Ignore if formatVersion is broken
+        }
         capturePreSemanticTokenFor(
             modifierTokens.name.text,
             modifierTokens.name.at,
@@ -1991,19 +1986,19 @@ function parseTextSection(
 
         // Check for spaces before/after the modifier, which causes Chapbook to ignore them
         if (m[1] !== "") {
-            logErrorFor(
+            logDiagnosticFor(
+                DiagnosticCodes.ChapbookNoSpacesBeforeModifiers,
                 m[1],
                 sectionIndex + m.index,
-                "Modifiers can't have spaces before them",
                 state,
             );
         }
         if (m[3] !== "") {
             // The +2 in the index is for the modifier's two brackets ([])
-            logErrorFor(
+            logDiagnosticFor(
+                DiagnosticCodes.ChapbookNoSpacesAfterModifiers,
                 m[3],
                 sectionIndex + m.index + 2 + m[1].length + m[2].length,
-                "Modifiers can't have spaces after them",
                 state,
             );
         }
@@ -2168,10 +2163,10 @@ function parseVarsSection(
         const colonIndex = m[2].indexOf(":");
         // If the colon is missing, the entire line will be ignored
         if (colonIndex === -1) {
-            logWarningFor(
+            logDiagnosticFor(
+                DiagnosticCodes.ChapbookMissingColon,
                 m[0],
                 sectionIndex + m.index,
-                "Missing colon; this line will be ignored",
                 state,
             );
             continue;
@@ -2188,12 +2183,12 @@ function parseVarsSection(
 
             // Make sure the condition ends in a closing parenthesis
             if (conditionMatch[2].slice(-1) !== ")") {
-                logErrorFor(
+                logDiagnosticFor(
+                    DiagnosticCodes.MissingCloseParen,
                     "",
                     sectionIndex +
                         conditionMatchIndex +
                         conditionMatch[0].length,
-                    "Missing a close parenthesis",
                     state,
                 );
             } else {
@@ -2212,12 +2207,12 @@ function parseVarsSection(
 
                 // Check for ignored text
                 if (conditionMatch[4] !== "") {
-                    logWarningFor(
+                    logDiagnosticFor(
+                        DiagnosticCodes.ChapbookIgnoredText,
                         conditionMatch[4].trimEnd(),
                         sectionIndex +
                             conditionMatchIndex +
                             conditionMatch[1].length,
-                        "This will be ignored",
                         state,
                     );
                 }
@@ -2227,10 +2222,10 @@ function parseVarsSection(
         // Make sure the name has no spaces
         const spaceMatch = /\s+/.exec(name);
         if (spaceMatch !== null) {
-            logErrorFor(
+            logDiagnosticFor(
+                DiagnosticCodes.ChapbookNoSpacesInVariableNames,
                 spaceMatch[0],
                 sectionIndex + nameIndex + spaceMatch.index,
-                "Variable names can't have spaces",
                 state,
             );
             name = name.slice(0, spaceMatch.index);

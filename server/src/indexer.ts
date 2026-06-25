@@ -1,14 +1,15 @@
-import { Diagnostic, DiagnosticSeverity, Range } from "vscode-languageserver";
+import { Diagnostic, Range } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { DecorationRange } from "./client-server";
+import { createDiagnosticFromRange, DiagnosticCodes } from "./diagnostics";
 import { EmbeddedDocument } from "./embedded-languages";
 import {
     Passage,
     ProjectIndex,
+    ProjSymbol,
     References,
     StoryData,
-    ProjSymbol,
 } from "./project-index";
 import { ParseLevel, ParserCallbacks, parse } from "./parser";
 import { SemanticToken } from "./semantic-tokens";
@@ -72,12 +73,9 @@ export function updateProjectIndex(
         onStoryTitle: function (title: string, range: Range): void {
             if (index.getStoryTitle() !== undefined) {
                 this.onParseError(
-                    Diagnostic.create(
+                    createDiagnosticFromRange(
+                        DiagnosticCodes.ReplacesStoryTitle,
                         range,
-                        "This replaces an existing StoryTitle. Is that intentional?",
-                        DiagnosticSeverity.Warning,
-                        undefined,
-                        "Twine",
                     ),
                 );
             } else {
@@ -87,12 +85,9 @@ export function updateProjectIndex(
         onStoryData: function (data: StoryData, range: Range): void {
             if (index.getStoryData() !== undefined) {
                 this.onParseError(
-                    Diagnostic.create(
+                    createDiagnosticFromRange(
+                        DiagnosticCodes.ReplacesStoryData,
                         range,
-                        "This replaces existing StoryData. Is that intentional?",
-                        DiagnosticSeverity.Warning,
-                        undefined,
-                        "Twine",
                     ),
                 );
             } else {

@@ -1,6 +1,6 @@
-import { Diagnostic, DiagnosticSeverity } from "vscode-languageserver";
+import { createDiagnosticFromRange, DiagnosticCodes } from "../../diagnostics";
 import { TokenizedJS } from "../../js-parser";
-import { logErrorFor, ParsingState } from "../../parser";
+import { logDiagnosticFor, ParsingState } from "../../parser";
 import { positionInRange } from "../../utilities";
 import { SugarCubeParsingState } from "./sugarcube-parser";
 import { builtinVars, builtInVarsAndProperties } from "./sugarcube-variables";
@@ -41,12 +41,10 @@ export function createVariableAndPropertyReferences(
                 )
             ) {
                 state.callbacks.onParseError(
-                    Diagnostic.create(
+                    createDiagnosticFromRange(
+                        DiagnosticCodes.SugarCubeUnexpectedWidgetVariable,
                         v.location.range,
                         `${v.contents} typically only exists inside <<widget>> macros. If this variable name is correct, consider renaming it.`,
-                        DiagnosticSeverity.Warning,
-                        undefined,
-                        "Twine",
                     ),
                 );
             }
@@ -126,11 +124,12 @@ export function createVariableAndPropertyReferences(
             });
     }
     if (jsTokens.error) {
-        logErrorFor(
+        logDiagnosticFor(
+            DiagnosticCodes.IncorrectJavaScript,
             jsTokens.error.contents,
             jsTokens.error.at,
-            jsTokens.error.message,
             state,
+            jsTokens.error.message,
         );
     }
 }

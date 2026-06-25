@@ -3,8 +3,9 @@
  * as well as Twee3-Language-Tools's `arguments.ts`
  */
 
+import { DiagnosticCodes } from "../../../diagnostics";
 import {
-    logErrorFor,
+    logDiagnosticFor,
     parsePassageReference,
     ParsingState,
 } from "../../../parser";
@@ -147,7 +148,13 @@ export function parseSugarCubeTwineLink(
             );
         }
     } else if (error !== undefined) {
-        logErrorFor(error.text, error.at + textIndex, error.message, state);
+        logDiagnosticFor(
+            DiagnosticCodes.SugarCubeIncorrectTwineLink,
+            error.text,
+            error.at + textIndex,
+            state,
+            error.message,
+        );
     }
 
     return markupData;

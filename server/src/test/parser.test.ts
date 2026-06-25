@@ -1335,13 +1335,13 @@ describe("Server Twine Parser", () => {
 
                     expect(callbacks.errors.length).to.equal(2);
                     expect(callbacks.errors[0].message).to.include(
-                        "Passage names can't include ] without a \\ in front of it",
+                        "Passage names can't include } or ] without a \\ in front of it",
                     );
                     expect(callbacks.errors[0].range).to.eql(
                         Range.create(0, 11, 0, 12),
                     );
                     expect(callbacks.errors[1].message).to.include(
-                        "Passage names can't include } without a \\ in front of it",
+                        "Passage names can't include } or ] without a \\ in front of it",
                     );
                     expect(callbacks.errors[1].range).to.eql(
                         Range.create(0, 15, 0, 16),

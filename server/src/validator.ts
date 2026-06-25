@@ -1,10 +1,10 @@
 import {
     Diagnostic,
     DiagnosticRelatedInformation,
-    DiagnosticSeverity,
 } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
+import { createDiagnosticFromRange, DiagnosticCodes } from "./diagnostics";
 import { doValidation } from "./embedded-languages";
 import { ProjectIndex, TwineSymbolKind } from "./project-index";
 import { getStoryFormatParser } from "./passage-text-parsers";
@@ -48,21 +48,17 @@ function validatePassages(
             ) {
                 otherPassage = matchingPassages[1];
             }
-            diagnostics.push(
-                Diagnostic.create(
-                    passage.name.location.range,
-                    `Passage "${passage.name.contents}" was defined elsewhere`,
-                    DiagnosticSeverity.Warning,
-                    undefined,
-                    "Twine",
-                    [
-                        DiagnosticRelatedInformation.create(
-                            otherPassage.name.location,
-                            `Other creation of passage "${passage.name.contents}"`,
-                        ),
-                    ],
-                ),
+            const diagnostic = createDiagnosticFromRange(
+                DiagnosticCodes.MultiplePassageDefinitions,
+                passage.name.location.range,
             );
+            diagnostic.relatedInformation = [
+                DiagnosticRelatedInformation.create(
+                    otherPassage.name.location,
+                    `Other creation of passage "${passage.name.contents}"`,
+                ),
+            ];
+            diagnostics.push(diagnostic);
         }
     }
 
@@ -92,12 +88,9 @@ function validatePassageReferences(
             if (!names.includes(ref.contents)) {
                 for (const loc of ref.locations) {
                     diagnostics.push(
-                        Diagnostic.create(
+                        createDiagnosticFromRange(
+                            DiagnosticCodes.MissingPassage,
                             loc.range,
-                            `Cannot find passage '${ref.contents}'`,
-                            DiagnosticSeverity.Warning,
-                            undefined,
-                            "Twine",
                         ),
                     );
                 }

@@ -145,13 +145,17 @@ export namespace ChapbookFunctionInfo {
         info: ChapbookFunctionInfo,
         version: string,
     ): boolean {
-        if (info.since === undefined) return true;
-        if (info.removed === undefined)
-            return versionCompare(version, info.since) >= 0;
-        return (
-            versionCompare(version, info.since) >= 0 &&
-            versionCompare(version, info.removed) < 0
-        );
+        try {
+            if (info.since === undefined) return true;
+            if (info.removed === undefined)
+                return versionCompare(version, info.since) >= 0;
+            return (
+                versionCompare(version, info.since) >= 0 &&
+                versionCompare(version, info.removed) < 0
+            );
+        } catch {
+            return true; // If the version is broken, just assume it's available
+        }
     }
     /**
      * Is a function deprecated in a given Chapbook version?
@@ -165,7 +169,11 @@ export namespace ChapbookFunctionInfo {
         version: string,
     ): boolean {
         if (info.deprecated === undefined) return false;
-        return versionCompare(version, info.deprecated) >= 0;
+        try {
+            return versionCompare(version, info.deprecated) >= 0;
+        } catch {
+            return false; // If the version is broken, just assume it's not deprecated
+        }
     }
 }
 

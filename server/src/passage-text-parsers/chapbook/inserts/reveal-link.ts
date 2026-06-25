@@ -1,4 +1,5 @@
-import { logErrorFor, logWarningFor } from "../../../parser";
+import { DiagnosticCodes } from "../../../diagnostics";
+import { logDiagnosticFor } from "../../../parser";
 import { ArgumentRequirement, ValueType } from "../types";
 import { InsertInfo } from "./types";
 
@@ -25,18 +26,18 @@ export const revealLink: InsertInfo = {
         // the text property wins out.
         if (textProp !== undefined) {
             if (passageProp !== undefined) {
-                logWarningFor(
+                logDiagnosticFor(
+                    DiagnosticCodes.ChapbookRevealLinkIgnorePassageProperty,
                     passageProp[0].text,
                     passageProp[0].at,
-                    'The "passage" property will be ignored',
                     state,
                 );
             }
         } else if (passageProp === undefined) {
-            logErrorFor(
+            logDiagnosticFor(
+                DiagnosticCodes.ChapbookRevealLinkMissingProperty,
                 args.name.text,
                 args.name.at,
-                'Either the "passage" or "text" property must be defined',
                 state,
             );
         }

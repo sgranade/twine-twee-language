@@ -133,7 +133,7 @@ describe("Validator", () => {
 
             expect(result.length).to.equal(2);
             expect(result[0].message).to.contain(
-                'Passage "Passage 1a" was defined elsewhere',
+                "This passage was defined elsewhere",
             );
             expect(result[0].relatedInformation).to.not.be.undefined;
             if (result[0].relatedInformation !== undefined) {
@@ -142,7 +142,7 @@ describe("Validator", () => {
                 );
             }
             expect(result[1].message).to.contain(
-                'Passage "Passage 1a" was defined elsewhere',
+                "This passage was defined elsewhere",
             );
             expect(result[1].relatedInformation).to.not.be.undefined;
             if (result[1].relatedInformation !== undefined) {
@@ -191,7 +191,7 @@ describe("Validator", () => {
 
             expect(result.length).to.equal(1);
             expect(result[0].message).to.contain(
-                'Passage "Passage 1b" was defined elsewhere',
+                "This passage was defined elsewhere",
             );
             expect(result[0].relatedInformation).to.not.be.undefined;
             if (result[0].relatedInformation !== undefined) {
@@ -228,9 +228,7 @@ describe("Validator", () => {
             );
 
             expect(result.length).to.equal(1);
-            expect(result[0].message).to.contain(
-                "Cannot find passage 'Non-existent passage'",
-            );
+            expect(result[0].message).to.contain("Cannot find this passage");
         });
 
         it("should not flag passage references that aren't in the index if that warning is disabled in options", async () => {

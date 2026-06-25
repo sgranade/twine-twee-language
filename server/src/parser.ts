@@ -1,12 +1,12 @@
-import {
-    Diagnostic,
-    DiagnosticSeverity,
-    Location,
-    Range,
-} from "vscode-languageserver";
+import { Diagnostic, Location, Range } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { DecorationRange, StoryFormat } from "./client-server";
+import {
+    createDiagnosticFor,
+    DiagnosticCode,
+    DiagnosticCodes,
+} from "./diagnostics";
 import {
     EmbeddedDocument,
     headerMetadataJSONUri,
@@ -17,8 +17,8 @@ import {
     Label,
     Passage,
     PassageMetadata,
-    StoryData,
     ProjSymbol,
+    StoryData,
     TwineSymbolKind,
 } from "./project-index";
 import {
@@ -44,7 +44,6 @@ import {
     defaultDiagnosticsOptions,
 } from "./server-options";
 import {
-    createDiagnosticFor,
     nextLineIndex,
     pairwise,
     removeAndCountPadding,
@@ -180,53 +179,15 @@ export function createSymbolFor(
     };
 }
 
-/**
- * Log an error associated with text in a document.
- *
- * @param text Document text that has the error.
- * @param at Index where the text occurs in the document (zero-based).
- * @param message Error message.
- * @param doc Text document.
- */
-export function logErrorFor(
+export function logDiagnosticFor(
+    code: DiagnosticCode,
     text: string,
     at: number,
-    message: string,
     state: ParsingState,
+    message?: string,
 ): void {
     state.callbacks.onParseError(
-        createDiagnosticFor(
-            DiagnosticSeverity.Error,
-            state.textDocument,
-            text,
-            at,
-            message,
-        ),
-    );
-}
-
-/**
- * Log a warning associated with text in a document.
- *
- * @param text Document text that has the error.
- * @param at Index where the text occurs in the document (zero-based).
- * @param message Error message.
- * @param state Parsing state.
- */
-export function logWarningFor(
-    text: string,
-    at: number,
-    message: string,
-    state: ParsingState,
-): void {
-    state.callbacks.onParseError(
-        createDiagnosticFor(
-            DiagnosticSeverity.Warning,
-            state.textDocument,
-            text,
-            at,
-            message,
-        ),
+        createDiagnosticFor(code, text, at, state.textDocument, message),
     );
 }
 
@@ -591,10 +552,10 @@ function parsePassageHeader(
         if (m[0] === "[") {
             const tagMatch = tagRegex.exec(unparsedHeader);
             if (tagMatch === null) {
-                logErrorFor(
+                logDiagnosticFor(
+                    DiagnosticCodes.IncorrectPassageTagFormat,
                     unparsedHeader,
                     parsingIndex,
-                    "Tags aren't formatted correctly. Are you missing a ']'?",
                     state,
                 );
                 unparsedHeader = "";
@@ -624,10 +585,10 @@ function parsePassageHeader(
         if (m !== null && m[0] === "{") {
             const metaMatch = metadataRegex.exec(unparsedHeader);
             if (metaMatch === null) {
-                logErrorFor(
+                logDiagnosticFor(
+                    DiagnosticCodes.IncorrectPassageMetadataFormat,
                     unparsedHeader,
                     parsingIndex,
-                    "Metadata isn't formatted correctly. Are you missing a '}'?",
                     state,
                 );
                 unparsedHeader = "";
@@ -648,17 +609,19 @@ function parsePassageHeader(
         // Is there a tag section after the metadata?
         const misplacedTagMatch = /(?<!\\)\[.*?(?<!\\)\]/.exec(unparsedHeader);
         if (misplacedTagMatch !== null) {
-            logErrorFor(
+            logDiagnosticFor(
+                DiagnosticCodes.PassageTagsAfterMetadata,
                 misplacedTagMatch[0],
                 parsingIndex + misplacedTagMatch.index,
-                "Tags need to come before metadata.",
                 state,
             );
         } else {
-            logErrorFor(
+            logDiagnosticFor(
+                metadata !== undefined
+                    ? DiagnosticCodes.PassageHeaderTextAfterMetadata
+                    : DiagnosticCodes.PassageHeaderTextAfterTags,
                 unparsedHeader,
                 parsingIndex,
-                `Passage headers can't have text after ${metadata !== undefined ? "metadata" : "tags"}`,
                 state,
             );
         }
@@ -668,10 +631,10 @@ function parsePassageHeader(
     // (No need to check for tag/block opening characters, as they'll be processed above.)
     closeMetaCharRegex.lastIndex = 0;
     for (const closeMatch of name.matchAll(closeMetaCharRegex)) {
-        logErrorFor(
+        logDiagnosticFor(
+            DiagnosticCodes.PassageNameWithClosingCharacter,
             closeMatch[0],
             headerStartIndex + closeMatch.index,
-            `Passage names can't include ${closeMatch[0]} without a \\ in front of it.`,
             state,
         );
     }

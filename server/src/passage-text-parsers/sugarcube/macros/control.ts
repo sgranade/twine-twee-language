@@ -1,17 +1,17 @@
 import {
     DiagnosticRelatedInformation,
-    DiagnosticSeverity,
     Location,
     Range,
 } from "vscode-languageserver";
 
+import { createDiagnosticFor, DiagnosticCodes } from "../../../diagnostics";
 import { TokenizedJS } from "../../../js-parser";
-import { logErrorFor } from "../../../parser";
-import { createDiagnosticFor, skipSpaces } from "../../../utilities";
+import { logDiagnosticFor } from "../../../parser";
+import { skipSpaces } from "../../../utilities";
 import { MacroLocationInfo } from "../sugarcube-parser";
+import { createVariableAndPropertyReferences } from "../sugarcube-utils";
 import { forMacroIsRange, forMacroRangeFormat } from "../sc2/sc2-patterns";
 import { tokenizeTwineScriptExpression } from "../sc2/sc2-twinescript";
-import { createVariableAndPropertyReferences } from "../sugarcube-utils";
 import { MacroInfo, parseArgsAsTwineScriptExpression } from "./types";
 
 export const ifMacro: MacroInfo = {
@@ -36,11 +36,10 @@ export const ifMacro: MacroInfo = {
             for (let i = elseifIndex! - 1; i >= 0; --i) {
                 if (children[i].name === "else") {
                     const diagnostic = createDiagnosticFor(
-                        DiagnosticSeverity.Error,
-                        state.textDocument,
+                        DiagnosticCodes.SugarCubeElseIfAfterElse,
                         elseifMacro.fullText,
                         elseifMacro.at,
-                        "<<elseif>> can't come after an <<else>>",
+                        state.textDocument,
                     );
                     diagnostic.relatedInformation = [
                         DiagnosticRelatedInformation.create(
@@ -112,10 +111,10 @@ export const forMacro: MacroInfo = {
             // Range form
             const m = args.match(forMacroRangeFormatRegex);
             if (m === null) {
-                logErrorFor(
+                logDiagnosticFor(
+                    DiagnosticCodes.SugarCubeIncorrectRangeSyntax,
                     args,
                     argsIndex,
-                    "Range format syntax is `[[index,] value] range collection`",
                     state,
                 );
             } else {
@@ -183,11 +182,12 @@ export const forMacro: MacroInfo = {
                 // Make sure they didn't accidentally use "for x in y" or "for x of y" syntax
                 const m = args.match(forMacroInOfRegex);
                 if (m !== null) {
-                    logErrorFor(
+                    logDiagnosticFor(
+                        DiagnosticCodes.SugarCubeNoForInOf,
                         args,
                         argsIndex + (m.index ?? 0),
-                        `\`for...${m[1]}\` syntax isn't supported; try \`for...range\``,
                         state,
+                        `\`for...${m[1]}\` syntax isn't supported; try \`for...range\``,
                     );
                     return true; // Bail out
                 }
