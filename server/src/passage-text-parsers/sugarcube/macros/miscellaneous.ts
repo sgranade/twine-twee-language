@@ -2,7 +2,7 @@ import {
     createDiagnosticFromRange,
     DiagnosticCodes,
 } from "../../../diagnostics";
-import { createLocationFor } from "../../../parser";
+import { createLocationFor, logRawDiagnostic } from "../../../parser";
 import { ETokenModifier, ETokenType } from "../../../semantic-tokens";
 import { capturePreSemanticTokenFor } from "../..";
 import { OSugarCubeSymbolKind, SugarCubeSymbol } from "../types";
@@ -83,11 +83,12 @@ export const widgetMacro: MacroInfo = {
                 ?.map((l) => l.contents)
                 .includes("widget")
         ) {
-            state.callbacks.onParseError(
+            logRawDiagnostic(
                 createDiagnosticFromRange(
                     DiagnosticCodes.SugarCubeMissingWidgetTag,
                     state.currentPassage.name.location.range,
                 ),
+                state,
             );
         }
 

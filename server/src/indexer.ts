@@ -2,7 +2,12 @@ import { Diagnostic, Range } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { DecorationRange } from "./client-server";
-import { createDiagnosticFromRange, DiagnosticCodes } from "./diagnostics";
+import {
+    createDiagnosticFromRange,
+    DiagnosticCode,
+    DiagnosticCodes,
+    DiagnosticMap,
+} from "./diagnostics";
 import { EmbeddedDocument } from "./embedded-languages";
 import {
     Passage,
@@ -32,6 +37,7 @@ class IndexingState {
     foldingRanges: Range[] = [];
     decorationRanges: DecorationRange[] = [];
     embeddedDocuments: EmbeddedDocument[] = [];
+    disabledDiagnosticsRanges: DiagnosticMap<Range[]> = {};
 
     constructor(textDocument: TextDocument) {
         this.textDocument = textDocument;
@@ -109,6 +115,15 @@ export function updateProjectIndex(
         onParseError: function (error: Diagnostic): void {
             indexingState.parseErrors.push(error);
         },
+        onDisabledDiagnosticRange: function (
+            code: DiagnosticCode,
+            range: Range,
+        ): void {
+            const disabledRanges =
+                indexingState.disabledDiagnosticsRanges[code] ?? [];
+            disabledRanges.push(range);
+            indexingState.disabledDiagnosticsRanges[code] = disabledRanges;
+        },
     };
 
     parse(
@@ -141,4 +156,8 @@ export function updateProjectIndex(
     index.setFoldingRanges(uri, indexingState.foldingRanges);
     index.setDecorationRanges(uri, indexingState.decorationRanges);
     index.setParseErrors(uri, indexingState.parseErrors);
+    index.setDisabledDiagnosticRanges(
+        uri,
+        indexingState.disabledDiagnosticsRanges,
+    );
 }

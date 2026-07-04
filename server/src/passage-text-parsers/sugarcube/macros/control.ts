@@ -6,7 +6,7 @@ import {
 
 import { createDiagnosticFor, DiagnosticCodes } from "../../../diagnostics";
 import { TokenizedJS } from "../../../js-parser";
-import { logDiagnosticFor } from "../../../parser";
+import { logDiagnosticFor, logRawDiagnostic } from "../../../parser";
 import { skipSpaces } from "../../../utilities";
 import { MacroLocationInfo } from "../sugarcube-parser";
 import { createVariableAndPropertyReferences } from "../sugarcube-utils";
@@ -58,7 +58,7 @@ export const ifMacro: MacroInfo = {
                             "The <<else>> before this <<elseif>>",
                         ),
                     ];
-                    state.callbacks.onParseError(diagnostic);
+                    logRawDiagnostic(diagnostic, state);
                 }
             }
         }

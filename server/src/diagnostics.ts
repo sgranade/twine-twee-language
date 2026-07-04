@@ -1,5 +1,12 @@
-import { DiagnosticSeverity, Diagnostic, Range } from "vscode-languageserver";
+import {
+    DiagnosticSeverity,
+    Diagnostic,
+    Location,
+    Range,
+} from "vscode-languageserver";
 import type { TextDocument } from "vscode-languageserver-textdocument";
+
+import { Label } from "./project-index";
 
 /**
  * Metadata for diagnostic.
@@ -13,6 +20,13 @@ interface DiagnosticMetadata {
      * Diagnostic severity. If omitted, `DiagnosticSeverity.Error` is used.
      */
     severity?: DiagnosticSeverity;
+}
+
+/**
+ * Twine diagnostic.
+ */
+export interface TwineDiagnostic extends Diagnostic {
+    code: DiagnosticCode;
 }
 
 /**
@@ -31,6 +45,7 @@ export const DiagnosticCodes = {
     PassageTagsAfterMetadata: "passage-tags-after-metadata",
     ReplacesStoryData: "replaces-story-data",
     ReplacesStoryTitle: "replaces-story-title",
+    UnrecognizedDiagnosticCode: "unrecognized-diagnostic-code",
     VariableNeverSet: "variable-never-set",
     // Chapbook
     ChapbookBadArgument: "bad-argument",
@@ -98,18 +113,26 @@ export const DiagnosticCodes = {
     SugarCubeVariableNeverSet: "sugarcube-variable-never-set",
 } as const;
 
+// A set of the codes for quick lookup
+export const diagnosticCodeSet = new Set(Object.values(DiagnosticCodes));
+function isDiagnosticCode(code: string): code is DiagnosticCode {
+    return diagnosticCodeSet.has(code as DiagnosticCode);
+}
+
 export type DiagnosticCode =
     (typeof DiagnosticCodes)[keyof typeof DiagnosticCodes];
 
+export type DiagnosticMap<T> = Partial<Record<DiagnosticCode, T>>;
+
 const DiagnosticMetadata: Record<DiagnosticCode, DiagnosticMetadata> = {
     [DiagnosticCodes.IncorrectJavaScript]: {
-        message: "Incorrect JavaScript.",
+        message: "Incorrect JavaScript",
     },
     [DiagnosticCodes.IncorrectPassageMetadataFormat]: {
-        message: "Metadata isn't formatted correctly. Are you missing a '}'?",
+        message: "Metadata isn't formatted correctly; are you missing a '}'?",
     },
     [DiagnosticCodes.IncorrectPassageTagFormat]: {
-        message: "Tags aren't formatted correctly. Are you missing a ']'?",
+        message: "Tags aren't formatted correctly; are you missing a ']'?",
     },
     [DiagnosticCodes.MissingCloseParen]: {
         message: "Missing a close parenthesis",
@@ -130,17 +153,21 @@ const DiagnosticMetadata: Record<DiagnosticCode, DiagnosticMetadata> = {
     },
     [DiagnosticCodes.PassageNameWithClosingCharacter]: {
         message:
-            "Passage names can't include } or ] without a \\ in front of it.",
+            "Passage names can't include } or ] without a \\ in front of it",
     },
     [DiagnosticCodes.PassageTagsAfterMetadata]: {
-        message: "Tags need to come before metadata.",
+        message: "Tags need to come before metadata",
     },
     [DiagnosticCodes.ReplacesStoryData]: {
-        message: "This replaces existing StoryData. Is that intentional?",
+        message: "This replaces existing StoryData; is that intentional?",
         severity: DiagnosticSeverity.Warning,
     },
     [DiagnosticCodes.ReplacesStoryTitle]: {
-        message: "This replaces an existing StoryTitle. Is that intentional?",
+        message: "This replaces an existing StoryTitle; is that intentional?",
+        severity: DiagnosticSeverity.Warning,
+    },
+    [DiagnosticCodes.UnrecognizedDiagnosticCode]: {
+        message: "Unrecognized diagnostic code",
         severity: DiagnosticSeverity.Warning,
     },
     [DiagnosticCodes.VariableNeverSet]: {
@@ -363,6 +390,49 @@ const DiagnosticMetadata: Record<DiagnosticCode, DiagnosticMetadata> = {
 };
 
 /**
+ * Get a list of diagnostics from passage tags that should be disabled.
+ *
+ * Diagnostics are disabled using `[tt3-disable diagnostic1,diagnostic2...]`
+ *
+ * @param tags List of passage tag labels.
+ * @returns Diagnostic codes that should be disabled, and ones that weren't recognized.
+ */
+export function disabledDiagnosticsFromPassageTagLabels(
+    tags: Label[],
+): [Set<DiagnosticCode>, Label[]] {
+    const disabledCodes = new Set<DiagnosticCode>();
+    const unrecognizedCodes: Label[] = [];
+    const ndx = tags.findIndex((x) => x.contents === "tt3-disable");
+    if (ndx !== -1 && tags[ndx + 1] !== undefined) {
+        const codeTag = tags[ndx + 1];
+        const codeTagStartLine = codeTag.location.range.start.line;
+        const codeTagStartCharacter = codeTag.location.range.start.character;
+        for (const disabledCode of codeTag.contents.split(",")) {
+            if (isDiagnosticCode(disabledCode)) {
+                disabledCodes.add(disabledCode);
+            } else {
+                const offset = codeTag.contents.indexOf(disabledCode);
+                unrecognizedCodes.push({
+                    contents: disabledCode,
+                    location: Location.create(
+                        codeTag.location.uri,
+                        Range.create(
+                            codeTagStartLine,
+                            codeTagStartCharacter + offset,
+                            codeTagStartLine,
+                            codeTagStartCharacter +
+                                offset +
+                                disabledCode.length,
+                        ),
+                    ),
+                });
+            }
+        }
+    }
+    return [disabledCodes, unrecognizedCodes];
+}
+
+/**
  * Create a diagnostic message.
  *
  * Pass start and end locations as 0-based indexes into the document's text.
@@ -379,8 +449,8 @@ export function createDiagnostic(
     end: number,
     textDocument: TextDocument,
     message?: string,
-): Diagnostic {
-    const diagnostic: Diagnostic = {
+): TwineDiagnostic {
+    const diagnostic: TwineDiagnostic = {
         code: code,
         severity: DiagnosticMetadata[code].severity ?? DiagnosticSeverity.Error,
         range: {
@@ -405,8 +475,8 @@ export function createDiagnosticFromRange(
     code: DiagnosticCode,
     range: Range,
     message?: string,
-): Diagnostic {
-    const diagnostic: Diagnostic = {
+): TwineDiagnostic {
+    const diagnostic: TwineDiagnostic = {
         code: code,
         severity: DiagnosticMetadata[code].severity ?? DiagnosticSeverity.Error,
         range: range,
@@ -427,7 +497,6 @@ export function createDiagnosticFromRange(
  * @param at Location in the document of the text.
  * @param textDocument Document to which the diagnostic applies.
  * @param message Diagnostic message to override the default message associated with the code.
- * @returns
  */
 export function createDiagnosticFor(
     code: DiagnosticCode,
@@ -435,6 +504,6 @@ export function createDiagnosticFor(
     at: number,
     textDocument: TextDocument,
     message?: string,
-): Diagnostic {
+): TwineDiagnostic {
     return createDiagnostic(code, at, at + text.length, textDocument, message);
 }

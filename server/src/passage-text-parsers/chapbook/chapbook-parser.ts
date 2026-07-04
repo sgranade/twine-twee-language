@@ -1,14 +1,14 @@
 import * as acorn from "acorn";
 import * as acornWalk from "acorn-walk";
-import { Diagnostic, Range } from "vscode-languageserver";
+import { Range } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { StoryFormatParsingState, capturePreSemanticTokenFor } from "..";
 import { DecorationType } from "../../client-server";
 import {
-    createDiagnostic,
     createDiagnosticFor,
     DiagnosticCodes,
+    TwineDiagnostic,
 } from "../../diagnostics";
 import { EmbeddedDocument } from "../../embedded-languages";
 import {
@@ -17,15 +17,17 @@ import {
     tokenizeJavaScript,
 } from "../../js-parser";
 import {
+    ParseLevel,
     ParsingState,
     createLocationFor,
     createSymbolFor,
     findAndParseHtml,
     findAndParseLinks,
+    logDiagnostic,
     logDiagnosticFor,
+    logRawDiagnostic,
     logSemanticTokenFor,
     parsePassageReference,
-    ParseLevel,
 } from "../../parser";
 import { ProjectIndex } from "../../project-index";
 import { ETokenType, ETokenModifier } from "../../semantic-tokens";
@@ -565,14 +567,12 @@ function parseCustomFunctionArguments(
             }
 
             if (errorNode !== undefined) {
-                state.callbacks.onParseError(
-                    createDiagnostic(
-                        DiagnosticCodes.ChapbookBadArgument,
-                        contentsIndex + errorNode.start,
-                        contentsIndex + errorNode.end,
-                        state.textDocument,
-                        errorMessage,
-                    ),
+                logDiagnostic(
+                    DiagnosticCodes.ChapbookBadArgument,
+                    contentsIndex + errorNode.start,
+                    contentsIndex + errorNode.end,
+                    state,
+                    errorMessage,
                 );
             }
         },
@@ -666,25 +666,21 @@ function parseCustomInsertOrModifierDefinition(
                                 ) {
                                     completions.push(elem.value);
                                 } else {
-                                    state.callbacks.onParseError(
-                                        createDiagnostic(
-                                            DiagnosticCodes.ChapbookIncorrectCompletions,
-                                            contentsIndex + elem.start,
-                                            contentsIndex + elem.end,
-                                            state.textDocument,
-                                        ),
+                                    logDiagnostic(
+                                        DiagnosticCodes.ChapbookIncorrectCompletions,
+                                        contentsIndex + elem.start,
+                                        contentsIndex + elem.end,
+                                        state,
                                     );
                                 }
                             }
                             props.completions = completions;
                         } else {
-                            state.callbacks.onParseError(
-                                createDiagnostic(
-                                    DiagnosticCodes.ChapbookIncorrectCompletions,
-                                    contentsIndex + node.value.start,
-                                    contentsIndex + node.value.end,
-                                    state.textDocument,
-                                ),
+                            logDiagnostic(
+                                DiagnosticCodes.ChapbookIncorrectCompletions,
+                                contentsIndex + node.value.start,
+                                contentsIndex + node.value.end,
+                                state,
                             );
                         }
                     }
@@ -712,15 +708,13 @@ function parseCustomInsertOrModifierDefinition(
                             // We only mark an error for the `match` property, as
                             // that's the only thing Chapbook actually cares about
                             const isMatch = node.key.name === "match";
-                            state.callbacks.onParseError(
-                                createDiagnostic(
-                                    isMatch
-                                        ? DiagnosticCodes.ChapbookMatchIsNotRegex
-                                        : DiagnosticCodes.ChapbookPropertyIsNotString,
-                                    contentsIndex + node.value.start,
-                                    contentsIndex + node.value.end,
-                                    state.textDocument,
-                                ),
+                            logDiagnostic(
+                                isMatch
+                                    ? DiagnosticCodes.ChapbookMatchIsNotRegex
+                                    : DiagnosticCodes.ChapbookPropertyIsNotString,
+                                contentsIndex + node.value.start,
+                                contentsIndex + node.value.end,
+                                state,
                             );
                         }
                     }
@@ -1012,8 +1006,8 @@ function validateFunctionVersion(
     at: number,
     storyFormatVersion: string | undefined,
     doc: TextDocument,
-): Diagnostic[] {
-    const diagnostics: Diagnostic[] = [];
+): TwineDiagnostic[] {
+    const diagnostics: TwineDiagnostic[] = [];
 
     if (storyFormatVersion !== undefined) {
         try {
@@ -1106,7 +1100,7 @@ export function validateFunctionAndFirstArgument(
     firstArgument: Token | undefined,
     storyFormatVersion: string | undefined,
     doc: TextDocument,
-): Diagnostic[] {
+): TwineDiagnostic[] {
     // Check the story format against insert since/removed version information
     const diagnostics = validateFunctionVersion(
         funcInfo,
@@ -1168,7 +1162,7 @@ export function validateInsertContents(
     tokens: InsertTokens,
     doc: TextDocument,
     storyFormatVersion?: string,
-): Diagnostic[] {
+): TwineDiagnostic[] {
     // Check the story format against insert since/removed version information
     // as well as the first argument's existence (or lack thereof)
     const diagnostics = validateFunctionAndFirstArgument(
@@ -1294,7 +1288,7 @@ function parseInsertContents(
         state.textDocument,
         state.storyFormat?.formatVersion,
     )) {
-        state.callbacks.onParseError(diagnostic);
+        logRawDiagnostic(diagnostic, state);
     }
 
     // Capture any tokens associated with the first argument
@@ -1823,7 +1817,7 @@ function parseModifier(
             state.storyFormat?.formatVersion,
             state.textDocument,
         )) {
-            state.callbacks.onParseError(diagnostic);
+            logRawDiagnostic(diagnostic, state);
         }
 
         // If there's an argument to the modifier, tokenize and parse it

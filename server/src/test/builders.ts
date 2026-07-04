@@ -2,6 +2,7 @@ import { Diagnostic, Range } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { DecorationRange } from "../client-server";
+import { DiagnosticCode, DiagnosticMap } from "../diagnostics";
 import { EmbeddedDocument } from "../embedded-languages";
 import { Passage, StoryData, ProjSymbol } from "../project-index";
 import { ParseLevel, ParserCallbacks, ParsingState } from "../parser";
@@ -63,6 +64,7 @@ export class MockCallbacks implements ParserCallbacks {
     public foldingRanges: Range[] = [];
     public decorationRanges: DecorationRange[] = [];
     public errors: Diagnostic[] = [];
+    public disabledDiagnosticRanges: DiagnosticMap<Range[]> = {};
 
     onPassage(passage: Passage): void {
         this.passages.push(passage);
@@ -95,5 +97,10 @@ export class MockCallbacks implements ParserCallbacks {
     }
     onParseError(error: Diagnostic): void {
         this.errors.push(error);
+    }
+    onDisabledDiagnosticRange(code: DiagnosticCode, range: Range): void {
+        if (this.disabledDiagnosticRanges[code] === undefined)
+            this.disabledDiagnosticRanges[code] = [];
+        this.disabledDiagnosticRanges[code].push(range);
     }
 }

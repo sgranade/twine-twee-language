@@ -287,12 +287,24 @@ export function comparePositions(pos1: Position, pos2: Position): number {
 
 /**
  * Determine if a position is inside a range.
- * @param position Position.
+ * @param position Position to test.
  * @param range Range.
  */
 export function positionInRange(position: Position, range: Range): boolean {
     return (
         comparePositions(position, range.start) >= 0 &&
         comparePositions(position, range.end) <= 0
+    );
+}
+
+/**
+ * Determine if a range is inside another range.
+ * @param range Range to test.
+ * @param containingRange Range that may contain the other range.
+ */
+export function rangeInRange(range: Range, containingRange: Range): boolean {
+    return (
+        positionInRange(range.start, containingRange) &&
+        positionInRange(range.end, containingRange)
     );
 }

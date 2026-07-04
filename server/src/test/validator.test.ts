@@ -3,6 +3,7 @@ import "mocha";
 import { Diagnostic, Location, Range } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
+import { DiagnosticCodes } from "../diagnostics";
 import { EmbeddedDocument } from "../embedded-languages";
 import { Index, TwineSymbolKind } from "../project-index";
 import { defaultDiagnosticsOptions } from "../server-options";
@@ -43,7 +44,7 @@ describe("Validator", () => {
     });
 
     describe("Embedded Documents", () => {
-        it("should return parse errors from embedded JSON documents", async () => {
+        it("should return parse errors from embedded documents", async () => {
             const document = TextDocument.create(
                 "test-uri",
                 "twine",
@@ -70,7 +71,7 @@ describe("Validator", () => {
             expect(result[0].message).to.equal("Trailing comma");
         });
 
-        it("should offset embedded JSON document errors by its position in the larger document", async () => {
+        it("should offset embedded document errors by their positions in the larger document", async () => {
             const document = TextDocument.create(
                 "test-uri",
                 "twine",
@@ -200,6 +201,51 @@ describe("Validator", () => {
                 );
             }
         });
+
+        it("should support disabling repeated passage name warnings", async () => {
+            const document = TextDocument.create(
+                "test-uri",
+                "twine",
+                1,
+                '{ "test": 17, }',
+            );
+            const passages1 = [
+                buildPassage({ label: "Passage 1a" }),
+                buildPassage({
+                    label: "Passage 1b",
+                    location: Location.create(
+                        "uri-one",
+                        Range.create(1, 1, 2, 3),
+                    ),
+                }),
+            ];
+            const passages2 = [
+                buildPassage({ label: "Passage 2a" }),
+                buildPassage({
+                    label: "Passage 1b",
+                    location: Location.create(
+                        "test-uri",
+                        Range.create(4, 4, 5, 5),
+                    ),
+                }),
+            ];
+            const index = new Index();
+            index.setPassages("uri-one", passages1);
+            index.setPassages("test-uri", passages2);
+            index.setDisabledDiagnosticRanges("test-uri", {
+                [DiagnosticCodes.MultiplePassageDefinitions]: [
+                    Range.create(1, 1, 6, 1),
+                ],
+            });
+
+            const result = await uut.generateDiagnostics(
+                document,
+                index,
+                defaultDiagnosticsOptions,
+            );
+
+            expect(result).to.be.empty;
+        });
     });
 
     describe("Passage References", () => {
@@ -229,6 +275,36 @@ describe("Validator", () => {
 
             expect(result.length).to.equal(1);
             expect(result[0].message).to.contain("Cannot find this passage");
+        });
+
+        it("should support disabling missing passage reference errors", async () => {
+            const document = TextDocument.create(
+                "test-uri",
+                "twine",
+                1,
+                '{ "test": 17, }',
+            );
+            const index = new Index();
+            index.setReferences("test-uri", [
+                {
+                    contents: "Non-existent passage",
+                    locations: [
+                        Location.create("test-uri", Range.create(1, 2, 3, 4)),
+                    ],
+                    kind: TwineSymbolKind.Passage,
+                },
+            ]);
+            index.setDisabledDiagnosticRanges("test-uri", {
+                [DiagnosticCodes.MissingPassage]: [Range.create(1, 1, 6, 1)],
+            });
+
+            const result = await uut.generateDiagnostics(
+                document,
+                index,
+                defaultDiagnosticsOptions,
+            );
+
+            expect(result).to.be.empty;
         });
 
         it("should not flag passage references that aren't in the index if that warning is disabled in options", async () => {

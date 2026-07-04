@@ -3,9 +3,13 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { DecorationRange, StoryFormat } from "./client-server";
 import {
+    createDiagnostic,
     createDiagnosticFor,
+    createDiagnosticFromRange,
     DiagnosticCode,
     DiagnosticCodes,
+    disabledDiagnosticsFromPassageTagLabels,
+    TwineDiagnostic,
 } from "./diagnostics";
 import {
     EmbeddedDocument,
@@ -43,13 +47,13 @@ import {
     DiagnosticsOptions,
     defaultDiagnosticsOptions,
 } from "./server-options";
+import { Token } from "./types";
 import {
     nextLineIndex,
     pairwise,
     removeAndCountPadding,
     skipSpaces,
 } from "./utilities";
-import { Token } from "./types";
 
 /**
  * At what level of detail to parse a Twee document.
@@ -86,6 +90,10 @@ export interface ParsingState {
      */
     currentPassage?: Passage;
     /**
+     * What diagnostic codes are currently disabled for this passage?
+     */
+    currentPassageDisabledDiagnostics?: Set<DiagnosticCode>;
+    /**
      * Diagnostics options.
      */
     diagnosticsOptions: DiagnosticsOptions;
@@ -117,6 +125,7 @@ export interface ParserCallbacks {
     onFoldingRange(range: Range): void;
     onDecorationRange(range: DecorationRange): void;
     onParseError(error: Diagnostic): void;
+    onDisabledDiagnosticRange(code: DiagnosticCode, range: Range): void;
 }
 
 //#region UtilityFunctions
@@ -179,6 +188,60 @@ export function createSymbolFor(
     };
 }
 
+/**
+ * Log a diagnostic.
+ *
+ * This takes into account any diagnostics that have been disabled.
+ *
+ * @param diagnostic Diagnostic to log.
+ * @param state Parsing state.
+ */
+export function logRawDiagnostic(
+    diagnostic: TwineDiagnostic,
+    state: ParsingState,
+): void {
+    if (
+        !state.currentPassageDisabledDiagnostics ||
+        !state.currentPassageDisabledDiagnostics.has(diagnostic.code)
+    )
+        state.callbacks.onParseError(diagnostic);
+}
+
+/**
+ * Log a diagnostic.
+ *
+ * This takes into account any diagnostics that have been disabled.
+ *
+ * @param code Code for the diagnostic.
+ * @param start Start location in the text of the diagnostic message.
+ * @param end End location in the text of the diagnostic message.
+ * @param state Parsing state.
+ * @param message Diagnostic message to override the default message associated with the code.
+ */
+export function logDiagnostic(
+    code: DiagnosticCode,
+    start: number,
+    end: number,
+    state: ParsingState,
+    message?: string,
+): void {
+    logRawDiagnostic(
+        createDiagnostic(code, start, end, state.textDocument, message),
+        state,
+    );
+}
+
+/**
+ * Log a diagnostic associated with text in a document.
+ *
+ * This takes into account any diagnostics that have been disabled.
+ *
+ * @param code Diagnostic code.
+ * @param text Text to which the diagnostic applies.
+ * @param at Index where the text occurs in the document (zero-based).
+ * @param state Parsing state.
+ * @param message Optional diagnostic message. If omitted, the default message will be used.
+ */
 export function logDiagnosticFor(
     code: DiagnosticCode,
     text: string,
@@ -186,8 +249,9 @@ export function logDiagnosticFor(
     state: ParsingState,
     message?: string,
 ): void {
-    state.callbacks.onParseError(
+    logRawDiagnostic(
         createDiagnosticFor(code, text, at, state.textDocument, message),
+        state,
     );
 }
 
@@ -834,6 +898,21 @@ function findAndParsePassageContents(
 ): void {
     // Set the currently-being-parsed passage
     state.currentPassage = passage;
+    // Find what diagnostics are disabled
+    let unrecognizedCodes;
+    [state.currentPassageDisabledDiagnostics, unrecognizedCodes] =
+        disabledDiagnosticsFromPassageTagLabels(passage.tags ?? []);
+    if (unrecognizedCodes) {
+        for (const code of unrecognizedCodes) {
+            logRawDiagnostic(
+                createDiagnosticFromRange(
+                    DiagnosticCodes.UnrecognizedDiagnosticCode,
+                    code.location.range,
+                ),
+                state,
+            );
+        }
+    }
 
     // Find the passage's contents
     const passageContentsStartIndex = state.textDocument.offsetAt({
@@ -867,13 +946,18 @@ function findAndParsePassageContents(
                 passageText.replace(/\r?\n$/g, "").length,
         ),
     );
+    // Now that the scope's been updated, capture disabled diagnostics' ranges
+    for (const code of state.currentPassageDisabledDiagnostics) {
+        state.callbacks.onDisabledDiagnosticRange(code, passage.scope);
+    }
 
     // Even if we're not to parse passage text, we call this function
     // since there are elements that we need to parse (like StoryTitle) regardless
     parsePassageText(passage, passageText, passageContentsStartIndex, state);
 
-    // Unset the currently-being-parsed passage
+    // Unset the currently-being-parsed passage and disabled diagnostics
     state.currentPassage = undefined;
+    state.currentPassageDisabledDiagnostics = undefined;
 }
 
 /**

@@ -10,6 +10,7 @@ import {
     createSymbolFor,
     findAndParseHtml,
     logDiagnosticFor,
+    logRawDiagnostic,
     logSemanticTokenFor,
     parsePassageReference,
 } from "../../parser";
@@ -1369,12 +1370,13 @@ function checkForSpecialPassages(state: ParsingState): boolean {
                 state.currentPassage.name.contents === "StoryDisplayTitle" &&
                 versionCompare(state.storyFormat.formatVersion, "2.31.0") < 0
             ) {
-                state.callbacks.onParseError(
+                logRawDiagnostic(
                     createDiagnosticFromRange(
                         DiagnosticCodes.SugarCubeUnsupporedSpecialPassage,
                         state.currentPassage.name.location.range,
                         `StoryDisplayTitle isn't supported in SugarCube version ${state.storyFormat.formatVersion}`,
                     ),
+                    state,
                 );
             }
 
@@ -1382,12 +1384,13 @@ function checkForSpecialPassages(state: ParsingState): boolean {
                 state.currentPassage.name.contents === "StoryInterface" &&
                 versionCompare(state.storyFormat.formatVersion, "2.18.0") < 0
             ) {
-                state.callbacks.onParseError(
+                logRawDiagnostic(
                     createDiagnosticFromRange(
                         DiagnosticCodes.SugarCubeUnsupporedSpecialPassage,
                         state.currentPassage.name.location.range,
                         `StoryInterface isn't supported in SugarCube version ${state.storyFormat.formatVersion}`,
                     ),
+                    state,
                 );
             }
 
@@ -1395,12 +1398,13 @@ function checkForSpecialPassages(state: ParsingState): boolean {
                 state.currentPassage.name.contents === "StoryShare" &&
                 versionCompare(state.storyFormat.formatVersion, "2.37.0") >= 0
             ) {
-                state.callbacks.onParseError(
+                logRawDiagnostic(
                     createDiagnosticFromRange(
                         DiagnosticCodes.SugarCubeDeprecatedSpecialPassage,
                         state.currentPassage.name.location.range,
                         `StoryShare is deprecated as of SugarCube version 2.37.0`,
                     ),
+                    state,
                 );
             }
         } catch {
@@ -1474,12 +1478,13 @@ function checkPassageTags(
                 state.storyFormat?.formatVersion !== undefined &&
                 versionCompare(state.storyFormat.formatVersion, "2.24.0") < 0
             ) {
-                state.callbacks.onParseError(
+                logRawDiagnostic(
                     createDiagnosticFromRange(
                         DiagnosticCodes.SugarCubeUnsupporedMediaPassageTags,
                         mediaTags[0].location.range,
                         `${mediaTags[0].contents} isn't supported in SugarCube version ${state.storyFormat.formatVersion}`,
                     ),
+                    state,
                 );
             }
         } catch {
@@ -1489,11 +1494,12 @@ function checkPassageTags(
         isHtmlPassage = false;
         // We only allow one media tag
         for (const tag of mediaTags) {
-            state.callbacks.onParseError(
+            logRawDiagnostic(
                 createDiagnosticFromRange(
                     DiagnosticCodes.SugarCubeNoMultipleMediaPassageTags,
                     tag.location.range,
                 ),
+                state,
             );
         }
     } else {
@@ -1504,12 +1510,13 @@ function checkPassageTags(
                 versionCompare(state.storyFormat.formatVersion, "2.37.0") >= 0
             ) {
                 const ndx = tagNames.indexOf("bookmark");
-                state.callbacks.onParseError(
+                logRawDiagnostic(
                     createDiagnosticFromRange(
                         DiagnosticCodes.SugarCubeDeprecatedTag,
                         tags[ndx].location.range,
                         `bookmark is deprecated as of SugarCube version 2.37.0`,
                     ),
+                    state,
                 );
             }
         } catch {

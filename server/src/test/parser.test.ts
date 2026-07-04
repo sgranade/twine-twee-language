@@ -6,6 +6,7 @@ import { Range, Position, Location } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { StoryFormat } from "../client-server";
+import { DiagnosticCodes } from "../diagnostics";
 import { TwineSymbolKind } from "../project-index";
 import { ETokenType } from "../semantic-tokens";
 import { MockCallbacks, buildParsingState } from "./builders";
@@ -1260,6 +1261,28 @@ describe("Server Twine Parser", () => {
     });
 
     describe("Errors", () => {
+        describe("Diagnostic Generation", () => {
+            it("should flag passages with metadata before tags", () => {
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: "fake content",
+                    callbacks: callbacks,
+                });
+                state.currentPassageDisabledDiagnostics = new Set([
+                    DiagnosticCodes.IncorrectJavaScript,
+                ]);
+
+                uut.logDiagnostic(
+                    DiagnosticCodes.IncorrectJavaScript,
+                    1,
+                    4,
+                    state,
+                );
+
+                expect(callbacks.errors).to.be.empty;
+            });
+        });
+
         describe("Passages", () => {
             describe("General", () => {
                 it("should flag passages with metadata before tags", () => {
@@ -1361,10 +1384,30 @@ describe("Server Twine Parser", () => {
 
                     expect(callbacks.errors.length).to.equal(1);
                     expect(callbacks.errors[0].message).to.include(
-                        "Tags aren't formatted correctly.",
+                        "Tags aren't formatted correctly",
                     );
                     expect(callbacks.errors[0].range).to.eql(
                         Range.create(0, 13, 0, 20),
+                    );
+                });
+
+                it("should warn when trying to disable non-existent diagnostics", () => {
+                    const callbacks = new MockCallbacks();
+                    const doc = TextDocument.create(
+                        "fake-uri",
+                        "",
+                        0,
+                        ":: Passage 1 [tt3-disable missing-passage,nope,incorrect-javascript]\nP1 contents",
+                    );
+
+                    uut.parse(doc, callbacks, uut.ParseLevel.Full);
+
+                    expect(callbacks.errors.length).to.equal(1);
+                    expect(callbacks.errors[0].message).to.include(
+                        "Unrecognized diagnostic code",
+                    );
+                    expect(callbacks.errors[0].range).to.eql(
+                        Range.create(0, 42, 0, 46),
                     );
                 });
             });

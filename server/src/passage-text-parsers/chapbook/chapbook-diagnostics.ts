@@ -1,10 +1,11 @@
 import { Diagnostic } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
-import { createDiagnosticFromRange, DiagnosticCodes } from "../../diagnostics";
+import { DiagnosticCodes } from "../../diagnostics";
 import { isBuiltinJSObjectInstanceProperty } from "../../js-parser";
 import { ProjectIndex } from "../../project-index";
 import { DiagnosticsOptions } from "../../server-options";
+import { referencesToDiagnostics } from "../../validator";
 import {
     findEndOfPartialInsert,
     findEndOfPartialModifier,
@@ -189,21 +190,23 @@ function generateCustomInsertDiagnostics(
                 // Tokenize the insert and validate its arguments
                 const insertTokens = tokenizeInsert(insertText, startNdx);
                 diagnostics.push(
-                    ...validateInsertContents(
-                        insert,
-                        insertTokens,
-                        document,
-                        index.getStoryData()?.storyFormat?.formatVersion,
+                    ...index.reduceDiagnostics(
+                        document.uri,
+                        validateInsertContents(
+                            insert,
+                            insertTokens,
+                            document,
+                            index.getStoryData()?.storyFormat?.formatVersion,
+                        ),
                     ),
                 );
             }
         } else if (diagnosticsOptions.warnings.unknownMacro) {
             diagnostics.push(
-                ...insertRef.locations.map((loc) =>
-                    createDiagnosticFromRange(
-                        DiagnosticCodes.ChapbookUnknownInsert,
-                        loc.range,
-                    ),
+                ...referencesToDiagnostics(
+                    index,
+                    insertRef,
+                    DiagnosticCodes.ChapbookUnknownInsert,
                 ),
             );
         }
@@ -260,23 +263,26 @@ function generateCustomModifierDiagnostics(
                 const modTokens = tokenizeModifier(modText, startNdx, modifier);
                 if (modTokens !== undefined) {
                     diagnostics.push(
-                        ...validateFunctionAndFirstArgument(
-                            modifier,
-                            modTokens.name,
-                            modTokens.firstArgument,
-                            index.getStoryData()?.storyFormat?.formatVersion,
-                            document,
+                        ...index.reduceDiagnostics(
+                            document.uri,
+                            validateFunctionAndFirstArgument(
+                                modifier,
+                                modTokens.name,
+                                modTokens.firstArgument,
+                                index.getStoryData()?.storyFormat
+                                    ?.formatVersion,
+                                document,
+                            ),
                         ),
                     );
                 }
             }
         } else if (diagnosticsOptions.warnings.unknownMacro) {
             diagnostics.push(
-                ...modRef.locations.map((loc) =>
-                    createDiagnosticFromRange(
-                        DiagnosticCodes.ChapbookUnknownModifier,
-                        loc.range,
-                    ),
+                ...referencesToDiagnostics(
+                    index,
+                    modRef,
+                    DiagnosticCodes.ChapbookUnknownModifier,
                 ),
             );
         }
@@ -322,18 +328,19 @@ export function generateDiagnostics(
     }
     const varSetNames = new Set(varNamesWithDuplicates);
 
+    const unsetVarMessage =
+        "This isn't set in any vars or JavaScript section; make sure it's spelled correctly";
     for (const varRef of index.getReferences(
         document.uri,
         OChapbookSymbolKind.Variable,
     ) ?? []) {
         if (!varSetNames.has(varRef.contents)) {
             diagnostics.push(
-                ...varRef.locations.map((loc) =>
-                    createDiagnosticFromRange(
-                        DiagnosticCodes.VariableNeverSet,
-                        loc.range,
-                        "This isn't set in any vars or JavaScript section; make sure it's spelled correctly",
-                    ),
+                ...referencesToDiagnostics(
+                    index,
+                    varRef,
+                    DiagnosticCodes.VariableNeverSet,
+                    unsetVarMessage,
                 ),
             );
         }
@@ -347,12 +354,11 @@ export function generateDiagnostics(
             !isBuiltinJSObjectInstanceProperty(propRef.contents)
         ) {
             diagnostics.push(
-                ...propRef.locations.map((loc) =>
-                    createDiagnosticFromRange(
-                        DiagnosticCodes.VariableNeverSet,
-                        loc.range,
-                        "This isn't set in any vars or JavaScript section; make sure it's spelled correctly",
-                    ),
+                ...referencesToDiagnostics(
+                    index,
+                    propRef,
+                    DiagnosticCodes.VariableNeverSet,
+                    unsetVarMessage,
                 ),
             );
         }

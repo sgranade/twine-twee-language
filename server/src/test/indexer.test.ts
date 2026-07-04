@@ -10,10 +10,11 @@ import {
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { DecorationType } from "../client-server";
+import { DiagnosticCodes } from "../diagnostics";
 import { ParseLevel, ParsingState } from "../parser";
 import { Index } from "../project-index";
-import { buildPassage } from "./builders";
 
+import { buildPassage } from "./builders";
 import * as ptpModule from "../passage-text-parsers";
 import * as uut from "../indexer";
 
@@ -376,6 +377,23 @@ describe("Indexer", () => {
                 "Tags aren't formatted correctly",
             );
         });
+
+        it("should add disabled diagnostic ranges to the index", () => {
+            const doc = buildDocument({
+                uri: "test-uri",
+                content: "::Disabled [tt3-disable missing-passage]\nContent",
+            });
+            const index = new Index();
+
+            uut.updateProjectIndex(doc, ParseLevel.Full, index);
+            const result = index.diagnosticIsDisabled(
+                "test-uri",
+                DiagnosticCodes.MissingPassage,
+                Range.create(1, 2, 1, 4),
+            );
+
+            expect(result).to.be.true;
+        });
     });
 
     describe("Parse Errors", () => {
@@ -395,7 +413,7 @@ describe("Indexer", () => {
             expect(result[0].range.start).to.eql(Position.create(4, 0));
             expect(result[0].range.end).to.eql(Position.create(4, 9));
             expect(result[0].message).to.include(
-                "This replaces an existing StoryTitle. Is that intentional?",
+                "This replaces an existing StoryTitle; is that intentional?",
             );
         });
 
@@ -429,7 +447,7 @@ describe("Indexer", () => {
             expect(result[0].range.start).to.eql(Position.create(4, 0));
             expect(result[0].range.end).to.eql(Position.create(4, 50));
             expect(result[0].message).to.include(
-                "This replaces existing StoryData. Is that intentional?",
+                "This replaces existing StoryData; is that intentional?",
             );
         });
 

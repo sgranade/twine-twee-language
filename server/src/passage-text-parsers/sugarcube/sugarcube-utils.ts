@@ -1,6 +1,6 @@
 import { createDiagnosticFromRange, DiagnosticCodes } from "../../diagnostics";
 import { TokenizedJS } from "../../js-parser";
-import { logDiagnosticFor, ParsingState } from "../../parser";
+import { logDiagnosticFor, logRawDiagnostic, ParsingState } from "../../parser";
 import { positionInRange } from "../../utilities";
 import { SugarCubeParsingState } from "./sugarcube-parser";
 import { builtinVars, builtInVarsAndProperties } from "./sugarcube-variables";
@@ -40,12 +40,13 @@ export function createVariableAndPropertyReferences(
                     positionInRange(v.location.range.start, r),
                 )
             ) {
-                state.callbacks.onParseError(
+                logRawDiagnostic(
                     createDiagnosticFromRange(
                         DiagnosticCodes.SugarCubeUnexpectedWidgetVariable,
                         v.location.range,
                         `${v.contents} typically only exists inside <<widget>> macros. If this variable name is correct, consider renaming it.`,
                     ),
+                    state,
                 );
             }
         }

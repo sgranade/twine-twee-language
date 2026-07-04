@@ -9,6 +9,7 @@ import {
 } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
+import { DiagnosticCodes } from "../../../diagnostics";
 import { Index } from "../../../project-index";
 import { defaultDiagnosticsOptions } from "../../../server-options";
 import { OSugarCubeSymbolKind } from "../../../passage-text-parsers/sugarcube/types";
@@ -52,6 +53,38 @@ describe("SugarCube Diagnostics", () => {
                     "Twine",
                 ),
             ]);
+        });
+
+        it("should support disabling variable with no matching variable setting warnings", () => {
+            const doc = TextDocument.create(
+                "fake-uri",
+                "",
+                0,
+                "Let's try {var1}",
+            );
+            const index = new Index();
+            index.setReferences("fake-uri", [
+                {
+                    contents: "var1",
+                    locations: [
+                        Location.create("fake-uri", Range.create(1, 2, 3, 4)),
+                    ],
+                    kind: OSugarCubeSymbolKind.Variable,
+                },
+            ]);
+            index.setDisabledDiagnosticRanges("fake-uri", {
+                [DiagnosticCodes.VariableNeverSet]: [Range.create(1, 1, 6, 1)],
+            });
+            const diagnosticOptions = defaultDiagnosticsOptions;
+            const parser = uut.getSugarCubeParser(undefined);
+
+            const results = parser?.generateDiagnostics(
+                doc,
+                index,
+                diagnosticOptions,
+            );
+
+            expect(results).to.be.empty;
         });
 
         it("should not warn on a variable with a matching variable setting", () => {
@@ -248,6 +281,41 @@ describe("SugarCube Diagnostics", () => {
             ]);
         });
 
+        it("should support disabling unrecognized macro warnings", () => {
+            const doc = TextDocument.create(
+                "fake-uri",
+                "",
+                0,
+                "Let's try <<this>>",
+            );
+            const index = new Index();
+            index.setReferences("fake-uri", [
+                {
+                    contents: "this",
+                    locations: [
+                        Location.create("fake-uri", Range.create(1, 2, 3, 4)),
+                    ],
+                    kind: OSugarCubeSymbolKind.UnknownMacro,
+                },
+            ]);
+            index.setDisabledDiagnosticRanges("fake-uri", {
+                [DiagnosticCodes.SugarCubeUnknownMacro]: [
+                    Range.create(1, 1, 6, 1),
+                ],
+            });
+            const diagnosticOptions = defaultDiagnosticsOptions;
+            diagnosticOptions.warnings.unknownMacro = true;
+            const parser = uut.getSugarCubeParser(undefined);
+
+            const results = parser?.generateDiagnostics(
+                doc,
+                index,
+                diagnosticOptions,
+            );
+
+            expect(results).to.be.empty;
+        });
+
         it("should not warn on an unrecognized macro if there's a matching macro definition", () => {
             const doc = TextDocument.create(
                 "fake-uri",
@@ -350,6 +418,35 @@ describe("SugarCube Diagnostics", () => {
             ]);
         });
 
+        it("should support disabling a no-macro-with-same-name-as-a-built-in-one error", () => {
+            const doc = TextDocument.create("fake-uri", "", 0, "Placeholder");
+            const index = new Index();
+            index.setDefinitions("fake-uri", [
+                {
+                    contents: "if",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(1, 2, 3, 4),
+                    ),
+                    kind: OSugarCubeSymbolKind.KnownMacro,
+                },
+            ]);
+            index.setDisabledDiagnosticRanges("fake-uri", {
+                [DiagnosticCodes.SugarCubeNoWidgetWithBuiltInMacroName]: [
+                    Range.create(1, 1, 6, 1),
+                ],
+            });
+            const parser = uut.getSugarCubeParser(undefined);
+
+            const results = parser?.generateDiagnostics(
+                doc,
+                index,
+                defaultDiagnosticsOptions,
+            );
+
+            expect(results).to.be.empty;
+        });
+
         it("should error on a macro (widget) that's defined twice", () => {
             const doc = TextDocument.create("fake-uri", "", 0, "Placeholder");
             const index = new Index();
@@ -399,6 +496,45 @@ describe("SugarCube Diagnostics", () => {
                     ],
                 ),
             ]);
+        });
+
+        it("should support disabling duplicate macro (widget) definition errors", () => {
+            const doc = TextDocument.create("fake-uri", "", 0, "Placeholder");
+            const index = new Index();
+            index.setDefinitions("fake-uri", [
+                {
+                    contents: "testy",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(1, 2, 3, 4),
+                    ),
+                    kind: OSugarCubeSymbolKind.KnownMacro,
+                },
+            ]);
+            index.setDefinitions("other-uri", [
+                {
+                    contents: "testy",
+                    location: Location.create(
+                        "other-uri",
+                        Range.create(5, 6, 7, 8),
+                    ),
+                    kind: OSugarCubeSymbolKind.KnownMacro,
+                },
+            ]);
+            index.setDisabledDiagnosticRanges("fake-uri", {
+                [DiagnosticCodes.SugarCubeNoMultipleWidgetDefinitions]: [
+                    Range.create(1, 1, 6, 1),
+                ],
+            });
+            const parser = uut.getSugarCubeParser(undefined);
+
+            const results = parser?.generateDiagnostics(
+                doc,
+                index,
+                defaultDiagnosticsOptions,
+            );
+
+            expect(results).to.be.empty;
         });
     });
 });

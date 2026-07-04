@@ -8,6 +8,7 @@ import {
 } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
+import { DiagnosticCodes } from "../../../diagnostics";
 import { Index } from "../../../project-index";
 import { defaultDiagnosticsOptions } from "../../../server-options";
 import {
@@ -55,6 +56,38 @@ describe("Chapbook Diagnostics", () => {
                     "Twine",
                 ),
             ]);
+        });
+
+        it("should support disabling non-set variable errors", () => {
+            const doc = TextDocument.create(
+                "fake-uri",
+                "",
+                0,
+                "Let's try {var1}",
+            );
+            const index = new Index();
+            index.setReferences("fake-uri", [
+                {
+                    contents: "var1",
+                    locations: [
+                        Location.create("fake-uri", Range.create(1, 2, 3, 4)),
+                    ],
+                    kind: OChapbookSymbolKind.Variable,
+                },
+            ]);
+            index.setDisabledDiagnosticRanges("fake-uri", {
+                [DiagnosticCodes.VariableNeverSet]: [Range.create(1, 1, 6, 1)],
+            });
+            const diagnosticOptions = defaultDiagnosticsOptions;
+            const parser = uut.getChapbookParser(undefined);
+
+            const results = parser?.generateDiagnostics(
+                doc,
+                index,
+                diagnosticOptions,
+            );
+
+            expect(results).to.be.empty;
         });
 
         it("should not warn on a variable with a matching variable setting", () => {
@@ -301,6 +334,41 @@ describe("Chapbook Diagnostics", () => {
             ]);
         });
 
+        it("should support disabling unrecognized insert warnings", () => {
+            const doc = TextDocument.create(
+                "fake-uri",
+                "",
+                0,
+                "Let's try {test insert, one: 'here',",
+            );
+            const index = new Index();
+            index.setReferences("fake-uri", [
+                {
+                    contents: "custom insert",
+                    locations: [
+                        Location.create("fake-uri", Range.create(1, 2, 3, 4)),
+                    ],
+                    kind: OChapbookSymbolKind.CustomInsert,
+                },
+            ]);
+            index.setDisabledDiagnosticRanges("fake-uri", {
+                [DiagnosticCodes.ChapbookUnknownInsert]: [
+                    Range.create(1, 1, 6, 1),
+                ],
+            });
+            const diagnosticOptions = defaultDiagnosticsOptions;
+            diagnosticOptions.warnings.unknownMacro = true;
+            const parser = uut.getChapbookParser(undefined);
+
+            const results = parser?.generateDiagnostics(
+                doc,
+                index,
+                diagnosticOptions,
+            );
+
+            expect(results).to.be.empty;
+        });
+
         it("should not warn on an unrecognized insert if that warning is disabled", () => {
             const doc = TextDocument.create(
                 "fake-uri",
@@ -425,6 +493,56 @@ describe("Chapbook Diagnostics", () => {
             ]);
         });
 
+        it("should support disabling  custom insert reference with a missing required first argument errors", () => {
+            const doc = TextDocument.create(
+                "fake-uri",
+                "",
+                0,
+                "Let's try {custom insert ",
+            );
+            const index = new Index();
+            index.setDefinitions("source-uri", [
+                {
+                    contents: "custom\\s+insert",
+                    name: "custom insert",
+                    location: Location.create(
+                        "source-uri",
+                        Range.create(5, 6, 7, 8),
+                    ),
+                    kind: OChapbookSymbolKind.CustomInsert,
+                    match: /custom\s+insert/,
+                    firstArgument: {
+                        required: ArgumentRequirement.required,
+                    },
+                } as ChapbookSymbol,
+            ]);
+            index.setReferences("fake-uri", [
+                {
+                    contents: "custom insert",
+                    locations: [
+                        Location.create("fake-uri", Range.create(1, 2, 3, 4)),
+                    ],
+                    kind: OChapbookSymbolKind.CustomInsert,
+                },
+            ]);
+            index.setDisabledDiagnosticRanges("fake-uri", {
+                [DiagnosticCodes.ChapbookFunctionMissingFirstArgument]: [
+                    Range.create(0, 1, 6, 1),
+                ],
+            });
+            const diagnosticOptions = defaultDiagnosticsOptions;
+            diagnosticOptions.warnings.unknownMacro = true;
+            const parser = uut.getChapbookParser(undefined);
+
+            const results = parser?.generateDiagnostics(
+                doc,
+                index,
+                diagnosticOptions,
+            );
+
+            expect(results).to.be.empty;
+        });
+
         it("should warn on a custom insert reference with an ignored first argument", () => {
             const doc = TextDocument.create(
                 "fake-uri",
@@ -476,6 +594,56 @@ describe("Chapbook Diagnostics", () => {
                     "Twine",
                 ),
             ]);
+        });
+
+        it("should support disabling custom insert ignored first argument warning", () => {
+            const doc = TextDocument.create(
+                "fake-uri",
+                "",
+                0,
+                "Let's try {custom insert: 'nope' ",
+            );
+            const index = new Index();
+            index.setDefinitions("source-uri", [
+                {
+                    contents: "custom\\s+insert",
+                    name: "custom insert",
+                    location: Location.create(
+                        "source-uri",
+                        Range.create(5, 6, 7, 8),
+                    ),
+                    kind: OChapbookSymbolKind.CustomInsert,
+                    match: /custom\s+insert/,
+                    firstArgument: {
+                        required: ArgumentRequirement.ignored,
+                    },
+                } as ChapbookSymbol,
+            ]);
+            index.setReferences("fake-uri", [
+                {
+                    contents: "custom insert",
+                    locations: [
+                        Location.create("fake-uri", Range.create(1, 2, 3, 4)),
+                    ],
+                    kind: OChapbookSymbolKind.CustomInsert,
+                },
+            ]);
+            index.setDisabledDiagnosticRanges("fake-uri", {
+                [DiagnosticCodes.ChapbookFunctionWillIgnoreFirstArgument]: [
+                    Range.create(0, 1, 6, 1),
+                ],
+            });
+            const diagnosticOptions = defaultDiagnosticsOptions;
+            diagnosticOptions.warnings.unknownMacro = true;
+            const parser = uut.getChapbookParser(undefined);
+
+            const results = parser?.generateDiagnostics(
+                doc,
+                index,
+                diagnosticOptions,
+            );
+
+            expect(results).to.be.empty;
         });
 
         it("should error on a custom insert reference with a missing required property", () => {
@@ -533,6 +701,58 @@ describe("Chapbook Diagnostics", () => {
             ]);
         });
 
+        it("should support disablong custom insert missing required property errors", () => {
+            const doc = TextDocument.create(
+                "fake-uri",
+                "",
+                0,
+                "Let's try { custom insert } ",
+            );
+            const index = new Index();
+            index.setDefinitions("source-uri", [
+                {
+                    contents: "custom\\s+insert",
+                    name: "custom insert",
+                    location: Location.create(
+                        "source-uri",
+                        Range.create(5, 6, 7, 8),
+                    ),
+                    kind: OChapbookSymbolKind.CustomInsert,
+                    match: /custom\s+insert/,
+                    firstArgument: {
+                        required: ArgumentRequirement.ignored,
+                    },
+                    requiredProps: { expected: null, also: null },
+                    optionalProps: {},
+                } as ChapbookSymbol,
+            ]);
+            index.setReferences("fake-uri", [
+                {
+                    contents: "custom insert",
+                    locations: [
+                        Location.create("fake-uri", Range.create(1, 2, 3, 4)),
+                    ],
+                    kind: OChapbookSymbolKind.CustomInsert,
+                },
+            ]);
+            index.setDisabledDiagnosticRanges("fake-uri", {
+                [DiagnosticCodes.ChapbookInsertMissingProperties]: [
+                    Range.create(0, 1, 6, 1),
+                ],
+            });
+            const diagnosticOptions = defaultDiagnosticsOptions;
+            diagnosticOptions.warnings.unknownMacro = true;
+            const parser = uut.getChapbookParser(undefined);
+
+            const results = parser?.generateDiagnostics(
+                doc,
+                index,
+                diagnosticOptions,
+            );
+
+            expect(results).to.be.empty;
+        });
+
         it("should warn about a custom insert reference with unexpected properties", () => {
             const doc = TextDocument.create(
                 "fake-uri",
@@ -586,6 +806,56 @@ describe("Chapbook Diagnostics", () => {
             ]);
         });
 
+        it("should support disabling custom insert with unexpected properties warnings", () => {
+            const doc = TextDocument.create(
+                "fake-uri",
+                "",
+                0,
+                "Let's try { custom insert, prop: 'nope' } ",
+            );
+            const index = new Index();
+            index.setDefinitions("source-uri", [
+                {
+                    contents: "custom\\s+insert",
+                    name: "custom insert",
+                    location: Location.create(
+                        "source-uri",
+                        Range.create(5, 6, 7, 8),
+                    ),
+                    kind: OChapbookSymbolKind.CustomInsert,
+                    match: /custom\s+insert/,
+                    firstArgument: {
+                        required: ArgumentRequirement.ignored,
+                    },
+                } as ChapbookSymbol,
+            ]);
+            index.setReferences("fake-uri", [
+                {
+                    contents: "custom insert",
+                    locations: [
+                        Location.create("fake-uri", Range.create(1, 2, 3, 4)),
+                    ],
+                    kind: OChapbookSymbolKind.CustomInsert,
+                },
+            ]);
+            index.setDisabledDiagnosticRanges("fake-uri", {
+                [DiagnosticCodes.ChapbookInsertIgnoredProperty]: [
+                    Range.create(0, 1, 6, 1),
+                ],
+            });
+            const diagnosticOptions = defaultDiagnosticsOptions;
+            diagnosticOptions.warnings.unknownMacro = true;
+            const parser = uut.getChapbookParser(undefined);
+
+            const results = parser?.generateDiagnostics(
+                doc,
+                index,
+                diagnosticOptions,
+            );
+
+            expect(results).to.be.empty;
+        });
+
         it("should warn on an unrecognized modifier", () => {
             const doc = TextDocument.create(
                 "fake-uri",
@@ -622,6 +892,41 @@ describe("Chapbook Diagnostics", () => {
                     "Twine",
                 ),
             ]);
+        });
+
+        it("should support disabling unrecognized modifier warnings", () => {
+            const doc = TextDocument.create(
+                "fake-uri",
+                "",
+                0,
+                "[mod-me]\nI'm modified!",
+            );
+            const index = new Index();
+            index.setReferences("fake-uri", [
+                {
+                    contents: "mod-me",
+                    locations: [
+                        Location.create("fake-uri", Range.create(1, 2, 3, 4)),
+                    ],
+                    kind: OChapbookSymbolKind.CustomModifier,
+                },
+            ]);
+            index.setDisabledDiagnosticRanges("fake-uri", {
+                [DiagnosticCodes.ChapbookUnknownModifier]: [
+                    Range.create(1, 1, 6, 1),
+                ],
+            });
+            const diagnosticOptions = defaultDiagnosticsOptions;
+            diagnosticOptions.warnings.unknownMacro = true;
+            const parser = uut.getChapbookParser(undefined);
+
+            const results = parser?.generateDiagnostics(
+                doc,
+                index,
+                diagnosticOptions,
+            );
+
+            expect(results).to.be.empty;
         });
 
         it("should not warn on an unrecognized modifier if that warning is disabled", () => {

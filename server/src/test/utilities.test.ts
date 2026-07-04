@@ -433,4 +433,39 @@ describe("Utilities", () => {
             expect(result).to.be.false;
         });
     });
+
+    describe("range in range", () => {
+        it("should return false for a range that starts before the containing range", () => {
+            // No arrange
+
+            const result = uut.rangeInRange(
+                Range.create(17, 1, 18, 1),
+                Range.create(17, 2, 19, 4),
+            );
+
+            expect(result).to.be.false;
+        });
+
+        it("should return true for a range that fills the containing range", () => {
+            // No arrange
+
+            const result = uut.rangeInRange(
+                Range.create(17, 2, 19, 4),
+                Range.create(17, 2, 19, 4),
+            );
+
+            expect(result).to.be.true;
+        });
+
+        it("should return false for a range that ends after the containing range", () => {
+            // No arrange
+
+            const result = uut.rangeInRange(
+                Range.create(18, 1, 19, 5),
+                Range.create(17, 2, 19, 4),
+            );
+
+            expect(result).to.be.false;
+        });
+    });
 });

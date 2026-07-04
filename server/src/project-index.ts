@@ -1,9 +1,10 @@
 import { Diagnostic, Location, Position, Range } from "vscode-languageserver";
 
 import { DecorationRange, StoryFormat } from "./client-server";
+import { DiagnosticCode, DiagnosticMap, TwineDiagnostic } from "./diagnostics";
 import { EmbeddedDocument } from "./embedded-languages";
 import { SemanticToken } from "./semantic-tokens";
-import { positionInRange } from "./utilities";
+import { positionInRange, rangeInRange } from "./utilities";
 
 /**
  * A number that identifies the kind of a symbol or reference.
@@ -138,6 +139,15 @@ export interface ProjectIndex {
      * @param errors New list of errors.
      */
     setParseErrors(uri: string, errors: Diagnostic[]): void;
+    /**
+     * Set a document's ranges where diagnostics are disabled.
+     * @param uri URI of the document whose index is to be updated.
+     * @param disabledRanges Ranges of disabled diagnostics per diagnostic code.
+     */
+    setDisabledDiagnosticRanges(
+        uri: string,
+        disabledRanges: DiagnosticMap<Range[]>,
+    ): void;
 
     /**
      * Get the project's story title, if known.
@@ -195,6 +205,7 @@ export interface ProjectIndex {
     /**
      * Get a document's parse errors.
      * @param uri Document URI.
+     * @returns All non-disabled diagnostics that were found during parsing.
      */
     getParseErrors(uri: string): readonly Diagnostic[];
 
@@ -271,6 +282,29 @@ export interface ProjectIndex {
     getPassageNames(): readonly string[];
 
     /**
+     * Check to see if a diagnostic has been disabled at a given location.
+     * @param uri Document URI.
+     * @param code Diagnostic code to check.
+     * @param range Range over which the diagnostic will apply.
+     * @returns True if the diagnostic is disabled.
+     */
+    diagnosticIsDisabled(
+        uri: string,
+        code: DiagnosticCode,
+        range: Range,
+    ): boolean;
+    /**
+     * Remove diagnostics that have been disabled.
+     * @param uri Document URI.
+     * @param diagnostics List of diagnostics.
+     * @returns Diagnostics that haven't been disabled.
+     */
+    reduceDiagnostics(
+        uri: string,
+        diagnostics: TwineDiagnostic[],
+    ): TwineDiagnostic[];
+
+    /**
      * Get all URIs in the index.
      */
     getIndexedUris(): readonly string[];
@@ -300,6 +334,8 @@ export class Index implements ProjectIndex {
     private _foldingRanges: Record<string, Range[]> = {};
     private _decorationRanges: Record<string, DecorationRange[]> = {};
     private _parseErrors: Record<string, Diagnostic[]> = {};
+    private _disabledDiagnosticRanges: Record<string, DiagnosticMap<Range[]>> =
+        {};
 
     // Cache of passage names
     private _cachedPassageNames: string[] | undefined = undefined;
@@ -345,6 +381,12 @@ export class Index implements ProjectIndex {
     }
     setParseErrors(uri: string, errors: Diagnostic[]): void {
         this._parseErrors[uri] = [...errors];
+    }
+    setDisabledDiagnosticRanges(
+        uri: string,
+        disabledRanges: DiagnosticMap<Range[]>,
+    ): void {
+        this._disabledDiagnosticRanges[uri] = disabledRanges;
     }
     getStoryTitle(): string | undefined {
         return this._storyTitle;
@@ -584,6 +626,25 @@ export class Index implements ProjectIndex {
         return this._cachedPassageNames;
     }
 
+    diagnosticIsDisabled(
+        uri: string,
+        code: DiagnosticCode,
+        range: Range,
+    ): boolean {
+        for (const r of this._disabledDiagnosticRanges[uri]?.[code] || []) {
+            if (rangeInRange(range, r)) return true;
+        }
+        return false;
+    }
+    reduceDiagnostics(
+        uri: string,
+        diagnostics: TwineDiagnostic[],
+    ): TwineDiagnostic[] {
+        return diagnostics.filter(
+            (d) => !this.diagnosticIsDisabled(uri, d.code, d.range),
+        );
+    }
+
     getIndexedUris(): readonly string[] {
         const s = new Set([
             ...Object.keys(this._passages),
@@ -605,6 +666,7 @@ export class Index implements ProjectIndex {
         delete this._foldingRanges[uri];
         delete this._decorationRanges[uri];
         delete this._parseErrors[uri];
+        delete this._disabledDiagnosticRanges[uri];
         if (uri === this._storyTitleUri) {
             this._storyTitle = undefined;
         }

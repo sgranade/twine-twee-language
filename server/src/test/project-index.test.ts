@@ -3,12 +3,12 @@ import "mocha";
 import { Diagnostic, Location, Position, Range } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
-import { buildPassage } from "./builders";
-
-import { DecorationRange, DecorationType } from "../client-server";
+import { DiagnosticCodes } from "../diagnostics";
 import { EmbeddedDocument } from "../embedded-languages";
-import * as uut from "../project-index";
 import { SemanticToken } from "../semantic-tokens";
+
+import { buildPassage } from "./builders";
+import * as uut from "../project-index";
 
 describe("Project Index", () => {
     describe("Story Title", () => {
@@ -1190,6 +1190,94 @@ describe("Project Index", () => {
         });
     });
 
+    describe("Disabling Diagnostics", () => {
+        it("should indicate when a diagnostic is disabled in a range", () => {
+            const index = new uut.Index();
+            index.setDisabledDiagnosticRanges("fake-uri", {
+                [DiagnosticCodes.MissingPassage]: [Range.create(1, 1, 5, 1)],
+            });
+
+            const result = index.diagnosticIsDisabled(
+                "fake-uri",
+                DiagnosticCodes.MissingPassage,
+                Range.create(2, 1, 2, 4),
+            );
+
+            expect(result).to.be.true;
+        });
+
+        it("should indicate when a diagnostic is not disabled in a range", () => {
+            const index = new uut.Index();
+            index.setDisabledDiagnosticRanges("fake-uri", {
+                [DiagnosticCodes.MissingPassage]: [Range.create(1, 1, 5, 1)],
+            });
+
+            const result = index.diagnosticIsDisabled(
+                "fake-uri",
+                DiagnosticCodes.MissingPassage,
+                Range.create(6, 1, 6, 4),
+            );
+
+            expect(result).to.be.false;
+        });
+
+        it("should remove disabled diagnostics", () => {
+            const index = new uut.Index();
+            index.setDisabledDiagnosticRanges("fake-uri", {
+                [DiagnosticCodes.MissingPassage]: [
+                    Range.create(2, 1, 3, 1),
+                    Range.create(5, 1, 6, 1),
+                ],
+            });
+
+            const result = index.reduceDiagnostics("fake-uri", [
+                {
+                    range: Range.create(1, 3, 1, 17),
+                    message: "1",
+                    code: DiagnosticCodes.MissingPassage,
+                },
+                {
+                    range: Range.create(2, 3, 2, 17),
+                    message: "2",
+                    code: DiagnosticCodes.MissingPassage,
+                },
+                {
+                    range: Range.create(4, 3, 4, 17),
+                    message: "3",
+                    code: DiagnosticCodes.MissingPassage,
+                },
+                {
+                    range: Range.create(5, 3, 5, 17),
+                    message: "4",
+                    code: DiagnosticCodes.MissingPassage,
+                },
+                {
+                    range: Range.create(5, 3, 5, 17),
+                    message: "5",
+                    code: DiagnosticCodes.ReplacesStoryData,
+                },
+            ]);
+
+            expect(result).to.eql([
+                {
+                    range: Range.create(1, 3, 1, 17),
+                    message: "1",
+                    code: DiagnosticCodes.MissingPassage,
+                },
+                {
+                    range: Range.create(4, 3, 4, 17),
+                    message: "3",
+                    code: DiagnosticCodes.MissingPassage,
+                },
+                {
+                    range: Range.create(5, 3, 5, 17),
+                    message: "5",
+                    code: DiagnosticCodes.ReplacesStoryData,
+                },
+            ]);
+        });
+    });
+
     describe("Getting Indexed URIs", () => {
         it("should return URIs from passages", () => {
             const index = new uut.Index();
@@ -1471,6 +1559,25 @@ describe("Project Index", () => {
             const result = index.getParseErrors("storytitle-uri");
 
             expect(result).to.be.empty;
+        });
+
+        it("should remove disabled diagnostic ranges for a deleted document", () => {
+            const index = new uut.Index();
+            index.setDisabledDiagnosticRanges("storytitle-uri", {
+                [DiagnosticCodes.MissingPassage]: [
+                    Range.create(2, 1, 3, 1),
+                    Range.create(5, 1, 6, 1),
+                ],
+            });
+
+            index.removeDocument("storytitle-uri");
+            const result = index.diagnosticIsDisabled(
+                "storytitle-uri",
+                DiagnosticCodes.MissingPassage,
+                Range.create(2, 1, 2, 4),
+            );
+
+            expect(result).to.be.false;
         });
 
         it("should leave parse errors alone for a not-deleted document", () => {
