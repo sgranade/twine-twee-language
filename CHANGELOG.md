@@ -8,6 +8,7 @@ Diagnostics have been extensively re-worked, including now providing them for Ja
 
 ### Added
 
+- Warnings and errors can now be disabled in a passage by adding `tt3-disable` followed by comma-separated list of diagnostics to the passage's tags: `[tt3-disable <error 1>,<error 2>]`.
 - JavaScript errors are now reported.
 - Variables and properties that haven't been defined now create a warning across both story format code (Chapbook/SugarCube) and JavaScript sections.
 - Now auto-completes object properties from expressions like `var['prop'] = { prop1: 2 }`.
@@ -15,6 +16,10 @@ Diagnostics have been extensively re-worked, including now providing them for Ja
 - SugarCube: Special variables `_args` and `_contents` now produce warnings if used outside of `<<widget>>` macros.
 - SugarCube: Macros inside link setters (such as `[[passage][<<set $var to 1>>]]`) now generate a warning about them not being evaluated.
 - Chapbook: Added parsing variables and properties in script passages and `[JavaScript]` modifier blocks, including variables set in calls to `engine.state.set()`.
+
+### Removed
+
+- Removed extension options to enable or disable warnings on unknown macro and unknown passage references, as all diagnostics can now be disabled on a project or per-passage basis.
 
 ### Changed
 

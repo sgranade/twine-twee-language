@@ -4,7 +4,6 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 import { DiagnosticCodes } from "../../diagnostics";
 import { isBuiltinJSObjectInstanceProperty } from "../../js-parser";
 import { ProjectIndex } from "../../project-index";
-import { DiagnosticsOptions } from "../../server-options";
 import { referencesToDiagnostics } from "../../validator";
 import {
     findEndOfPartialInsert,
@@ -142,14 +141,12 @@ const builtinVars = [
  * @param document Document to validate and generate diagnostics against.
  * @param index Index of the Twine project.
  * @param text Text of the document.
- * @param diagnosticsOptions Options for what optional diagnostics to report.
  * @returns List of diagnostic messages.
  */
 function generateCustomInsertDiagnostics(
     document: TextDocument,
     index: ProjectIndex,
     text: string,
-    diagnosticsOptions: DiagnosticsOptions,
 ): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];
 
@@ -201,7 +198,7 @@ function generateCustomInsertDiagnostics(
                     ),
                 );
             }
-        } else if (diagnosticsOptions.warnings.unknownMacro) {
+        } else {
             diagnostics.push(
                 ...referencesToDiagnostics(
                     index,
@@ -221,14 +218,12 @@ function generateCustomInsertDiagnostics(
  * @param document Document to validate and generate diagnostics against.
  * @param index Index of the Twine project.
  * @param text Text of the document.
- * @param diagnosticsOptions Options for what optional diagnostics to report.
  * @returns List of diagnostic messages.
  */
 function generateCustomModifierDiagnostics(
     document: TextDocument,
     index: ProjectIndex,
     text: string,
-    diagnosticsOptions: DiagnosticsOptions,
 ): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];
 
@@ -277,7 +272,7 @@ function generateCustomModifierDiagnostics(
                     );
                 }
             }
-        } else if (diagnosticsOptions.warnings.unknownMacro) {
+        } else {
             diagnostics.push(
                 ...referencesToDiagnostics(
                     index,
@@ -296,13 +291,11 @@ function generateCustomModifierDiagnostics(
  *
  * @param document Document to validate and generate diagnostics against.
  * @param index Index of the Twine project.
- * @param diagnosticsOptions Options for what optional diagnostics to report.
  * @returns List of diagnostic messages.
  */
 export function generateDiagnostics(
     document: TextDocument,
     index: ProjectIndex,
-    diagnosticsOptions: DiagnosticsOptions,
 ): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];
     const text = document.getText();
@@ -366,22 +359,10 @@ export function generateDiagnostics(
 
     // Check for unrecognized custom inserts (if that option is set) and
     // any argument errors in recognized custom inserts
-    diagnostics.push(
-        ...generateCustomInsertDiagnostics(
-            document,
-            index,
-            text,
-            diagnosticsOptions,
-        ),
-    );
+    diagnostics.push(...generateCustomInsertDiagnostics(document, index, text));
 
     diagnostics.push(
-        ...generateCustomModifierDiagnostics(
-            document,
-            index,
-            text,
-            diagnosticsOptions,
-        ),
+        ...generateCustomModifierDiagnostics(document, index, text),
     );
 
     return diagnostics;

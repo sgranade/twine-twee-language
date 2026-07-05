@@ -234,18 +234,6 @@
                     "default": "include",
                     "order": 8,
                     "markdownDescription": "Directory with non-game files to add to the build directory (relative to the workspace). Files in this directory and all of its subdirectories will be added as-is to the build directory. If blank, no files will be included. Useful for images, fonts, and other files you don't want to bundle directly into the compiled `.html` file."
-                },
-                "twineTweeLanguage.twee-3.warnings.unknownMacro": {
-                    "type": "boolean",
-                    "default": "true",
-                    "order": 9,
-                    "description": "Warn about unrecognized macros (in SugarCube) or inserts and modifiers (in Chapbook)."
-                },
-                "twineTweeLanguage.twee-3.warnings.unknownPassage": {
-                    "type": "boolean",
-                    "default": "true",
-                    "order": 10,
-                    "markdownDescription": "Warn about references to unrecognized passages, such as in `[[passage]]` links."
                 }
             }
         },

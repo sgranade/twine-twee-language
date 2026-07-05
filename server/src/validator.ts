@@ -10,9 +10,8 @@ import {
     DiagnosticCodes,
 } from "./diagnostics";
 import { doValidation } from "./embedded-languages";
-import { ProjectIndex, References, TwineSymbolKind } from "./project-index";
 import { getStoryFormatParser } from "./passage-text-parsers";
-import { DiagnosticsOptions } from "./server-options";
+import { ProjectIndex, References, TwineSymbolKind } from "./project-index";
 import { comparePositions, containingRange } from "./utilities";
 
 /**
@@ -102,37 +101,33 @@ function validatePassages(
  *
  * @param document Document to validate.
  * @param index Index of the Twine project.
- * @param diagnosticsOptions Options for what optional diagnostics to report.
  * @returns List of diagnostic messages.
  */
 function validatePassageReferences(
     document: TextDocument,
     index: ProjectIndex,
-    diagnosticsOptions: DiagnosticsOptions,
 ): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];
 
-    if (diagnosticsOptions.warnings.unknownPassage) {
-        const references =
-            index.getReferences(document.uri, TwineSymbolKind.Passage) ?? [];
-        const names = index.getPassageNames();
-        for (const ref of references) {
-            if (!names.includes(ref.contents)) {
-                for (const loc of ref.locations) {
-                    if (
-                        !index.diagnosticIsDisabled(
-                            loc.uri,
+    const references =
+        index.getReferences(document.uri, TwineSymbolKind.Passage) ?? [];
+    const names = index.getPassageNames();
+    for (const ref of references) {
+        if (!names.includes(ref.contents)) {
+            for (const loc of ref.locations) {
+                if (
+                    !index.diagnosticIsDisabled(
+                        loc.uri,
+                        DiagnosticCodes.MissingPassage,
+                        loc.range,
+                    )
+                ) {
+                    diagnostics.push(
+                        createDiagnosticFromRange(
                             DiagnosticCodes.MissingPassage,
                             loc.range,
-                        )
-                    ) {
-                        diagnostics.push(
-                            createDiagnosticFromRange(
-                                DiagnosticCodes.MissingPassage,
-                                loc.range,
-                            ),
-                        );
-                    }
+                        ),
+                    );
                 }
             }
         }
@@ -146,13 +141,11 @@ function validatePassageReferences(
  *
  * @param document Document to validate and generate diagnostics against.
  * @param index Index of the Twine project.
- * @param diagnosticsOptions Options for what optional diagnostics to report.
  * @returns List of diagnostic messages.
  */
 export async function generateDiagnostics(
     document: TextDocument,
     index: ProjectIndex,
-    diagnosticsOptions: DiagnosticsOptions,
 ): Promise<Diagnostic[]> {
     // Start with parse errors
     const diagnostics: Diagnostic[] = [...index.getParseErrors(document.uri)];
@@ -176,15 +169,13 @@ export async function generateDiagnostics(
     diagnostics.push(...validatePassages(document, index));
 
     // Validate passage references
-    diagnostics.push(
-        ...validatePassageReferences(document, index, diagnosticsOptions),
-    );
+    diagnostics.push(...validatePassageReferences(document, index));
 
     // If we have a story format, let it generate its own diagnostics
     diagnostics.push(
         ...(getStoryFormatParser(
             index.getStoryData()?.storyFormat,
-        )?.generateDiagnostics(document, index, diagnosticsOptions) ?? []),
+        )?.generateDiagnostics(document, index) ?? []),
     );
 
     return diagnostics;

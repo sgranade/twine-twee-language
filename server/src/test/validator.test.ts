@@ -6,7 +6,6 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 import { DiagnosticCodes } from "../diagnostics";
 import { EmbeddedDocument } from "../embedded-languages";
 import { Index, TwineSymbolKind } from "../project-index";
-import { defaultDiagnosticsOptions } from "../server-options";
 
 import * as uut from "../validator";
 import { buildPassage } from "./builders";
@@ -33,11 +32,7 @@ describe("Validator", () => {
             const index = new Index();
             index.setParseErrors("test-uri", errors);
 
-            const result = await uut.generateDiagnostics(
-                doc,
-                index,
-                defaultDiagnosticsOptions,
-            );
+            const result = await uut.generateDiagnostics(doc, index);
 
             expect(result).to.eql(errors);
         });
@@ -61,11 +56,7 @@ describe("Validator", () => {
             const index = new Index();
             index.setEmbeddedDocuments("test-uri", [embeddedDocument]);
 
-            const result = await uut.generateDiagnostics(
-                document,
-                index,
-                defaultDiagnosticsOptions,
-            );
+            const result = await uut.generateDiagnostics(document, index);
 
             expect(result.length).to.equal(1);
             expect(result[0].message).to.equal("Trailing comma");
@@ -88,11 +79,7 @@ describe("Validator", () => {
             const index = new Index();
             index.setEmbeddedDocuments("test-uri", [embeddedDocument]);
 
-            const result = await uut.generateDiagnostics(
-                document,
-                index,
-                defaultDiagnosticsOptions,
-            );
+            const result = await uut.generateDiagnostics(document, index);
 
             expect(result[0].range).to.eql(Range.create(1, 19, 1, 20));
         });
@@ -126,11 +113,7 @@ describe("Validator", () => {
             const index = new Index();
             index.setPassages("test-uri", passages);
 
-            const result = await uut.generateDiagnostics(
-                document,
-                index,
-                defaultDiagnosticsOptions,
-            );
+            const result = await uut.generateDiagnostics(document, index);
 
             expect(result.length).to.equal(2);
             expect(result[0].message).to.contain(
@@ -184,11 +167,7 @@ describe("Validator", () => {
             index.setPassages("uri-one", passages1);
             index.setPassages("test-uri", passages2);
 
-            const result = await uut.generateDiagnostics(
-                document,
-                index,
-                defaultDiagnosticsOptions,
-            );
+            const result = await uut.generateDiagnostics(document, index);
 
             expect(result.length).to.equal(1);
             expect(result[0].message).to.contain(
@@ -238,11 +217,7 @@ describe("Validator", () => {
                 ],
             });
 
-            const result = await uut.generateDiagnostics(
-                document,
-                index,
-                defaultDiagnosticsOptions,
-            );
+            const result = await uut.generateDiagnostics(document, index);
 
             expect(result).to.be.empty;
         });
@@ -267,11 +242,7 @@ describe("Validator", () => {
                 },
             ]);
 
-            const result = await uut.generateDiagnostics(
-                document,
-                index,
-                defaultDiagnosticsOptions,
-            );
+            const result = await uut.generateDiagnostics(document, index);
 
             expect(result.length).to.equal(1);
             expect(result[0].message).to.contain("Cannot find this passage");
@@ -298,36 +269,7 @@ describe("Validator", () => {
                 [DiagnosticCodes.MissingPassage]: [Range.create(1, 1, 6, 1)],
             });
 
-            const result = await uut.generateDiagnostics(
-                document,
-                index,
-                defaultDiagnosticsOptions,
-            );
-
-            expect(result).to.be.empty;
-        });
-
-        it("should not flag passage references that aren't in the index if that warning is disabled in options", async () => {
-            const document = TextDocument.create(
-                "test-uri",
-                "twine",
-                1,
-                '{ "test": 17, }',
-            );
-            const index = new Index();
-            index.setReferences("test-uri", [
-                {
-                    contents: "Non-existent passage",
-                    locations: [
-                        Location.create("test-uri", Range.create(1, 2, 3, 4)),
-                    ],
-                    kind: TwineSymbolKind.Passage,
-                },
-            ]);
-
-            const result = await uut.generateDiagnostics(document, index, {
-                warnings: { unknownMacro: true, unknownPassage: false },
-            });
+            const result = await uut.generateDiagnostics(document, index);
 
             expect(result).to.be.empty;
         });

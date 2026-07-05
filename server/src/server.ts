@@ -45,17 +45,13 @@ import { ParseLevel } from "./parser";
 import { Index } from "./project-index";
 import { getReferencesToSymbolAt } from "./references";
 import { generateRenames, prepareRename } from "./renames";
-import {
-    DiagnosticsOptions,
-    defaultDiagnosticsOptions,
-} from "./server-options";
+import { semanticTokensLegend } from "./semantic-tokens";
 import {
     generateDecorationRanges,
     generateFoldingRanges,
     generateSemanticTokens,
     generateSymbols,
 } from "./structure";
-import { semanticTokensLegend } from "./semantic-tokens";
 import { generateDiagnostics } from "./validator";
 import { getSugarCubeMacroInfo } from "./passage-text-parsers/sugarcube";
 import {
@@ -210,15 +206,12 @@ namespace Heartbeat {
                 }
             }
 
-            const diagnosticsOptions = (await getSettings())["twee-3"];
-
             for (const uri of tweeFileUris) {
                 const doc = await getDoc(uri);
                 if (doc !== undefined) {
                     await parseTextDocument(
                         doc,
                         ParseLevel.Full,
-                        diagnosticsOptions,
                         false, // Don't re-index on story format change b/c we're in the middle of re-indexing
                     );
                 }
@@ -227,7 +220,7 @@ namespace Heartbeat {
             for (const uri of tweeFileUris) {
                 const doc = await getDoc(uri);
                 if (doc !== undefined) {
-                    await validateTextDocument(doc, diagnosticsOptions);
+                    await validateTextDocument(doc);
                 }
             }
 
@@ -241,12 +234,11 @@ namespace Heartbeat {
                 await parseTextDocument(
                     doc,
                     ParseLevel.Full,
-                    diagnosticsOptions,
                     false, // Don't re-index on story format change
                 );
             }
             for (const doc of unprocessedOpenDocuments) {
-                await validateTextDocument(doc, diagnosticsOptions);
+                await validateTextDocument(doc);
             }
         } catch (err) {
             connection.console.error(`Client couldn't find Twee files: ${err}`);
@@ -402,23 +394,11 @@ connection.onDefinition((params: DefinitionParams): Definition | undefined => {
     return getDefinitionAt(document, params.position, projectIndex);
 });
 
-connection.onDidChangeConfiguration(async () => {
-    // Only re-parse if our parse-affecting options have changed
-    const prev = lastSettings["twee-3"];
-    const cur = (await getSettings())["twee-3"];
-    if (
-        prev.warnings.unknownMacro != cur.warnings.unknownMacro ||
-        prev.warnings.unknownPassage != cur.warnings.unknownPassage
-    ) {
-        await processAllOpenDocuments();
-    }
-});
-
 documents.onDidChangeContent(async (change) => {
     // Parse w/re-indexing if the story format changes
-    await parseTextDocument(change.document, ParseLevel.Full, undefined, true);
+    await parseTextDocument(change.document, ParseLevel.Full, true);
     // Validate
-    await validateTextDocument(change.document, undefined);
+    await validateTextDocument(change.document);
     // Update decoration ranges
     sendDecorationRanges(change.document.uri);
 });
@@ -441,9 +421,9 @@ connection.onDidChangeWatchedFiles((_change) => {
 
 documents.onDidOpen(async (change) => {
     // Parse w/re-indexing if the story format changes
-    await parseTextDocument(change.document, ParseLevel.Full, undefined, true);
+    await parseTextDocument(change.document, ParseLevel.Full, true);
     // Validate
-    await validateTextDocument(change.document, undefined);
+    await validateTextDocument(change.document);
     // Update decoration ranges
     sendDecorationRanges(change.document.uri);
 });
@@ -537,62 +517,25 @@ async function fetchFile(
 }
 
 /**
- * Settings for the server. Synchronize with "configuration" in the main package.json.
- */
-interface ServerSettings {
-    "twee-3": DiagnosticsOptions;
-}
-
-const defaultSettings: ServerSettings = {
-    "twee-3": defaultDiagnosticsOptions,
-};
-
-let lastSettings = defaultSettings;
-
-async function getSettings(): Promise<ServerSettings> {
-    if (!hasConfigurationCapability) {
-        return Promise.resolve(defaultSettings);
-    }
-    lastSettings = await connection.workspace.getConfiguration({
-        section: "twineTweeLanguage", // From the package.json file
-    });
-
-    return lastSettings;
-}
-
-/**
  * Parse a document.
  *
  * This does not update the diagnostics.
  *
  * @param document Document to process.
  * @param parseLevel What level of parsing to do.
- * @param diagnosticsOptions Diagnostic options.
  * @param reindexOnStoryFormatChange If true and the story format changes, re-index all project files.
  */
 async function parseTextDocument(
     document: TextDocument,
     parseLevel: ParseLevel,
-    diagnosticsOptions: DiagnosticsOptions | undefined,
     reindexOnStoryFormatChange: boolean,
 ) {
-    if (diagnosticsOptions === undefined) {
-        // We'll only get the diagnostic options if we're parsing passage
-        // contents, since otherwise we're just collecting passage names
-        if (parseLevel === ParseLevel.Full) {
-            const settings = await getSettings();
-            diagnosticsOptions = settings["twee-3"];
-        } else {
-            diagnosticsOptions = defaultDiagnosticsOptions;
-        }
-    }
-
     // Keep track of the story title and format so, if either changes, we can notify
     // listeners and (optionally, for changed story format) request a full re-index
     const storyTitle = projectIndex.getStoryTitle();
     const storyFormat = projectIndex.getStoryData()?.storyFormat;
 
-    updateProjectIndex(document, parseLevel, projectIndex, diagnosticsOptions);
+    updateProjectIndex(document, parseLevel, projectIndex);
 
     const newStoryTitle = projectIndex.getStoryTitle();
     const newStoryFormat = projectIndex.getStoryData()?.storyFormat;
@@ -695,15 +638,12 @@ async function parseT3LTMacroFile(uri: string) {
  * options) that could affect parsing.
  */
 async function processAllOpenDocuments() {
-    const settings = await getSettings();
-    const diagnosticsOptions = settings["twee-3"];
-
     // Loop through twice since validation can depend on the result of parsing all docs
     for (const doc of documents.all()) {
-        await parseTextDocument(doc, ParseLevel.Full, diagnosticsOptions, true);
+        await parseTextDocument(doc, ParseLevel.Full, true);
     }
     for (const doc of documents.all()) {
-        await validateTextDocument(doc, diagnosticsOptions);
+        await validateTextDocument(doc);
     }
 
     // Request that the client re-do diagnostics since we've re-processed
@@ -714,21 +654,9 @@ async function processAllOpenDocuments() {
  * Validate a document and get any diagnostics arising from that validation.
  *
  * @param textDocument Document to validate.
- * @param diagnosticsOptions Diagnostics options.
  */
-async function validateTextDocument(
-    textDocument: TextDocument,
-    diagnosticsOptions: DiagnosticsOptions | undefined,
-) {
-    if (diagnosticsOptions === undefined) {
-        diagnosticsOptions = (await getSettings())["twee-3"];
-    }
-
-    const diagnostics = await generateDiagnostics(
-        textDocument,
-        projectIndex,
-        diagnosticsOptions,
-    );
+async function validateTextDocument(textDocument: TextDocument) {
+    const diagnostics = await generateDiagnostics(textDocument, projectIndex);
 
     connection.sendDiagnostics({ uri: textDocument.uri, diagnostics });
 }

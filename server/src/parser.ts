@@ -43,10 +43,6 @@ import {
     TokenModifier,
     TokenType,
 } from "./semantic-tokens";
-import {
-    DiagnosticsOptions,
-    defaultDiagnosticsOptions,
-} from "./server-options";
 import { Token } from "./types";
 import {
     nextLineIndex,
@@ -93,10 +89,6 @@ export interface ParsingState {
      * What diagnostic codes are currently disabled for this passage?
      */
     currentPassageDisabledDiagnostics?: Set<DiagnosticCode>;
-    /**
-     * Diagnostics options.
-     */
-    diagnosticsOptions: DiagnosticsOptions;
     /**
      * Story format (if known).
      */
@@ -1000,19 +992,16 @@ function parseTwee3(state: ParsingState): void {
  * @param callbacks Parser event callbacks.
  * @param parseLevel What level of parsing to do.
  * @param storyFormat Previous story format (if any) to use in parsing.
- * @param diagnosticsOptions Options for what optional diagnostics to report.
  */
 export function parse(
     textDocument: TextDocument,
     callbacks: ParserCallbacks,
     parseLevel: ParseLevel,
     storyFormat?: StoryFormat,
-    diagnosticsOptions?: DiagnosticsOptions,
 ): void {
     const state: ParsingState = {
         textDocument: textDocument,
         parseLevel: parseLevel,
-        diagnosticsOptions: diagnosticsOptions ?? defaultDiagnosticsOptions,
         storyFormatParser: undefined, // No story format parser to begin with
         callbacks: callbacks,
     };

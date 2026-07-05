@@ -4,7 +4,6 @@ import { Location, Position, Range } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { Index } from "../../../project-index";
-import { defaultDiagnosticsOptions } from "../../../server-options";
 import {
     ChapbookSymbol,
     OChapbookSymbolKind,
@@ -41,8 +40,6 @@ describe("Chapbook Definitions", () => {
                 kind: OChapbookSymbolKind.CustomInsert,
             },
         ]);
-        const diagnosticOptions = defaultDiagnosticsOptions;
-        diagnosticOptions.warnings.unknownMacro = true;
         const parser = uut.getChapbookParser(undefined);
 
         const result = parser?.getDefinitionAt(
@@ -82,8 +79,6 @@ describe("Chapbook Definitions", () => {
                 kind: OChapbookSymbolKind.CustomInsert,
             },
         ]);
-        const diagnosticOptions = defaultDiagnosticsOptions;
-        diagnosticOptions.warnings.unknownMacro = true;
         const parser = uut.getChapbookParser(undefined);
 
         const result = parser?.getDefinitionAt(
@@ -125,8 +120,6 @@ describe("Chapbook Definitions", () => {
                 kind: OChapbookSymbolKind.CustomModifier,
             },
         ]);
-        const diagnosticOptions = defaultDiagnosticsOptions;
-        diagnosticOptions.warnings.unknownMacro = true;
         const parser = uut.getChapbookParser(undefined);
 
         const result = parser?.getDefinitionAt(

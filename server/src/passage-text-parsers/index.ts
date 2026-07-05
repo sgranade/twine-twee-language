@@ -14,7 +14,6 @@ import { StoryFormat } from "../client-server";
 import { EmbeddedDocument } from "../embedded-languages";
 import { ParsingState } from "../parser";
 import { ProjectIndex } from "../project-index";
-import { DiagnosticsOptions } from "../server-options";
 import { TokenModifier, TokenType } from "../semantic-tokens";
 import { getChapbookParser } from "./chapbook";
 import { getSugarCubeParser } from "./sugarcube";
@@ -67,12 +66,10 @@ export interface StoryFormatParser {
      *
      * @param document Document to generate diagnostics for.
      * @param index Twine project index.
-     * @param diagnosticsOptions Diagnostic options.
      */
     generateDiagnostics(
         document: TextDocument,
         index: ProjectIndex,
-        diagnosticsOptions: DiagnosticsOptions,
     ): Diagnostic[];
     /**
      * Generate hover information.

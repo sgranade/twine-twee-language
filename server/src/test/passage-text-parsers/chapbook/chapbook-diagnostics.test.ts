@@ -10,7 +10,6 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { DiagnosticCodes } from "../../../diagnostics";
 import { Index } from "../../../project-index";
-import { defaultDiagnosticsOptions } from "../../../server-options";
 import {
     ChapbookSymbol,
     OChapbookSymbolKind,
@@ -38,14 +37,9 @@ describe("Chapbook Diagnostics", () => {
                     kind: OChapbookSymbolKind.Variable,
                 },
             ]);
-            const diagnosticOptions = defaultDiagnosticsOptions;
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateDiagnostics(
-                doc,
-                index,
-                diagnosticOptions,
-            );
+            const results = parser?.generateDiagnostics(doc, index);
 
             expect(results).to.eql([
                 Diagnostic.create(
@@ -78,14 +72,9 @@ describe("Chapbook Diagnostics", () => {
             index.setDisabledDiagnosticRanges("fake-uri", {
                 [DiagnosticCodes.VariableNeverSet]: [Range.create(1, 1, 6, 1)],
             });
-            const diagnosticOptions = defaultDiagnosticsOptions;
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateDiagnostics(
-                doc,
-                index,
-                diagnosticOptions,
-            );
+            const results = parser?.generateDiagnostics(doc, index);
 
             expect(results).to.be.empty;
         });
@@ -116,14 +105,9 @@ describe("Chapbook Diagnostics", () => {
                     kind: OChapbookSymbolKind.VariableSet,
                 },
             ]);
-            const diagnosticOptions = defaultDiagnosticsOptions;
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateDiagnostics(
-                doc,
-                index,
-                diagnosticOptions,
-            );
+            const results = parser?.generateDiagnostics(doc, index);
 
             expect(results).to.be.empty;
         });
@@ -145,14 +129,9 @@ describe("Chapbook Diagnostics", () => {
                     kind: OChapbookSymbolKind.Property,
                 },
             ]);
-            const diagnosticOptions = defaultDiagnosticsOptions;
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateDiagnostics(
-                doc,
-                index,
-                diagnosticOptions,
-            );
+            const results = parser?.generateDiagnostics(doc, index);
 
             expect(results).to.be.empty;
         });
@@ -174,14 +153,9 @@ describe("Chapbook Diagnostics", () => {
                     kind: OChapbookSymbolKind.Variable,
                 },
             ]);
-            const diagnosticOptions = defaultDiagnosticsOptions;
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateDiagnostics(
-                doc,
-                index,
-                diagnosticOptions,
-            );
+            const results = parser?.generateDiagnostics(doc, index);
 
             expect(results).to.be.empty;
         });
@@ -219,14 +193,9 @@ describe("Chapbook Diagnostics", () => {
                     kind: OChapbookSymbolKind.VariableSet,
                 },
             ]);
-            const diagnosticOptions = defaultDiagnosticsOptions;
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateDiagnostics(
-                doc,
-                index,
-                diagnosticOptions,
-            );
+            const results = parser?.generateDiagnostics(doc, index);
 
             expect(results).to.eql([
                 Diagnostic.create(
@@ -282,14 +251,9 @@ describe("Chapbook Diagnostics", () => {
                     kind: OChapbookSymbolKind.PropertySet,
                 },
             ]);
-            const diagnosticOptions = defaultDiagnosticsOptions;
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateDiagnostics(
-                doc,
-                index,
-                diagnosticOptions,
-            );
+            const results = parser?.generateDiagnostics(doc, index);
 
             expect(results).to.be.empty;
         });
@@ -313,15 +277,9 @@ describe("Chapbook Diagnostics", () => {
                     kind: OChapbookSymbolKind.CustomInsert,
                 },
             ]);
-            const diagnosticOptions = defaultDiagnosticsOptions;
-            diagnosticOptions.warnings.unknownMacro = true;
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateDiagnostics(
-                doc,
-                index,
-                diagnosticOptions,
-            );
+            const results = parser?.generateDiagnostics(doc, index);
 
             expect(results).to.eql([
                 Diagnostic.create(
@@ -356,45 +314,9 @@ describe("Chapbook Diagnostics", () => {
                     Range.create(1, 1, 6, 1),
                 ],
             });
-            const diagnosticOptions = defaultDiagnosticsOptions;
-            diagnosticOptions.warnings.unknownMacro = true;
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateDiagnostics(
-                doc,
-                index,
-                diagnosticOptions,
-            );
-
-            expect(results).to.be.empty;
-        });
-
-        it("should not warn on an unrecognized insert if that warning is disabled", () => {
-            const doc = TextDocument.create(
-                "fake-uri",
-                "",
-                0,
-                "Let's try {test insert, one: 'here',",
-            );
-            const index = new Index();
-            index.setReferences("fake-uri", [
-                {
-                    contents: "custom insert",
-                    locations: [
-                        Location.create("fake-uri", Range.create(1, 2, 3, 4)),
-                    ],
-                    kind: OChapbookSymbolKind.CustomInsert,
-                },
-            ]);
-            const diagnosticOptions = defaultDiagnosticsOptions;
-            diagnosticOptions.warnings.unknownMacro = false;
-            const parser = uut.getChapbookParser(undefined);
-
-            const results = parser?.generateDiagnostics(
-                doc,
-                index,
-                diagnosticOptions,
-            );
+            const results = parser?.generateDiagnostics(doc, index);
 
             expect(results).to.be.empty;
         });
@@ -427,15 +349,9 @@ describe("Chapbook Diagnostics", () => {
                     kind: OChapbookSymbolKind.CustomInsert,
                 },
             ]);
-            const diagnosticOptions = defaultDiagnosticsOptions;
-            diagnosticOptions.warnings.unknownMacro = true;
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateDiagnostics(
-                doc,
-                index,
-                diagnosticOptions,
-            );
+            const results = parser?.generateDiagnostics(doc, index);
 
             expect(results).to.be.empty;
         });
@@ -472,15 +388,9 @@ describe("Chapbook Diagnostics", () => {
                     kind: OChapbookSymbolKind.CustomInsert,
                 },
             ]);
-            const diagnosticOptions = defaultDiagnosticsOptions;
-            diagnosticOptions.warnings.unknownMacro = true;
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateDiagnostics(
-                doc,
-                index,
-                diagnosticOptions,
-            );
+            const results = parser?.generateDiagnostics(doc, index);
 
             expect(results).to.eql([
                 Diagnostic.create(
@@ -530,15 +440,9 @@ describe("Chapbook Diagnostics", () => {
                     Range.create(0, 1, 6, 1),
                 ],
             });
-            const diagnosticOptions = defaultDiagnosticsOptions;
-            diagnosticOptions.warnings.unknownMacro = true;
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateDiagnostics(
-                doc,
-                index,
-                diagnosticOptions,
-            );
+            const results = parser?.generateDiagnostics(doc, index);
 
             expect(results).to.be.empty;
         });
@@ -575,15 +479,9 @@ describe("Chapbook Diagnostics", () => {
                     kind: OChapbookSymbolKind.CustomInsert,
                 },
             ]);
-            const diagnosticOptions = defaultDiagnosticsOptions;
-            diagnosticOptions.warnings.unknownMacro = true;
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateDiagnostics(
-                doc,
-                index,
-                diagnosticOptions,
-            );
+            const results = parser?.generateDiagnostics(doc, index);
 
             expect(results).to.eql([
                 Diagnostic.create(
@@ -633,15 +531,9 @@ describe("Chapbook Diagnostics", () => {
                     Range.create(0, 1, 6, 1),
                 ],
             });
-            const diagnosticOptions = defaultDiagnosticsOptions;
-            diagnosticOptions.warnings.unknownMacro = true;
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateDiagnostics(
-                doc,
-                index,
-                diagnosticOptions,
-            );
+            const results = parser?.generateDiagnostics(doc, index);
 
             expect(results).to.be.empty;
         });
@@ -680,15 +572,9 @@ describe("Chapbook Diagnostics", () => {
                     kind: OChapbookSymbolKind.CustomInsert,
                 },
             ]);
-            const diagnosticOptions = defaultDiagnosticsOptions;
-            diagnosticOptions.warnings.unknownMacro = true;
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateDiagnostics(
-                doc,
-                index,
-                diagnosticOptions,
-            );
+            const results = parser?.generateDiagnostics(doc, index);
 
             expect(results).to.eql([
                 Diagnostic.create(
@@ -740,15 +626,9 @@ describe("Chapbook Diagnostics", () => {
                     Range.create(0, 1, 6, 1),
                 ],
             });
-            const diagnosticOptions = defaultDiagnosticsOptions;
-            diagnosticOptions.warnings.unknownMacro = true;
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateDiagnostics(
-                doc,
-                index,
-                diagnosticOptions,
-            );
+            const results = parser?.generateDiagnostics(doc, index);
 
             expect(results).to.be.empty;
         });
@@ -785,15 +665,9 @@ describe("Chapbook Diagnostics", () => {
                     kind: OChapbookSymbolKind.CustomInsert,
                 },
             ]);
-            const diagnosticOptions = defaultDiagnosticsOptions;
-            diagnosticOptions.warnings.unknownMacro = true;
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateDiagnostics(
-                doc,
-                index,
-                diagnosticOptions,
-            );
+            const results = parser?.generateDiagnostics(doc, index);
 
             expect(results).to.eql([
                 Diagnostic.create(
@@ -843,15 +717,9 @@ describe("Chapbook Diagnostics", () => {
                     Range.create(0, 1, 6, 1),
                 ],
             });
-            const diagnosticOptions = defaultDiagnosticsOptions;
-            diagnosticOptions.warnings.unknownMacro = true;
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateDiagnostics(
-                doc,
-                index,
-                diagnosticOptions,
-            );
+            const results = parser?.generateDiagnostics(doc, index);
 
             expect(results).to.be.empty;
         });
@@ -873,15 +741,9 @@ describe("Chapbook Diagnostics", () => {
                     kind: OChapbookSymbolKind.CustomModifier,
                 },
             ]);
-            const diagnosticOptions = defaultDiagnosticsOptions;
-            diagnosticOptions.warnings.unknownMacro = true;
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateDiagnostics(
-                doc,
-                index,
-                diagnosticOptions,
-            );
+            const results = parser?.generateDiagnostics(doc, index);
 
             expect(results).to.eql([
                 Diagnostic.create(
@@ -916,45 +778,9 @@ describe("Chapbook Diagnostics", () => {
                     Range.create(1, 1, 6, 1),
                 ],
             });
-            const diagnosticOptions = defaultDiagnosticsOptions;
-            diagnosticOptions.warnings.unknownMacro = true;
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateDiagnostics(
-                doc,
-                index,
-                diagnosticOptions,
-            );
-
-            expect(results).to.be.empty;
-        });
-
-        it("should not warn on an unrecognized modifier if that warning is disabled", () => {
-            const doc = TextDocument.create(
-                "fake-uri",
-                "",
-                0,
-                "[mod-me]\nI'm modified!",
-            );
-            const index = new Index();
-            index.setReferences("fake-uri", [
-                {
-                    contents: "mod-me",
-                    locations: [
-                        Location.create("fake-uri", Range.create(1, 2, 3, 4)),
-                    ],
-                    kind: OChapbookSymbolKind.CustomModifier,
-                },
-            ]);
-            const diagnosticOptions = defaultDiagnosticsOptions;
-            diagnosticOptions.warnings.unknownMacro = false;
-            const parser = uut.getChapbookParser(undefined);
-
-            const results = parser?.generateDiagnostics(
-                doc,
-                index,
-                diagnosticOptions,
-            );
+            const results = parser?.generateDiagnostics(doc, index);
 
             expect(results).to.be.empty;
         });
@@ -987,15 +813,9 @@ describe("Chapbook Diagnostics", () => {
                     kind: OChapbookSymbolKind.CustomModifier,
                 },
             ]);
-            const diagnosticOptions = defaultDiagnosticsOptions;
-            diagnosticOptions.warnings.unknownMacro = true;
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateDiagnostics(
-                doc,
-                index,
-                diagnosticOptions,
-            );
+            const results = parser?.generateDiagnostics(doc, index);
 
             expect(results).to.be.empty;
         });
@@ -1032,15 +852,9 @@ describe("Chapbook Diagnostics", () => {
                     kind: OChapbookSymbolKind.CustomModifier,
                 },
             ]);
-            const diagnosticOptions = defaultDiagnosticsOptions;
-            diagnosticOptions.warnings.unknownMacro = true;
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateDiagnostics(
-                doc,
-                index,
-                diagnosticOptions,
-            );
+            const results = parser?.generateDiagnostics(doc, index);
 
             expect(results).to.eql([
                 Diagnostic.create(
@@ -1085,15 +899,9 @@ describe("Chapbook Diagnostics", () => {
                     kind: OChapbookSymbolKind.CustomModifier,
                 },
             ]);
-            const diagnosticOptions = defaultDiagnosticsOptions;
-            diagnosticOptions.warnings.unknownMacro = true;
             const parser = uut.getChapbookParser(undefined);
 
-            const results = parser?.generateDiagnostics(
-                doc,
-                index,
-                diagnosticOptions,
-            );
+            const results = parser?.generateDiagnostics(doc, index);
 
             expect(results).to.eql([
                 Diagnostic.create(

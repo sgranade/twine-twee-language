@@ -3,7 +3,6 @@ import { expect } from "chai";
 import { Location, Position, Range } from "vscode-languageserver";
 
 import { Index } from "../../../project-index";
-import { defaultDiagnosticsOptions } from "../../../server-options";
 import { OChapbookSymbolKind } from "../../../passage-text-parsers/chapbook/types";
 
 import * as uut from "../../../passage-text-parsers/chapbook";
@@ -43,8 +42,6 @@ describe("Chapbook References", () => {
                 kind: OChapbookSymbolKind.VariableSet,
             },
         ]);
-        const diagnosticOptions = defaultDiagnosticsOptions;
-        diagnosticOptions.warnings.unknownMacro = true;
         const parser = uut.getChapbookParser(undefined);
 
         const result = parser?.getReferencesToSymbolAt(
@@ -96,8 +93,6 @@ describe("Chapbook References", () => {
                 kind: OChapbookSymbolKind.VariableSet,
             },
         ]);
-        const diagnosticOptions = defaultDiagnosticsOptions;
-        diagnosticOptions.warnings.unknownMacro = true;
         const parser = uut.getChapbookParser(undefined);
 
         const result = parser?.getReferencesToSymbolAt(
@@ -149,8 +144,6 @@ describe("Chapbook References", () => {
                 kind: OChapbookSymbolKind.PropertySet,
             },
         ]);
-        const diagnosticOptions = defaultDiagnosticsOptions;
-        diagnosticOptions.warnings.unknownMacro = true;
         const parser = uut.getChapbookParser(undefined);
 
         const result = parser?.getReferencesToSymbolAt(
@@ -202,8 +195,6 @@ describe("Chapbook References", () => {
                 kind: OChapbookSymbolKind.PropertySet,
             },
         ]);
-        const diagnosticOptions = defaultDiagnosticsOptions;
-        diagnosticOptions.warnings.unknownMacro = true;
         const parser = uut.getChapbookParser(undefined);
 
         const result = parser?.getReferencesToSymbolAt(

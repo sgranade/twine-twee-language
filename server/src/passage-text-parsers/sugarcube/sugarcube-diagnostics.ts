@@ -7,7 +7,6 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 import { createDiagnosticFromRange, DiagnosticCodes } from "../../diagnostics";
 import { isBuiltinJSObjectInstanceProperty } from "../../js-parser";
 import { ProjectIndex } from "../../project-index";
-import { DiagnosticsOptions } from "../../server-options";
 import { referencesToDiagnostics } from "../../validator";
 import { allBuiltInMacros, allMacros } from "./macros";
 import { getSugarCubeDefinitions } from "./sugarcube-parser";
@@ -99,13 +98,11 @@ function generateVariableAndPropertyDiagnostics(
  * @param document Document to validate and generate diagnostics against.
  * @param index Index of the Twine project.
  * @param text Text of the document.
- * @param diagnosticsOptions Options for what optional diagnostics to report.
  * @returns List of diagnostic messages.
  */
 function generateMacroDiagnostics(
     document: TextDocument,
     index: ProjectIndex,
-    diagnosticsOptions: DiagnosticsOptions,
 ): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];
     const macros = allMacros();
@@ -178,23 +175,21 @@ function generateMacroDiagnostics(
     }
 
     // See if we have unknown macros
-    if (diagnosticsOptions.warnings.unknownMacro) {
-        for (const macroRef of index.getReferences(
-            document.uri,
-            OSugarCubeSymbolKind.UnknownMacro,
-        ) ?? []) {
-            if (
-                macros[macroRef.contents] === undefined &&
-                definedMacroNames.indexOf(macroRef.contents) === -1
-            ) {
-                diagnostics.push(
-                    ...referencesToDiagnostics(
-                        index,
-                        macroRef,
-                        DiagnosticCodes.SugarCubeUnknownMacro,
-                    ),
-                );
-            }
+    for (const macroRef of index.getReferences(
+        document.uri,
+        OSugarCubeSymbolKind.UnknownMacro,
+    ) ?? []) {
+        if (
+            macros[macroRef.contents] === undefined &&
+            definedMacroNames.indexOf(macroRef.contents) === -1
+        ) {
+            diagnostics.push(
+                ...referencesToDiagnostics(
+                    index,
+                    macroRef,
+                    DiagnosticCodes.SugarCubeUnknownMacro,
+                ),
+            );
         }
     }
 
@@ -206,13 +201,11 @@ function generateMacroDiagnostics(
  *
  * @param document Document to validate and generate diagnostics against.
  * @param index Index of the Twine project.
- * @param diagnosticsOptions Options for what optional diagnostics to report.
  * @returns List of diagnostic messages.
  */
 export function generateDiagnostics(
     document: TextDocument,
     index: ProjectIndex,
-    diagnosticsOptions: DiagnosticsOptions,
 ): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];
 
@@ -221,10 +214,8 @@ export function generateDiagnostics(
         ...generateVariableAndPropertyDiagnostics(document, index),
     );
 
-    // Check for unrecognized macros (if that option is set)
-    diagnostics.push(
-        ...generateMacroDiagnostics(document, index, diagnosticsOptions),
-    );
+    // Check for unrecognized macros
+    diagnostics.push(...generateMacroDiagnostics(document, index));
 
     return diagnostics;
 }

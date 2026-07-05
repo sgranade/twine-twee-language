@@ -9,6 +9,7 @@ import {
     DiagnosticMap,
 } from "./diagnostics";
 import { EmbeddedDocument } from "./embedded-languages";
+import { ParseLevel, ParserCallbacks, parse } from "./parser";
 import {
     Passage,
     ProjectIndex,
@@ -16,9 +17,7 @@ import {
     References,
     StoryData,
 } from "./project-index";
-import { ParseLevel, ParserCallbacks, parse } from "./parser";
 import { SemanticToken } from "./semantic-tokens";
-import { DiagnosticsOptions } from "./server-options";
 
 /**
  * Captures information about the current state of indexing
@@ -54,13 +53,11 @@ class IndexingState {
  * @param textDocument Document to index.
  * @param parseLevel Level of parsing to do.
  * @param index Project index to update.
- * @param diagnosticsOptions Options for what optional diagnostics to report.
  */
 export function updateProjectIndex(
     textDocument: TextDocument,
     parseLevel: ParseLevel,
     index: ProjectIndex,
-    diagnosticsOptions?: DiagnosticsOptions,
 ): void {
     const indexingState = new IndexingState(textDocument);
     const uri = textDocument.uri;
@@ -131,7 +128,6 @@ export function updateProjectIndex(
         callbacks,
         parseLevel,
         index.getStoryData()?.storyFormat,
-        diagnosticsOptions,
     );
 
     // Collate the array of individual references by kind and name

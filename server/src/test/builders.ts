@@ -4,9 +4,8 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 import { DecorationRange } from "../client-server";
 import { DiagnosticCode, DiagnosticMap } from "../diagnostics";
 import { EmbeddedDocument } from "../embedded-languages";
-import { Passage, StoryData, ProjSymbol } from "../project-index";
 import { ParseLevel, ParserCallbacks, ParsingState } from "../parser";
-import { defaultDiagnosticsOptions } from "../server-options";
+import { Passage, StoryData, ProjSymbol } from "../project-index";
 import { SemanticToken } from "../semantic-tokens";
 
 export function buildPassage({
@@ -39,14 +38,12 @@ export function buildParsingState({
     content = "content",
     parseLevel = ParseLevel.Full,
     callbacks = new MockCallbacks(),
-    diagnosticsOptions = defaultDiagnosticsOptions,
 }): ParsingState {
     return {
         textDocument: TextDocument.create(uri, "twee3", 1, content),
         parseLevel: parseLevel,
         storyFormatParser: undefined,
         callbacks: callbacks,
-        diagnosticsOptions: diagnosticsOptions,
     };
 }
 

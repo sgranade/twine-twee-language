@@ -11,7 +11,6 @@ export enum Configuration {
     RunningGameUpdate = "build.runningGameUpdate",
     BuildDirectory = "build.buildDirectory",
     IncludeDirectory = "build.includeDirectory",
-    Twee3WarningUnknownMacro = "twee-3.warning.unknownMacro",
 }
 
 export type RunningGameUpdateOptions = "live reload" | "restart" | "no update";
