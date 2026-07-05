@@ -113,16 +113,12 @@ export const DiagnosticCodes = {
     SugarCubeVariableNeverSet: "sugarcube-variable-never-set",
 } as const;
 
-// A set of the codes for quick lookup
-export const diagnosticCodeSet = new Set(Object.values(DiagnosticCodes));
-function isDiagnosticCode(code: string): code is DiagnosticCode {
-    return diagnosticCodeSet.has(code as DiagnosticCode);
-}
-
 export type DiagnosticCode =
     (typeof DiagnosticCodes)[keyof typeof DiagnosticCodes];
 
 export type DiagnosticMap<T> = Partial<Record<DiagnosticCode, T>>;
+
+export const DisableDiagnosticTag = "tt3-disable";
 
 const DiagnosticMetadata: Record<DiagnosticCode, DiagnosticMetadata> = {
     [DiagnosticCodes.IncorrectJavaScript]: {
@@ -389,6 +385,18 @@ const DiagnosticMetadata: Record<DiagnosticCode, DiagnosticMetadata> = {
     },
 };
 
+// A set of the codes for quick lookup
+const diagnosticCodeSet = new Set(Object.values(DiagnosticCodes));
+
+/**
+ * Does a string correspond to a diagnostic code?
+ * @param code String to check.
+ * @returns True if the string corresponds to a diagnostic code.
+ */
+export function isDiagnosticCode(code: string): code is DiagnosticCode {
+    return diagnosticCodeSet.has(code as DiagnosticCode);
+}
+
 /**
  * Get a list of diagnostics from passage tags that should be disabled.
  *
@@ -402,7 +410,7 @@ export function disabledDiagnosticsFromPassageTagLabels(
 ): [Set<DiagnosticCode>, Label[]] {
     const disabledCodes = new Set<DiagnosticCode>();
     const unrecognizedCodes: Label[] = [];
-    const ndx = tags.findIndex((x) => x.contents === "tt3-disable");
+    const ndx = tags.findIndex((x) => x.contents === DisableDiagnosticTag);
     if (ndx !== -1 && tags[ndx + 1] !== undefined) {
         const codeTag = tags[ndx + 1];
         const codeTagStartLine = codeTag.location.range.start.line;

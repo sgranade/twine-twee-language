@@ -8,7 +8,8 @@ Diagnostics have been extensively re-worked, including now providing them for Ja
 
 ### Added
 
-- Warnings and errors can now be disabled in a passage by adding `tt3-disable` followed by comma-separated list of diagnostics to the passage's tags: `[tt3-disable <error 1>,<error 2>]`.
+- Diagnostics (Warnings and errors) can now be disabled in a passage by adding `tt3-disable` followed by comma-separated list of diagnostics to the passage's tags: `[tt3-disable <error 1>,<error 2>]`.
+- Added a quick fix action for disabling diagnostics for a passage.
 - JavaScript errors are now reported.
 - Variables and properties that haven't been defined now create a warning across both story format code (Chapbook/SugarCube) and JavaScript sections.
 - Now auto-completes object properties from expressions like `var['prop'] = { prop1: 2 }`.

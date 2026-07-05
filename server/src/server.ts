@@ -1,4 +1,5 @@
 import {
+    CodeAction,
     CompletionList,
     Connection,
     DefinitionParams,
@@ -58,6 +59,7 @@ import {
     setCustomMacrosAndEnums,
     tweeConfigFileToMacrosAndEnums,
 } from "./passage-text-parsers/sugarcube/macros";
+import { generateCodeActions } from "./code-actions";
 
 const connection: Connection = createConnection(ProposedFeatures.all);
 
@@ -307,11 +309,13 @@ connection.onInitialize((params: InitializeParams) => {
                     includeText: false,
                 },
             },
+            codeActionProvider: true,
             completionProvider: {
                 triggerCharacters: ["{", "[", "<", "'", '"', "$", "_"], // the last two are SugarCube variable sigils
                 // TODO create a resolve provider
                 resolveProvider: false,
             },
+            definitionProvider: true,
             // Right now we don't support pull diagnostics b/c as of VS Code 1.94.2 (2024/10/09) it's flaky
             // diagnosticProvider: {
             //     interFileDependencies: true,
@@ -320,13 +324,12 @@ connection.onInitialize((params: InitializeParams) => {
             documentSymbolProvider: true,
             foldingRangeProvider: true,
             hoverProvider: true,
+            referencesProvider: true,
+            renameProvider: true,
             semanticTokensProvider: {
                 legend: semanticTokensLegend,
                 full: true,
             },
-            definitionProvider: true,
-            referencesProvider: true,
-            renameProvider: true,
         },
     };
     if (hasPrepareProviderCapability) {
@@ -368,6 +371,21 @@ connection.onInitialized(async () => {
 //         } satisfies DocumentDiagnosticReport;
 //     }
 // });
+
+connection.onCodeAction((params): CodeAction[] => {
+    const passage = projectIndex.getPassageAt(
+        params.textDocument.uri,
+        params.range.start,
+    );
+    if (passage === undefined) {
+        return [];
+    }
+    return generateCodeActions(
+        params.textDocument.uri,
+        passage,
+        params.context.diagnostics,
+    );
+});
 
 connection.onCompletion(
     async (
