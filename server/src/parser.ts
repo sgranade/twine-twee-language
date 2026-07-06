@@ -617,7 +617,7 @@ function parsePassageHeader(
                 unparsedHeader = "";
             } else {
                 const rawTags = new Set(tagMatch[1].split(/\s+/));
-                tags = Array.from(rawTags).map((tag): Label => {
+                tags = [...rawTags].map((tag): Label => {
                     const tagIndex = parsingIndex + tagMatch[0].indexOf(tag);
                     return {
                         contents: tag.replace(/\\(.)/g, "$1"),
@@ -632,6 +632,14 @@ function parsePassageHeader(
                         ),
                     };
                 });
+                // Capture the tags as symbol references
+                for (const t of tags) {
+                    state.callbacks.onSymbolReference({
+                        contents: t.contents,
+                        location: t.location,
+                        kind: TwineSymbolKind.Tag,
+                    });
+                }
                 unparsedHeader = unparsedHeader.substring(tagMatch[0].length);
                 parsingIndex += tagMatch[0].length;
                 m = openMetaCharRegex.exec(unparsedHeader); // Re-run to see if we have any trailing metadata

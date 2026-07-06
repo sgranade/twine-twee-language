@@ -4,13 +4,22 @@ Changes to the extension.
 
 ## Unreleased
 
-Diagnostics have been extensively re-worked, including now providing them for JavaScript code.
+Two big changes:
+
+- Diagnostics have been extensively re-worked.
+    - The extension now reports JavaScript errors.
+    - It flags variables that (it thinks) have never been defined.
+    - You can disable any diagnostic on a per-passage basis.
+- Passage tag handling has been greatly improved.
+    - Tag auto-complete? Yes, please!
+    - Find every reference to a tag or rename a tag the same way you can a passage or variable.
 
 ### Added
 
 - JavaScript diagnostics (warnings and errors) are now reported.
 - Diagnostics can now be disabled in a passage by adding `tt3-disable` followed by comma-separated list of diagnostics to the passage's tags: `[tt3-disable <error 1>,<error 2>]`.
 - Added a quick fix action for disabling diagnostics for a passage.
+- You can now search for and rename passage tags the same way you can passages and variables.
 - Passage tags now auto-complete.
 - Variables and properties that haven't been defined now create a warning across both story format code (Chapbook/SugarCube) and JavaScript sections.
 - Now auto-completes object properties from expressions like `var['prop'] = { prop1: 2 }`.

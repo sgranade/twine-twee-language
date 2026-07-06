@@ -143,6 +143,38 @@ describe("Server Twine Parser", () => {
                 ]);
             });
 
+            it("should capture the passage tags as tag references", () => {
+                const callbacks = new MockCallbacks();
+                const doc = TextDocument.create(
+                    "fake-uri",
+                    "",
+                    0,
+                    ":: Passage 1 [tag-1  tag_2]\nP1 contents",
+                );
+
+                uut.parse(doc, callbacks, uut.ParseLevel.Full);
+                const result = callbacks.references;
+
+                expect(result).to.eql([
+                    {
+                        contents: "tag-1",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(0, 14, 0, 19),
+                        ),
+                        kind: TwineSymbolKind.Tag,
+                    },
+                    {
+                        contents: "tag_2",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(0, 21, 0, 26),
+                        ),
+                        kind: TwineSymbolKind.Tag,
+                    },
+                ]);
+            });
+
             it("should ignore repeated tags", () => {
                 const callbacks = new MockCallbacks();
                 const doc = TextDocument.create(

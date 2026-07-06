@@ -36,6 +36,7 @@ export interface ProjSymbol extends Label, Kind {}
  */
 export enum TwineSymbolKind {
     Passage = 1,
+    Tag,
     _end, // So story format parsers can de-conflict their values
 }
 
