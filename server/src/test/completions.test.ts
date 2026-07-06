@@ -5,6 +5,7 @@ import * as uuid from "uuid";
 import {
     CompletionItem,
     CompletionList,
+    Location,
     Position,
     Range,
     TextEdit,
@@ -12,11 +13,12 @@ import {
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { Index } from "../project-index";
-import { buildPassage } from "./builders";
+import { buildPassage, buildTag } from "./builders";
 import * as ptpModule from "../passage-text-parsers";
 import * as embeddedLanguagesModule from "../embedded-languages";
 
 import * as uut from "../completions";
+import { diagnosticCodeSet, DisableDiagnosticTag } from "../diagnostics";
 
 describe("Completions", () => {
     describe("Embedded Documents", () => {
@@ -585,6 +587,207 @@ describe("Completions", () => {
             expect(results?.items[0].label).to.eql("Testy");
             expect(results?.itemDefaults?.editRange).to.eql(
                 Range.create(0, 12, 0, 27),
+            );
+        });
+    });
+
+    describe("Tags", () => {
+        it("should suggest tags from across all passages as well as the diagnostic disabling tag", async () => {
+            const doc = TextDocument.create(
+                "fake-uri",
+                "",
+                0,
+                ":: Testy []\nContents",
+            );
+            const passage1 = buildPassage({
+                label: "Testy",
+                location: {
+                    uri: "fake-uri",
+                    range: Range.create(0, 3, 0, 8),
+                },
+                scope: Range.create(0, 0, 1, 8),
+            });
+            const passage2 = buildPassage({
+                label: "Other",
+                scope: Range.create(3, 0, 4, 10),
+            });
+            const passage3 = buildPassage({
+                label: "Separate",
+                scope: Range.create(6, 0, 7, 14),
+            });
+            passage2.tags = [
+                buildTag(
+                    "other-tag",
+                    Location.create("fake-uri", Range.create(1, 11, 1, 16)),
+                ),
+            ];
+            passage3.tags = [
+                buildTag(
+                    "separate-tag",
+                    Location.create(
+                        "another-fake-uri",
+                        Range.create(1, 11, 1, 16),
+                    ),
+                ),
+            ];
+            const position = Position.create(0, 10);
+            const index = new Index();
+            index.setPassages("fake-uri", [passage1, passage2]);
+            index.setPassages("another-fake-uri", [passage3]);
+
+            const results = await uut.generateCompletions(
+                doc,
+                position,
+                index,
+                true,
+            );
+
+            expect(results?.items.map((i) => i.label)).to.eql([
+                "other-tag",
+                "separate-tag",
+                DisableDiagnosticTag,
+            ]);
+            expect(results?.itemDefaults?.editRange).to.eql(
+                Range.create(0, 10, 0, 10),
+            );
+        });
+
+        it("should suggest tags after an existing tag other than ones already existing", async () => {
+            const doc = TextDocument.create(
+                "fake-uri",
+                "",
+                0,
+                ":: Testy [tag ]\nContents",
+            );
+            const passage1 = buildPassage({
+                label: "Testy",
+                location: {
+                    uri: "fake-uri",
+                    range: Range.create(0, 3, 0, 8),
+                },
+                scope: Range.create(0, 0, 1, 8),
+            });
+            const passage2 = buildPassage({
+                label: "Other",
+                scope: Range.create(3, 0, 4, 10),
+            });
+            passage1.tags = [
+                buildTag(
+                    "tag",
+                    Location.create(
+                        "another-fake-uri",
+                        Range.create(1, 10, 1, 16),
+                    ),
+                ),
+            ];
+            passage2.tags = [
+                buildTag(
+                    "other-tag",
+                    Location.create("fake-uri", Range.create(1, 11, 1, 16)),
+                ),
+                buildTag(
+                    "tag",
+                    Location.create("fake-uri", Range.create(1, 18, 1, 21)),
+                ),
+            ];
+            const position = Position.create(0, 14);
+            const index = new Index();
+            index.setPassages("fake-uri", [passage1, passage2]);
+
+            const results = await uut.generateCompletions(
+                doc,
+                position,
+                index,
+                true,
+            );
+
+            expect(results?.items.map((i) => i.label)).to.eql([
+                "other-tag",
+                DisableDiagnosticTag,
+            ]);
+            expect(results?.itemDefaults?.editRange).to.eql(
+                Range.create(0, 14, 0, 14),
+            );
+        });
+
+        it("should suggest diagnostic codes after a diagnostic-disabling tag", async () => {
+            const doc = TextDocument.create(
+                "fake-uri",
+                "",
+                0,
+                ":: Testy [tt3-disable ]\nContents",
+            );
+            const position = Position.create(0, 22);
+            const passage1 = buildPassage({
+                label: "Testy",
+                location: {
+                    uri: "fake-uri",
+                    range: Range.create(0, 3, 0, 8),
+                },
+                scope: Range.create(0, 0, 1, 8),
+            });
+            passage1.tags = [
+                buildTag(
+                    "tag",
+                    Location.create("tt3-disable", Range.create(0, 10, 0, 21)),
+                ),
+            ];
+            const index = new Index();
+            index.setPassages("fake-uri", [passage1]);
+
+            const results = await uut.generateCompletions(
+                doc,
+                position,
+                index,
+                true,
+            );
+
+            expect(results?.items.map((i) => i.label)).to.eql([
+                ...diagnosticCodeSet,
+            ]);
+            expect(results?.itemDefaults?.editRange).to.eql(
+                Range.create(0, 22, 0, 22),
+            );
+        });
+
+        it("should suggest diagnostic codes other than existing ones after a diagnostic-disabling tag", async () => {
+            const doc = TextDocument.create(
+                "fake-uri",
+                "",
+                0,
+                ":: Testy [tt3-disable missing-passage,]\nContents",
+            );
+            const position = Position.create(0, 38);
+            const passage1 = buildPassage({
+                label: "Testy",
+                location: {
+                    uri: "fake-uri",
+                    range: Range.create(0, 3, 0, 8),
+                },
+                scope: Range.create(0, 0, 1, 8),
+            });
+            passage1.tags = [
+                buildTag(
+                    "tag",
+                    Location.create("tt3-disable", Range.create(0, 10, 0, 21)),
+                ),
+            ];
+            const index = new Index();
+            index.setPassages("fake-uri", [passage1]);
+            diagnosticCodeSet.delete("missing-passage");
+
+            const results = await uut.generateCompletions(
+                doc,
+                position,
+                index,
+                true,
+            );
+
+            expect(results?.items.map((i) => i.label)).to.eql([
+                ...diagnosticCodeSet,
+            ]);
+            expect(results?.itemDefaults?.editRange).to.eql(
+                Range.create(0, 38, 0, 38),
             );
         });
     });

@@ -5,7 +5,7 @@ import { DecorationRange } from "../client-server";
 import { DiagnosticCode, DiagnosticMap } from "../diagnostics";
 import { EmbeddedDocument } from "../embedded-languages";
 import { ParseLevel, ParserCallbacks, ParsingState } from "../parser";
-import { Passage, StoryData, ProjSymbol } from "../project-index";
+import { Label, Passage, ProjSymbol, StoryData } from "../project-index";
 import { SemanticToken } from "../semantic-tokens";
 
 export function buildPassage({
@@ -30,6 +30,16 @@ export function buildPassage({
         isStylesheet: isStylesheet,
         tags: tags,
         metadata: metadata,
+    };
+}
+
+export function buildTag(
+    name = "tag",
+    location = { uri: "fake-uri", range: Range.create(5, 5, 6, 6) },
+): Label {
+    return {
+        contents: name,
+        location: location,
     };
 }
 

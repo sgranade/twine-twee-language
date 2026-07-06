@@ -1,7 +1,12 @@
 import { Diagnostic, Location, Position, Range } from "vscode-languageserver";
 
 import { DecorationRange, StoryFormat } from "./client-server";
-import { DiagnosticCode, DiagnosticMap, TwineDiagnostic } from "./diagnostics";
+import {
+    DiagnosticCode,
+    DiagnosticMap,
+    DisableDiagnosticTag,
+    TwineDiagnostic,
+} from "./diagnostics";
 import { EmbeddedDocument } from "./embedded-languages";
 import { SemanticToken } from "./semantic-tokens";
 import { positionInRange, rangeInRange } from "./utilities";
@@ -275,11 +280,15 @@ export interface ProjectIndex {
      */
     getPassageAt(uri: string, position: Position): Passage | undefined;
     /**
-     * Get all passage names in the index in alphabetically- sorted order.
+     * Get all passage names in the index in alphabetically-sorted order.
      *
      * There may be duplicated names if multiple passages share the same name.
      */
     getPassageNames(): readonly string[];
+    /**
+     * Get all tags used in passages in the index in alphabetically-sorted order.
+     */
+    getAllPassageTags(): readonly string[];
 
     /**
      * Check to see if a diagnostic has been disabled at a given location.
@@ -337,8 +346,10 @@ export class Index implements ProjectIndex {
     private _disabledDiagnosticRanges: Record<string, DiagnosticMap<Range[]>> =
         {};
 
-    // Cache of passage names
-    private _cachedPassageNames: string[] | undefined = undefined;
+    // Cache of passage names, since they take time to generate
+    private _cachedPassageNames: Record<string, string[]> = {};
+    // Cache of passage tags, since they also take time to generate
+    private _cachedPassageTags: Record<string, string[]> = {};
 
     setStoryTitle(title: string, uri: string): void {
         this._storyTitle = title;
@@ -350,7 +361,14 @@ export class Index implements ProjectIndex {
     }
     setPassages(uri: string, newPassages: Passage[]): void {
         this._passages[uri] = [...newPassages];
-        this._cachedPassageNames = undefined;
+        this._cachedPassageNames[uri] = newPassages.map((p) => p.name.contents);
+        const passageTags: string[] = [];
+        for (const p of newPassages) {
+            if (p.tags) {
+                passageTags.push(...p.tags.map((t) => t.contents));
+            }
+        }
+        this._cachedPassageTags[uri] = passageTags;
     }
     _setPerKind<T extends Kind>(toAdd: T[]): RepositoryPerKind<T> {
         const repo: RepositoryPerKind<T> = {};
@@ -612,18 +630,20 @@ export class Index implements ProjectIndex {
         return undefined;
     }
     getPassageNames(): string[] {
-        // Since passage name generation can take significant time
-        // for large projects, cache the results
-        if (this._cachedPassageNames === undefined) {
-            this._cachedPassageNames = [];
-            for (const passages of Object.values(this._passages)) {
-                this._cachedPassageNames.push(
-                    ...passages.map((p) => p.name.contents),
-                );
-            }
-            this._cachedPassageNames.sort();
+        const allNames: string[] = [];
+        for (const names of Object.values(this._cachedPassageNames)) {
+            allNames.push(...names);
         }
-        return this._cachedPassageNames;
+        return allNames.sort((a, b) => a.localeCompare(b));
+    }
+    getAllPassageTags(): string[] {
+        const allTags: string[] = [];
+        for (const tags of Object.values(this._cachedPassageTags)) {
+            allTags.push(...tags);
+        }
+        // Add the diagnostic disabling tag
+        allTags.push(DisableDiagnosticTag);
+        return allTags.sort((a, b) => a.localeCompare(b));
     }
 
     diagnosticIsDisabled(
@@ -673,6 +693,7 @@ export class Index implements ProjectIndex {
         if (uri === this._storyDataUri) {
             this._storyData = undefined;
         }
-        this._cachedPassageNames = undefined;
+        delete this._cachedPassageNames[uri];
+        delete this._cachedPassageTags[uri];
     }
 }

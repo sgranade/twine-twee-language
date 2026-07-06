@@ -10,6 +10,7 @@ import {
 } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
+import { diagnosticCodeSet } from "./diagnostics";
 import {
     EmbeddedDocument,
     doComplete,
@@ -128,10 +129,9 @@ function generateStoryDataCompletions(
 
         // Start
         if (node.parent.keyNode.value === "start") {
-            const uniquePassageNames = new Set<string>(index.getPassageNames());
             completions.push(
                 ...createStringCompletions(
-                    [...uniquePassageNames],
+                    index.getPassageNames(),
                     nodeRange,
                     CompletionItemKind.Class,
                 ),
@@ -257,47 +257,20 @@ async function generateEmbeddedDocumentCompletions(
 }
 
 /**
- * Generate completions for a document.
+ * Generate Twine link completions if possible.
  *
  * @param document Document to generate completions for.
- * @param position Where to generate the completions.
+ * @param completionOffset Offset into the document where to generate the completions.
  * @param index Twine project index.
- * @param hasCompletionListItemDefaults Whether the client supports CompletionList.itemDefaults
- * @returns Completion list, or null if no completions.
+ * @param hasCompletionListItemDefaults Whether the client supports CompletionList.itemDefaults.
+ * @returns Completion list, or null if no Twine link completions are possible.
  */
-export async function generateCompletions(
+function generateTwineLinkCompletions(
     document: TextDocument,
-    position: Position,
+    completionOffset: number,
     index: ProjectIndex,
     hasCompletionListItemDefaults: boolean,
-): Promise<CompletionList | null> {
-    const completionOffset = document.offsetAt(position);
-    let passageDocument: EmbeddedDocument | undefined;
-    const deferredEmbeddedDocuments: EmbeddedDocument[] = [];
-
-    // Embedded documents get to create their own completions
-    for (const embeddedDocument of index.getEmbeddedDocuments(document.uri) ||
-        []) {
-        if (positionInRange(position, embeddedDocument.range)) {
-            // If the document corresponds to an entire passage, wait to form completions
-            // from it until after everything else has had its chance. If it's deferred to
-            // story formats to handle, add it to the list of deferred embedded documents.
-            if (embeddedDocument.isPassage) {
-                passageDocument = embeddedDocument;
-            } else if (embeddedDocument.deferToStoryFormat) {
-                deferredEmbeddedDocuments.push(embeddedDocument);
-            } else {
-                return await generateEmbeddedDocumentCompletions(
-                    embeddedDocument,
-                    document,
-                    position,
-                    index,
-                );
-            }
-        }
-    }
-
-    // See if we're potentially inside a Twine link
+): CompletionList | undefined {
     const text = document.getText();
     let i = completionOffset;
     let linkBeginOffset: number | undefined;
@@ -376,6 +349,189 @@ export async function generateCompletions(
             return completionList;
         }
     }
+}
+
+/**
+ * Generate Twine passage tag completions if possible.
+ *
+ * @param document Document to generate completions for.
+ * @param position Where to generate the completions.
+ * @param index Twine project index.
+ * @param hasCompletionListItemDefaults Whether the client supports CompletionList.itemDefaults.
+ * @returns Completion list, or null if no tag completions are possible.
+ */
+function generatePassageTagCompletions(
+    document: TextDocument,
+    position: Position,
+    index: ProjectIndex,
+    hasCompletionListItemDefaults: boolean,
+): CompletionList | undefined {
+    // We will only have tag completions if the position is on the same line
+    // as the passage's name and also after its name
+    const passage = index.getPassageAt(document.uri, position);
+    if (
+        passage === undefined ||
+        passage.name.location.range.start.line !== position.line ||
+        passage.name.location.range.end.character >= position.character
+    )
+        return;
+
+    const completionOffset = document.offsetAt(position);
+    const text = document.getText();
+    let tagBeginOffset: number | undefined;
+    let bracketOffset: number | undefined;
+    let spaceOffset: number | undefined;
+    let commaOffset: number | undefined;
+    // Find where the tags begin and note if there's a space before us
+    for (let i = completionOffset; i >= 0; i--) {
+        // Don't go further back than the current line
+        if (text[i] === "\n") break;
+
+        // Go until we find a leading [, but note if we find a space or a comma (prior to a space)
+        if (text[i] === "[") {
+            bracketOffset = i;
+            tagBeginOffset = i + 1;
+            break;
+        } else if (
+            text[i] === "," &&
+            spaceOffset === undefined &&
+            commaOffset === undefined
+        ) {
+            commaOffset = i;
+        } else if (text[i] === " " && spaceOffset === undefined) {
+            spaceOffset = i;
+        }
+    }
+    if (tagBeginOffset === undefined) return;
+
+    // If we found a space, that's where the tag should begin
+    if (spaceOffset !== undefined) {
+        tagBeginOffset = spaceOffset + 1;
+    }
+
+    // Find where the tag should end: ], { (for metadata), a space, or EOL
+    let tagEndOffset: number | undefined;
+    for (
+        tagEndOffset = completionOffset;
+        tagBeginOffset < text.length;
+        tagEndOffset++
+    ) {
+        // Don't go further than the current line, ], {, or a space
+        if (
+            text[tagEndOffset] === "]" ||
+            text[tagEndOffset] === "{" ||
+            text[tagEndOffset] === " " ||
+            text[tagEndOffset] === "\r" ||
+            text[tagEndOffset] === "\n"
+        ) {
+            break;
+        }
+    }
+    tagEndOffset--;
+    // Handle the case where the tag is empty []
+    if (tagEndOffset < tagBeginOffset) tagEndOffset = tagBeginOffset;
+
+    let tags: Set<string>;
+    // If the tag `tt3-disable` is before the current one, we need to suggest diagnostics
+    if (/tt3-disable\s+$/.test(text.slice(bracketOffset, tagBeginOffset))) {
+        tags = new Set<string>(diagnosticCodeSet);
+        if (commaOffset !== undefined) {
+            for (const code of text
+                .slice(tagBeginOffset, tagEndOffset)
+                .split(",")) {
+                tags.delete(code);
+            }
+            tagBeginOffset = commaOffset + 1;
+            if (tagEndOffset < tagBeginOffset) {
+                tagEndOffset = tagBeginOffset;
+            }
+        }
+    } else {
+        tags = new Set<string>(index.getAllPassageTags());
+        // Remove any current passage tags from the list
+        if (passage.tags) {
+            for (const t of passage.tags) {
+                tags.delete(t.contents);
+            }
+        }
+    }
+    let completionList = CompletionList.create(
+        [...tags].map((t): CompletionItem => {
+            return { label: t, kind: CompletionItemKind.Text };
+        }),
+        false,
+    );
+    completionList.itemDefaults = {
+        editRange: Range.create(
+            document.positionAt(tagBeginOffset),
+            document.positionAt(tagEndOffset),
+        ),
+        insertTextFormat: InsertTextFormat.Snippet,
+    };
+    if (!hasCompletionListItemDefaults) {
+        completionList = removeCompletionListItemDefaults(completionList);
+    }
+    return completionList;
+}
+
+/**
+ * Generate completions for a document.
+ *
+ * @param document Document to generate completions for.
+ * @param position Where to generate the completions.
+ * @param index Twine project index.
+ * @param hasCompletionListItemDefaults Whether the client supports CompletionList.itemDefaults.
+ * @returns Completion list, or null if no completions.
+ */
+export async function generateCompletions(
+    document: TextDocument,
+    position: Position,
+    index: ProjectIndex,
+    hasCompletionListItemDefaults: boolean,
+): Promise<CompletionList | null> {
+    const completionOffset = document.offsetAt(position);
+    let passageDocument: EmbeddedDocument | undefined;
+    const deferredEmbeddedDocuments: EmbeddedDocument[] = [];
+
+    // Embedded documents get to create their own completions
+    for (const embeddedDocument of index.getEmbeddedDocuments(document.uri) ||
+        []) {
+        if (positionInRange(position, embeddedDocument.range)) {
+            // If the document corresponds to an entire passage, wait to form completions
+            // from it until after everything else has had its chance. If it's deferred to
+            // story formats to handle, add it to the list of deferred embedded documents.
+            if (embeddedDocument.isPassage) {
+                passageDocument = embeddedDocument;
+            } else if (embeddedDocument.deferToStoryFormat) {
+                deferredEmbeddedDocuments.push(embeddedDocument);
+            } else {
+                return await generateEmbeddedDocumentCompletions(
+                    embeddedDocument,
+                    document,
+                    position,
+                    index,
+                );
+            }
+        }
+    }
+
+    // See if we're potentially inside a Twine link
+    const linkCompletions = generateTwineLinkCompletions(
+        document,
+        completionOffset,
+        index,
+        hasCompletionListItemDefaults,
+    );
+    if (linkCompletions) return linkCompletions;
+
+    // See if we're potentially creating tags
+    const tagCompletions = generatePassageTagCompletions(
+        document,
+        position,
+        index,
+        hasCompletionListItemDefaults,
+    );
+    if (tagCompletions) return tagCompletions;
 
     // If there's a story format, let its parser provide optional completions
     const storyFormat = index.getStoryData()?.storyFormat;

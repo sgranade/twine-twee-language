@@ -9,7 +9,7 @@ import {
 } from "vscode-languageserver";
 
 import { DiagnosticCodes, DisableDiagnosticTag } from "../diagnostics";
-import { buildPassage } from "./builders";
+import { buildPassage, buildTag } from "./builders";
 
 import * as uut from "../code-actions";
 
@@ -103,13 +103,10 @@ describe("Code Actions", () => {
                 },
             });
             passage.tags = [
-                {
-                    contents: "first",
-                    location: Location.create(
-                        "fake-uri",
-                        Range.create(1, 11, 1, 16),
-                    ),
-                },
+                buildTag(
+                    "first",
+                    Location.create("fake-uri", Range.create(1, 11, 1, 16)),
+                ),
             ];
             const diagnostic = Diagnostic.create(
                 Range.create(2, 3, 2, 5),
@@ -145,13 +142,10 @@ describe("Code Actions", () => {
                 },
             });
             passage.tags = [
-                {
-                    contents: DisableDiagnosticTag,
-                    location: Location.create(
-                        "fake-uri",
-                        Range.create(1, 11, 1, 34),
-                    ),
-                },
+                buildTag(
+                    DisableDiagnosticTag,
+                    Location.create("fake-uri", Range.create(1, 11, 1, 34)),
+                ),
             ];
             const diagnostic = Diagnostic.create(
                 Range.create(2, 3, 2, 5),
@@ -187,20 +181,14 @@ describe("Code Actions", () => {
                 },
             });
             passage.tags = [
-                {
-                    contents: DisableDiagnosticTag,
-                    location: Location.create(
-                        "fake-uri",
-                        Range.create(1, 11, 1, 22),
-                    ),
-                },
-                {
-                    contents: "previous-code",
-                    location: Location.create(
-                        "fake-uri",
-                        Range.create(1, 24, 1, 37),
-                    ),
-                },
+                buildTag(
+                    DisableDiagnosticTag,
+                    Location.create("fake-uri", Range.create(1, 11, 1, 22)),
+                ),
+                buildTag(
+                    "previous-code",
+                    Location.create("fake-uri", Range.create(1, 24, 1, 37)),
+                ),
             ];
             const diagnostic = Diagnostic.create(
                 Range.create(2, 3, 2, 5),

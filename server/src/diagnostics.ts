@@ -386,7 +386,7 @@ const DiagnosticMetadata: Record<DiagnosticCode, DiagnosticMetadata> = {
 };
 
 // A set of the codes for quick lookup
-const diagnosticCodeSet = new Set(Object.values(DiagnosticCodes));
+export const diagnosticCodeSet = new Set(Object.values(DiagnosticCodes));
 
 /**
  * Does a string correspond to a diagnostic code?

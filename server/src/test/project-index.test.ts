@@ -7,7 +7,7 @@ import { DiagnosticCodes } from "../diagnostics";
 import { EmbeddedDocument } from "../embedded-languages";
 import { SemanticToken } from "../semantic-tokens";
 
-import { buildPassage } from "./builders";
+import { buildPassage, buildTag } from "./builders";
 import * as uut from "../project-index";
 
 describe("Project Index", () => {
@@ -1187,6 +1187,64 @@ describe("Project Index", () => {
             const result = index.getPassageNames();
 
             expect(result).to.eql(["F1 P1", "F2 P2", "spoiler", "spoiler"]);
+        });
+    });
+
+    describe("Passage Tags", () => {
+        it("should return passage tags across all indexed files", () => {
+            const passages1 = [
+                buildPassage({ label: "F1 P1" }),
+                buildPassage({ label: "F1 P2" }),
+            ];
+            const passages2 = [
+                buildPassage({ label: "F2 P1" }),
+                buildPassage({ label: "F2 P2" }),
+            ];
+            passages1[0].tags = [buildTag("oneTag"), buildTag("anotherTag")];
+            passages2[1].tags = [buildTag("thirdTag")];
+            const index = new uut.Index();
+            index.setPassages("file1", passages1);
+            index.setPassages("file2", passages2);
+
+            const result = index.getAllPassageTags();
+
+            expect(result).to.eql([
+                "anotherTag",
+                "oneTag",
+                "thirdTag",
+                "tt3-disable",
+            ]);
+        });
+
+        it("should return passage tags with duplicates and in sort order", () => {
+            const passages1 = [
+                buildPassage({ label: "F1 P1" }),
+                buildPassage({ label: "spoiler" }),
+            ];
+            const passages2 = [
+                buildPassage({ label: "spoiler" }),
+                buildPassage({ label: "F2 P2" }),
+            ];
+            passages1[0].tags = [buildTag("oneTag"), buildTag("anotherTag")];
+            passages2[0].tags = [
+                buildTag("anotherTag"),
+                buildTag("aDifferentTag"),
+            ];
+            passages2[1].tags = [buildTag("thirdTag")];
+            const index = new uut.Index();
+            index.setPassages("file1", passages1);
+            index.setPassages("file2", passages2);
+
+            const result = index.getAllPassageTags();
+
+            expect(result).to.eql([
+                "aDifferentTag",
+                "anotherTag",
+                "anotherTag",
+                "oneTag",
+                "thirdTag",
+                "tt3-disable",
+            ]);
         });
     });
 
