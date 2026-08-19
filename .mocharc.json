@@ -1,5 +1,5 @@
 {
     "extension": ["ts"],
-    "require": "ts-node/register/transpile-only",
+    "require": "tsx",
     "spec": ["client/src/test/**/*.test.ts", "server/src/test/**/*.test.ts"]
 }
