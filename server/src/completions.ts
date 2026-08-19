@@ -195,6 +195,7 @@ function removeCompletionListItemDefaults(
  * @param document Document to generate completions for.
  * @param position Where to generate the completions.
  * @param index Twine project index.
+ * @param doCompleteFn: Embedded document doComplete function.
  * @returns Completion list, or null if no completions.
  */
 async function generateEmbeddedDocumentCompletions(
@@ -202,6 +203,7 @@ async function generateEmbeddedDocumentCompletions(
     document: TextDocument,
     position: Position,
     index: ProjectIndex,
+    doCompleteFn: typeof doComplete,
 ): Promise<CompletionList | null> {
     const completionOffset = document.offsetAt(position);
 
@@ -212,7 +214,7 @@ async function generateEmbeddedDocumentCompletions(
 
     const embeddedDocOffset = document.offsetAt(embeddedDocument.range.start);
     const completions =
-        (await doComplete(document, embeddedDocument, completionOffset)) ||
+        (await doCompleteFn(document, embeddedDocument, completionOffset)) ||
         CompletionList.create([], false);
 
     // Adjust the completion items for StoryData
@@ -475,12 +477,26 @@ function generatePassageTagCompletions(
 }
 
 /**
+ * Interface for external functions used by generateCompletions()
+ */
+export interface CompletionGenerationAPI {
+    embeddedDocumentDoComplete: typeof doComplete;
+    getStoryFormatParser: typeof getStoryFormatParser;
+}
+
+const defaultCompletionGenerationAPI: CompletionGenerationAPI = {
+    embeddedDocumentDoComplete: doComplete,
+    getStoryFormatParser: getStoryFormatParser,
+};
+
+/**
  * Generate completions for a document.
  *
  * @param document Document to generate completions for.
  * @param position Where to generate the completions.
  * @param index Twine project index.
  * @param hasCompletionListItemDefaults Whether the client supports CompletionList.itemDefaults.
+ * @param api API for completion generation.
  * @returns Completion list, or null if no completions.
  */
 export async function generateCompletions(
@@ -488,6 +504,7 @@ export async function generateCompletions(
     position: Position,
     index: ProjectIndex,
     hasCompletionListItemDefaults: boolean,
+    api: CompletionGenerationAPI = defaultCompletionGenerationAPI,
 ): Promise<CompletionList | null> {
     const completionOffset = document.offsetAt(position);
     let passageDocument: EmbeddedDocument | undefined;
@@ -510,6 +527,7 @@ export async function generateCompletions(
                     document,
                     position,
                     index,
+                    api.embeddedDocumentDoComplete,
                 );
             }
         }
@@ -536,7 +554,7 @@ export async function generateCompletions(
     // If there's a story format, let its parser provide optional completions
     const storyFormat = index.getStoryData()?.storyFormat;
     if (storyFormat !== undefined) {
-        const parser = getStoryFormatParser(storyFormat);
+        const parser = api.getStoryFormatParser(storyFormat);
         if (parser !== undefined) {
             let completionList = parser.generateCompletions(
                 document,
@@ -561,6 +579,7 @@ export async function generateCompletions(
             document,
             position,
             index,
+            api.embeddedDocumentDoComplete,
         );
     }
 

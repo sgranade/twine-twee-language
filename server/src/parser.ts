@@ -1000,12 +1000,14 @@ function parseTwee3(state: ParsingState): void {
  * @param callbacks Parser event callbacks.
  * @param parseLevel What level of parsing to do.
  * @param storyFormat Previous story format (if any) to use in parsing.
+ * @param getParser Function to get a story-format-specific parser.
  */
 export function parse(
     textDocument: TextDocument,
     callbacks: ParserCallbacks,
     parseLevel: ParseLevel,
     storyFormat?: StoryFormat,
+    getParser: typeof getStoryFormatParser = getStoryFormatParser,
 ): void {
     const state: ParsingState = {
         textDocument: textDocument,
@@ -1056,7 +1058,7 @@ export function parse(
 
     state.storyFormat = storyFormat;
 
-    state.storyFormatParser = getStoryFormatParser(storyFormat);
+    state.storyFormatParser = getParser(storyFormat);
 
     parseTwee3(state);
 }

@@ -1,6 +1,5 @@
 import "mocha";
 import { expect } from "chai";
-import { ImportMock } from "ts-mock-imports";
 import { DiagnosticSeverity, Location, Range } from "vscode-languageserver";
 
 import { buildInsertInfo } from "./inserts/insert-builders";
@@ -19,7 +18,6 @@ import {
     ValueType,
 } from "../../../passage-text-parsers/chapbook/types";
 import * as insertsModule from "../../../passage-text-parsers/chapbook/inserts";
-import * as modifiersModule from "../../../passage-text-parsers/chapbook/modifiers";
 
 import * as uut from "../../../passage-text-parsers/chapbook";
 
@@ -672,14 +670,12 @@ describe("Chapbook Parser", () => {
                         description: "My description!",
                         match: /^mod1/,
                     });
-                    const mockFunction = ImportMock.mockFunction(
-                        modifiersModule,
-                        "all",
-                    ).returns([modifier]);
-                    const parser = uut.getChapbookParser(undefined);
+                    const parser = uut.getChapbookParser(undefined, {
+                        allModifiers: () => [modifier],
+                        allInserts: () => [],
+                    });
 
                     parser?.parsePassageText(passage, header.length, state);
-                    mockFunction.restore();
                     const [mod1Token, mod2Token, mod2Param1] = callbacks.tokens;
 
                     expect(callbacks.tokens.length).to.equal(3);
@@ -748,19 +744,17 @@ describe("Chapbook Parser", () => {
                         format: "Chapbook",
                         formatVersion: "2.1",
                     };
-                    const parser = uut.getChapbookParser("2.1");
                     const modifier = buildModifierInfo({
                         description: "My description!",
                         match: /^mod1/,
                     });
                     modifier.deprecated = "2.1";
-                    const mockFunction = ImportMock.mockFunction(
-                        modifiersModule,
-                        "all",
-                    ).returns([modifier]);
+                    const parser = uut.getChapbookParser("2.1", {
+                        allModifiers: () => [modifier],
+                        allInserts: () => [],
+                    });
 
                     parser?.parsePassageText(passage, header.length, state);
-                    mockFunction.restore();
                     const [mod1Token] = callbacks.tokens;
 
                     expect(callbacks.tokens.length).to.equal(1);
@@ -889,14 +883,12 @@ describe("Chapbook Parser", () => {
                         content: header + passage,
                         callbacks: callbacks,
                     });
-                    const parser = uut.getChapbookParser(undefined);
-                    const mockFunction = ImportMock.mockFunction(
-                        modifiersModule,
-                        "all",
-                    ).returns([modifier]);
+                    const parser = uut.getChapbookParser(undefined, {
+                        allModifiers: () => [modifier],
+                        allInserts: () => [],
+                    });
 
                     parser?.parsePassageText(passage, header.length, state);
-                    mockFunction.restore();
                     const result = callbacks.references[0];
 
                     expect(callbacks.references.length).to.equal(1);
@@ -919,14 +911,12 @@ describe("Chapbook Parser", () => {
                         content: header + passage,
                         callbacks: callbacks,
                     });
-                    const parser = uut.getChapbookParser(undefined);
-                    const mockFunction = ImportMock.mockFunction(
-                        modifiersModule,
-                        "all",
-                    ).returns([]);
+                    const parser = uut.getChapbookParser(undefined, {
+                        allModifiers: () => [],
+                        allInserts: () => [],
+                    });
 
                     parser?.parsePassageText(passage, header.length, state);
-                    mockFunction.restore();
                     const result = callbacks.references[0];
 
                     expect(callbacks.references.length).to.equal(1);
@@ -950,14 +940,12 @@ describe("Chapbook Parser", () => {
                         content: header + passage,
                         callbacks: callbacks,
                     });
-                    const parser = uut.getChapbookParser(undefined);
-                    const mockFunction = ImportMock.mockFunction(
-                        modifiersModule,
-                        "all",
-                    ).returns([]);
+                    const parser = uut.getChapbookParser(undefined, {
+                        allModifiers: () => [],
+                        allInserts: () => [],
+                    });
 
                     parser?.parsePassageText(passage, header.length, state);
-                    mockFunction.restore();
                     const result = callbacks.foldingRanges;
 
                     expect(result).to.eql([
@@ -976,14 +964,12 @@ describe("Chapbook Parser", () => {
                         content: header + passage,
                         callbacks: callbacks,
                     });
-                    const parser = uut.getChapbookParser(undefined);
-                    const mockFunction = ImportMock.mockFunction(
-                        modifiersModule,
-                        "all",
-                    ).returns([]);
+                    const parser = uut.getChapbookParser(undefined, {
+                        allModifiers: () => [],
+                        allInserts: () => [],
+                    });
 
                     parser?.parsePassageText(passage, header.length, state);
-                    mockFunction.restore();
                     const result = callbacks.foldingRanges;
 
                     expect(result).to.eql([
@@ -1052,14 +1038,12 @@ describe("Chapbook Parser", () => {
                         content: header + passage,
                         callbacks: callbacks,
                     });
-                    const parser = uut.getChapbookParser(undefined);
-                    const mockFunction = ImportMock.mockFunction(
-                        modifiersModule,
-                        "all",
-                    ).returns([modifier]);
+                    const parser = uut.getChapbookParser(undefined, {
+                        allModifiers: () => [modifier],
+                        allInserts: () => [],
+                    });
 
                     parser?.parsePassageText(passage, header.length, state);
-                    mockFunction.restore();
 
                     expect(passedText).to.equal("mock-mod stuff that follows!");
                 });
@@ -1079,14 +1063,12 @@ describe("Chapbook Parser", () => {
                         content: header + passage,
                         callbacks: callbacks,
                     });
-                    const parser = uut.getChapbookParser(undefined);
-                    const mockFunction = ImportMock.mockFunction(
-                        modifiersModule,
-                        "all",
-                    ).returns([modifier]);
+                    const parser = uut.getChapbookParser(undefined, {
+                        allModifiers: () => [modifier],
+                        allInserts: () => [],
+                    });
 
                     parser?.parsePassageText(passage, header.length, state);
-                    mockFunction.restore();
                     const result = callbacks.references;
 
                     expect(callbacks.references.length).to.equal(4);
@@ -1131,14 +1113,12 @@ describe("Chapbook Parser", () => {
                         content: header + passage,
                         callbacks: callbacks,
                     });
-                    const parser = uut.getChapbookParser(undefined);
-                    const mockFunction = ImportMock.mockFunction(
-                        modifiersModule,
-                        "all",
-                    ).returns([modifier]);
+                    const parser = uut.getChapbookParser(undefined, {
+                        allModifiers: () => [modifier],
+                        allInserts: () => [],
+                    });
 
                     parser?.parsePassageText(passage, header.length, state);
-                    mockFunction.restore();
                     const result = callbacks.references[1];
 
                     expect(callbacks.references.length).to.equal(2);
@@ -1167,14 +1147,12 @@ describe("Chapbook Parser", () => {
                         content: header + passage,
                         callbacks: callbacks,
                     });
-                    const parser = uut.getChapbookParser(undefined);
-                    const mockFunction = ImportMock.mockFunction(
-                        modifiersModule,
-                        "all",
-                    ).returns([modifier]);
+                    const parser = uut.getChapbookParser(undefined, {
+                        allModifiers: () => [modifier],
+                        allInserts: () => [],
+                    });
 
                     parser?.parsePassageText(passage, header.length, state);
-                    mockFunction.restore();
                     const [, firstArgToken] = callbacks.tokens;
 
                     expect(firstArgToken).to.eql({
@@ -1201,14 +1179,12 @@ describe("Chapbook Parser", () => {
                         content: header + passage,
                         callbacks: callbacks,
                     });
-                    const parser = uut.getChapbookParser(undefined);
-                    const mockFunction = ImportMock.mockFunction(
-                        modifiersModule,
-                        "all",
-                    ).returns([modifier]);
+                    const parser = uut.getChapbookParser(undefined, {
+                        allModifiers: () => [modifier],
+                        allInserts: () => [],
+                    });
 
                     parser?.parsePassageText(passage, header.length, state);
-                    mockFunction.restore();
                     const result = callbacks.references[1];
 
                     expect(callbacks.references.length).to.equal(2);
@@ -1237,14 +1213,12 @@ describe("Chapbook Parser", () => {
                         content: header + passage,
                         callbacks: callbacks,
                     });
-                    const parser = uut.getChapbookParser(undefined);
-                    const mockFunction = ImportMock.mockFunction(
-                        modifiersModule,
-                        "all",
-                    ).returns([modifier]);
+                    const parser = uut.getChapbookParser(undefined, {
+                        allModifiers: () => [modifier],
+                        allInserts: () => [],
+                    });
 
                     parser?.parsePassageText(passage, header.length, state);
-                    mockFunction.restore();
                     const [, firstArgToken] = callbacks.tokens;
 
                     expect(firstArgToken).to.eql({
@@ -1271,14 +1245,12 @@ describe("Chapbook Parser", () => {
                         content: header + passage,
                         callbacks: callbacks,
                     });
-                    const parser = uut.getChapbookParser(undefined);
-                    const mockFunction = ImportMock.mockFunction(
-                        modifiersModule,
-                        "all",
-                    ).returns([modifier]);
+                    const parser = uut.getChapbookParser(undefined, {
+                        allModifiers: () => [modifier],
+                        allInserts: () => [],
+                    });
 
                     parser?.parsePassageText(passage, header.length, state);
-                    mockFunction.restore();
                     const result = callbacks.references;
 
                     expect(result.length).to.equal(1); // There should only be the reference to the modifier itself
@@ -1300,14 +1272,12 @@ describe("Chapbook Parser", () => {
                         content: header + passage,
                         callbacks: callbacks,
                     });
-                    const parser = uut.getChapbookParser(undefined);
-                    const mockFunction = ImportMock.mockFunction(
-                        modifiersModule,
-                        "all",
-                    ).returns([modifier]);
+                    const parser = uut.getChapbookParser(undefined, {
+                        allModifiers: () => [modifier],
+                        allInserts: () => [],
+                    });
 
                     parser?.parsePassageText(passage, header.length, state);
-                    mockFunction.restore();
                     const [, firstArgToken] = callbacks.tokens;
 
                     expect(firstArgToken).to.eql({
@@ -1334,14 +1304,12 @@ describe("Chapbook Parser", () => {
                         content: header + passage,
                         callbacks: callbacks,
                     });
-                    const parser = uut.getChapbookParser(undefined);
-                    const mockFunction = ImportMock.mockFunction(
-                        modifiersModule,
-                        "all",
-                    ).returns([modifier]);
+                    const parser = uut.getChapbookParser(undefined, {
+                        allModifiers: () => [modifier],
+                        allInserts: () => [],
+                    });
 
                     parser?.parsePassageText(passage, header.length, state);
-                    mockFunction.restore();
                     const result = callbacks.references;
 
                     expect(callbacks.references.length).to.equal(3);
@@ -1378,14 +1346,12 @@ describe("Chapbook Parser", () => {
                         content: header + passage,
                         callbacks: callbacks,
                     });
-                    const parser = uut.getChapbookParser(undefined);
-                    const mockFunction = ImportMock.mockFunction(
-                        modifiersModule,
-                        "all",
-                    ).returns([modifier]);
+                    const parser = uut.getChapbookParser(undefined, {
+                        allModifiers: () => [modifier],
+                        allInserts: () => [],
+                    });
 
                     parser?.parsePassageText(passage, header.length, state);
-                    mockFunction.restore();
                     const [, firstArgToken] = callbacks.tokens;
 
                     expect(firstArgToken).to.eql({
@@ -1905,18 +1871,16 @@ describe("Chapbook Parser", () => {
                         format: "Chapbook",
                         formatVersion: "2.1",
                     };
-                    const parser = uut.getChapbookParser("2.1");
                     const insert = buildInsertInfo({
                         match: /^back soon/,
                     });
                     insert.deprecated = "2.1";
-                    const mockFunction = ImportMock.mockFunction(
-                        insertsModule,
-                        "all",
-                    ).returns([insert]);
+                    const parser = uut.getChapbookParser("2.1", {
+                        allModifiers: () => [],
+                        allInserts: () => [insert],
+                    });
 
                     parser?.parsePassageText(passage, header.length, state);
-                    mockFunction.restore();
                     const [functionToken] = callbacks.tokens;
 
                     expect(callbacks.tokens.length).to.equal(1);
@@ -2227,14 +2191,12 @@ describe("Chapbook Parser", () => {
                         content: header + passage,
                         callbacks: callbacks,
                     });
-                    const parser = uut.getChapbookParser(undefined);
-                    const mockFunction = ImportMock.mockFunction(
-                        insertsModule,
-                        "all",
-                    ).returns([insert]);
+                    const parser = uut.getChapbookParser(undefined, {
+                        allModifiers: () => [],
+                        allInserts: () => [insert],
+                    });
 
                     parser?.parsePassageText(passage, header.length, state);
-                    mockFunction.restore();
                     const result = callbacks.references[0];
 
                     expect(callbacks.references.length).to.equal(1);
@@ -2257,14 +2219,12 @@ describe("Chapbook Parser", () => {
                         content: header + passage,
                         callbacks: callbacks,
                     });
-                    const parser = uut.getChapbookParser(undefined);
-                    const mockFunction = ImportMock.mockFunction(
-                        insertsModule,
-                        "all",
-                    ).returns([]);
+                    const parser = uut.getChapbookParser(undefined, {
+                        allModifiers: () => [],
+                        allInserts: () => [],
+                    });
 
                     parser?.parsePassageText(passage, header.length, state);
-                    mockFunction.restore();
                     const result = callbacks.references[0];
 
                     expect(callbacks.references.length).to.equal(1);
@@ -2289,14 +2249,12 @@ describe("Chapbook Parser", () => {
                         content: header + passage,
                         callbacks: callbacks,
                     });
-                    const parser = uut.getChapbookParser(undefined);
-                    const mockFunction = ImportMock.mockFunction(
-                        insertsModule,
-                        "all",
-                    ).returns([insert]);
+                    const parser = uut.getChapbookParser(undefined, {
+                        allModifiers: () => [],
+                        allInserts: () => [insert],
+                    });
 
                     parser?.parsePassageText(passage, header.length, state);
-                    mockFunction.restore();
                     const [result] = callbacks.references;
 
                     expect(callbacks.references.length).to.equal(2);
@@ -2325,14 +2283,12 @@ describe("Chapbook Parser", () => {
                         content: header + passage,
                         callbacks: callbacks,
                     });
-                    const parser = uut.getChapbookParser(undefined);
-                    const mockFunction = ImportMock.mockFunction(
-                        insertsModule,
-                        "all",
-                    ).returns([insert]);
+                    const parser = uut.getChapbookParser(undefined, {
+                        allModifiers: () => [],
+                        allInserts: () => [insert],
+                    });
 
                     parser?.parsePassageText(passage, header.length, state);
-                    mockFunction.restore();
 
                     expect(allTokens.length).to.equal(1);
                     expect(allTokens[0].firstArgument).to.eql({
@@ -2358,14 +2314,12 @@ describe("Chapbook Parser", () => {
                         content: header + passage,
                         callbacks: callbacks,
                     });
-                    const parser = uut.getChapbookParser(undefined);
-                    const mockFunction = ImportMock.mockFunction(
-                        insertsModule,
-                        "all",
-                    ).returns([insert]);
+                    const parser = uut.getChapbookParser(undefined, {
+                        allModifiers: () => [],
+                        allInserts: () => [insert],
+                    });
 
                     parser?.parsePassageText(passage, header.length, state);
-                    mockFunction.restore();
 
                     expect(allTokens.length).to.equal(2);
                     expect(allTokens[0].firstArgument).to.eql({
@@ -2395,14 +2349,12 @@ describe("Chapbook Parser", () => {
                         content: header + passage,
                         callbacks: callbacks,
                     });
-                    const parser = uut.getChapbookParser(undefined);
-                    const mockFunction = ImportMock.mockFunction(
-                        insertsModule,
-                        "all",
-                    ).returns([insert]);
+                    const parser = uut.getChapbookParser(undefined, {
+                        allModifiers: () => [],
+                        allInserts: () => [insert],
+                    });
 
                     parser?.parsePassageText(passage, header.length, state);
-                    mockFunction.restore();
 
                     expect(allTokens.length).to.equal(1);
                     expect(allTokens[0].firstArgument).to.eql({
@@ -2427,14 +2379,12 @@ describe("Chapbook Parser", () => {
                         content: header + passage,
                         callbacks: callbacks,
                     });
-                    const parser = uut.getChapbookParser(undefined);
-                    const mockFunction = ImportMock.mockFunction(
-                        insertsModule,
-                        "all",
-                    ).returns([insert]);
+                    const parser = uut.getChapbookParser(undefined, {
+                        allModifiers: () => [],
+                        allInserts: () => [insert],
+                    });
 
                     parser?.parsePassageText(passage, header.length, state);
-                    mockFunction.restore();
 
                     expect(allTokens.length).to.equal(1);
                     expect(allTokens[0].firstArgument).to.eql({
@@ -2459,14 +2409,12 @@ describe("Chapbook Parser", () => {
                         content: header + passage,
                         callbacks: callbacks,
                     });
-                    const parser = uut.getChapbookParser(undefined);
-                    const mockFunction = ImportMock.mockFunction(
-                        insertsModule,
-                        "all",
-                    ).returns([insert]);
+                    const parser = uut.getChapbookParser(undefined, {
+                        allModifiers: () => [],
+                        allInserts: () => [insert],
+                    });
 
                     parser?.parsePassageText(passage, header.length, state);
-                    mockFunction.restore();
 
                     expect(allTokens.length).to.equal(1);
                     expect(allTokens[0].firstArgument).to.eql({
@@ -2489,14 +2437,12 @@ describe("Chapbook Parser", () => {
                         content: header + passage,
                         callbacks: callbacks,
                     });
-                    const parser = uut.getChapbookParser(undefined);
-                    const mockFunction = ImportMock.mockFunction(
-                        insertsModule,
-                        "all",
-                    ).returns([insert]);
+                    const parser = uut.getChapbookParser(undefined, {
+                        allModifiers: () => [],
+                        allInserts: () => [insert],
+                    });
 
                     parser?.parsePassageText(passage, header.length, state);
-                    mockFunction.restore();
                     const result = callbacks.references;
 
                     expect(callbacks.references.length).to.equal(3);
@@ -2531,14 +2477,12 @@ describe("Chapbook Parser", () => {
                         content: header + passage,
                         callbacks: callbacks,
                     });
-                    const parser = uut.getChapbookParser(undefined);
-                    const mockFunction = ImportMock.mockFunction(
-                        insertsModule,
-                        "all",
-                    ).returns([insert]);
+                    const parser = uut.getChapbookParser(undefined, {
+                        allModifiers: () => [],
+                        allInserts: () => [insert],
+                    });
 
                     parser?.parsePassageText(passage, header.length, state);
-                    mockFunction.restore();
                     const result = callbacks.references[1];
 
                     expect(callbacks.references.length).to.equal(2);
@@ -2564,14 +2508,12 @@ describe("Chapbook Parser", () => {
                         content: header + passage,
                         callbacks: callbacks,
                     });
-                    const parser = uut.getChapbookParser(undefined);
-                    const mockFunction = ImportMock.mockFunction(
-                        insertsModule,
-                        "all",
-                    ).returns([insert]);
+                    const parser = uut.getChapbookParser(undefined, {
+                        allModifiers: () => [],
+                        allInserts: () => [insert],
+                    });
 
                     parser?.parsePassageText(passage, header.length, state);
-                    mockFunction.restore();
                     const [, firstArgToken] = callbacks.tokens;
 
                     expect(firstArgToken).to.eql({
@@ -2596,14 +2538,12 @@ describe("Chapbook Parser", () => {
                         content: header + passage,
                         callbacks: callbacks,
                     });
-                    const parser = uut.getChapbookParser(undefined);
-                    const mockFunction = ImportMock.mockFunction(
-                        insertsModule,
-                        "all",
-                    ).returns([insert]);
+                    const parser = uut.getChapbookParser(undefined, {
+                        allModifiers: () => [],
+                        allInserts: () => [insert],
+                    });
 
                     parser?.parsePassageText(passage, header.length, state);
-                    mockFunction.restore();
                     const result = callbacks.references[1];
 
                     expect(callbacks.references.length).to.equal(2);
@@ -2629,14 +2569,12 @@ describe("Chapbook Parser", () => {
                         content: header + passage,
                         callbacks: callbacks,
                     });
-                    const parser = uut.getChapbookParser(undefined);
-                    const mockFunction = ImportMock.mockFunction(
-                        insertsModule,
-                        "all",
-                    ).returns([insert]);
+                    const parser = uut.getChapbookParser(undefined, {
+                        allModifiers: () => [],
+                        allInserts: () => [insert],
+                    });
 
                     parser?.parsePassageText(passage, header.length, state);
-                    mockFunction.restore();
                     const [, firstArgToken] = callbacks.tokens;
 
                     expect(firstArgToken).to.eql({
@@ -2661,14 +2599,12 @@ describe("Chapbook Parser", () => {
                         content: header + passage,
                         callbacks: callbacks,
                     });
-                    const parser = uut.getChapbookParser(undefined);
-                    const mockFunction = ImportMock.mockFunction(
-                        insertsModule,
-                        "all",
-                    ).returns([insert]);
+                    const parser = uut.getChapbookParser(undefined, {
+                        allModifiers: () => [],
+                        allInserts: () => [insert],
+                    });
 
                     parser?.parsePassageText(passage, header.length, state);
-                    mockFunction.restore();
                     const result = callbacks.references;
 
                     expect(result.length).to.equal(1); // There should only be the reference to the insert itself
@@ -2688,14 +2624,12 @@ describe("Chapbook Parser", () => {
                         content: header + passage,
                         callbacks: callbacks,
                     });
-                    const parser = uut.getChapbookParser(undefined);
-                    const mockFunction = ImportMock.mockFunction(
-                        insertsModule,
-                        "all",
-                    ).returns([insert]);
+                    const parser = uut.getChapbookParser(undefined, {
+                        allModifiers: () => [],
+                        allInserts: () => [insert],
+                    });
 
                     parser?.parsePassageText(passage, header.length, state);
-                    mockFunction.restore();
                     const [, firstArgToken] = callbacks.tokens;
 
                     expect(firstArgToken).to.eql({
@@ -2719,14 +2653,12 @@ describe("Chapbook Parser", () => {
                         content: header + passage,
                         callbacks: callbacks,
                     });
-                    const parser = uut.getChapbookParser(undefined);
-                    const mockFunction = ImportMock.mockFunction(
-                        insertsModule,
-                        "all",
-                    ).returns([insert]);
+                    const parser = uut.getChapbookParser(undefined, {
+                        allModifiers: () => [],
+                        allInserts: () => [insert],
+                    });
 
                     parser?.parsePassageText(passage, header.length, state);
-                    mockFunction.restore();
                     const result = callbacks.references;
 
                     expect(callbacks.references.length).to.equal(3);
@@ -2760,14 +2692,12 @@ describe("Chapbook Parser", () => {
                         content: header + passage,
                         callbacks: callbacks,
                     });
-                    const parser = uut.getChapbookParser(undefined);
-                    const mockFunction = ImportMock.mockFunction(
-                        insertsModule,
-                        "all",
-                    ).returns([insert]);
+                    const parser = uut.getChapbookParser(undefined, {
+                        allModifiers: () => [],
+                        allInserts: () => [insert],
+                    });
 
                     parser?.parsePassageText(passage, header.length, state);
-                    mockFunction.restore();
                     const [, firstArgToken] = callbacks.tokens;
 
                     expect(firstArgToken).to.eql({
@@ -2797,14 +2727,12 @@ describe("Chapbook Parser", () => {
                         content: header + passage,
                         callbacks: callbacks,
                     });
-                    const parser = uut.getChapbookParser(undefined);
-                    const mockFunction = ImportMock.mockFunction(
-                        insertsModule,
-                        "all",
-                    ).returns([insert]);
+                    const parser = uut.getChapbookParser(undefined, {
+                        allModifiers: () => [],
+                        allInserts: () => [insert],
+                    });
 
                     parser?.parsePassageText(passage, header.length, state);
-                    mockFunction.restore();
                     const result = callbacks.references;
 
                     expect(callbacks.references.length).to.equal(3);
@@ -2850,14 +2778,12 @@ describe("Chapbook Parser", () => {
                         content: header + passage,
                         callbacks: callbacks,
                     });
-                    const parser = uut.getChapbookParser(undefined);
-                    const mockFunction = ImportMock.mockFunction(
-                        insertsModule,
-                        "all",
-                    ).returns([insert]);
+                    const parser = uut.getChapbookParser(undefined, {
+                        allModifiers: () => [],
+                        allInserts: () => [insert],
+                    });
 
                     parser?.parsePassageText(passage, header.length, state);
-                    mockFunction.restore();
                     const [, , , firstPropValueToken, , secondPropValueToken] =
                         callbacks.tokens;
 
@@ -2893,14 +2819,12 @@ describe("Chapbook Parser", () => {
                         content: header + passage,
                         callbacks: callbacks,
                     });
-                    const parser = uut.getChapbookParser(undefined);
-                    const mockFunction = ImportMock.mockFunction(
-                        insertsModule,
-                        "all",
-                    ).returns([insert]);
+                    const parser = uut.getChapbookParser(undefined, {
+                        allModifiers: () => [],
+                        allInserts: () => [insert],
+                    });
 
                     parser?.parsePassageText(passage, header.length, state);
-                    mockFunction.restore();
 
                     expect(allTokens.length).to.equal(1);
                     expect(allTokens[0].firstArgument).to.be.undefined;
@@ -2932,14 +2856,12 @@ describe("Chapbook Parser", () => {
                         content: header + passage,
                         callbacks: callbacks,
                     });
-                    const parser = uut.getChapbookParser(undefined);
-                    const mockFunction = ImportMock.mockFunction(
-                        insertsModule,
-                        "all",
-                    ).returns([insert]);
+                    const parser = uut.getChapbookParser(undefined, {
+                        allModifiers: () => [],
+                        allInserts: () => [insert],
+                    });
 
                     parser?.parsePassageText(passage, header.length, state);
-                    mockFunction.restore();
 
                     expect(allTokens.length).to.equal(1);
                     expect(allTokens[0].firstArgument).to.eql({
@@ -4230,19 +4152,17 @@ describe("Chapbook Parser", () => {
                         format: "Chapbook",
                         formatVersion: "2.1",
                     };
-                    const parser = uut.getChapbookParser("2.1");
                     const modifier = buildModifierInfo({
                         name: "modMe",
                         match: /^mod/,
                     });
                     modifier.since = "2.1.1";
-                    const mockFunction = ImportMock.mockFunction(
-                        modifiersModule,
-                        "all",
-                    ).returns([modifier]);
+                    const parser = uut.getChapbookParser("2.1", {
+                        allModifiers: () => [modifier],
+                        allInserts: () => [],
+                    });
 
                     parser?.parsePassageText(passage, header.length, state);
-                    mockFunction.restore();
                     const [result] = callbacks.errors;
 
                     expect(callbacks.errors.length).to.equal(1);
@@ -4265,19 +4185,17 @@ describe("Chapbook Parser", () => {
                         format: "Chapbook",
                         formatVersion: "2.1",
                     };
-                    const parser = uut.getChapbookParser("2.1");
                     const modifier = buildModifierInfo({
                         name: "modMe",
                         match: /^mod/,
                     });
                     modifier.removed = "2.1";
-                    const mockFunction = ImportMock.mockFunction(
-                        modifiersModule,
-                        "all",
-                    ).returns([modifier]);
+                    const parser = uut.getChapbookParser("2.1", {
+                        allModifiers: () => [modifier],
+                        allInserts: () => [],
+                    });
 
                     parser?.parsePassageText(passage, header.length, state);
-                    mockFunction.restore();
                     const [result] = callbacks.errors;
 
                     expect(callbacks.errors.length).to.equal(1);
@@ -4377,19 +4295,17 @@ describe("Chapbook Parser", () => {
                         format: "Chapbook",
                         formatVersion: "2.1",
                     };
-                    const parser = uut.getChapbookParser("2.1");
                     const insert = buildInsertInfo({
                         name: "fn insert",
                         match: /^fn\s+insert/i,
                     });
                     insert.since = "2.1.1";
-                    const mockFunction = ImportMock.mockFunction(
-                        insertsModule,
-                        "all",
-                    ).returns([insert]);
+                    const parser = uut.getChapbookParser("2.1", {
+                        allModifiers: () => [],
+                        allInserts: () => [insert],
+                    });
 
                     parser?.parsePassageText(passage, header.length, state);
-                    mockFunction.restore();
                     const [result] = callbacks.errors;
 
                     expect(callbacks.errors.length).to.equal(1);
@@ -4413,19 +4329,17 @@ describe("Chapbook Parser", () => {
                         format: "Chapbook",
                         formatVersion: "2.1",
                     };
-                    const parser = uut.getChapbookParser("2.1");
                     const insert = buildInsertInfo({
                         name: "fn insert",
                         match: /^fn\s+insert/i,
                     });
                     insert.removed = "2.1";
-                    const mockFunction = ImportMock.mockFunction(
-                        insertsModule,
-                        "all",
-                    ).returns([insert]);
+                    const parser = uut.getChapbookParser("2.1", {
+                        allModifiers: () => [],
+                        allInserts: () => [insert],
+                    });
 
                     parser?.parsePassageText(passage, header.length, state);
-                    mockFunction.restore();
                     const [result] = callbacks.errors;
 
                     expect(callbacks.errors.length).to.equal(1);
@@ -4506,14 +4420,12 @@ describe("Chapbook Parser", () => {
                         content: header + passage,
                         callbacks: callbacks,
                     });
-                    const parser = uut.getChapbookParser(undefined);
-                    const mockFunction = ImportMock.mockFunction(
-                        insertsModule,
-                        "all",
-                    ).returns([insert]);
+                    const parser = uut.getChapbookParser(undefined, {
+                        allModifiers: () => [],
+                        allInserts: () => [insert],
+                    });
 
                     parser?.parsePassageText(passage, header.length, state);
-                    mockFunction.restore();
                     const [result] = callbacks.errors;
 
                     expect(callbacks.errors.length).to.equal(1);
@@ -4536,14 +4448,12 @@ describe("Chapbook Parser", () => {
                         content: header + passage,
                         callbacks: callbacks,
                     });
-                    const parser = uut.getChapbookParser(undefined);
-                    const mockFunction = ImportMock.mockFunction(
-                        insertsModule,
-                        "all",
-                    ).returns([insert]);
+                    const parser = uut.getChapbookParser(undefined, {
+                        allModifiers: () => [],
+                        allInserts: () => [insert],
+                    });
 
                     parser?.parsePassageText(passage, header.length, state);
-                    mockFunction.restore();
                     const [result] = callbacks.errors;
 
                     expect(callbacks.errors.length).to.equal(1);
@@ -4566,14 +4476,12 @@ describe("Chapbook Parser", () => {
                         content: header + passage,
                         callbacks: callbacks,
                     });
-                    const parser = uut.getChapbookParser(undefined);
-                    const mockFunction = ImportMock.mockFunction(
-                        insertsModule,
-                        "all",
-                    ).returns([insert]);
+                    const parser = uut.getChapbookParser(undefined, {
+                        allModifiers: () => [],
+                        allInserts: () => [insert],
+                    });
 
                     parser?.parsePassageText(passage, header.length, state);
-                    mockFunction.restore();
                     const [result] = callbacks.errors;
 
                     expect(callbacks.errors.length).to.equal(1);
@@ -4596,14 +4504,12 @@ describe("Chapbook Parser", () => {
                         content: header + passage,
                         callbacks: callbacks,
                     });
-                    const parser = uut.getChapbookParser(undefined);
-                    const mockFunction = ImportMock.mockFunction(
-                        insertsModule,
-                        "all",
-                    ).returns([insert]);
+                    const parser = uut.getChapbookParser(undefined, {
+                        allModifiers: () => [],
+                        allInserts: () => [insert],
+                    });
 
                     parser?.parsePassageText(passage, header.length, state);
-                    mockFunction.restore();
                     const [result] = callbacks.errors;
 
                     expect(callbacks.errors.length).to.equal(1);
@@ -4626,14 +4532,12 @@ describe("Chapbook Parser", () => {
                         content: header + passage,
                         callbacks: callbacks,
                     });
-                    const parser = uut.getChapbookParser(undefined);
-                    const mockFunction = ImportMock.mockFunction(
-                        insertsModule,
-                        "all",
-                    ).returns([insert]);
+                    const parser = uut.getChapbookParser(undefined, {
+                        allModifiers: () => [],
+                        allInserts: () => [insert],
+                    });
 
                     parser?.parsePassageText(passage, header.length, state);
-                    mockFunction.restore();
 
                     expect(callbacks.errors.length).to.equal(0);
                 });
@@ -4650,14 +4554,12 @@ describe("Chapbook Parser", () => {
                         content: header + passage,
                         callbacks: callbacks,
                     });
-                    const parser = uut.getChapbookParser(undefined);
-                    const mockFunction = ImportMock.mockFunction(
-                        insertsModule,
-                        "all",
-                    ).returns([insert]);
+                    const parser = uut.getChapbookParser(undefined, {
+                        allModifiers: () => [],
+                        allInserts: () => [insert],
+                    });
 
                     parser?.parsePassageText(passage, header.length, state);
-                    mockFunction.restore();
                     const [result] = callbacks.errors;
 
                     expect(callbacks.errors.length).to.equal(1);

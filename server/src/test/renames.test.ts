@@ -1,12 +1,11 @@
 import { expect } from "chai";
 import "mocha";
-import { ImportMock } from "ts-mock-imports";
 import { Location, Position, Range, TextEdit } from "vscode-languageserver";
 
+import { StoryFormatParser } from "../passage-text-parsers";
 import { Index, TwineSymbolKind } from "../project-index";
 import { buildPassage } from "./builders";
 
-import * as ptpModule from "../passage-text-parsers";
 import * as uut from "../renames";
 
 describe("Renames", () => {
@@ -82,32 +81,28 @@ describe("Renames", () => {
                 const index = new Index();
                 index.setPassages("fake-uri", passages);
                 index.setReferences("other-uri", passageReferences);
-                const mockFunction = ImportMock.mockFunction(
-                    ptpModule,
-                    "getStoryFormatParser",
-                ).callsFake(() => {
-                    return {
-                        id: "FakeFormat",
-                        generateRenamesAt: () => {
-                            return {
-                                "totally-other-uri": [
-                                    TextEdit.replace(
-                                        Range.create(5, 2, 5, 6),
-                                        "$renamed",
-                                    ),
-                                ],
-                            };
-                        },
-                    };
-                });
 
                 const result = uut.generateRenames(
                     "fake-uri",
                     Position.create(1, 2),
                     "New Passage 1",
                     index,
+                    () => {
+                        return {
+                            id: "FakeFormat",
+                            generateRenamesAt: () => {
+                                return {
+                                    "totally-other-uri": [
+                                        TextEdit.replace(
+                                            Range.create(5, 2, 5, 6),
+                                            "$renamed",
+                                        ),
+                                    ],
+                                };
+                            },
+                        } as unknown as StoryFormatParser;
+                    },
                 );
-                mockFunction.restore();
 
                 expect(result).to.eql({
                     changes: {
@@ -146,23 +141,19 @@ describe("Renames", () => {
                 const index = new Index();
                 index.setPassages("fake-uri", passages);
                 index.setReferences("other-uri", passageReferences);
-                const mockFunction = ImportMock.mockFunction(
-                    ptpModule,
-                    "getStoryFormatParser",
-                ).callsFake(() => {
-                    return {
-                        id: "FakeFormat",
-                        generateRenamesAt: () => undefined,
-                    };
-                });
 
                 const result = uut.generateRenames(
                     "fake-uri",
                     Position.create(1, 2),
                     "New Passage 1",
                     index,
+                    () => {
+                        return {
+                            id: "FakeFormat",
+                            generateRenamesAt: () => undefined,
+                        } as unknown as StoryFormatParser;
+                    },
                 );
-                mockFunction.restore();
 
                 expect(result).to.be.null;
             });

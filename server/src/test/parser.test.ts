@@ -1,17 +1,16 @@
 import "mocha";
 import { expect } from "chai";
-import { ImportMock } from "ts-mock-imports";
 
 import { Range, Position, Location } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { StoryFormat } from "../client-server";
 import { DiagnosticCodes } from "../diagnostics";
+import { StoryFormatParser } from "../passage-text-parsers";
 import { TwineSymbolKind } from "../project-index";
 import { ETokenType } from "../semantic-tokens";
 import { MockCallbacks, buildParsingState } from "./builders";
 
-import * as ptpModule from "../passage-text-parsers";
 import * as uut from "../parser";
 
 function buildStoryData({
@@ -792,25 +791,26 @@ describe("Server Twine Parser", () => {
                     ":: Passage\nI am the passage contents!\n",
                 );
                 const receivedContents: string[] = [];
-                const mockFunction = ImportMock.mockFunction(
-                    ptpModule,
-                    "getStoryFormatParser",
-                ).callsFake((format: StoryFormat | undefined) => {
-                    if (format?.format == "FakeFormat") {
-                        return {
-                            id: "FakeFormat",
-                            parsePassageText: (passageText: string) => {
-                                receivedContents.push(passageText);
-                            },
-                        };
-                    }
-                    return undefined;
-                });
 
-                uut.parse(doc, callbacks, uut.ParseLevel.Full, {
-                    format: "FakeFormat",
-                });
-                mockFunction.restore();
+                uut.parse(
+                    doc,
+                    callbacks,
+                    uut.ParseLevel.Full,
+                    {
+                        format: "FakeFormat",
+                    },
+                    (format: StoryFormat | undefined) => {
+                        if (format?.format == "FakeFormat") {
+                            return {
+                                id: "FakeFormat",
+                                parsePassageText: (passageText: string) => {
+                                    receivedContents.push(passageText);
+                                },
+                            } as unknown as StoryFormatParser;
+                        }
+                        return undefined;
+                    },
+                );
 
                 expect(receivedContents).to.eql([
                     "I am the passage contents!\n",
@@ -832,25 +832,26 @@ describe("Server Twine Parser", () => {
                         ":: Other Passage\nMe? Also contents!\n\n",
                 );
                 const receivedContents: string[] = [];
-                const mockFunction = ImportMock.mockFunction(
-                    ptpModule,
-                    "getStoryFormatParser",
-                ).callsFake((format: StoryFormat | undefined) => {
-                    if (format?.format == "FakeFormat") {
-                        return {
-                            id: "FakeFormat",
-                            parsePassageText: (passageText: string) => {
-                                receivedContents.push(passageText);
-                            },
-                        };
-                    }
-                    return undefined;
-                });
 
-                uut.parse(doc, callbacks, uut.ParseLevel.Full, {
-                    format: "FakeFormat",
-                });
-                mockFunction.restore();
+                uut.parse(
+                    doc,
+                    callbacks,
+                    uut.ParseLevel.Full,
+                    {
+                        format: "FakeFormat",
+                    },
+                    (format: StoryFormat | undefined) => {
+                        if (format?.format == "FakeFormat") {
+                            return {
+                                id: "FakeFormat",
+                                parsePassageText: (passageText: string) => {
+                                    receivedContents.push(passageText);
+                                },
+                            } as unknown as StoryFormatParser;
+                        }
+                        return undefined;
+                    },
+                );
 
                 expect(receivedContents).to.eql([
                     "I am the passage contents!\n\n",
@@ -867,32 +868,33 @@ describe("Server Twine Parser", () => {
                     ":: Passage to be parsed\nI am the passage contents!\n",
                 );
                 const receivedContents: string[] = [];
-                const mockFunction = ImportMock.mockFunction(
-                    ptpModule,
-                    "getStoryFormatParser",
-                ).callsFake((format: StoryFormat | undefined) => {
-                    if (format?.format == "FakeFormat") {
-                        return {
-                            id: "FakeFormat",
-                            parsePassageText: (
-                                passageText: string,
-                                textIndex: number,
-                                state: uut.ParsingState,
-                            ) => {
-                                receivedContents.push(
-                                    state.currentPassage?.name.contents ||
-                                        "nope!",
-                                );
-                            },
-                        };
-                    }
-                    return undefined;
-                });
 
-                uut.parse(doc, callbacks, uut.ParseLevel.Full, {
-                    format: "FakeFormat",
-                });
-                mockFunction.restore();
+                uut.parse(
+                    doc,
+                    callbacks,
+                    uut.ParseLevel.Full,
+                    {
+                        format: "FakeFormat",
+                    },
+                    (format: StoryFormat | undefined) => {
+                        if (format?.format == "FakeFormat") {
+                            return {
+                                id: "FakeFormat",
+                                parsePassageText: (
+                                    passageText: string,
+                                    textIndex: number,
+                                    state: uut.ParsingState,
+                                ) => {
+                                    receivedContents.push(
+                                        state.currentPassage?.name.contents ||
+                                            "nope!",
+                                    );
+                                },
+                            } as unknown as StoryFormatParser;
+                        }
+                        return undefined;
+                    },
+                );
 
                 expect(receivedContents).to.eql(["Passage to be parsed"]);
             });

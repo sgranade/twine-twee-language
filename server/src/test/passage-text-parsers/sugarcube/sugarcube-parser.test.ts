@@ -1,6 +1,5 @@
 import "mocha";
 import { expect } from "chai";
-import { ImportMock } from "ts-mock-imports";
 import { DiagnosticSeverity, Location, Range } from "vscode-languageserver";
 
 import { TwineSymbolKind } from "../../../project-index";
@@ -13,7 +12,6 @@ import {
     buildMacroInfoWithArgs,
 } from "./macros/macro-builders";
 
-import * as macrosModule from "../../../passage-text-parsers/sugarcube/macros";
 import * as uut from "../../../passage-text-parsers/sugarcube";
 
 describe("SugarCube Parser", () => {
@@ -1924,16 +1922,18 @@ describe("SugarCube Parser", () => {
                 format: "SugarCube",
                 formatVersion: "2.1",
             };
-            const parser = uut.getSugarCubeParser("2.1");
             const macro = buildMacroInfo({ name: "testy" });
             macro.deprecated = "2.1";
-            const mockFunction = ImportMock.mockFunction(
-                macrosModule,
-                "allMacros",
-            ).returns({ testy: macro });
+            const parser = uut.getSugarCubeParser("2.1", {
+                allMacros: () => {
+                    return { testy: macro };
+                },
+                allMacroEnums: () => {
+                    return {};
+                },
+            });
 
             parser?.parsePassageText(passage, header.length, state);
-            mockFunction.restore();
             const [functionToken] = callbacks.tokens;
 
             expect(callbacks.tokens.length).to.equal(1);
@@ -1955,17 +1955,19 @@ describe("SugarCube Parser", () => {
                 content: header + passage,
                 callbacks: callbacks,
             });
-            const parser = uut.getSugarCubeParser(undefined);
             const macro = buildMacroInfo({
                 name: "testy",
             });
-            const mockFunction = ImportMock.mockFunction(
-                macrosModule,
-                "allMacros",
-            ).returns({ testy: macro });
+            const parser = uut.getSugarCubeParser(undefined, {
+                allMacros: () => {
+                    return { testy: macro };
+                },
+                allMacroEnums: () => {
+                    return {};
+                },
+            });
 
             parser?.parsePassageText(passage, header.length, state);
-            mockFunction.restore();
             const result = callbacks.references[0];
 
             expect(callbacks.references.length).to.equal(1);
@@ -1988,17 +1990,19 @@ describe("SugarCube Parser", () => {
                 content: header + passage,
                 callbacks: callbacks,
             });
-            const parser = uut.getSugarCubeParser(undefined);
             const macro = buildMacroInfo({
                 name: "testy",
             });
-            const mockFunction = ImportMock.mockFunction(
-                macrosModule,
-                "allMacros",
-            ).returns({ testy: macro });
+            const parser = uut.getSugarCubeParser(undefined, {
+                allMacros: () => {
+                    return { testy: macro };
+                },
+                allMacroEnums: () => {
+                    return {};
+                },
+            });
 
             parser?.parsePassageText(passage, header.length, state);
-            mockFunction.restore();
             const result = callbacks.references;
 
             expect(result).to.be.empty;
@@ -2013,17 +2017,19 @@ describe("SugarCube Parser", () => {
                 content: header + passage,
                 callbacks: callbacks,
             });
-            const parser = uut.getSugarCubeParser(undefined);
             const macro = buildMacroInfo({
                 name: "testy",
             });
-            const mockFunction = ImportMock.mockFunction(
-                macrosModule,
-                "allMacros",
-            ).returns({ testy: macro });
+            const parser = uut.getSugarCubeParser(undefined, {
+                allMacros: () => {
+                    return { testy: macro };
+                },
+                allMacroEnums: () => {
+                    return {};
+                },
+            });
 
             parser?.parsePassageText(passage, header.length, state);
-            mockFunction.restore();
             const result = callbacks.references;
 
             expect(result).to.be.empty;
@@ -2038,17 +2044,19 @@ describe("SugarCube Parser", () => {
                 content: header + passage,
                 callbacks: callbacks,
             });
-            const parser = uut.getSugarCubeParser(undefined);
             const macro = buildMacroInfo({
                 name: "testy",
             });
-            const mockFunction = ImportMock.mockFunction(
-                macrosModule,
-                "allMacros",
-            ).returns({ testy: macro });
+            const parser = uut.getSugarCubeParser(undefined, {
+                allMacros: () => {
+                    return { testy: macro };
+                },
+                allMacroEnums: () => {
+                    return {};
+                },
+            });
 
             parser?.parsePassageText(passage, header.length, state);
-            mockFunction.restore();
             const result = callbacks.references;
 
             expect(result).to.be.empty;
@@ -2063,17 +2071,19 @@ describe("SugarCube Parser", () => {
                 content: header + passage,
                 callbacks: callbacks,
             });
-            const parser = uut.getSugarCubeParser(undefined);
             const macro = buildMacroInfo({
                 name: "testy",
             });
-            const mockFunction = ImportMock.mockFunction(
-                macrosModule,
-                "allMacros",
-            ).returns({ testy: macro });
+            const parser = uut.getSugarCubeParser(undefined, {
+                allMacros: () => {
+                    return { testy: macro };
+                },
+                allMacroEnums: () => {
+                    return {};
+                },
+            });
 
             parser?.parsePassageText(passage, header.length, state);
-            mockFunction.restore();
             const result = callbacks.references;
 
             expect(result).to.be.empty;
@@ -2088,17 +2098,19 @@ describe("SugarCube Parser", () => {
                 content: header + passage,
                 callbacks: callbacks,
             });
-            const parser = uut.getSugarCubeParser(undefined);
             const macro = buildMacroInfo({
                 name: "testy",
             });
-            const mockFunction = ImportMock.mockFunction(
-                macrosModule,
-                "allMacros",
-            ).returns({ testy: macro });
+            const parser = uut.getSugarCubeParser(undefined, {
+                allMacros: () => {
+                    return { testy: macro };
+                },
+                allMacroEnums: () => {
+                    return {};
+                },
+            });
 
             parser?.parsePassageText(passage, header.length, state);
-            mockFunction.restore();
             const result = callbacks.references;
 
             expect(result).to.be.empty;
@@ -2113,17 +2125,19 @@ describe("SugarCube Parser", () => {
                 content: header + passage,
                 callbacks: callbacks,
             });
-            const parser = uut.getSugarCubeParser(undefined);
             const macro = buildMacroInfo({
                 name: "testy",
             });
-            const mockFunction = ImportMock.mockFunction(
-                macrosModule,
-                "allMacros",
-            ).returns({ testy: macro });
+            const parser = uut.getSugarCubeParser(undefined, {
+                allMacros: () => {
+                    return { testy: macro };
+                },
+                allMacroEnums: () => {
+                    return {};
+                },
+            });
 
             parser?.parsePassageText(passage, header.length, state);
-            mockFunction.restore();
             const result = callbacks.references;
 
             expect(result).to.be.empty;
@@ -2138,7 +2152,6 @@ describe("SugarCube Parser", () => {
                 content: header + passage,
                 callbacks: callbacks,
             });
-            const parser = uut.getSugarCubeParser(undefined);
             const macro = buildMacroInfo({
                 name: "testy",
             });
@@ -2149,13 +2162,16 @@ describe("SugarCube Parser", () => {
                 macroArgsIndex = argsIndex;
                 return true;
             };
-            const mockFunction = ImportMock.mockFunction(
-                macrosModule,
-                "allMacros",
-            ).returns({ testy: macro });
+            const parser = uut.getSugarCubeParser(undefined, {
+                allMacros: () => {
+                    return { testy: macro };
+                },
+                allMacroEnums: () => {
+                    return {};
+                },
+            });
 
             parser?.parsePassageText(passage, header.length, state);
-            mockFunction.restore();
 
             expect(macroArgs).to.eql("arg1 arg2");
             expect(macroArgsIndex).to.equal(26);
@@ -2170,7 +2186,6 @@ describe("SugarCube Parser", () => {
                 content: header + passage,
                 callbacks: callbacks,
             });
-            const parser = uut.getSugarCubeParser(undefined);
             const testyMacro = buildMacroInfo({
                 name: "testy",
                 container: true,
@@ -2181,16 +2196,16 @@ describe("SugarCube Parser", () => {
             };
             const kidMacro = buildMacroInfo({ name: "kid" });
             kidMacro.parents = ["testy"];
-            const mockFunction = ImportMock.mockFunction(
-                macrosModule,
-                "allMacros",
-            ).returns({
-                testy: testyMacro,
-                kid: kidMacro,
+            const parser = uut.getSugarCubeParser(undefined, {
+                allMacros: () => {
+                    return { testy: testyMacro, kid: kidMacro };
+                },
+                allMacroEnums: () => {
+                    return {};
+                },
             });
 
             parser?.parsePassageText(passage, header.length, state);
-            mockFunction.restore();
 
             expect(macroKids).to.eql([
                 { name: "kid", fullText: "<<kid>>", at: 27, id: 1 },
@@ -2716,7 +2731,6 @@ describe("SugarCube Parser", () => {
                     content: header + passage,
                     callbacks: callbacks,
                 });
-                const parser = uut.getSugarCubeParser(undefined);
                 const macro = buildMacroInfo({
                     name: "a",
                 });
@@ -2725,13 +2739,16 @@ describe("SugarCube Parser", () => {
                     allArgs.push(args ?? "UNDEFINED");
                     return true;
                 };
-                const mockFunction = ImportMock.mockFunction(
-                    macrosModule,
-                    "allMacros",
-                ).returns({ a: macro });
+                const parser = uut.getSugarCubeParser(undefined, {
+                    allMacros: () => {
+                        return { a: macro };
+                    },
+                    allMacroEnums: () => {
+                        return {};
+                    },
+                });
 
                 parser?.parsePassageText(passage, header.length, state);
-                mockFunction.restore();
 
                 expect(allArgs).to.eql(["true 1 bare 'cont' $testy"]);
             });
@@ -2744,7 +2761,6 @@ describe("SugarCube Parser", () => {
                     content: header + passage,
                     callbacks: callbacks,
                 });
-                const parser = uut.getSugarCubeParser(undefined);
                 const macro = buildMacroInfo({
                     name: "a",
                 });
@@ -2752,13 +2768,16 @@ describe("SugarCube Parser", () => {
                 macro.parseArgs = () => {
                     return true;
                 };
-                const mockFunction = ImportMock.mockFunction(
-                    macrosModule,
-                    "allMacros",
-                ).returns({ a: macro });
+                const parser = uut.getSugarCubeParser(undefined, {
+                    allMacros: () => {
+                        return { a: macro };
+                    },
+                    allMacroEnums: () => {
+                        return {};
+                    },
+                });
 
                 parser?.parsePassageText(passage, header.length, state);
-                mockFunction.restore();
 
                 // If there's no more parsing, then no non-macro tokens or references should be created
                 expect(callbacks.tokens).to.eql([
@@ -2790,7 +2809,6 @@ describe("SugarCube Parser", () => {
                     content: header + passage,
                     callbacks: callbacks,
                 });
-                const parser = uut.getSugarCubeParser(undefined);
                 const macro = buildMacroInfo({
                     name: "a",
                 });
@@ -2798,13 +2816,16 @@ describe("SugarCube Parser", () => {
                 macro.parseArgs = () => {
                     return false;
                 };
-                const mockFunction = ImportMock.mockFunction(
-                    macrosModule,
-                    "allMacros",
-                ).returns({ a: macro });
+                const parser = uut.getSugarCubeParser(undefined, {
+                    allMacros: () => {
+                        return { a: macro };
+                    },
+                    allMacroEnums: () => {
+                        return {};
+                    },
+                });
 
                 parser?.parsePassageText(passage, header.length, state);
-                mockFunction.restore();
 
                 expect(callbacks.tokens).to.eql([
                     {
@@ -2852,20 +2873,22 @@ describe("SugarCube Parser", () => {
                     content: header + passage,
                     callbacks: callbacks,
                 });
-                const parser = uut.getSugarCubeParser(undefined);
                 const macro = buildMacroInfoWithArgs({
                     name: "a",
                     args: [
                         "boolean &+ number &+ bareword &+ string &+ (bool | var)",
                     ],
                 });
-                const mockFunction = ImportMock.mockFunction(
-                    macrosModule,
-                    "allMacros",
-                ).returns({ a: macro });
+                const parser = uut.getSugarCubeParser(undefined, {
+                    allMacros: () => {
+                        return { a: macro };
+                    },
+                    allMacroEnums: () => {
+                        return {};
+                    },
+                });
 
                 parser?.parsePassageText(passage, header.length, state);
-                mockFunction.restore();
                 const result = callbacks.tokens;
 
                 expect(result).to.eql([
@@ -2915,20 +2938,22 @@ describe("SugarCube Parser", () => {
                     content: header + passage,
                     callbacks: callbacks,
                 });
-                const parser = uut.getSugarCubeParser(undefined);
                 const macro = buildMacroInfoWithArgs({
                     name: "a",
                     args: [
                         "boolean &+ number &+ bareword &+ (string |+ var | bool)",
                     ],
                 });
-                const mockFunction = ImportMock.mockFunction(
-                    macrosModule,
-                    "allMacros",
-                ).returns({ a: macro });
+                const parser = uut.getSugarCubeParser(undefined, {
+                    allMacros: () => {
+                        return { a: macro };
+                    },
+                    allMacroEnums: () => {
+                        return {};
+                    },
+                });
 
                 parser?.parsePassageText(passage, header.length, state);
-                mockFunction.restore();
                 const results = callbacks.references;
 
                 expect(results.slice(1)).to.eql([
@@ -2951,18 +2976,20 @@ describe("SugarCube Parser", () => {
                     content: header + passage,
                     callbacks: callbacks,
                 });
-                const parser = uut.getSugarCubeParser(undefined);
                 const macro = buildMacroInfoWithArgs({
                     name: "a",
                     args: ["text"],
                 });
-                const mockFunction = ImportMock.mockFunction(
-                    macrosModule,
-                    "allMacros",
-                ).returns({ a: macro });
+                const parser = uut.getSugarCubeParser(undefined, {
+                    allMacros: () => {
+                        return { a: macro };
+                    },
+                    allMacroEnums: () => {
+                        return {};
+                    },
+                });
 
                 parser?.parsePassageText(passage, header.length, state);
-                mockFunction.restore();
                 const result = callbacks.tokens;
 
                 expect(result).to.eql([
@@ -3005,18 +3032,20 @@ describe("SugarCube Parser", () => {
                     content: header + passage,
                     callbacks: callbacks,
                 });
-                const parser = uut.getSugarCubeParser(undefined);
                 const macro = buildMacroInfoWithArgs({
                     name: "a",
                     args: ["text"],
                 });
-                const mockFunction = ImportMock.mockFunction(
-                    macrosModule,
-                    "allMacros",
-                ).returns({ a: macro });
+                const parser = uut.getSugarCubeParser(undefined, {
+                    allMacros: () => {
+                        return { a: macro };
+                    },
+                    allMacroEnums: () => {
+                        return {};
+                    },
+                });
 
                 parser?.parsePassageText(passage, header.length, state);
-                mockFunction.restore();
                 const results = callbacks.references;
 
                 expect(results.slice(1)).to.eql([
@@ -3040,18 +3069,20 @@ describe("SugarCube Parser", () => {
                     content: header + passage,
                     callbacks: callbacks,
                 });
-                const parser = uut.getSugarCubeParser(undefined);
                 const macro = buildMacroInfoWithArgs({
                     name: "a",
                     args: ["link"],
                 });
-                const mockFunction = ImportMock.mockFunction(
-                    macrosModule,
-                    "allMacros",
-                ).returns({ a: macro });
+                const parser = uut.getSugarCubeParser(undefined, {
+                    allMacros: () => {
+                        return { a: macro };
+                    },
+                    allMacroEnums: () => {
+                        return {};
+                    },
+                });
 
                 parser?.parsePassageText(passage, header.length, state);
-                mockFunction.restore();
                 const results = callbacks.references;
 
                 expect(results.slice(1)).to.eql([
@@ -3082,18 +3113,20 @@ describe("SugarCube Parser", () => {
                     content: header + passage,
                     callbacks: callbacks,
                 });
-                const parser = uut.getSugarCubeParser(undefined);
                 const macro = buildMacroInfoWithArgs({
                     name: "a",
                     args: ["bareword &+ passage"],
                 });
-                const mockFunction = ImportMock.mockFunction(
-                    macrosModule,
-                    "allMacros",
-                ).returns({ a: macro });
+                const parser = uut.getSugarCubeParser(undefined, {
+                    allMacros: () => {
+                        return { a: macro };
+                    },
+                    allMacroEnums: () => {
+                        return {};
+                    },
+                });
 
                 parser?.parsePassageText(passage, header.length, state);
-                mockFunction.restore();
                 const results = callbacks.references;
 
                 expect(results.slice(1)).to.eql([
@@ -3116,18 +3149,20 @@ describe("SugarCube Parser", () => {
                     content: header + passage,
                     callbacks: callbacks,
                 });
-                const parser = uut.getSugarCubeParser(undefined);
                 const macro = buildMacroInfoWithArgs({
                     name: "a",
                     args: ["bareword &+ passage"],
                 });
-                const mockFunction = ImportMock.mockFunction(
-                    macrosModule,
-                    "allMacros",
-                ).returns({ a: macro });
+                const parser = uut.getSugarCubeParser(undefined, {
+                    allMacros: () => {
+                        return { a: macro };
+                    },
+                    allMacroEnums: () => {
+                        return {};
+                    },
+                });
 
                 parser?.parsePassageText(passage, header.length, state);
-                mockFunction.restore();
                 const results = callbacks.references;
 
                 expect(results.slice(1)).to.eql([
@@ -3150,18 +3185,20 @@ describe("SugarCube Parser", () => {
                     content: header + passage,
                     callbacks: callbacks,
                 });
-                const parser = uut.getSugarCubeParser(undefined);
                 const macro = buildMacroInfoWithArgs({
                     name: "a",
                     args: ["bareword &+ receiver"],
                 });
-                const mockFunction = ImportMock.mockFunction(
-                    macrosModule,
-                    "allMacros",
-                ).returns({ a: macro });
+                const parser = uut.getSugarCubeParser(undefined, {
+                    allMacros: () => {
+                        return { a: macro };
+                    },
+                    allMacroEnums: () => {
+                        return {};
+                    },
+                });
 
                 parser?.parsePassageText(passage, header.length, state);
-                mockFunction.restore();
                 const results = callbacks.references;
 
                 expect(results.slice(1)).to.eql([
@@ -3184,18 +3221,20 @@ describe("SugarCube Parser", () => {
                     content: header + passage,
                     callbacks: callbacks,
                 });
-                const parser = uut.getSugarCubeParser(undefined);
                 const macro = buildMacroInfoWithArgs({
                     name: "a",
                     args: ["bareword &+ receiver"],
                 });
-                const mockFunction = ImportMock.mockFunction(
-                    macrosModule,
-                    "allMacros",
-                ).returns({ a: macro });
+                const parser = uut.getSugarCubeParser(undefined, {
+                    allMacros: () => {
+                        return { a: macro };
+                    },
+                    allMacroEnums: () => {
+                        return {};
+                    },
+                });
 
                 parser?.parsePassageText(passage, header.length, state);
-                mockFunction.restore();
                 const results = callbacks.references;
 
                 expect(results.slice(1)).to.eql([
@@ -3264,17 +3303,19 @@ describe("SugarCube Parser", () => {
                 content: header + passage,
                 callbacks: callbacks,
             });
-            const parser = uut.getSugarCubeParser(undefined);
             const macro = buildMacroInfo({
                 name: "testy",
             });
-            const mockFunction = ImportMock.mockFunction(
-                macrosModule,
-                "allMacros",
-            ).returns({ testy: macro });
+            const parser = uut.getSugarCubeParser(undefined, {
+                allMacros: () => {
+                    return { testy: macro };
+                },
+                allMacroEnums: () => {
+                    return {};
+                },
+            });
 
             parser?.parsePassageText(passage, header.length, state);
-            mockFunction.restore();
             const result = callbacks.references;
 
             expect(result).to.be.empty;
@@ -3292,17 +3333,19 @@ describe("SugarCube Parser", () => {
                 content: header + passage,
                 callbacks: callbacks,
             });
-            const parser = uut.getSugarCubeParser(undefined);
             const macro = buildMacroInfo({
                 name: "testy",
             });
-            const mockFunction = ImportMock.mockFunction(
-                macrosModule,
-                "allMacros",
-            ).returns({ testy: macro });
+            const parser = uut.getSugarCubeParser(undefined, {
+                allMacros: () => {
+                    return { testy: macro };
+                },
+                allMacroEnums: () => {
+                    return {};
+                },
+            });
 
             parser?.parsePassageText(passage, header.length, state);
-            mockFunction.restore();
             const result = callbacks.references;
 
             expect(result).to.be.empty;
@@ -3320,17 +3363,19 @@ describe("SugarCube Parser", () => {
                 content: header + passage,
                 callbacks: callbacks,
             });
-            const parser = uut.getSugarCubeParser(undefined);
             const macro = buildMacroInfo({
                 name: "testy",
             });
-            const mockFunction = ImportMock.mockFunction(
-                macrosModule,
-                "allMacros",
-            ).returns({ testy: macro });
+            const parser = uut.getSugarCubeParser(undefined, {
+                allMacros: () => {
+                    return { testy: macro };
+                },
+                allMacroEnums: () => {
+                    return {};
+                },
+            });
 
             parser?.parsePassageText(passage, header.length, state);
-            mockFunction.restore();
             const result = callbacks.references;
 
             expect(result).to.be.empty;
@@ -4380,18 +4425,20 @@ describe("SugarCube Parser", () => {
                     format: "SugarCube",
                     formatVersion: "2.1",
                 };
-                const parser = uut.getSugarCubeParser("2.1");
                 const macro = buildMacroInfo({
                     name: "testy",
                 });
                 macro.since = "2.1.1";
-                const mockFunction = ImportMock.mockFunction(
-                    macrosModule,
-                    "allMacros",
-                ).returns({ testy: macro });
+                const parser = uut.getSugarCubeParser("2.1", {
+                    allMacros: () => {
+                        return { testy: macro };
+                    },
+                    allMacroEnums: () => {
+                        return {};
+                    },
+                });
 
                 parser?.parsePassageText(passage, header.length, state);
-                mockFunction.restore();
                 const [result] = callbacks.errors;
 
                 expect(callbacks.errors.length).to.equal(1);
@@ -4414,18 +4461,20 @@ describe("SugarCube Parser", () => {
                     format: "SugarCube",
                     formatVersion: "2.1",
                 };
-                const parser = uut.getSugarCubeParser("2.1");
                 const macro = buildMacroInfo({
                     name: "testy",
                 });
                 macro.removed = "2.1";
-                const mockFunction = ImportMock.mockFunction(
-                    macrosModule,
-                    "allMacros",
-                ).returns({ testy: macro });
+                const parser = uut.getSugarCubeParser("2.1", {
+                    allMacros: () => {
+                        return { testy: macro };
+                    },
+                    allMacroEnums: () => {
+                        return {};
+                    },
+                });
 
                 parser?.parsePassageText(passage, header.length, state);
-                mockFunction.restore();
                 const [result] = callbacks.errors;
 
                 expect(callbacks.errors.length).to.equal(1);
@@ -4444,17 +4493,19 @@ describe("SugarCube Parser", () => {
                     content: header + passage,
                     callbacks: callbacks,
                 });
-                const parser = uut.getSugarCubeParser(undefined);
                 const macro = buildMacroInfo({
                     name: "testy",
                 });
-                const mockFunction = ImportMock.mockFunction(
-                    macrosModule,
-                    "allMacros",
-                ).returns({ testy: macro });
+                const parser = uut.getSugarCubeParser(undefined, {
+                    allMacros: () => {
+                        return { testy: macro };
+                    },
+                    allMacroEnums: () => {
+                        return {};
+                    },
+                });
 
                 parser?.parsePassageText(passage, header.length, state);
-                mockFunction.restore();
                 const [result] = callbacks.errors;
 
                 expect(callbacks.errors.length).to.equal(1);
@@ -4473,18 +4524,20 @@ describe("SugarCube Parser", () => {
                     content: header + passage,
                     callbacks: callbacks,
                 });
-                const parser = uut.getSugarCubeParser(undefined);
                 const macro = buildMacroInfo({
                     name: "testy",
                     container: false,
                 });
-                const mockFunction = ImportMock.mockFunction(
-                    macrosModule,
-                    "allMacros",
-                ).returns({ testy: macro });
+                const parser = uut.getSugarCubeParser(undefined, {
+                    allMacros: () => {
+                        return { testy: macro };
+                    },
+                    allMacroEnums: () => {
+                        return {};
+                    },
+                });
 
                 parser?.parsePassageText(passage, header.length, state);
-                mockFunction.restore();
                 const [result] = callbacks.errors;
 
                 expect(callbacks.errors.length).to.equal(1);
@@ -4503,18 +4556,20 @@ describe("SugarCube Parser", () => {
                     content: header + passage,
                     callbacks: callbacks,
                 });
-                const parser = uut.getSugarCubeParser(undefined);
                 const macro = buildMacroInfo({
                     name: "testy",
                     container: true,
                 });
-                const mockFunction = ImportMock.mockFunction(
-                    macrosModule,
-                    "allMacros",
-                ).returns({ testy: macro });
+                const parser = uut.getSugarCubeParser(undefined, {
+                    allMacros: () => {
+                        return { testy: macro };
+                    },
+                    allMacroEnums: () => {
+                        return {};
+                    },
+                });
 
                 parser?.parsePassageText(passage, header.length, state);
-                mockFunction.restore();
                 const [result] = callbacks.errors;
 
                 expect(callbacks.errors.length).to.equal(1);
@@ -4533,18 +4588,20 @@ describe("SugarCube Parser", () => {
                     content: header + passage,
                     callbacks: callbacks,
                 });
-                const parser = uut.getSugarCubeParser(undefined);
                 const macro = buildMacroInfo({
                     name: "testy",
                     container: true,
                 });
-                const mockFunction = ImportMock.mockFunction(
-                    macrosModule,
-                    "allMacros",
-                ).returns({ testy: macro });
+                const parser = uut.getSugarCubeParser(undefined, {
+                    allMacros: () => {
+                        return { testy: macro };
+                    },
+                    allMacroEnums: () => {
+                        return {};
+                    },
+                });
 
                 parser?.parsePassageText(passage, header.length, state);
-                mockFunction.restore();
                 const [result] = callbacks.errors;
 
                 expect(callbacks.errors.length).to.equal(1);
@@ -4563,18 +4620,20 @@ describe("SugarCube Parser", () => {
                     content: header + passage,
                     callbacks: callbacks,
                 });
-                const parser = uut.getSugarCubeParser(undefined);
                 const macro = buildMacroInfo({
                     name: "testy",
                     container: true,
                 });
-                const mockFunction = ImportMock.mockFunction(
-                    macrosModule,
-                    "allMacros",
-                ).returns({ testy: macro });
+                const parser = uut.getSugarCubeParser(undefined, {
+                    allMacros: () => {
+                        return { testy: macro };
+                    },
+                    allMacroEnums: () => {
+                        return {};
+                    },
+                });
 
                 parser?.parsePassageText(passage, header.length, state);
-                mockFunction.restore();
                 const [result] = callbacks.errors;
 
                 expect(callbacks.errors.length).to.equal(1);
@@ -4594,20 +4653,22 @@ describe("SugarCube Parser", () => {
                     content: header + passage,
                     callbacks: callbacks,
                 });
-                const parser = uut.getSugarCubeParser(undefined);
                 const macroA = buildMacroInfo({
                     name: "a",
                     container: true,
                 });
                 const macroB = buildMacroInfo({ name: "b" });
                 macroB.parents = [{ name: "a", max: 2 }];
-                const mockFunction = ImportMock.mockFunction(
-                    macrosModule,
-                    "allMacros",
-                ).returns({ a: macroA, b: macroB });
+                const parser = uut.getSugarCubeParser(undefined, {
+                    allMacros: () => {
+                        return { a: macroA, b: macroB };
+                    },
+                    allMacroEnums: () => {
+                        return {};
+                    },
+                });
 
                 parser?.parsePassageText(passage, header.length, state);
-                mockFunction.restore();
                 const [result] = callbacks.errors;
 
                 expect(callbacks.errors.length).to.equal(1);
@@ -4625,20 +4686,22 @@ describe("SugarCube Parser", () => {
                     content: header + passage,
                     callbacks: callbacks,
                 });
-                const parser = uut.getSugarCubeParser(undefined);
                 const macroA = buildMacroInfo({
                     name: "a",
                     container: true,
                 });
                 const macroB = buildMacroInfo({ name: "b" });
                 macroB.parents = [{ name: "a", max: 2 }];
-                const mockFunction = ImportMock.mockFunction(
-                    macrosModule,
-                    "allMacros",
-                ).returns({ a: macroA, b: macroB });
+                const parser = uut.getSugarCubeParser(undefined, {
+                    allMacros: () => {
+                        return { a: macroA, b: macroB };
+                    },
+                    allMacroEnums: () => {
+                        return {};
+                    },
+                });
 
                 parser?.parsePassageText(passage, header.length, state);
-                mockFunction.restore();
                 const [result] = callbacks.errors;
 
                 expect(callbacks.errors.length).to.equal(1);
@@ -4659,20 +4722,22 @@ describe("SugarCube Parser", () => {
                     content: header + passage,
                     callbacks: callbacks,
                 });
-                const parser = uut.getSugarCubeParser(undefined);
                 const macroA = buildMacroInfo({
                     name: "a",
                     container: true,
                 });
                 const macroB = buildMacroInfo({ name: "b" });
                 macroB.parents = [{ name: "a", max: 1 }];
-                const mockFunction = ImportMock.mockFunction(
-                    macrosModule,
-                    "allMacros",
-                ).returns({ a: macroA, b: macroB });
+                const parser = uut.getSugarCubeParser(undefined, {
+                    allMacros: () => {
+                        return { a: macroA, b: macroB };
+                    },
+                    allMacroEnums: () => {
+                        return {};
+                    },
+                });
 
                 parser?.parsePassageText(passage, header.length, state);
-                mockFunction.restore();
                 const result = callbacks.errors;
 
                 expect(result).to.be.empty;
@@ -4740,16 +4805,18 @@ describe("SugarCube Parser", () => {
                         content: header + passage,
                         callbacks: callbacks,
                     });
-                    const parser = uut.getSugarCubeParser(undefined);
                     const macro = buildMacroInfo({ name: "a" });
                     macro.arguments = true;
-                    const mockFunction = ImportMock.mockFunction(
-                        macrosModule,
-                        "allMacros",
-                    ).returns({ a: macro });
+                    const parser = uut.getSugarCubeParser(undefined, {
+                        allMacros: () => {
+                            return { a: macro };
+                        },
+                        allMacroEnums: () => {
+                            return {};
+                        },
+                    });
 
                     parser?.parsePassageText(passage, header.length, state);
-                    mockFunction.restore();
                     const [result] = callbacks.errors;
 
                     expect(callbacks.errors.length).to.equal(1);
@@ -4766,16 +4833,18 @@ describe("SugarCube Parser", () => {
                         content: header + passage,
                         callbacks: callbacks,
                     });
-                    const parser = uut.getSugarCubeParser(undefined);
                     const macro = buildMacroInfo({ name: "a" });
                     macro.arguments = false;
-                    const mockFunction = ImportMock.mockFunction(
-                        macrosModule,
-                        "allMacros",
-                    ).returns({ a: macro });
+                    const parser = uut.getSugarCubeParser(undefined, {
+                        allMacros: () => {
+                            return { a: macro };
+                        },
+                        allMacroEnums: () => {
+                            return {};
+                        },
+                    });
 
                     parser?.parsePassageText(passage, header.length, state);
-                    mockFunction.restore();
                     const [result] = callbacks.errors;
 
                     expect(callbacks.errors.length).to.equal(1);
@@ -4792,16 +4861,18 @@ describe("SugarCube Parser", () => {
                         content: header + passage,
                         callbacks: callbacks,
                     });
-                    const parser = uut.getSugarCubeParser(undefined);
                     const macro = buildMacroInfo({ name: "a" });
                     macro.arguments = undefined;
-                    const mockFunction = ImportMock.mockFunction(
-                        macrosModule,
-                        "allMacros",
-                    ).returns({ a: macro });
+                    const parser = uut.getSugarCubeParser(undefined, {
+                        allMacros: () => {
+                            return { a: macro };
+                        },
+                        allMacroEnums: () => {
+                            return {};
+                        },
+                    });
 
                     parser?.parsePassageText(passage, header.length, state);
-                    mockFunction.restore();
                     const result = callbacks.errors;
 
                     expect(result).to.be.empty;
@@ -4816,18 +4887,20 @@ describe("SugarCube Parser", () => {
                         content: header + passage,
                         callbacks: callbacks,
                     });
-                    const parser = uut.getSugarCubeParser(undefined);
                     const macro = buildMacroInfoWithArgs({
                         name: "a",
                         args: ["link"],
                     });
-                    const mockFunction = ImportMock.mockFunction(
-                        macrosModule,
-                        "allMacros",
-                    ).returns({ a: macro });
+                    const parser = uut.getSugarCubeParser(undefined, {
+                        allMacros: () => {
+                            return { a: macro };
+                        },
+                        allMacroEnums: () => {
+                            return {};
+                        },
+                    });
 
                     parser?.parsePassageText(passage, header.length, state);
-                    mockFunction.restore();
                     const results = callbacks.errors;
 
                     expect(results).to.be.empty;
@@ -4841,18 +4914,20 @@ describe("SugarCube Parser", () => {
                         content: header + passage,
                         callbacks: callbacks,
                     });
-                    const parser = uut.getSugarCubeParser(undefined);
                     const macro = buildMacroInfoWithArgs({
                         name: "a",
                         args: ["boolean"],
                     });
-                    const mockFunction = ImportMock.mockFunction(
-                        macrosModule,
-                        "allMacros",
-                    ).returns({ a: macro });
+                    const parser = uut.getSugarCubeParser(undefined, {
+                        allMacros: () => {
+                            return { a: macro };
+                        },
+                        allMacroEnums: () => {
+                            return {};
+                        },
+                    });
 
                     parser?.parsePassageText(passage, header.length, state);
-                    mockFunction.restore();
                     const [result] = callbacks.errors;
 
                     expect(callbacks.errors.length).to.equal(1);
@@ -4871,19 +4946,21 @@ describe("SugarCube Parser", () => {
                         content: header + passage,
                         callbacks: callbacks,
                     });
-                    const parser = uut.getSugarCubeParser(undefined);
                     const macro = buildMacroInfoWithArgs({
                         name: "a",
                         container: true,
                         args: ["number"],
                     });
-                    const mockFunction = ImportMock.mockFunction(
-                        macrosModule,
-                        "allMacros",
-                    ).returns({ a: macro });
+                    const parser = uut.getSugarCubeParser(undefined, {
+                        allMacros: () => {
+                            return { a: macro };
+                        },
+                        allMacroEnums: () => {
+                            return {};
+                        },
+                    });
 
                     parser?.parsePassageText(passage, header.length, state);
-                    mockFunction.restore();
                     const result = callbacks.errors;
 
                     expect(result).to.be.empty;
@@ -4897,19 +4974,21 @@ describe("SugarCube Parser", () => {
                         content: header + passage,
                         callbacks: callbacks,
                     });
-                    const parser = uut.getSugarCubeParser(undefined);
                     const macro = buildMacroInfoWithArgs({
                         name: "a",
                         container: true,
                         args: ["number"],
                     });
-                    const mockFunction = ImportMock.mockFunction(
-                        macrosModule,
-                        "allMacros",
-                    ).returns({ a: macro });
+                    const parser = uut.getSugarCubeParser(undefined, {
+                        allMacros: () => {
+                            return { a: macro };
+                        },
+                        allMacroEnums: () => {
+                            return {};
+                        },
+                    });
 
                     parser?.parsePassageText(passage, header.length, state);
-                    mockFunction.restore();
                     const [result] = callbacks.errors;
 
                     expect(callbacks.errors.length).to.equal(1);
@@ -4928,18 +5007,20 @@ describe("SugarCube Parser", () => {
                         content: header + passage,
                         callbacks: callbacks,
                     });
-                    const parser = uut.getSugarCubeParser(undefined);
                     const macro = buildMacroInfoWithArgs({
                         name: "a",
                         args: ["bareword &+ receiver"],
                     });
-                    const mockFunction = ImportMock.mockFunction(
-                        macrosModule,
-                        "allMacros",
-                    ).returns({ a: macro });
+                    const parser = uut.getSugarCubeParser(undefined, {
+                        allMacros: () => {
+                            return { a: macro };
+                        },
+                        allMacroEnums: () => {
+                            return {};
+                        },
+                    });
 
                     parser?.parsePassageText(passage, header.length, state);
-                    mockFunction.restore();
                     const [result] = callbacks.errors;
 
                     expect(callbacks.errors.length).to.equal(1);
@@ -4959,18 +5040,20 @@ describe("SugarCube Parser", () => {
                         content: header + passage,
                         callbacks: callbacks,
                     });
-                    const parser = uut.getSugarCubeParser(undefined);
                     const macro = buildMacroInfoWithArgs({
                         name: "a",
                         args: ["link"],
                     });
-                    const mockFunction = ImportMock.mockFunction(
-                        macrosModule,
-                        "allMacros",
-                    ).returns({ a: macro });
+                    const parser = uut.getSugarCubeParser(undefined, {
+                        allMacros: () => {
+                            return { a: macro };
+                        },
+                        allMacroEnums: () => {
+                            return {};
+                        },
+                    });
 
                     parser?.parsePassageText(passage, header.length, state);
-                    mockFunction.restore();
                     const results = callbacks.errors;
 
                     expect(results).to.be.empty;
@@ -4985,18 +5068,20 @@ describe("SugarCube Parser", () => {
                         content: header + passage,
                         callbacks: callbacks,
                     });
-                    const parser = uut.getSugarCubeParser(undefined);
                     const macro = buildMacroInfoWithArgs({
                         name: "a",
                         args: ["linkNoSetter"],
                     });
-                    const mockFunction = ImportMock.mockFunction(
-                        macrosModule,
-                        "allMacros",
-                    ).returns({ a: macro });
+                    const parser = uut.getSugarCubeParser(undefined, {
+                        allMacros: () => {
+                            return { a: macro };
+                        },
+                        allMacroEnums: () => {
+                            return {};
+                        },
+                    });
 
                     parser?.parsePassageText(passage, header.length, state);
-                    mockFunction.restore();
                     const [result] = callbacks.errors;
 
                     expect(callbacks.errors.length).to.equal(1);

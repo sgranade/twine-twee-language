@@ -3,7 +3,7 @@ import * as acornWalk from "acorn-walk";
 import { Range } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
-import { StoryFormatParsingState, capturePreSemanticTokenFor } from "..";
+import { improveAcornErrorMessage } from "../../acorn-errors";
 import { DecorationType } from "../../client-server";
 import {
     createDiagnosticFor,
@@ -38,8 +38,9 @@ import {
     skipSpaces,
     versionCompare,
 } from "../../utilities";
-import { InsertTokens, ModifierTokens, all as allInserts } from "./inserts";
-import { all as allModifiers } from "./modifiers";
+import { StoryFormatParsingState, capturePreSemanticTokenFor } from "..";
+import { ChapbookParserAPI } from ".";
+import { InsertTokens, ModifierTokens } from "./inserts";
 import {
     ArgumentRequirement,
     ChapbookFunctionInfo,
@@ -51,7 +52,6 @@ import {
     OChapbookSymbolKind,
     ValueType,
 } from "./types";
-import { improveAcornErrorMessage } from "../../acorn-errors";
 
 const varsSepRegex = /^--(\r?\n|$)/m;
 const conditionRegex = /((\((.+?)\)?)\s*)([^)]*)$/;
@@ -80,6 +80,7 @@ export interface ChapbookParsingState extends StoryFormatParsingState {
      * Type of modifier affecting a text block.
      */
     modifierKind: ModifierKind;
+    api: ChapbookParserAPI;
 }
 
 const varInsertRegex = /^({\s*)(\S+)\s*}$/;
@@ -1229,7 +1230,9 @@ function parseInsertContents(
     chapbookState: ChapbookParsingState,
 ): void {
     // See if we match a built-in insert
-    const insert = allInserts().find((i) => i.match.test(tokens.name.text));
+    const insert = chapbookState.api
+        .allInserts()
+        .find((i) => i.match.test(tokens.name.text));
     // Store a reference to the insert (either built-in or custom)
     state.callbacks.onSymbolReference(
         createSymbolFor(
@@ -1761,7 +1764,9 @@ function parseModifier(
         return;
     }
 
-    const modifier = allModifiers().find((i) => i.match.test(modifierText));
+    const modifier = chapbookState.api
+        .allModifiers()
+        .find((i) => i.match.test(modifierText));
 
     const modifierTokens = tokenizeModifier(
         modifierText,
@@ -2312,15 +2317,18 @@ export function divideChapbookPassage(
  * @param passageText Passage text to parse.
  * @param textIndex Index of the text in the document (zero-based).
  * @param state Parsing state.
+ * @param api Chapbook parser API.
  */
 export function parsePassageText(
     passageText: string,
     textIndex: number,
     state: ParsingState,
+    api: ChapbookParserAPI,
 ): void {
     const chapbookState: ChapbookParsingState = {
         modifierKind: ModifierKind.None,
         passageTokens: {},
+        api: api,
     };
 
     if (state.parseLevel !== ParseLevel.Full) {

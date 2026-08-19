@@ -1,12 +1,22 @@
 import { StoryFormatParser } from "..";
 import { SC2MacroInfo } from "../../client-server";
-import { allMacros } from "./macros";
+import { allMacros, allMacroEnums } from "./macros";
 import { generateCompletions } from "./sugarcube-completions";
 import { generateDiagnostics } from "./sugarcube-diagnostics";
 import { generateHover } from "./sugarcube-hover";
 import { getReferencesToSymbolAt } from "./sugarcube-references";
 import { generateRenames } from "./sugarcube-renames";
 import { parsePassageText } from "./sugarcube-parser";
+
+export interface SugarCubeParserAPI {
+    allMacros: typeof allMacros;
+    allMacroEnums: typeof allMacroEnums;
+}
+
+const defaultSugarCubeParserAPI: SugarCubeParserAPI = {
+    allMacros,
+    allMacroEnums,
+};
 
 /**
  * Get the names of all the known SugarCube 2 macros.
@@ -30,15 +40,18 @@ export function getSugarCubeMacroInfo(): SC2MacroInfo[] {
  * @returns Parser, or undefined if none is available.
  */
 export function getSugarCubeParser(
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     formatVersion: string | undefined,
+    api: SugarCubeParserAPI = defaultSugarCubeParserAPI,
 ): StoryFormatParser | undefined {
     return {
         id: "sugarcube-any",
-        parsePassageText: parsePassageText,
-        generateCompletions: generateCompletions,
+        parsePassageText: (passageText, textIndex, state) =>
+            parsePassageText(passageText, textIndex, state, api),
+        generateCompletions: (document, position, deferred, index) =>
+            generateCompletions(document, position, deferred, index, api),
         generateDiagnostics: generateDiagnostics,
-        generateHover: generateHover,
+        generateHover: (document, position, deferred, index) =>
+            generateHover(document, position, deferred, index, api),
         getDefinitionAt: () => undefined, // Unneeded -- the index will find all definitions
         getReferencesToSymbolAt: getReferencesToSymbolAt,
         generateRenamesAt: generateRenames,

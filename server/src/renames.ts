@@ -48,6 +48,7 @@ export function prepareRename(
  * @param position Cursor position.
  * @param newName New name for the symbol.
  * @param index Project index.
+ * @param getParser Function to get a story-format-specific parser.
  * @returns Generated renames, or null if renames aren't possible.
  */
 export function generateRenames(
@@ -55,11 +56,12 @@ export function generateRenames(
     position: Position,
     newName: string,
     index: ProjectIndex,
+    getParser: typeof getStoryFormatParser = getStoryFormatParser,
 ): WorkspaceEdit | null {
     // Check the story format's changes, followed by the default index
     // Note that the story parser's function can return changes, undefined (no change
     // possible), or null (not implemented).
-    const parser = getStoryFormatParser(index.getStoryData()?.storyFormat);
+    const parser = getParser(index.getStoryData()?.storyFormat);
     if (parser) {
         const changes = parser.generateRenamesAt(uri, position, newName, index);
         if (changes === undefined) return null;

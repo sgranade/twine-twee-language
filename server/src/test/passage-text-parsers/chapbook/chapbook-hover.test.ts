@@ -1,6 +1,5 @@
 import "mocha";
 import { expect } from "chai";
-import { ImportMock } from "ts-mock-imports";
 import { Location, MarkupKind, Position, Range } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
@@ -11,8 +10,6 @@ import {
     ChapbookSymbol,
     OChapbookSymbolKind,
 } from "../../../passage-text-parsers/chapbook/types";
-import * as insertsModule from "../../../passage-text-parsers/chapbook/inserts";
-import * as modifiersModule from "../../../passage-text-parsers/chapbook/modifiers";
 
 import * as uut from "../../../passage-text-parsers/chapbook";
 
@@ -29,15 +26,14 @@ describe("Chapbook Hover", () => {
                 kind: OChapbookSymbolKind.BuiltInModifier,
             },
         ]);
-        const parser = uut.getChapbookParser(undefined);
         const modifier = buildModifierInfo({
             description: "My description!",
             match: /^mock-mod/,
         });
-        const mockFunction = ImportMock.mockFunction(
-            modifiersModule,
-            "all",
-        ).returns([modifier]);
+        const parser = uut.getChapbookParser(undefined, {
+            allModifiers: () => [modifier],
+            allInserts: () => [],
+        });
 
         const result = parser?.generateHover(
             doc,
@@ -45,7 +41,6 @@ describe("Chapbook Hover", () => {
             [],
             index,
         );
-        mockFunction.restore();
 
         expect(result).to.eql({
             contents: {
@@ -67,16 +62,15 @@ describe("Chapbook Hover", () => {
                 kind: OChapbookSymbolKind.BuiltInModifier,
             },
         ]);
-        const parser = uut.getChapbookParser(undefined);
         const modifier = buildModifierInfo({
             description: "My description!",
             match: /^mock-mod/,
         });
         modifier.syntax = "My syntax";
-        const mockFunction = ImportMock.mockFunction(
-            modifiersModule,
-            "all",
-        ).returns([modifier]);
+        const parser = uut.getChapbookParser(undefined, {
+            allModifiers: () => [modifier],
+            allInserts: () => [],
+        });
 
         const result = parser?.generateHover(
             doc,
@@ -84,7 +78,6 @@ describe("Chapbook Hover", () => {
             [],
             index,
         );
-        mockFunction.restore();
 
         expect(result).to.eql({
             contents: {
@@ -118,11 +111,10 @@ describe("Chapbook Hover", () => {
                 kind: OChapbookSymbolKind.CustomModifier,
             },
         ]);
-        const parser = uut.getChapbookParser(undefined);
-        const mockFunction = ImportMock.mockFunction(
-            modifiersModule,
-            "all",
-        ).returns([]);
+        const parser = uut.getChapbookParser(undefined, {
+            allModifiers: () => [],
+            allInserts: () => [],
+        });
 
         const result = parser?.generateHover(
             doc,
@@ -130,7 +122,6 @@ describe("Chapbook Hover", () => {
             [],
             index,
         );
-        mockFunction.restore();
 
         expect(result).to.eql({
             contents: {
@@ -165,11 +156,10 @@ describe("Chapbook Hover", () => {
                 kind: OChapbookSymbolKind.CustomModifier,
             },
         ]);
-        const parser = uut.getChapbookParser(undefined);
-        const mockFunction = ImportMock.mockFunction(
-            modifiersModule,
-            "all",
-        ).returns([]);
+        const parser = uut.getChapbookParser(undefined, {
+            allModifiers: () => [],
+            allInserts: () => [],
+        });
 
         const result = parser?.generateHover(
             doc,
@@ -177,7 +167,6 @@ describe("Chapbook Hover", () => {
             [],
             index,
         );
-        mockFunction.restore();
 
         expect(result).to.eql({
             contents: {
@@ -210,11 +199,10 @@ describe("Chapbook Hover", () => {
                 kind: OChapbookSymbolKind.CustomModifier,
             },
         ]);
-        const parser = uut.getChapbookParser(undefined);
-        const mockFunction = ImportMock.mockFunction(
-            modifiersModule,
-            "all",
-        ).returns([]);
+        const parser = uut.getChapbookParser(undefined, {
+            allModifiers: () => [],
+            allInserts: () => [],
+        });
 
         const result = parser?.generateHover(
             doc,
@@ -222,7 +210,6 @@ describe("Chapbook Hover", () => {
             [],
             index,
         );
-        mockFunction.restore();
 
         expect(result).to.be.null;
     });
@@ -239,15 +226,14 @@ describe("Chapbook Hover", () => {
                 kind: OChapbookSymbolKind.BuiltInInsert,
             },
         ]);
-        const parser = uut.getChapbookParser(undefined);
         const insert = buildInsertInfo({
             description: "My description!",
             match: /^mock insert/,
         });
-        const mockFunction = ImportMock.mockFunction(
-            insertsModule,
-            "all",
-        ).returns([insert]);
+        const parser = uut.getChapbookParser(undefined, {
+            allModifiers: () => [],
+            allInserts: () => [insert],
+        });
 
         const result = parser?.generateHover(
             doc,
@@ -255,7 +241,6 @@ describe("Chapbook Hover", () => {
             [],
             index,
         );
-        mockFunction.restore();
 
         expect(result).to.eql({
             contents: {
@@ -277,16 +262,15 @@ describe("Chapbook Hover", () => {
                 kind: OChapbookSymbolKind.BuiltInInsert,
             },
         ]);
-        const parser = uut.getChapbookParser(undefined);
         const insert = buildInsertInfo({
             description: "My description!",
             match: /^mock insert/,
         });
         insert.syntax = "{mock insert}";
-        const mockFunction = ImportMock.mockFunction(
-            insertsModule,
-            "all",
-        ).returns([insert]);
+        const parser = uut.getChapbookParser(undefined, {
+            allModifiers: () => [],
+            allInserts: () => [insert],
+        });
 
         const result = parser?.generateHover(
             doc,
@@ -294,7 +278,6 @@ describe("Chapbook Hover", () => {
             [],
             index,
         );
-        mockFunction.restore();
 
         expect(result).to.eql({
             contents: {
@@ -328,11 +311,10 @@ describe("Chapbook Hover", () => {
                 kind: OChapbookSymbolKind.CustomInsert,
             },
         ]);
-        const parser = uut.getChapbookParser(undefined);
-        const mockFunction = ImportMock.mockFunction(
-            insertsModule,
-            "all",
-        ).returns([]);
+        const parser = uut.getChapbookParser(undefined, {
+            allModifiers: () => [],
+            allInserts: () => [],
+        });
 
         const result = parser?.generateHover(
             doc,
@@ -340,7 +322,6 @@ describe("Chapbook Hover", () => {
             [],
             index,
         );
-        mockFunction.restore();
 
         expect(result).to.eql({
             contents: {
@@ -375,11 +356,10 @@ describe("Chapbook Hover", () => {
                 kind: OChapbookSymbolKind.CustomInsert,
             },
         ]);
-        const parser = uut.getChapbookParser(undefined);
-        const mockFunction = ImportMock.mockFunction(
-            insertsModule,
-            "all",
-        ).returns([]);
+        const parser = uut.getChapbookParser(undefined, {
+            allModifiers: () => [],
+            allInserts: () => [],
+        });
 
         const result = parser?.generateHover(
             doc,
@@ -387,7 +367,6 @@ describe("Chapbook Hover", () => {
             [],
             index,
         );
-        mockFunction.restore();
 
         expect(result).to.eql({
             contents: {
@@ -421,11 +400,10 @@ describe("Chapbook Hover", () => {
                 kind: OChapbookSymbolKind.CustomInsert,
             },
         ]);
-        const parser = uut.getChapbookParser(undefined);
-        const mockFunction = ImportMock.mockFunction(
-            insertsModule,
-            "all",
-        ).returns([]);
+        const parser = uut.getChapbookParser(undefined, {
+            allModifiers: () => [],
+            allInserts: () => [],
+        });
 
         const result = parser?.generateHover(
             doc,
@@ -433,7 +411,6 @@ describe("Chapbook Hover", () => {
             [],
             index,
         );
-        mockFunction.restore();
 
         expect(result).to.be.null;
     });

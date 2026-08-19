@@ -17,6 +17,7 @@ import {
 import { ProjectIndex, ProjSymbol } from "../../project-index";
 import { ETokenModifier, ETokenType } from "../../semantic-tokens";
 import { eraseMatches, versionCompare } from "../../utilities";
+import { SugarCubeParserAPI } from ".";
 import { allMacros, MacroInfo, MacroParent } from "./macros";
 import { createVariableAndPropertyReferences } from "./sugarcube-utils";
 import { OSugarCubeSymbolKind, SugarCubeSymbolKind } from "./types";
@@ -133,6 +134,7 @@ export interface SugarCubeParsingState extends StoryFormatParsingState {
      * Ranges of <<widget>> macros in the document, since they create variables.
      */
     widgetMacroRanges: Range[];
+    api: SugarCubeParserAPI;
 }
 
 /**
@@ -882,7 +884,7 @@ function parseAndRemoveMacros(
     // that we concatenate at the end for speed
     const macrolessStrings: string[] = [];
     let lastIndex = 0;
-    const knownMacros = allMacros();
+    const knownMacros = sugarcubeState.api.allMacros();
 
     // Warn on any macro that's inside of the setter portion of a link
     for (const m of passageText.matchAll(macroInASetterRegex)) {
@@ -1547,11 +1549,13 @@ function checkPassageTags(
  * @param passageText Passage text to parse.
  * @param textIndex Index of the text in the document (zero-based).
  * @param state Parsing state.
+ * @param api SugarCube parser API.
  */
 export function parsePassageText(
     passageText: string,
     textIndex: number,
     state: ParsingState,
+    api: SugarCubeParserAPI,
 ): void {
     // Nothing to do if we're not doing a full parse
     if (state.parseLevel !== ParseLevel.Full) {
@@ -1562,6 +1566,7 @@ export function parsePassageText(
         passageTokens: {},
         unclosedMacros: [],
         widgetMacroRanges: [],
+        api: api,
     };
 
     if (state.currentPassage?.isScript) {

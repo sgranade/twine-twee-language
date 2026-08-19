@@ -1,6 +1,5 @@
 import { expect } from "chai";
 import "mocha";
-import { ImportMock } from "ts-mock-imports";
 import {
     DiagnosticSeverity,
     Location,
@@ -15,7 +14,6 @@ import { ParseLevel, ParsingState } from "../parser";
 import { Index } from "../project-index";
 
 import { buildPassage } from "./builders";
-import * as ptpModule from "../passage-text-parsers";
 import * as uut from "../indexer";
 
 function buildDocument({
@@ -74,12 +72,10 @@ describe("Indexer", () => {
                 content: "::Passage 1\nYup\n\n",
             });
             const index = new Index();
+
             // Because definitions only show up in passage contents, we
             // need to mock the passage text parser to create a reference
-            const mockFunction = ImportMock.mockFunction(
-                ptpModule,
-                "getStoryFormatParser",
-            ).callsFake(() => {
+            uut.updateProjectIndex(doc, ParseLevel.Full, index, () => {
                 return {
                     id: "FakeFormat",
                     parsePassageText: (
@@ -97,11 +93,14 @@ describe("Indexer", () => {
                                 kind: 17,
                             });
                     },
+                    generateCompletions: () => null,
+                    generateDiagnostics: () => [],
+                    generateHover: () => null,
+                    generateRenamesAt: () => undefined,
+                    getDefinitionAt: () => undefined,
+                    getReferencesToSymbolAt: () => undefined,
                 };
             });
-
-            uut.updateProjectIndex(doc, ParseLevel.Full, index);
-            mockFunction.restore();
             const result = index.getDefinitions("test-uri", 17);
 
             expect(result).to.eql([
@@ -122,12 +121,10 @@ describe("Indexer", () => {
                 content: "::Passage 1\nYup\n\n",
             });
             const index = new Index();
+
             // Because passage references only show up in passage contents, we
             // need to mock the passage text parser to create a reference
-            const mockFunction = ImportMock.mockFunction(
-                ptpModule,
-                "getStoryFormatParser",
-            ).callsFake(() => {
+            uut.updateProjectIndex(doc, ParseLevel.Full, index, () => {
                 return {
                     id: "FakeFormat",
                     parsePassageText: (
@@ -145,11 +142,14 @@ describe("Indexer", () => {
                                 kind: 1,
                             });
                     },
+                    generateCompletions: () => null,
+                    generateDiagnostics: () => [],
+                    generateHover: () => null,
+                    generateRenamesAt: () => undefined,
+                    getDefinitionAt: () => undefined,
+                    getReferencesToSymbolAt: () => undefined,
                 };
             });
-
-            uut.updateProjectIndex(doc, ParseLevel.Full, index);
-            mockFunction.restore();
             const result = index.getReferences("test-uri", 1);
 
             expect(result).to.eql([
@@ -169,12 +169,10 @@ describe("Indexer", () => {
                 content: "::Passage 1\nYup\n\n",
             });
             const index = new Index();
+
             // Because passage references only show up in passage contents, we
             // need to mock the passage text parser to create a reference
-            const mockFunction = ImportMock.mockFunction(
-                ptpModule,
-                "getStoryFormatParser",
-            ).callsFake(() => {
+            uut.updateProjectIndex(doc, ParseLevel.Full, index, () => {
                 return {
                     id: "FakeFormat",
                     parsePassageText: (
@@ -201,11 +199,14 @@ describe("Indexer", () => {
                             });
                         }
                     },
+                    generateCompletions: () => null,
+                    generateDiagnostics: () => [],
+                    generateHover: () => null,
+                    generateRenamesAt: () => undefined,
+                    getDefinitionAt: () => undefined,
+                    getReferencesToSymbolAt: () => undefined,
                 };
             });
-
-            uut.updateProjectIndex(doc, ParseLevel.Full, index);
-            mockFunction.restore();
             const result_0 = index.getReferences("test-uri", 1);
             const result_1 = index.getReferences("test-uri", 2);
 
@@ -328,12 +329,10 @@ describe("Indexer", () => {
                 content: "::Passage 1\nYup\n\n",
             });
             const index = new Index();
+
             // Because decoration ranges only show up in passage contents, we
             // need to mock the passage text parser to create a reference
-            const mockFunction = ImportMock.mockFunction(
-                ptpModule,
-                "getStoryFormatParser",
-            ).callsFake(() => {
+            uut.updateProjectIndex(doc, ParseLevel.Full, index, () => {
                 return {
                     id: "FakeFormat",
                     parsePassageText: (
@@ -347,11 +346,14 @@ describe("Indexer", () => {
                                 range: Range.create(1, 2, 3, 4),
                             });
                     },
+                    generateCompletions: () => null,
+                    generateDiagnostics: () => [],
+                    generateHover: () => null,
+                    generateRenamesAt: () => undefined,
+                    getDefinitionAt: () => undefined,
+                    getReferencesToSymbolAt: () => undefined,
                 };
             });
-
-            uut.updateProjectIndex(doc, ParseLevel.Full, index);
-            mockFunction.restore();
             const result = index.getDecorationRanges("test-uri");
 
             expect(result).to.eql([

@@ -1,6 +1,5 @@
 import { expect } from "chai";
 import "mocha";
-import { ImportMock } from "ts-mock-imports";
 import * as uuid from "uuid";
 import {
     CompletionItem,
@@ -40,11 +39,8 @@ describe("Completions", () => {
                     doc,
                 ),
             ]);
-            const mockFunction = ImportMock.mockFunction(
-                embeddedLanguagesModule,
-                "doComplete",
-            ).callsFake(
-                async (
+            const mockApi: uut.CompletionGenerationAPI = {
+                embeddedDocumentDoComplete: async (
                     parentDoc: TextDocument,
                     embeddedDoc: embeddedLanguagesModule.EmbeddedDocument,
                 ) => {
@@ -55,15 +51,16 @@ describe("Completions", () => {
                     }
                     return null;
                 },
-            );
+                getStoryFormatParser: () => undefined,
+            };
 
             const result = await uut.generateCompletions(
                 doc,
                 position,
                 index,
                 true,
+                mockApi,
             );
-            mockFunction.restore();
 
             expect(result?.items).to.eql([{ label: "my completion!" }]);
         });
@@ -86,11 +83,8 @@ describe("Completions", () => {
                     doc,
                 ),
             ]);
-            const mockFunction = ImportMock.mockFunction(
-                embeddedLanguagesModule,
-                "doComplete",
-            ).callsFake(
-                async (
+            const mockApi: uut.CompletionGenerationAPI = {
+                embeddedDocumentDoComplete: async (
                     parentDoc: TextDocument,
                     embeddedDoc: embeddedLanguagesModule.EmbeddedDocument,
                 ) => {
@@ -104,15 +98,16 @@ describe("Completions", () => {
                     }
                     return null;
                 },
-            );
+                getStoryFormatParser: () => undefined,
+            };
 
             const result = await uut.generateCompletions(
                 doc,
                 position,
                 index,
                 true,
+                mockApi,
             );
-            mockFunction.restore();
 
             expect(result?.items[0].textEdit).to.eql({
                 newText: "changeit!",
@@ -140,11 +135,8 @@ describe("Completions", () => {
                     true,
                 ),
             ]);
-            const mockFunction = ImportMock.mockFunction(
-                embeddedLanguagesModule,
-                "doComplete",
-            ).callsFake(
-                async (
+            const mockApi: uut.CompletionGenerationAPI = {
+                embeddedDocumentDoComplete: async (
                     parentDoc: TextDocument,
                     embeddedDoc: embeddedLanguagesModule.EmbeddedDocument,
                 ) => {
@@ -155,15 +147,16 @@ describe("Completions", () => {
                     }
                     return null;
                 },
-            );
+                getStoryFormatParser: () => undefined,
+            };
 
             const result = await uut.generateCompletions(
                 doc,
                 position,
                 index,
                 true,
+                mockApi,
             );
-            mockFunction.restore();
 
             expect(result).to.be.null;
         });
@@ -222,20 +215,17 @@ describe("Completions", () => {
                         doc,
                     ),
                 ]);
-                const mockDoComplete = ImportMock.mockFunction(
-                    embeddedLanguagesModule,
-                    "doComplete",
-                ).callsFake(async () => {
-                    return null;
-                });
 
                 const result = await uut.generateCompletions(
                     doc,
                     position,
                     index,
                     true,
+                    {
+                        embeddedDocumentDoComplete: async () => null,
+                        getStoryFormatParser: () => undefined,
+                    },
                 );
-                mockDoComplete.restore();
 
                 // Slice the result to remove the quote marks
                 expect(
@@ -266,20 +256,17 @@ describe("Completions", () => {
                         doc,
                     ),
                 ]);
-                const mockDoComplete = ImportMock.mockFunction(
-                    embeddedLanguagesModule,
-                    "doComplete",
-                ).callsFake(async () => {
-                    return null;
-                });
 
                 const result = await uut.generateCompletions(
                     doc,
                     position,
                     index,
                     true,
+                    {
+                        embeddedDocumentDoComplete: async () => null,
+                        getStoryFormatParser: () => undefined,
+                    },
                 );
-                mockDoComplete.restore();
 
                 expect(result?.items.length).to.equal(3);
                 expect(result?.items[0].label).to.eql('"Chapbook"');
@@ -308,20 +295,17 @@ describe("Completions", () => {
                         doc,
                     ),
                 ]);
-                const mockDoComplete = ImportMock.mockFunction(
-                    embeddedLanguagesModule,
-                    "doComplete",
-                ).callsFake(async () => {
-                    return null;
-                });
 
                 const result = await uut.generateCompletions(
                     doc,
                     position,
                     index,
                     true,
+                    {
+                        embeddedDocumentDoComplete: async () => null,
+                        getStoryFormatParser: () => undefined,
+                    },
                 );
-                mockDoComplete.restore();
 
                 expect(result?.items.length).to.equal(1);
                 expect(result?.items[0].label).to.eql('"Testy"');
@@ -345,20 +329,17 @@ describe("Completions", () => {
                         doc,
                     ),
                 ]);
-                const mockDoComplete = ImportMock.mockFunction(
-                    embeddedLanguagesModule,
-                    "doComplete",
-                ).callsFake(async () => {
-                    return null;
-                });
 
                 const result = await uut.generateCompletions(
                     doc,
                     position,
                     index,
                     true,
+                    {
+                        embeddedDocumentDoComplete: async () => null,
+                        getStoryFormatParser: () => undefined,
+                    },
                 );
-                mockDoComplete.restore();
 
                 expect(result?.items.length).to.equal(7);
                 expect(result?.items[0].label).to.eql('"gray"');
@@ -807,23 +788,23 @@ describe("Completions", () => {
             const completionList = CompletionList.create([
                 { label: "story completion" },
             ]);
-            const mockFunction = ImportMock.mockFunction(
-                ptpModule,
-                "getStoryFormatParser",
-            ).callsFake(() => {
-                return {
-                    id: "FakeFormat",
-                    generateCompletions: () => completionList,
-                };
-            });
+            const mockApi: uut.CompletionGenerationAPI = {
+                embeddedDocumentDoComplete: async () => null,
+                getStoryFormatParser: () => {
+                    return {
+                        id: "FakeFormat",
+                        generateCompletions: () => completionList,
+                    } as unknown as ptpModule.StoryFormatParser;
+                },
+            };
 
             const result = await uut.generateCompletions(
                 doc,
                 position,
                 index,
                 true,
+                mockApi,
             );
-            mockFunction.restore();
 
             expect(result).to.eql(completionList);
         });
@@ -853,36 +834,36 @@ describe("Completions", () => {
             const completionList = CompletionList.create([
                 { label: "story completion" },
             ]);
-            const mockFunction = ImportMock.mockFunction(
-                ptpModule,
-                "getStoryFormatParser",
-            ).callsFake(() => {
-                return {
-                    id: "FakeFormat",
-                    generateCompletions: (
-                        doc: TextDocument,
-                        pos: Position,
-                        deferred: embeddedLanguagesModule.EmbeddedDocument[],
-                        index: Index,
-                    ) => {
-                        if (
-                            deferred.length !== 1 ||
-                            deferred[0].deferToStoryFormat !== true
-                        ) {
-                            return null;
-                        }
-                        return completionList;
-                    },
-                };
-            });
+            const mockApi: uut.CompletionGenerationAPI = {
+                embeddedDocumentDoComplete: async () => null,
+                getStoryFormatParser: () => {
+                    return {
+                        id: "FakeFormat",
+                        generateCompletions: (
+                            doc: TextDocument,
+                            pos: Position,
+                            deferred: embeddedLanguagesModule.EmbeddedDocument[],
+                            index: Index,
+                        ) => {
+                            if (
+                                deferred.length !== 1 ||
+                                deferred[0].deferToStoryFormat !== true
+                            ) {
+                                return null;
+                            }
+                            return completionList;
+                        },
+                    } as unknown as ptpModule.StoryFormatParser;
+                },
+            };
 
             const result = await uut.generateCompletions(
                 doc,
                 position,
                 index,
                 true,
+                mockApi,
             );
-            mockFunction.restore();
 
             expect(result).to.eql(completionList);
         });
@@ -904,11 +885,8 @@ describe("Completions", () => {
                     true,
                 ),
             ]);
-            const mockFunction = ImportMock.mockFunction(
-                embeddedLanguagesModule,
-                "doComplete",
-            ).callsFake(
-                async (
+            const mockApi: uut.CompletionGenerationAPI = {
+                embeddedDocumentDoComplete: async (
                     parentDoc: TextDocument,
                     embeddedDoc: embeddedLanguagesModule.EmbeddedDocument,
                 ) => {
@@ -919,15 +897,16 @@ describe("Completions", () => {
                     }
                     return null;
                 },
-            );
+                getStoryFormatParser: () => undefined,
+            };
 
             const result = await uut.generateCompletions(
                 doc,
                 position,
                 index,
                 true,
+                mockApi,
             );
-            mockFunction.restore();
 
             expect(result?.items[0].label).to.eql("Testy");
         });
@@ -956,20 +935,8 @@ describe("Completions", () => {
                     true,
                 ),
             ]);
-            const mockPassageTextParserFunction = ImportMock.mockFunction(
-                ptpModule,
-                "getStoryFormatParser",
-            ).callsFake(() => {
-                return {
-                    id: "FakeFormat",
-                    generateCompletions: () => completionList,
-                };
-            });
-            const mockEmbeddedDocFunction = ImportMock.mockFunction(
-                embeddedLanguagesModule,
-                "doComplete",
-            ).callsFake(
-                async (
+            const mockApi: uut.CompletionGenerationAPI = {
+                embeddedDocumentDoComplete: async (
                     parentDoc: TextDocument,
                     embeddedDoc: embeddedLanguagesModule.EmbeddedDocument,
                 ) => {
@@ -980,16 +947,21 @@ describe("Completions", () => {
                     }
                     return null;
                 },
-            );
+                getStoryFormatParser: () => {
+                    return {
+                        id: "FakeFormat",
+                        generateCompletions: () => completionList,
+                    } as unknown as ptpModule.StoryFormatParser;
+                },
+            };
 
             const result = await uut.generateCompletions(
                 doc,
                 position,
                 index,
                 true,
+                mockApi,
             );
-            mockEmbeddedDocFunction.restore();
-            mockPassageTextParserFunction.restore();
 
             expect(result).to.eql(completionList);
         });
@@ -1008,11 +980,8 @@ describe("Completions", () => {
                     true,
                 ),
             ]);
-            const mockFunction = ImportMock.mockFunction(
-                embeddedLanguagesModule,
-                "doComplete",
-            ).callsFake(
-                async (
+            const mockApi: uut.CompletionGenerationAPI = {
+                embeddedDocumentDoComplete: async (
                     parentDoc: TextDocument,
                     embeddedDoc: embeddedLanguagesModule.EmbeddedDocument,
                 ) => {
@@ -1023,15 +992,16 @@ describe("Completions", () => {
                     }
                     return null;
                 },
-            );
+                getStoryFormatParser: () => undefined,
+            };
 
             const result = await uut.generateCompletions(
                 doc,
                 position,
                 index,
                 true,
+                mockApi,
             );
-            mockFunction.restore();
 
             expect(result?.items).to.eql([{ label: "Embedded completion" }]);
         });

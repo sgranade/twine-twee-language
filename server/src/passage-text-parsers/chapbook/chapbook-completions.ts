@@ -12,19 +12,20 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 import { EmbeddedDocument } from "../../embedded-languages";
 import { ProjectIndex } from "../../project-index";
 import { removeAndCountPadding } from "../../utilities";
+import { ChapbookParserAPI } from ".";
 import {
     divideChapbookPassage,
     findStartOfModifierOrInsert,
     getChapbookDefinitions,
 } from "./chapbook-parser";
 import {
+    ArgumentRequirement,
     ChapbookFunctionInfo,
     ChapbookSymbol,
+    InsertProperty,
     OChapbookSymbolKind,
+    ValueType,
 } from "./types";
-import { all as allInserts } from "./inserts";
-import { all as allModifiers } from "./modifiers";
-import { ArgumentRequirement, InsertProperty, ValueType } from "./types";
 
 /**
  * Generate completions for variables and properties.
@@ -117,6 +118,7 @@ const modifierStopChar = /[\];\r\n]/g;
  * @param modifierContentStart Offset where the modifier starts (just past the [).
  * @param offset Offset where the completion is to be generated.
  * @param index Project index.
+ * @param api API for Chapbook parser functions.
  * @returns Completions list.
  */
 function generateModifierCompletions(
@@ -124,13 +126,14 @@ function generateModifierCompletions(
     modifierContentStart: number,
     offset: number,
     index: ProjectIndex,
+    api: ChapbookParserAPI,
 ): CompletionList | null {
     const text = document.getText();
     let i = offset;
     // Merge built-in and custom modifiers into one list, since they share
     // the ChapbookFunctionInfo interface
     const modifiers: ChapbookFunctionInfo[] = [
-        ...allModifiers(),
+        ...api.allModifiers(),
         ...getChapbookDefinitions(OChapbookSymbolKind.CustomModifier, index),
     ];
 
@@ -383,6 +386,8 @@ const insertStopChar = /[,:}\r\n]/g;
  * @param document Document in which to generate the completions.
  * @param insertContentStart Offset where the insert starts (just past the {).
  * @param offset Offset where the completion is to be generated.
+ * @param index Project index.
+ * @param api API for Chapbook parser functions.
  * @returns Completions list.
  */
 function generateInsertCompletions(
@@ -390,13 +395,14 @@ function generateInsertCompletions(
     insertContentStart: number,
     offset: number,
     index: ProjectIndex,
+    api: ChapbookParserAPI,
 ): CompletionList | null {
     let i: number;
     const text = document.getText();
     // Merge built-in inserts and custom inserts into one list, since they share
     // the ChapbookFunctionInfo interface
     const inserts: ChapbookFunctionInfo[] = [
-        ...allInserts(),
+        ...api.allInserts(),
         ...getChapbookDefinitions(OChapbookSymbolKind.CustomInsert, index),
     ];
 
@@ -617,6 +623,7 @@ export function generateCompletions(
     position: Position,
     deferredEmbeddedDocuments: EmbeddedDocument[],
     index: ProjectIndex,
+    api: ChapbookParserAPI,
 ): CompletionList | null {
     const offset = document.offsetAt(position);
     const passage = index.getPassageAt(document.uri, position);
@@ -663,6 +670,7 @@ export function generateCompletions(
                 passageTextOffset + i + 1,
                 offset,
                 index,
+                api,
             );
         } else if (passageText[i] === "{") {
             return generateInsertCompletions(
@@ -670,6 +678,7 @@ export function generateCompletions(
                 passageTextOffset + i + 1,
                 offset,
                 index,
+                api,
             );
         }
     }

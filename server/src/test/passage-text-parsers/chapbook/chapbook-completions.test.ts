@@ -1,6 +1,5 @@
 import "mocha";
 import { expect } from "chai";
-import { ImportMock } from "ts-mock-imports";
 import { Location, Position, Range, TextEdit } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
@@ -251,14 +250,12 @@ describe("Chapbook Completions", () => {
                     match: /custom\s+modifier/i,
                 } as ChapbookSymbol,
             ]);
-            const parser = uut.getChapbookParser(undefined);
-            const mockFunction = ImportMock.mockFunction(
-                modifiersModule,
-                "all",
-            ).returns([]);
+            const parser = uut.getChapbookParser(undefined, {
+                allModifiers: () => [],
+                allInserts: () => [],
+            });
 
             const results = parser?.generateCompletions(doc, pos, [], index);
-            mockFunction.restore();
 
             expect(results?.items[0]?.label).to.eql("custom modifier");
         });
@@ -352,14 +349,12 @@ describe("Chapbook Completions", () => {
             ]);
             const modifier = buildModifierInfo({ name: "mod", match: /^mod/i });
             modifier.completions = ["mod"];
-            const mockFunction = ImportMock.mockFunction(
-                modifiersModule,
-                "all",
-            ).returns([modifier]);
-            const parser = uut.getChapbookParser(undefined);
+            const parser = uut.getChapbookParser(undefined, {
+                allModifiers: () => [modifier],
+                allInserts: () => [],
+            });
 
             const results = parser?.generateCompletions(doc, pos, [], index);
-            mockFunction.restore();
 
             expect(results?.itemDefaults?.editRange).to.eql(
                 Range.create(1, 12, 1, 16),
@@ -384,14 +379,12 @@ describe("Chapbook Completions", () => {
             ]);
             const modifier = buildModifierInfo({ name: "mod", match: /^mod/i });
             modifier.completions = ["mod"];
-            const mockFunction = ImportMock.mockFunction(
-                modifiersModule,
-                "all",
-            ).returns([modifier]);
-            const parser = uut.getChapbookParser(undefined);
+            const parser = uut.getChapbookParser(undefined, {
+                allModifiers: () => [modifier],
+                allInserts: () => [],
+            });
 
             const results = parser?.generateCompletions(doc, pos, [], index);
-            mockFunction.restore();
 
             expect(results?.itemDefaults?.editRange).to.eql(
                 Range.create(1, 12, 1, 16),
@@ -420,14 +413,12 @@ describe("Chapbook Completions", () => {
                 required: ArgumentRequirement.required,
                 placeholder: "'URL'",
             };
-            const mockFunction = ImportMock.mockFunction(
-                modifiersModule,
-                "all",
-            ).returns([modifier]);
-            const parser = uut.getChapbookParser(undefined);
+            const parser = uut.getChapbookParser(undefined, {
+                allModifiers: () => [modifier],
+                allInserts: () => [],
+            });
 
             const results = parser?.generateCompletions(doc, pos, [], index);
-            mockFunction.restore();
 
             expect(results?.items[0].textEditText).to.eql("mod '${1:URL}'");
             expect(results?.itemDefaults?.editRange).to.eql(
@@ -456,14 +447,12 @@ describe("Chapbook Completions", () => {
                 required: ArgumentRequirement.required,
                 placeholder: "'URL'",
             };
-            const mockFunction = ImportMock.mockFunction(
-                modifiersModule,
-                "all",
-            ).returns([modifier]);
-            const parser = uut.getChapbookParser(undefined);
+            const parser = uut.getChapbookParser(undefined, {
+                allModifiers: () => [modifier],
+                allInserts: () => [],
+            });
 
             const results = parser?.generateCompletions(doc, pos, [], index);
-            mockFunction.restore();
 
             expect(results?.items[0].textEditText).to.eql("mod '${1:URL}'");
             expect(results?.itemDefaults?.editRange).to.eql(
@@ -502,14 +491,12 @@ describe("Chapbook Completions", () => {
                     match: /^custom mod/i,
                 } as ChapbookSymbol,
             ]);
-            const parser = uut.getChapbookParser(undefined);
-            const mockFunction = ImportMock.mockFunction(
-                modifiersModule,
-                "all",
-            ).returns([]);
+            const parser = uut.getChapbookParser(undefined, {
+                allModifiers: () => [],
+                allInserts: () => [],
+            });
 
             const results = parser?.generateCompletions(doc, pos, [], index);
-            mockFunction.restore();
 
             expect(results?.items[0].textEditText).to.eql(
                 "custom mod '${1:URL}'",
@@ -549,14 +536,12 @@ describe("Chapbook Completions", () => {
                 required: ArgumentRequirement.optional,
                 type: ValueType.expression,
             };
-            const mockFunction = ImportMock.mockFunction(
-                modifiersModule,
-                "all",
-            ).returns([modifier]);
-            const parser = uut.getChapbookParser(undefined);
+            const parser = uut.getChapbookParser(undefined, {
+                allModifiers: () => [modifier],
+                allInserts: () => [],
+            });
 
             const results = parser?.generateCompletions(doc, pos, [], index);
-            mockFunction.restore();
 
             expect(results?.items.length).to.equal(1);
             expect(results?.items[0]?.label).to.eql("var1");
@@ -609,14 +594,12 @@ describe("Chapbook Completions", () => {
                 required: ArgumentRequirement.optional,
                 type: ValueType.expression,
             };
-            const mockFunction = ImportMock.mockFunction(
-                modifiersModule,
-                "all",
-            ).returns([modifier]);
-            const parser = uut.getChapbookParser(undefined);
+            const parser = uut.getChapbookParser(undefined, {
+                allModifiers: () => [modifier],
+                allInserts: () => [],
+            });
 
             const results = parser?.generateCompletions(doc, pos, [], index);
-            mockFunction.restore();
 
             expect(results?.items.length).to.equal(1);
             expect(results?.items[0]?.label).to.eql("otherprop");
@@ -643,14 +626,12 @@ describe("Chapbook Completions", () => {
                 required: ArgumentRequirement.optional,
                 type: ValueType.passage,
             };
-            const mockFunction = ImportMock.mockFunction(
-                modifiersModule,
-                "all",
-            ).returns([modifier]);
-            const parser = uut.getChapbookParser(undefined);
+            const parser = uut.getChapbookParser(undefined, {
+                allModifiers: () => [modifier],
+                allInserts: () => [],
+            });
 
             const results = parser?.generateCompletions(doc, pos, [], index);
-            mockFunction.restore();
 
             expect(results?.items[0].label).to.eql("I'm a passage!");
             expect(results?.items[0].textEditText).to.eql("'I'm a passage!'");
@@ -689,14 +670,12 @@ describe("Chapbook Completions", () => {
                     },
                 } as ChapbookSymbol,
             ]);
-            const parser = uut.getChapbookParser(undefined);
-            const mockFunction = ImportMock.mockFunction(
-                modifiersModule,
-                "all",
-            ).returns([]);
+            const parser = uut.getChapbookParser(undefined, {
+                allModifiers: () => [],
+                allInserts: () => [],
+            });
 
             const results = parser?.generateCompletions(doc, pos, [], index);
-            mockFunction.restore();
 
             expect(results?.items[0].label).to.eql("I'm a passage!");
             expect(results?.items[0].textEditText).to.eql("'I'm a passage!'");
@@ -726,14 +705,12 @@ describe("Chapbook Completions", () => {
                 required: ArgumentRequirement.optional,
                 type: ValueType.urlOrPassage,
             };
-            const mockFunction = ImportMock.mockFunction(
-                modifiersModule,
-                "all",
-            ).returns([modifier]);
-            const parser = uut.getChapbookParser(undefined);
+            const parser = uut.getChapbookParser(undefined, {
+                allModifiers: () => [modifier],
+                allInserts: () => [],
+            });
 
             const results = parser?.generateCompletions(doc, pos, [], index);
-            mockFunction.restore();
 
             expect(results?.items[0].label).to.eql("I'm a passage!");
             expect(results?.items[0].textEditText).to.eql("'I'm a passage!'");
@@ -772,14 +749,12 @@ describe("Chapbook Completions", () => {
                     },
                 } as ChapbookSymbol,
             ]);
-            const parser = uut.getChapbookParser(undefined);
-            const mockFunction = ImportMock.mockFunction(
-                modifiersModule,
-                "all",
-            ).returns([]);
+            const parser = uut.getChapbookParser(undefined, {
+                allModifiers: () => [],
+                allInserts: () => [],
+            });
 
             const results = parser?.generateCompletions(doc, pos, [], index);
-            mockFunction.restore();
 
             expect(results?.items[0].label).to.eql("I'm a passage!");
             expect(results?.items[0].textEditText).to.eql("'I'm a passage!'");
@@ -818,14 +793,12 @@ describe("Chapbook Completions", () => {
                 optionalProps: {},
                 parse: () => {},
             };
-            const mockFunction = ImportMock.mockFunction(
-                insertsModule,
-                "all",
-            ).returns([insert]);
-            const parser = uut.getChapbookParser(undefined);
+            const parser = uut.getChapbookParser(undefined, {
+                allModifiers: () => [],
+                allInserts: () => [insert],
+            });
 
             const results = parser?.generateCompletions(doc, pos, [], index);
-            mockFunction.restore();
 
             expect(results?.items[0].label).to.eql("test insert");
             expect(results?.itemDefaults?.editRange).to.eql(
@@ -859,14 +832,12 @@ describe("Chapbook Completions", () => {
                     match: /custom\s+insert/i,
                 } as ChapbookSymbol,
             ]);
-            const mockFunction = ImportMock.mockFunction(
-                insertsModule,
-                "all",
-            ).returns([]);
-            const parser = uut.getChapbookParser(undefined);
+            const parser = uut.getChapbookParser(undefined, {
+                allModifiers: () => [],
+                allInserts: () => [],
+            });
 
             const results = parser?.generateCompletions(doc, pos, [], index);
-            mockFunction.restore();
 
             expect(results?.items[0]?.label).to.eql("custom insert");
         });
@@ -906,11 +877,10 @@ describe("Chapbook Completions", () => {
                     match: /custom\s+insert/i,
                 } as ChapbookSymbol,
             ]);
-            const mockFunction = ImportMock.mockFunction(
-                insertsModule,
-                "all",
-            ).returns([]);
-            const parser = uut.getChapbookParser(undefined);
+            const parser = uut.getChapbookParser(undefined, {
+                allModifiers: () => [],
+                allInserts: () => [],
+            });
 
             const results = parser?.generateCompletions(
                 doc,
@@ -918,7 +888,6 @@ describe("Chapbook Completions", () => {
                 [scriptEmbeddedDocument],
                 index,
             );
-            mockFunction.restore();
 
             expect(results).to.be.null;
         });
@@ -954,14 +923,12 @@ describe("Chapbook Completions", () => {
                     kind: OChapbookSymbolKind.Variable,
                 },
             ]);
-            const mockFunction = ImportMock.mockFunction(
-                insertsModule,
-                "all",
-            ).returns([]);
-            const parser = uut.getChapbookParser(undefined);
+            const parser = uut.getChapbookParser(undefined, {
+                allModifiers: () => [],
+                allInserts: () => [],
+            });
 
             const results = parser?.generateCompletions(doc, pos, [], index);
-            mockFunction.restore();
 
             expect(results?.items[0].label).to.eql("var1");
             expect(results?.itemDefaults?.editRange).to.eql(
@@ -1013,14 +980,12 @@ describe("Chapbook Completions", () => {
                     kind: OChapbookSymbolKind.Property,
                 },
             ]);
-            const mockFunction = ImportMock.mockFunction(
-                insertsModule,
-                "all",
-            ).returns([]);
-            const parser = uut.getChapbookParser(undefined);
+            const parser = uut.getChapbookParser(undefined, {
+                allModifiers: () => [],
+                allInserts: () => [],
+            });
 
             const results = parser?.generateCompletions(doc, pos, [], index);
-            mockFunction.restore();
 
             expect(results?.items[0].label).to.eql("otherprop");
             expect(results?.items[0].textEdit).to.eql(
@@ -1052,14 +1017,12 @@ describe("Chapbook Completions", () => {
                     kind: OChapbookSymbolKind.Variable,
                 },
             ]);
-            const mockFunction = ImportMock.mockFunction(
-                insertsModule,
-                "all",
-            ).returns([]);
-            const parser = uut.getChapbookParser(undefined);
+            const parser = uut.getChapbookParser(undefined, {
+                allModifiers: () => [],
+                allInserts: () => [],
+            });
 
             const results = parser?.generateCompletions(doc, pos, [], index);
-            mockFunction.restore();
 
             expect(results?.items).to.be.empty;
         });
@@ -1092,14 +1055,12 @@ describe("Chapbook Completions", () => {
                 optionalProps: {},
                 parse: () => {},
             };
-            const mockFunction = ImportMock.mockFunction(
-                insertsModule,
-                "all",
-            ).returns([insert]);
-            const parser = uut.getChapbookParser(undefined);
+            const parser = uut.getChapbookParser(undefined, {
+                allModifiers: () => [],
+                allInserts: () => [insert],
+            });
 
             const results = parser?.generateCompletions(doc, pos, [], index);
-            mockFunction.restore();
 
             expect(results?.items[0].label).to.eql("test insert");
             expect(results?.itemDefaults?.editRange).to.eql(
@@ -1135,14 +1096,12 @@ describe("Chapbook Completions", () => {
                 optionalProps: {},
                 parse: () => {},
             };
-            const mockFunction = ImportMock.mockFunction(
-                insertsModule,
-                "all",
-            ).returns([insert]);
-            const parser = uut.getChapbookParser(undefined);
+            const parser = uut.getChapbookParser(undefined, {
+                allModifiers: () => [],
+                allInserts: () => [insert],
+            });
 
             const results = parser?.generateCompletions(doc, pos, [], index);
-            mockFunction.restore();
 
             expect(results?.items[0].label).to.eql("test insert");
             expect(results?.itemDefaults?.editRange).to.eql(
@@ -1178,14 +1137,12 @@ describe("Chapbook Completions", () => {
                 optionalProps: {},
                 parse: () => {},
             };
-            const mockFunction = ImportMock.mockFunction(
-                insertsModule,
-                "all",
-            ).returns([insert]);
-            const parser = uut.getChapbookParser(undefined);
+            const parser = uut.getChapbookParser(undefined, {
+                allModifiers: () => [],
+                allInserts: () => [insert],
+            });
 
             const results = parser?.generateCompletions(doc, pos, [], index);
-            mockFunction.restore();
 
             expect(results?.items[0].label).to.eql("test insert");
             expect(results?.items[0].textEditText).to.eql("test insert");
@@ -1220,14 +1177,12 @@ describe("Chapbook Completions", () => {
                     match: /custom\s+insert/i,
                 } as ChapbookSymbol,
             ]);
-            const mockFunction = ImportMock.mockFunction(
-                insertsModule,
-                "all",
-            ).returns([]);
-            const parser = uut.getChapbookParser(undefined);
+            const parser = uut.getChapbookParser(undefined, {
+                allModifiers: () => [],
+                allInserts: () => [],
+            });
 
             const results = parser?.generateCompletions(doc, pos, [], index);
-            mockFunction.restore();
 
             expect(results?.items[0].label).to.eql("custom insert");
             expect(results?.items[0].textEditText).to.eql("custom insert");
@@ -1264,14 +1219,12 @@ describe("Chapbook Completions", () => {
                 optionalProps: {},
                 parse: () => {},
             };
-            const mockFunction = ImportMock.mockFunction(
-                insertsModule,
-                "all",
-            ).returns([insert]);
-            const parser = uut.getChapbookParser(undefined);
+            const parser = uut.getChapbookParser(undefined, {
+                allModifiers: () => [],
+                allInserts: () => [insert],
+            });
 
             const results = parser?.generateCompletions(doc, pos, [], index);
-            mockFunction.restore();
 
             expect(results?.items[0].textEditText).to.eql(
                 "test insert: '${1:arg}'",
@@ -1316,14 +1269,12 @@ describe("Chapbook Completions", () => {
                     },
                 } as ChapbookSymbol,
             ]);
-            const mockFunction = ImportMock.mockFunction(
-                insertsModule,
-                "all",
-            ).returns([]);
-            const parser = uut.getChapbookParser(undefined);
+            const parser = uut.getChapbookParser(undefined, {
+                allModifiers: () => [],
+                allInserts: () => [],
+            });
 
             const results = parser?.generateCompletions(doc, pos, [], index);
-            mockFunction.restore();
 
             expect(results?.items[0].textEditText).to.eql(
                 "custom insert: '${1:arg}'",
@@ -1361,14 +1312,12 @@ describe("Chapbook Completions", () => {
                 optionalProps: {},
                 parse: () => {},
             };
-            const mockFunction = ImportMock.mockFunction(
-                insertsModule,
-                "all",
-            ).returns([insert]);
-            const parser = uut.getChapbookParser(undefined);
+            const parser = uut.getChapbookParser(undefined, {
+                allModifiers: () => [],
+                allInserts: () => [insert],
+            });
 
             const results = parser?.generateCompletions(doc, pos, [], index);
-            mockFunction.restore();
 
             expect(results?.items[0].textEditText).to.eql(
                 "test insert: '${1:arg}'",
@@ -1413,14 +1362,12 @@ describe("Chapbook Completions", () => {
                     },
                 } as ChapbookSymbol,
             ]);
-            const mockFunction = ImportMock.mockFunction(
-                insertsModule,
-                "all",
-            ).returns([]);
-            const parser = uut.getChapbookParser(undefined);
+            const parser = uut.getChapbookParser(undefined, {
+                allModifiers: () => [],
+                allInserts: () => [],
+            });
 
             const results = parser?.generateCompletions(doc, pos, [], index);
-            mockFunction.restore();
 
             expect(results?.items[0].textEditText).to.eql(
                 "custom insert: '${1:arg}'",
@@ -1454,14 +1401,12 @@ describe("Chapbook Completions", () => {
                 required: ArgumentRequirement.required,
                 placeholder: "'URL'",
             };
-            const mockFunction = ImportMock.mockFunction(
-                insertsModule,
-                "all",
-            ).returns([insert]);
-            const parser = uut.getChapbookParser(undefined);
+            const parser = uut.getChapbookParser(undefined, {
+                allModifiers: () => [],
+                allInserts: () => [insert],
+            });
 
             const results = parser?.generateCompletions(doc, pos, [], index);
-            mockFunction.restore();
 
             expect(results?.items[0].textEditText).to.eql(
                 "test insert: '${1:URL}'",
@@ -1508,14 +1453,12 @@ describe("Chapbook Completions", () => {
                     },
                 } as ChapbookSymbol,
             ]);
-            const mockFunction = ImportMock.mockFunction(
-                insertsModule,
-                "all",
-            ).returns([]);
-            const parser = uut.getChapbookParser(undefined);
+            const parser = uut.getChapbookParser(undefined, {
+                allModifiers: () => [],
+                allInserts: () => [],
+            });
 
             const results = parser?.generateCompletions(doc, pos, [], index);
-            mockFunction.restore();
 
             expect(results?.items[0].textEditText).to.eql(
                 "custom insert: '${1:URL}'",
@@ -1550,14 +1493,12 @@ describe("Chapbook Completions", () => {
                 required: ArgumentRequirement.required,
                 placeholder: "'URL'",
             };
-            const mockFunction = ImportMock.mockFunction(
-                insertsModule,
-                "all",
-            ).returns([insert]);
-            const parser = uut.getChapbookParser(undefined);
+            const parser = uut.getChapbookParser(undefined, {
+                allModifiers: () => [],
+                allInserts: () => [insert],
+            });
 
             const results = parser?.generateCompletions(doc, pos, [], index);
-            mockFunction.restore();
 
             expect(results?.items[0].textEditText).to.eql(
                 "test insert: '${1:URL}', one: ${2:true}, two: '${3:falsy}'",
@@ -1614,14 +1555,12 @@ describe("Chapbook Completions", () => {
                     },
                 } as ChapbookSymbol,
             ]);
-            const mockFunction = ImportMock.mockFunction(
-                insertsModule,
-                "all",
-            ).returns([]);
-            const parser = uut.getChapbookParser(undefined);
+            const parser = uut.getChapbookParser(undefined, {
+                allModifiers: () => [],
+                allInserts: () => [],
+            });
 
             const results = parser?.generateCompletions(doc, pos, [], index);
-            mockFunction.restore();
 
             expect(results?.items[0].textEditText).to.eql(
                 "custom insert: '${1:URL}', one: ${2:true}, two: '${3:falsy}'",
@@ -1655,14 +1594,12 @@ describe("Chapbook Completions", () => {
                 required: ArgumentRequirement.required,
                 placeholder: "'URL'",
             };
-            const mockFunction = ImportMock.mockFunction(
-                insertsModule,
-                "all",
-            ).returns([insert]);
-            const parser = uut.getChapbookParser(undefined);
+            const parser = uut.getChapbookParser(undefined, {
+                allModifiers: () => [],
+                allInserts: () => [insert],
+            });
 
             const results = parser?.generateCompletions(doc, pos, [], index);
-            mockFunction.restore();
 
             expect(results?.items[0].textEditText).to.eql(
                 "test insert: '${1:URL}'",
@@ -1714,14 +1651,12 @@ describe("Chapbook Completions", () => {
                     },
                 } as ChapbookSymbol,
             ]);
-            const mockFunction = ImportMock.mockFunction(
-                insertsModule,
-                "all",
-            ).returns([]);
-            const parser = uut.getChapbookParser(undefined);
+            const parser = uut.getChapbookParser(undefined, {
+                allModifiers: () => [],
+                allInserts: () => [],
+            });
 
             const results = parser?.generateCompletions(doc, pos, [], index);
-            mockFunction.restore();
 
             expect(results?.items[0].textEditText).to.eql(
                 "custom insert: '${1:URL}'",
@@ -1755,14 +1690,12 @@ describe("Chapbook Completions", () => {
                 required: ArgumentRequirement.required,
                 placeholder: "'URL'",
             };
-            const mockFunction = ImportMock.mockFunction(
-                insertsModule,
-                "all",
-            ).returns([insert]);
-            const parser = uut.getChapbookParser(undefined);
+            const parser = uut.getChapbookParser(undefined, {
+                allModifiers: () => [],
+                allInserts: () => [insert],
+            });
 
             const results = parser?.generateCompletions(doc, pos, [], index);
-            mockFunction.restore();
 
             expect(results?.items[0].textEditText).to.eql("test insert");
             expect(results?.itemDefaults?.editRange).to.eql(
@@ -1803,14 +1736,12 @@ describe("Chapbook Completions", () => {
                     },
                 } as ChapbookSymbol,
             ]);
-            const mockFunction = ImportMock.mockFunction(
-                insertsModule,
-                "all",
-            ).returns([]);
-            const parser = uut.getChapbookParser(undefined);
+            const parser = uut.getChapbookParser(undefined, {
+                allModifiers: () => [],
+                allInserts: () => [],
+            });
 
             const results = parser?.generateCompletions(doc, pos, [], index);
-            mockFunction.restore();
 
             expect(results?.items[0].textEditText).to.eql("custom insert");
             expect(results?.itemDefaults?.editRange).to.eql(
@@ -1851,14 +1782,12 @@ describe("Chapbook Completions", () => {
                 required: ArgumentRequirement.optional,
                 type: ValueType.expression,
             };
-            const mockFunction = ImportMock.mockFunction(
-                insertsModule,
-                "all",
-            ).returns([insert]);
-            const parser = uut.getChapbookParser(undefined);
+            const parser = uut.getChapbookParser(undefined, {
+                allModifiers: () => [],
+                allInserts: () => [insert],
+            });
 
             const results = parser?.generateCompletions(doc, pos, [], index);
-            mockFunction.restore();
 
             expect(results?.items.length).to.equal(1);
             expect(results?.items[0]?.label).to.eql("var1");
@@ -1907,14 +1836,12 @@ describe("Chapbook Completions", () => {
                 required: ArgumentRequirement.optional,
                 type: ValueType.expression,
             };
-            const mockFunction = ImportMock.mockFunction(
-                insertsModule,
-                "all",
-            ).returns([insert]);
-            const parser = uut.getChapbookParser(undefined);
+            const parser = uut.getChapbookParser(undefined, {
+                allModifiers: () => [],
+                allInserts: () => [insert],
+            });
 
             const results = parser?.generateCompletions(doc, pos, [], index);
-            mockFunction.restore();
 
             expect(results?.items.length).to.equal(1);
             expect(results?.items[0]?.label).to.eql("otherprop");
@@ -1944,14 +1871,12 @@ describe("Chapbook Completions", () => {
                 required: ArgumentRequirement.optional,
                 type: ValueType.passage,
             };
-            const mockFunction = ImportMock.mockFunction(
-                insertsModule,
-                "all",
-            ).returns([insert]);
-            const parser = uut.getChapbookParser(undefined);
+            const parser = uut.getChapbookParser(undefined, {
+                allModifiers: () => [],
+                allInserts: () => [insert],
+            });
 
             const results = parser?.generateCompletions(doc, pos, [], index);
-            mockFunction.restore();
 
             expect(results?.items[0].label).to.eql("I'm a passage!");
             expect(results?.items[0].textEditText).to.eql("'I'm a passage!'");
@@ -1991,14 +1916,12 @@ describe("Chapbook Completions", () => {
                     },
                 } as ChapbookSymbol,
             ]);
-            const mockFunction = ImportMock.mockFunction(
-                insertsModule,
-                "all",
-            ).returns([]);
-            const parser = uut.getChapbookParser(undefined);
+            const parser = uut.getChapbookParser(undefined, {
+                allModifiers: () => [],
+                allInserts: () => [],
+            });
 
             const results = parser?.generateCompletions(doc, pos, [], index);
-            mockFunction.restore();
 
             expect(results?.items[0].label).to.eql("I'm a passage!");
             expect(results?.items[0].textEditText).to.eql("'I'm a passage!'");
@@ -2031,14 +1954,12 @@ describe("Chapbook Completions", () => {
                 required: ArgumentRequirement.optional,
                 type: ValueType.urlOrPassage,
             };
-            const mockFunction = ImportMock.mockFunction(
-                insertsModule,
-                "all",
-            ).returns([insert]);
-            const parser = uut.getChapbookParser(undefined);
+            const parser = uut.getChapbookParser(undefined, {
+                allModifiers: () => [],
+                allInserts: () => [insert],
+            });
 
             const results = parser?.generateCompletions(doc, pos, [], index);
-            mockFunction.restore();
 
             expect(results?.items[0].label).to.eql("passage");
             expect(results?.items[0].textEditText).to.eql("'passage'");
@@ -2078,14 +1999,12 @@ describe("Chapbook Completions", () => {
                     },
                 } as ChapbookSymbol,
             ]);
-            const mockFunction = ImportMock.mockFunction(
-                insertsModule,
-                "all",
-            ).returns([]);
-            const parser = uut.getChapbookParser(undefined);
+            const parser = uut.getChapbookParser(undefined, {
+                allModifiers: () => [],
+                allInserts: () => [],
+            });
 
             const results = parser?.generateCompletions(doc, pos, [], index);
-            mockFunction.restore();
 
             expect(results?.items[0].label).to.eql("I'm a passage!");
             expect(results?.items[0].textEditText).to.eql("'I'm a passage!'");
@@ -2118,14 +2037,12 @@ describe("Chapbook Completions", () => {
                 required: ArgumentRequirement.optional,
                 type: ValueType.passage,
             };
-            const mockFunction = ImportMock.mockFunction(
-                insertsModule,
-                "all",
-            ).returns([insert]);
-            const parser = uut.getChapbookParser(undefined);
+            const parser = uut.getChapbookParser(undefined, {
+                allModifiers: () => [],
+                allInserts: () => [insert],
+            });
 
             const results = parser?.generateCompletions(doc, pos, [], index);
-            mockFunction.restore();
 
             expect(results?.items[0].label).to.eql("I'm a passage!");
             expect(results?.items[0].textEditText).to.eql("I'm a passage!");
@@ -2159,14 +2076,12 @@ describe("Chapbook Completions", () => {
             insert.firstArgument = {
                 required: ArgumentRequirement.optional,
             };
-            const mockFunction = ImportMock.mockFunction(
-                insertsModule,
-                "all",
-            ).returns([insert]);
-            const parser = uut.getChapbookParser(undefined);
+            const parser = uut.getChapbookParser(undefined, {
+                allModifiers: () => [],
+                allInserts: () => [insert],
+            });
 
             const results = parser?.generateCompletions(doc, pos, [], index);
-            mockFunction.restore();
 
             expect(results?.items[0].label).to.eql("one");
             expect(results?.items[0].textEditText).to.eql(" one: '${1:arg}'");
@@ -2220,14 +2135,12 @@ describe("Chapbook Completions", () => {
                     },
                 } as ChapbookSymbol,
             ]);
-            const mockFunction = ImportMock.mockFunction(
-                insertsModule,
-                "all",
-            ).returns([]);
-            const parser = uut.getChapbookParser(undefined);
+            const parser = uut.getChapbookParser(undefined, {
+                allModifiers: () => [],
+                allInserts: () => [],
+            });
 
             const results = parser?.generateCompletions(doc, pos, [], index);
-            mockFunction.restore();
 
             expect(results?.items[0].label).to.eql("one");
             expect(results?.items[0].textEditText).to.eql(" one: '${1:arg}'");
@@ -2263,14 +2176,12 @@ describe("Chapbook Completions", () => {
             insert.firstArgument = {
                 required: ArgumentRequirement.optional,
             };
-            const mockFunction = ImportMock.mockFunction(
-                insertsModule,
-                "all",
-            ).returns([insert]);
-            const parser = uut.getChapbookParser(undefined);
+            const parser = uut.getChapbookParser(undefined, {
+                allModifiers: () => [],
+                allInserts: () => [insert],
+            });
 
             const results = parser?.generateCompletions(doc, pos, [], index);
-            mockFunction.restore();
 
             expect(results?.items[0].label).to.eql("one");
             expect(results?.items[0].textEditText).to.eql(" one: '${1:arg}'");
@@ -2324,14 +2235,12 @@ describe("Chapbook Completions", () => {
                     },
                 } as ChapbookSymbol,
             ]);
-            const mockFunction = ImportMock.mockFunction(
-                insertsModule,
-                "all",
-            ).returns([]);
-            const parser = uut.getChapbookParser(undefined);
+            const parser = uut.getChapbookParser(undefined, {
+                allModifiers: () => [],
+                allInserts: () => [],
+            });
 
             const results = parser?.generateCompletions(doc, pos, [], index);
-            mockFunction.restore();
 
             expect(results?.items[0].label).to.eql("one");
             expect(results?.items[0].textEditText).to.eql(" one: '${1:arg}'");
@@ -2367,14 +2276,12 @@ describe("Chapbook Completions", () => {
             insert.firstArgument = {
                 required: ArgumentRequirement.optional,
             };
-            const mockFunction = ImportMock.mockFunction(
-                insertsModule,
-                "all",
-            ).returns([insert]);
-            const parser = uut.getChapbookParser(undefined);
+            const parser = uut.getChapbookParser(undefined, {
+                allModifiers: () => [],
+                allInserts: () => [insert],
+            });
 
             const results = parser?.generateCompletions(doc, pos, [], index);
-            mockFunction.restore();
 
             expect(results).to.be.null;
         });
@@ -2418,14 +2325,12 @@ describe("Chapbook Completions", () => {
             insert.firstArgument = {
                 required: ArgumentRequirement.optional,
             };
-            const mockFunction = ImportMock.mockFunction(
-                insertsModule,
-                "all",
-            ).returns([insert]);
-            const parser = uut.getChapbookParser(undefined);
+            const parser = uut.getChapbookParser(undefined, {
+                allModifiers: () => [],
+                allInserts: () => [insert],
+            });
 
             const results = parser?.generateCompletions(doc, pos, [], index);
-            mockFunction.restore();
 
             expect(results?.items.length).to.equal(1);
             expect(results?.items[0]?.label).to.eql("var1");
@@ -2461,14 +2366,12 @@ describe("Chapbook Completions", () => {
             insert.firstArgument = {
                 required: ArgumentRequirement.optional,
             };
-            const mockFunction = ImportMock.mockFunction(
-                insertsModule,
-                "all",
-            ).returns([insert]);
-            const parser = uut.getChapbookParser(undefined);
+            const parser = uut.getChapbookParser(undefined, {
+                allModifiers: () => [],
+                allInserts: () => [insert],
+            });
 
             const results = parser?.generateCompletions(doc, pos, [], index);
-            mockFunction.restore();
 
             expect(results?.items[0].label).to.eql("I'm a passage!");
             expect(results?.items[0].textEditText).to.eql("I'm a passage!");

@@ -11,7 +11,7 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { EmbeddedDocument } from "../../embedded-languages";
 import { ProjectIndex } from "../../project-index";
-import { allMacros } from "./macros";
+import { SugarCubeParserAPI } from ".";
 import { getSugarCubeDefinitions } from "./sugarcube-parser";
 import { OSugarCubeSymbolKind, SugarCubeSymbol } from "./types";
 
@@ -97,10 +97,12 @@ function generateVariableAndPropertyCompletions(
  * Generate completions to close a SugarCube container <<macro>>.
  *
  * @param text Text from the start of the line to the point where completions will go.
+ * @param api SugarCube parser API.
  * @returns Completion list.
  */
 function generateMacroContainerCloseCompletions(
     text: string,
+    api: SugarCubeParserAPI,
 ): CompletionList | null {
     // Find the start and end of the macro name
     let macroNameStart: number | undefined;
@@ -129,7 +131,7 @@ function generateMacroContainerCloseCompletions(
     }
 
     // Get the possible matching macroInfo
-    const macroInfo = allMacros()[text.slice(macroNameStart, macroNameEnd)];
+    const macroInfo = api.allMacros()[text.slice(macroNameStart, macroNameEnd)];
     if (macroInfo === undefined) {
         return null; // No matching macro found
     }
@@ -149,6 +151,7 @@ function generateMacroContainerCloseCompletions(
  * @param textOffset Offset for the start of the text in the document.
  * @param completionPointOffset Where the completion occurs *relative to the start of the text string*.
  * @param index Project index.
+ * @param api SugarCube parser API.
  * @returns Completions list.
  */
 function generateMacroNameCompletions(
@@ -157,6 +160,7 @@ function generateMacroNameCompletions(
     textOffset: number,
     completionPointOffset: number,
     index: ProjectIndex,
+    api: SugarCubeParserAPI,
 ): CompletionList | null {
     const completions: CompletionItem[] = [];
 
@@ -192,7 +196,7 @@ function generateMacroNameCompletions(
 
     // Add known macros
     completions.push(
-        ...Object.values(allMacros())
+        ...Object.values(api.allMacros())
             .filter((info) => info.name.startsWith(partialMacroName))
             .map((info) => {
                 const completionItem: CompletionItem = {
@@ -275,6 +279,7 @@ export function generateCompletions(
     position: Position,
     deferredEmbeddedDocuments: EmbeddedDocument[],
     index: ProjectIndex,
+    api: SugarCubeParserAPI,
 ): CompletionList | null {
     const lineStartPosition = Position.create(position.line, 0);
     const lineEndPosition = Position.create(position.line + 1, 0);
@@ -287,7 +292,10 @@ export function generateCompletions(
     let i = completionRelativeOffset - 1;
     // If we're at a macro close (>>), generate matching close macros for containers
     if (i > 1 && line[i] === ">" && line[i - 1] === ">") {
-        return generateMacroContainerCloseCompletions(line.slice(0, i + 1));
+        return generateMacroContainerCloseCompletions(
+            line.slice(0, i + 1),
+            api,
+        );
     }
     // Look backwards for the start of macros (<<), variables ($, _), or possible object properties (.)
     for (; i >= 0; --i) {
@@ -306,6 +314,7 @@ export function generateCompletions(
                 lineOffset + i + 1,
                 completionRelativeOffset - (i + 1),
                 index,
+                api,
             );
         }
         // Once we run out of word characters or periods, bail

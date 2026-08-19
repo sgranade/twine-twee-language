@@ -1,6 +1,5 @@
 import "mocha";
 import { expect } from "chai";
-import { ImportMock } from "ts-mock-imports";
 import { Location, Position, Range, TextEdit } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
@@ -8,7 +7,6 @@ import { Index } from "../../../project-index";
 import { OSugarCubeSymbolKind } from "../../../passage-text-parsers/sugarcube/types";
 import { buildMacroInfo } from "./macros/macro-builders";
 
-import * as macrosModule from "../../../passage-text-parsers/sugarcube/macros";
 import * as uut from "../../../passage-text-parsers/sugarcube";
 
 describe("SugarCube Completions", () => {
@@ -163,11 +161,14 @@ describe("SugarCube Completions", () => {
             const position = Position.create(1, 12);
             const index = new Index();
             const macro = buildMacroInfo({ name: "testy" });
-            const mockFunction = ImportMock.mockFunction(
-                macrosModule,
-                "allMacros",
-            ).returns({ testy: macro });
-            const parser = uut.getSugarCubeParser(undefined);
+            const parser = uut.getSugarCubeParser(undefined, {
+                allMacros: () => {
+                    return { testy: macro };
+                },
+                allBuiltInMacros: () => {
+                    return {};
+                },
+            });
 
             const results = parser?.generateCompletions(
                 doc,
@@ -175,7 +176,6 @@ describe("SugarCube Completions", () => {
                 [],
                 index,
             );
-            mockFunction.restore();
 
             expect(results?.items[0].label).to.eql("testy");
             expect(results?.itemDefaults?.editRange).to.eql(
@@ -202,11 +202,14 @@ describe("SugarCube Completions", () => {
                     kind: OSugarCubeSymbolKind.KnownMacro,
                 },
             ]);
-            const mockFunction = ImportMock.mockFunction(
-                macrosModule,
-                "allMacros",
-            ).returns({});
-            const parser = uut.getSugarCubeParser(undefined);
+            const parser = uut.getSugarCubeParser(undefined, {
+                allMacros: () => {
+                    return {};
+                },
+                allBuiltInMacros: () => {
+                    return {};
+                },
+            });
 
             const results = parser?.generateCompletions(
                 doc,
@@ -214,7 +217,6 @@ describe("SugarCube Completions", () => {
                 [],
                 index,
             );
-            mockFunction.restore();
 
             expect(results?.items[0].label).to.eql("testy");
             expect(results?.itemDefaults?.editRange).to.eql(
@@ -242,11 +244,14 @@ describe("SugarCube Completions", () => {
                 },
             ]);
             const macro = buildMacroInfo({ name: "testy" });
-            const mockFunction = ImportMock.mockFunction(
-                macrosModule,
-                "allMacros",
-            ).returns({ testy: macro });
-            const parser = uut.getSugarCubeParser(undefined);
+            const parser = uut.getSugarCubeParser(undefined, {
+                allMacros: () => {
+                    return { testy: macro };
+                },
+                allBuiltInMacros: () => {
+                    return {};
+                },
+            });
 
             const results = parser?.generateCompletions(
                 doc,
@@ -254,7 +259,6 @@ describe("SugarCube Completions", () => {
                 [],
                 index,
             );
-            mockFunction.restore();
 
             expect(results?.items.length).to.equal(1);
             expect(results?.items[0].label).to.eql("testy");
@@ -273,11 +277,14 @@ describe("SugarCube Completions", () => {
             const position = Position.create(1, 12);
             const index = new Index();
             const macro = buildMacroInfo({ name: "testy" });
-            const mockFunction = ImportMock.mockFunction(
-                macrosModule,
-                "allMacros",
-            ).returns({ testy: macro });
-            const parser = uut.getSugarCubeParser(undefined);
+            const parser = uut.getSugarCubeParser(undefined, {
+                allMacros: () => {
+                    return { testy: macro };
+                },
+                allBuiltInMacros: () => {
+                    return {};
+                },
+            });
 
             const results = parser?.generateCompletions(
                 doc,
@@ -285,7 +292,6 @@ describe("SugarCube Completions", () => {
                 [],
                 index,
             );
-            mockFunction.restore();
 
             expect(results?.items[0].label).to.eql("testy");
             expect(results?.itemDefaults?.editRange).to.eql(
@@ -304,11 +310,14 @@ describe("SugarCube Completions", () => {
             const index = new Index();
             const macro = buildMacroInfo({ name: "testy", container: true });
             macro.arguments = undefined;
-            const mockFunction = ImportMock.mockFunction(
-                macrosModule,
-                "allMacros",
-            ).returns({ testy: macro });
-            const parser = uut.getSugarCubeParser(undefined);
+            const parser = uut.getSugarCubeParser(undefined, {
+                allMacros: () => {
+                    return { testy: macro };
+                },
+                allBuiltInMacros: () => {
+                    return {};
+                },
+            });
 
             const results = parser?.generateCompletions(
                 doc,
@@ -316,7 +325,6 @@ describe("SugarCube Completions", () => {
                 [],
                 index,
             );
-            mockFunction.restore();
 
             expect(results?.items[0].label).to.eql("testy");
             expect(results?.items[0].textEdit).to.eql(
@@ -341,11 +349,14 @@ describe("SugarCube Completions", () => {
             const index = new Index();
             const macro = buildMacroInfo({ name: "testy", container: true });
             macro.arguments = true;
-            const mockFunction = ImportMock.mockFunction(
-                macrosModule,
-                "allMacros",
-            ).returns({ testy: macro });
-            const parser = uut.getSugarCubeParser(undefined);
+            const parser = uut.getSugarCubeParser(undefined, {
+                allMacros: () => {
+                    return { testy: macro };
+                },
+                allBuiltInMacros: () => {
+                    return {};
+                },
+            });
 
             const results = parser?.generateCompletions(
                 doc,
@@ -353,7 +364,6 @@ describe("SugarCube Completions", () => {
                 [],
                 index,
             );
-            mockFunction.restore();
 
             expect(results?.items[0].label).to.eql("testy");
             expect(results?.items[0].textEdit).to.eql(
@@ -378,11 +388,14 @@ describe("SugarCube Completions", () => {
             const index = new Index();
             const macro = buildMacroInfo({ name: "testy", container: true });
             macro.arguments = ["text"];
-            const mockFunction = ImportMock.mockFunction(
-                macrosModule,
-                "allMacros",
-            ).returns({ testy: macro });
-            const parser = uut.getSugarCubeParser(undefined);
+            const parser = uut.getSugarCubeParser(undefined, {
+                allMacros: () => {
+                    return { testy: macro };
+                },
+                allBuiltInMacros: () => {
+                    return {};
+                },
+            });
 
             const results = parser?.generateCompletions(
                 doc,
@@ -390,7 +403,6 @@ describe("SugarCube Completions", () => {
                 [],
                 index,
             );
-            mockFunction.restore();
 
             expect(results?.items[0].label).to.eql("testy");
             expect(results?.items[0].textEdit).to.eql(
@@ -415,11 +427,14 @@ describe("SugarCube Completions", () => {
             const index = new Index();
             const macro = buildMacroInfo({ name: "testy", container: true });
             macro.arguments = false;
-            const mockFunction = ImportMock.mockFunction(
-                macrosModule,
-                "allMacros",
-            ).returns({ testy: macro });
-            const parser = uut.getSugarCubeParser(undefined);
+            const parser = uut.getSugarCubeParser(undefined, {
+                allMacros: () => {
+                    return { testy: macro };
+                },
+                allBuiltInMacros: () => {
+                    return {};
+                },
+            });
 
             const results = parser?.generateCompletions(
                 doc,
@@ -427,7 +442,6 @@ describe("SugarCube Completions", () => {
                 [],
                 index,
             );
-            mockFunction.restore();
 
             expect(results?.items[0].label).to.eql("testy");
             expect(results?.items[0].textEdit).to.eql(
@@ -449,11 +463,14 @@ describe("SugarCube Completions", () => {
             const index = new Index();
             const macro = buildMacroInfo({ name: "testy", container: true });
             macro.arguments = undefined;
-            const mockFunction = ImportMock.mockFunction(
-                macrosModule,
-                "allMacros",
-            ).returns({ testy: macro });
-            const parser = uut.getSugarCubeParser(undefined);
+            const parser = uut.getSugarCubeParser(undefined, {
+                allMacros: () => {
+                    return { testy: macro };
+                },
+                allBuiltInMacros: () => {
+                    return {};
+                },
+            });
 
             const results = parser?.generateCompletions(
                 doc,
@@ -461,7 +478,6 @@ describe("SugarCube Completions", () => {
                 [],
                 index,
             );
-            mockFunction.restore();
 
             expect(results?.items[0].label).to.eql("testy");
             expect(results?.items[0].textEdit).to.eql(
@@ -483,11 +499,14 @@ describe("SugarCube Completions", () => {
             const index = new Index();
             const macro = buildMacroInfo({ name: "testy", container: true });
             macro.arguments = false;
-            const mockFunction = ImportMock.mockFunction(
-                macrosModule,
-                "allMacros",
-            ).returns({ testy: macro });
-            const parser = uut.getSugarCubeParser(undefined);
+            const parser = uut.getSugarCubeParser(undefined, {
+                allMacros: () => {
+                    return { testy: macro };
+                },
+                allBuiltInMacros: () => {
+                    return {};
+                },
+            });
 
             const results = parser?.generateCompletions(
                 doc,
@@ -495,7 +514,6 @@ describe("SugarCube Completions", () => {
                 [],
                 index,
             );
-            mockFunction.restore();
 
             expect(results?.items[0].label).to.eql("testy");
             expect(results?.itemDefaults?.editRange).to.eql(
@@ -513,11 +531,14 @@ describe("SugarCube Completions", () => {
             const position = Position.create(1, 41);
             const index = new Index();
             const macro = buildMacroInfo({ name: "testy", container: true });
-            const mockFunction = ImportMock.mockFunction(
-                macrosModule,
-                "allMacros",
-            ).returns({ testy: macro });
-            const parser = uut.getSugarCubeParser(undefined);
+            const parser = uut.getSugarCubeParser(undefined, {
+                allMacros: () => {
+                    return { testy: macro };
+                },
+                allBuiltInMacros: () => {
+                    return {};
+                },
+            });
 
             const results = parser?.generateCompletions(
                 doc,
@@ -525,7 +546,6 @@ describe("SugarCube Completions", () => {
                 [],
                 index,
             );
-            mockFunction.restore();
 
             expect(results?.items[0].label).to.eql("<</testy>>");
         });

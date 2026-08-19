@@ -3,10 +3,9 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { EmbeddedDocument } from "../../embedded-languages";
 import { ProjectIndex } from "../../project-index";
+import { ChapbookParserAPI } from ".";
 import { getChapbookDefinitions } from "./chapbook-parser";
 import { ChapbookFunctionInfo, OChapbookSymbolKind } from "./types";
-import { all as allInserts } from "./inserts";
-import { all as allModifiers } from "./modifiers";
 
 function generateDescription(
     item: ChapbookFunctionInfo | undefined,
@@ -32,6 +31,7 @@ export function generateHover(
     position: Position,
     deferredEmbeddedDocuments: EmbeddedDocument[],
     index: ProjectIndex,
+    api: ChapbookParserAPI,
 ): Hover | null {
     // See if we have any references to an insert or modifier. If so,
     // return its description (if it exists) as the hover information.
@@ -39,9 +39,9 @@ export function generateHover(
     if (refs !== undefined) {
         let matchedObjects: readonly ChapbookFunctionInfo[] = [];
         if (refs.kind === OChapbookSymbolKind.BuiltInInsert) {
-            matchedObjects = allInserts();
+            matchedObjects = api.allInserts();
         } else if (refs.kind === OChapbookSymbolKind.BuiltInModifier) {
-            matchedObjects = allModifiers();
+            matchedObjects = api.allModifiers();
         } else if (
             refs.kind === OChapbookSymbolKind.CustomInsert ||
             refs.kind === OChapbookSymbolKind.CustomModifier

@@ -10,6 +10,7 @@ import {
 } from "./diagnostics";
 import { EmbeddedDocument } from "./embedded-languages";
 import { ParseLevel, ParserCallbacks, parse } from "./parser";
+import { getStoryFormatParser } from "./passage-text-parsers";
 import {
     Passage,
     ProjectIndex,
@@ -53,11 +54,13 @@ class IndexingState {
  * @param textDocument Document to index.
  * @param parseLevel Level of parsing to do.
  * @param index Project index to update.
+ * @param getParser: Function that gets a story-format-specific parser.
  */
 export function updateProjectIndex(
     textDocument: TextDocument,
     parseLevel: ParseLevel,
     index: ProjectIndex,
+    getParser: typeof getStoryFormatParser = getStoryFormatParser,
 ): void {
     const indexingState = new IndexingState(textDocument);
     const uri = textDocument.uri;
@@ -128,6 +131,7 @@ export function updateProjectIndex(
         callbacks,
         parseLevel,
         index.getStoryData()?.storyFormat,
+        getParser,
     );
 
     // Collate the array of individual references by kind and name
