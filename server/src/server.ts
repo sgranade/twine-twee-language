@@ -32,6 +32,7 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 import {
     CustomMessages,
     DecorationRangeInfo,
+    DiagnosticCodeInfo,
     FindFilesRequest,
     FindTweeFilesRequest,
     ReadFileRequest,
@@ -251,7 +252,7 @@ namespace Heartbeat {
     }
 
     /**
-     * Index all SC2 macro files in a workspace
+     * Index all T3LT SC2 macro files in a workspace
      */
     async function indexT3LTMacroFiles() {
         try {
@@ -413,7 +414,7 @@ connection.onDefinition((params: DefinitionParams): Definition | undefined => {
 });
 
 documents.onDidChangeContent(async (change) => {
-    // Parse w/re-indexing if the story format changes
+    // Parse w/re-indexing
     await parseTextDocument(change.document, ParseLevel.Full, true);
     // Validate
     await validateTextDocument(change.document);
@@ -438,7 +439,7 @@ connection.onDidChangeWatchedFiles((_change) => {
 });
 
 documents.onDidOpen(async (change) => {
-    // Parse w/re-indexing if the story format changes
+    // Parse w/re-indexing
     await parseTextDocument(change.document, ParseLevel.Full, true);
     // Validate
     await validateTextDocument(change.document);
@@ -474,6 +475,10 @@ connection.onNotification(CustomMessages.RequestReindex, () => {
 
 connection.onNotification(CustomMessages.RequestDecorationRanges, (uri) => {
     sendDecorationRanges(uri);
+});
+
+connection.onNotification(CustomMessages.RequestDiagnosticCodes, () => {
+    sendDiagnosticCodes();
 });
 
 connection.onPrepareRename((params: PrepareRenameParams): Range | undefined => {
@@ -607,12 +612,32 @@ function onStoryTitleChange(title: string) {
     connection.sendNotification(CustomMessages.UpdatedStoryTitle, title);
 }
 
+/**
+ * Send decoration ranges for a document.
+ *
+ * @param uri Document to send decoration ranges for.
+ */
 function sendDecorationRanges(uri: string) {
     const rangeInfo: DecorationRangeInfo = {
         uri: uri,
         ranges: generateDecorationRanges(uri, projectIndex),
     };
     connection.sendNotification(CustomMessages.DecorationRanges, rangeInfo);
+}
+
+/**
+ * Send decoration ranges for a document.
+ *
+ * @param uri Document to send decoration ranges for.
+ */
+function sendDiagnosticCodes() {
+    const diagnosticCodesInfo: DiagnosticCodeInfo = {
+        codes: Object.values(DiagnosticCodes),
+    };
+    connection.sendNotification(
+        CustomMessages.DiagnosticCodes,
+        diagnosticCodesInfo,
+    );
 }
 
 /**

@@ -10,6 +10,8 @@ export enum CustomMessages {
     RequestReindex = "twee3/requestReindex",
     IndexingStarted = "twee3/indexingStarted",
     IndexingComplete = "twee3/indexingComplete",
+    RequestDiagnosticCodes = "twee3/requestDiagnosticCodes",
+    DiagnosticCodes = "twee3/diagnosticCodes",
     RequestDecorationRanges = "twee3/requestDecorationRanges",
     DecorationRanges = "twee3/decorationRanges",
     UpdatedStoryFormat = "twee3/storyformat",
@@ -35,7 +37,14 @@ export interface SC2MacroInfo {
 }
 
 /**
- * Decoration range information sent via the DecorationRanges message.
+ * Diagnostic codes sent via the diagnosticCodes message.
+ */
+export interface DiagnosticCodeInfo {
+    codes: readonly string[];
+}
+
+/**
+ * Decoration range information sent via the decorationRanges message.
  */
 export interface DecorationRangeInfo {
     uri: string;

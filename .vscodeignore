@@ -18,5 +18,7 @@ node_modules
 !images/icon.png
 
 # And these directories
+!schema
+!schema/**/*
 !syntaxes
 !syntaxes/**/*

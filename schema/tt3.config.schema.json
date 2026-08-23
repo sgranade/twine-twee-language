@@ -1,0 +1,181 @@
+{
+    "type": "object",
+    "properties": {
+        "build": {
+            "type": "object",
+            "properties": {
+                "storySourceFiles": {
+                    "default": [
+                        "src/**/*.{tw,twee}",
+                        "src/**/*.css",
+                        "src/**/*.js",
+                        "src/**/*.{otf,ttf,woff,woff2}",
+                        "src/**/*.{gif,jpeg,jpg,png,svg,tif,tiff,webp}",
+                        "src/**/*.{aac,flac,m4a,mp3,oga,ogg,opus,wav,wave,weba}",
+                        "src/**/*.{mp4,ogb,webm}",
+                        "src/**/*.vtt"
+                    ],
+                    "description": "Files (relative to the project's root) to be included in the built story. Supports glob patterns. Allows any Tweego-supported files except for .tw2, .twee2, .htm, and .html.",
+                    "minItems": 1,
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "pattern": "^(?!\\/)(?![A-Za-z]:[\\\\/])(?!https?:\\/\\/).+"
+                    },
+                    "markdownDescription": "Files (relative to the project's root) to be included in the built story. Supports glob patterns. Allows any [Tweego-supported files](http://www.motoslave.net/tweego/docs/#usage-supported-files) except for `.tw2`, `.twee2`, `.htm`, and `.html`."
+                },
+                "includeSourcePaths": {
+                    "default": [
+                        "include"
+                    ],
+                    "description": "Paths (relative to the project's root) whose contents will be included as-is alongside the built story.",
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "pattern": "^(?!\\/)(?![A-Za-z]:[\\\\/])(?!https?:\\/\\/).+"
+                    }
+                },
+                "ignores": {
+                    "description": "Paths to files (relative to the project's root) to be excluded from storySourceFiles and includeSourcePaths. Supports glob patterns.",
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "pattern": "^(?!\\/)(?![A-Za-z]:[\\\\/])(?!https?:\\/\\/).+"
+                    }
+                },
+                "outputPath": {
+                    "default": "build",
+                    "description": "Path (relative to the project's root) to write the story file to. If omitted, defaults to 'build'.",
+                    "type": "string",
+                    "pattern": "^(?!\\/)(?![A-Za-z]:[\\\\/])(?!https?:\\/\\/).+",
+                    "markdownDescription": "Path (relative to the project's root) to write the story file to. If omitted, defaults to `build`."
+                },
+                "outputFilename": {
+                    "description": "Name for the story file. If omitted, defaults to the game's filename from the StoryTitle passage, with spaces replaced by hyphens.",
+                    "type": "string"
+                },
+                "storyFormatPaths": {
+                    "default": [
+                        ".storyformats"
+                    ],
+                    "description": "Path to story formats directory. Story formats are contained in subdirectories whose name matches the pattern <format>-<major>-<minor>-<patch>. Path is relative to the project's root.",
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "pattern": "^(?!\\/)(?![A-Za-z]:[\\\\/])(?!https?:\\/\\/).+"
+                    },
+                    "markdownDescription": "Path to story formats. Story formats are contained in subdirectories whose name matches the pattern `<format>-<major>-<minor>-<patch>`. Path is relative to the project's root."
+                },
+                "startPassage": {
+                    "description": "Name of the starting passage. Will override the one set in the game's StoryData passage.",
+                    "type": "string"
+                }
+            },
+            "required": [
+                "storySourceFiles",
+                "includeSourcePaths",
+                "outputPath",
+                "storyFormatPaths"
+            ],
+            "additionalProperties": false
+        },
+        "tt3": {
+            "description": "List of diagnostic codes to be disabled project-wide.",
+            "type": "object",
+            "properties": {
+                "disabledDiagnostics": {
+                    "default": [],
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "enum": [
+                            "bad-argument",
+                            "deprecated-special-passage",
+                            "deprecated-tag",
+                            "either-data-passage-or-href",
+                            "elseif-after-else",
+                            "endmacro-deprecated",
+                            "expected-arguments",
+                            "expected-no-arguments",
+                            "function-missing-first-argument",
+                            "function-not-available",
+                            "function-will-ignore-first-argument",
+                            "ignored-text",
+                            "incorrect-completions",
+                            "incorrect-javascript",
+                            "incorrect-passage-metadata-format",
+                            "incorrect-passage-tag-format",
+                            "incorrect-range-syntax",
+                            "incorrect-twine-link",
+                            "insert-ignored-property",
+                            "insert-missing-properties",
+                            "invalid-macro-arguments",
+                            "link-setter-ignores-macros",
+                            "macro-argument-parsing-error",
+                            "macro-argument-warning",
+                            "macro-file-error",
+                            "macro-has-no-closing-macro",
+                            "macro-not-available",
+                            "macro-removed",
+                            "match-is-not-regex",
+                            "missing-close-macro",
+                            "missing-close-paren",
+                            "missing-colon",
+                            "missing-open-macro",
+                            "missing-parent-macro",
+                            "missing-passage",
+                            "missing-widget-tag",
+                            "multiple-passage-definitions",
+                            "no-array-dereferencing-mid-expression",
+                            "no-evaluation-directive",
+                            "no-for-in-of",
+                            "no-multiple-media-passage-tags",
+                            "no-multiple-widget-definitions",
+                            "no-spaces-after-modifiers",
+                            "no-spaces-before-modifiers",
+                            "no-spaces-in-custom-insert-match",
+                            "no-spaces-in-insert-properties",
+                            "no-spaces-in-variable-names",
+                            "no-widget-with-built-in-macro-name",
+                            "non-numeric-engine-extension-version",
+                            "not-passage-string-or-variable",
+                            "passage-header-text-after-metadata",
+                            "passage-header-text-after-tags",
+                            "passage-name-with-closing-character",
+                            "passage-tags-after-metadata",
+                            "property-is-not-string",
+                            "replaces-story-data",
+                            "replaces-story-title",
+                            "reveal-link-ignore-passage-property",
+                            "reveal-link-missing-property",
+                            "story-format-versio-mismatch",
+                            "sugarcube-variable-never-set",
+                            "too-many-child-macros",
+                            "unexpected-bare-variable",
+                            "unexpected-widget-variable",
+                            "unknown-engine-template-function",
+                            "unknown-insert",
+                            "unknown-macro",
+                            "unknown-modifier",
+                            "unrecognized-diagnostic-code",
+                            "unsupported-media-passage-tags",
+                            "unsupported-special-passage",
+                            "variable-never-set"
+                        ]
+                    }
+                }
+            },
+            "required": [
+                "disabledDiagnostics"
+            ],
+            "additionalProperties": false
+        }
+    },
+    "required": [
+        "build",
+        "tt3"
+    ],
+    "additionalProperties": false,
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "Twine (Twee 3) Configuration"
+}

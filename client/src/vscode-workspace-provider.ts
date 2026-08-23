@@ -18,8 +18,9 @@ export class VSCodeWorkspaceProvider implements WorkspaceProvider {
         return workspace.workspaceFolders[0].uri;
     }
     fs = {
-        createDirectory: workspace.fs.createDirectory,
+        stat: workspace.fs.stat,
         readDirectory: workspace.fs.readDirectory,
+        createDirectory: workspace.fs.createDirectory,
         readFile: workspace.fs.readFile,
         writeFile: workspace.fs.writeFile,
         copy: workspace.fs.copy,

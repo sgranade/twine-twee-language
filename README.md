@@ -73,6 +73,8 @@ Two, the extension also provides native VS Code tasks so that you can build the 
 
 You'll need a local copy of the story format in the story formats directory. The extension will try to automatically download the format if it's Chapbook or SugarCube. If that fails, or if you're using a different story format, you can add it yourself. Download the story format you want to use. In the story formats directory, create a directory for the story format named `formatname-x-y-z`, where `formatname` is the lowercase name of the story format (like `chapbook` or `sugarcube`) and `x-y-z` is the version number separated by dashes instead of dots. In that directory, put the `format.js` file that you downloaded.
 
+You can configure all aspects of the build process by creating a [configuration file].
+
 ## Running Your Game
 
 Once you've turned your game into a playable file, you can run it in a VS Code window. The extension adds a "Run Twine Game" button to the bottom left side of the status bar.
@@ -85,6 +87,7 @@ Whenever you build a new version of your game, the running game updates to inclu
 
 [Chapbook]: https://klembot.github.io/chapbook/
 [command palette]: https://code.visualstudio.com/docs/getstarted/userinterface#_command-palette
+[configuration file]: docs/configuration-file.md
 [custom chapbook functions]: docs/chapbook-custom-inserts-modifiers.md
 [marketplace]: https://marketplace.visualstudio.com/items?itemName=StephenGranade.twine-twee-language
 [SugarCube]: https://www.motoslave.net/sugarcube/2/

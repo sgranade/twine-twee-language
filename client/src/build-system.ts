@@ -3,17 +3,18 @@ import { URI, Utils as UriUtils } from "vscode-uri";
 
 import { addTrailingAnnotation } from "./annotations";
 import { StoryFormat } from "./client-server";
+import { currentConfig } from "./config";
 import { Configuration, CustomWhenContext } from "./constants";
 import {
+    cachedStoryFormat,
     downloadStoryFormat,
-    getCachedStoryFormat,
-    localStoryFormatExists,
+    findLocalStoryFormat,
     readLocalStoryFormat,
     StoryFormatDownloadSupport,
     storyFormatSupportsDownloading,
-    storyFormatToWorkspacePath,
+    workspacePathToWriteStoryFormatTo,
 } from "./manage-storyformats";
-import { WorkspaceProvider } from "./workspace-provider";
+import { FileType, WorkspaceProvider } from "./workspace-provider";
 import {
     addFileToStory,
     canAddFileToStory,
@@ -23,6 +24,151 @@ import { compileStory } from "./build/story-output";
 import { TweeParseError } from "./build/twee-parser";
 import { Story } from "./build/types";
 import { signalContextEvent } from "./context";
+
+/**
+ * Find files that match a source list of globs w/optional ignored patterns.
+ * @param sources Files to find as a list of glob patterns.
+ * @param ignores Files to be ignored, also as a list of glob patterns.
+ * @param workspaceProvider Workspace provider.
+ * @returns List of found files.
+ */
+export async function getFilesFromSources(
+    sources: string[],
+    ignores: string[] | undefined,
+    workspaceProvider: WorkspaceProvider,
+): Promise<URI[]> {
+    sources = sources.map((source) => source.trim());
+    ignores = ignores?.map((ignore) => ignore.trim());
+
+    const joinedSources = !sources.some((p) => p.includes("{"))
+        ? "{" + sources.join(",") + "}"
+        : undefined;
+    // There's no ignores, just sources
+    if (ignores === undefined) {
+        if (joinedSources) {
+            // Simple case: no groups in sources, so we can concatenate them
+            return await workspaceProvider.findFiles(joinedSources, null);
+        } else {
+            // Moderate case: iterate over sources
+            const sourceURIs = (
+                await Promise.all(
+                    sources.map(async (source) => {
+                        return await workspaceProvider.findFiles(source, null);
+                    }),
+                )
+            ).flat();
+            return [...new Set(sourceURIs)];
+        }
+    }
+
+    const joinedIgnores = !ignores.some((p) => p.includes("{"))
+        ? "{" + ignores.join(",") + "}"
+        : undefined;
+    // There's ignores, and they can be concatentated
+    if (joinedIgnores) {
+        if (joinedSources) {
+            // Simple case: no groups in sources or ignores
+            return await workspaceProvider.findFiles(
+                joinedSources,
+                joinedIgnores,
+            );
+        } else {
+            // Moderate case: iterate over sources w/a single ignores
+            const sourceURIs = (
+                await Promise.all(
+                    sources.map(async (source) => {
+                        return await workspaceProvider.findFiles(
+                            source,
+                            joinedIgnores,
+                        );
+                    }),
+                )
+            ).flat();
+            return [...new Set(sourceURIs)];
+        }
+    }
+
+    // There's ignores, and we need to iterate over them
+    if (joinedSources) {
+        // Moderate case: iterate over ignores w/a single sources
+        const sourceURIs = (
+            await Promise.all(
+                ignores.map(async (ignore) => {
+                    return await workspaceProvider.findFiles(
+                        joinedSources,
+                        ignore,
+                    );
+                }),
+            )
+        ).flat();
+        return [...new Set(sourceURIs)];
+    } else {
+        // Complex case: iterate over sources and ignores
+        // (sigh, hello combinatoric explosion)
+        // TODO When we target es2024 (starting w/VS Code 1.123 2026-06-03), use Set operations
+        const sourceURIs: URI[] = [];
+        for (const source of sources) {
+            // For any given source, find the set intersection of files
+            // that are present in every iteration of `ignores`
+            let singleSourceList = await workspaceProvider.findFiles(
+                source,
+                ignores[0],
+            );
+            for (const ignore of ignores.slice(1)) {
+                const newSourceList = await workspaceProvider.findFiles(
+                    source,
+                    ignore,
+                );
+                singleSourceList = singleSourceList.filter((source) =>
+                    newSourceList.includes(source),
+                );
+            }
+            sourceURIs.push(...singleSourceList);
+        }
+        return [...new Set(sourceURIs)];
+    }
+}
+
+/**
+ * Copy a file if it's changed.
+ *
+ * @param src Source file to copy.
+ * @param dest Destination to copy it to.
+ * @param workspaceProvider Workspace provider.
+ * @throws If the copy fails.
+ */
+async function copyIfChanged(
+    src: URI,
+    dest: URI,
+    workspaceProvider: WorkspaceProvider,
+) {
+    let srcStat, destStat;
+
+    try {
+        destStat = await workspaceProvider.fs.stat(dest);
+    } catch {
+        // Continue on to copy
+    }
+    if (destStat !== undefined) {
+        try {
+            srcStat = await workspaceProvider.fs.stat(src);
+            // If the files have the same sizes, they may be the same
+            if (srcStat.size === destStat.size) {
+                // Assume they're the same if timestamps match
+                if (srcStat.mtime === destStat.mtime) {
+                    return;
+                }
+                // We could read in and compare, but let's take the
+                // simpler approach and just copy
+            }
+        } catch {
+            // If we run into a problem w/the source URI, shrug and give up
+            return;
+        }
+    }
+
+    await workspaceProvider.fs.copy(src, dest, { overwrite: true });
+}
 
 /**
  * Record whether a directory exists in a lookup object.
@@ -42,11 +188,11 @@ async function recordDirectoryExistence(
     try {
         await workspaceProvider.fs.readDirectory(uri);
         dirsExist[dir] = true;
-    } catch (err) {
-        if (err instanceof Error && err.message.includes("ENOENT")) {
+    } catch (e) {
+        if (e instanceof vscode.FileSystemError && e.code === "FileNotFound") {
             dirsExist[dir] = false;
         } else {
-            throw err;
+            throw e;
         }
     }
 }
@@ -86,18 +232,8 @@ export function getBuildAndStoryUris(
     workspaceProvider: WorkspaceProvider,
     storyName?: string,
 ): BuildDirAndStoryUris {
-    const buildDir = workspaceProvider
-        .getConfigurationItem<string>(
-            Configuration.BaseSection,
-            Configuration.BuildDirectory,
-        )
-        .trim();
-    let storyFilename = workspaceProvider
-        .getConfigurationItem<string>(
-            Configuration.BaseSection,
-            Configuration.OutputFile,
-        )
-        .trim();
+    const buildDir = currentConfig.build.outputPath;
+    let storyFilename = currentConfig.build.outputFilename;
     if (!storyFilename) {
         storyFilename = (storyName ?? "story").replace(/ /g, "-");
         if (!storyFilename.endsWith(".")) {
@@ -138,13 +274,21 @@ export async function buildProjectDirectoriesIfNeeded(
         return;
     }
 
-    const config = vscode.workspace.getConfiguration(Configuration.BaseSection);
+    // Remove any glob sections from storySources, along w/anything that
+    // looks like a file at the end
+    const storySourceDirs = new Set(
+        currentConfig.build.storySourceFiles.map((sourceDir) =>
+            sourceDir
+                .replace(/(?<=^|\/)\*\*\/.*$/, "")
+                .replace(/(?<=^|\/)[^/]*?\.[^/]+?$/, ""),
+        ),
+    );
     const projectDirs = [
-        Configuration.StoryFormatsDirectory,
-        Configuration.StoryFilesDirectory,
-        Configuration.IncludeDirectory,
-        Configuration.BuildDirectory,
-    ].map((key) => removeEndingSlash(config.get(key) as string));
+        ...currentConfig.build.storyFormatPaths,
+        ...storySourceDirs,
+        ...currentConfig.build.includeSourcePaths,
+        currentConfig.build.outputPath,
+    ].map((d) => removeEndingSlash(d));
 
     const directoriesExist: Record<string, boolean> = {};
     for (const d of projectDirs) {
@@ -171,11 +315,13 @@ export async function buildProjectDirectoriesIfNeeded(
     if (selection !== "Yes") {
         if (selection === "Don't Ask Again") {
             // "Don't ask again" -> update the workspace-local configuration
-            config.update(
-                Configuration.ProjectCreate,
-                false,
-                vscode.ConfigurationTarget.Workspace,
-            );
+            vscode.workspace
+                .getConfiguration(Configuration.BaseSection)
+                .update(
+                    Configuration.ProjectCreate,
+                    false,
+                    vscode.ConfigurationTarget.Workspace,
+                );
         }
         return;
     }
@@ -211,10 +357,9 @@ export async function downloadLocalStoryFormatIfNeeded(
         return;
     }
 
-    const alreadyDownloaded = await localStoryFormatExists(
-        storyFormat,
-        workspaceProvider,
-    );
+    const alreadyDownloaded =
+        (await findLocalStoryFormat(storyFormat, workspaceProvider)) !==
+        undefined;
 
     // If the story format exists & we don't want to allow
     // re-downloading, then we're done
@@ -282,8 +427,7 @@ export async function downloadLocalStoryFormatIfNeeded(
         try {
             const outUri = vscode.Uri.joinPath(
                 workspaceProvider.rootWorkspaceUri() ?? URI.file("."),
-                storyFormatToWorkspacePath(storyFormat, workspaceProvider) ??
-                    "format.js",
+                workspacePathToWriteStoryFormatTo(storyFormat) ?? "format.js",
             );
             await workspaceProvider.fs.writeFile(outUri, Buffer.from(format));
         } catch (error) {
@@ -297,7 +441,7 @@ export async function downloadLocalStoryFormatIfNeeded(
 }
 
 /**
- * Reads a story format from a local copy or asks the user to download if it doesn't exist.
+ * Read a story format from a local copy, or ask the user to download if it doesn't exist.
  *
  * If the story format isn't found and the user's prompted about whether
  * or not to download it, this function doesn't wait for that response.
@@ -349,7 +493,6 @@ export async function build(
         let storyFormatData: string | undefined;
 
         // See if we have a cached format
-        const cachedStoryFormat = getCachedStoryFormat();
         if (cachedStoryFormat?.contents !== undefined) {
             storyFormatData = cachedStoryFormat.contents;
         }
@@ -361,24 +504,18 @@ export async function build(
             true,
         );
 
-        // Get all files from the source directory
-        const storyFilesDirectory = removeEndingSlash(
-            workspaceProvider.getConfigurationItem(
-                Configuration.BaseSection,
-                Configuration.StoryFilesDirectory,
-            ),
-        );
+        // Get all files from the source directories
         const allFiles = (
-            await workspaceProvider.findFiles(
-                storyFilesDirectory !== "" ? `${storyFilesDirectory}/**` : "**",
+            await getFilesFromSources(
+                currentConfig.build.storySourceFiles,
+                currentConfig.build.ignores,
+                workspaceProvider,
             )
         )
             .filter((f) => canAddFileToStory(UriUtils.basename(f)))
             .sort(); // Sort to match Tweego order
         if (allFiles.length === 0) {
-            vscode.window.showInformationMessage(
-                `Found no files to build in ${storyFilesDirectory}`,
-            );
+            vscode.window.showInformationMessage(`Found no files to build`);
             return;
         }
 
@@ -423,51 +560,101 @@ export async function build(
         const outUris = getBuildAndStoryUris(workspaceProvider, story.name);
         await workspaceProvider.fs.writeFile(outUris.story, Buffer.from(html));
 
-        // If the include directory exists and isn't the root directory, copy all files from there into the build folder
-        const includeDir = removeEndingSlash(
-            workspaceProvider.getConfigurationItem(
-                Configuration.BaseSection,
-                Configuration.IncludeDirectory,
-            ),
-        );
-        if (includeDir) {
-            // The URI of the include directory assuming it lives in the first workspace
-            const includeRootWorkspaceDir = UriUtils.joinPath(
-                rootUri,
-                includeDir,
-            ).toString(true); // No %-encoding
-            for (const includeFileUri of await workspaceProvider.findFiles(
-                includeDir + "/**",
-            )) {
-                // To replicate the sub-directory structure, we can't just get the filename's
-                // basename. Instead, we need to remove the leading directories up to and
-                // including the include directory in the workspace.
-                let includeFilepath = "ERROR";
-                const includeFileStr = includeFileUri.toString(true); // No %-encoding
-                // First see if the included file is in the root workspace's include directory
-                const ndx = includeFileStr.indexOf(includeRootWorkspaceDir);
-                if (ndx !== -1) {
-                    includeFilepath = includeFileStr.slice(
-                        ndx + includeRootWorkspaceDir.length,
+        // If there are any include files, copy those over as needed
+        const includeErrors = [];
+        for (let includeSourcePath of currentConfig.build.includeSourcePaths ??
+            []) {
+            includeSourcePath = removeEndingSlash(includeSourcePath);
+            const includeSourceWorkspaceUri = UriUtils.joinPath(
+                workspaceProvider.rootWorkspaceUri() ?? URI.file("."),
+                removeEndingSlash(includeSourcePath),
+            );
+            try {
+                const includeSourceWorkspacePath =
+                    includeSourceWorkspaceUri.toString(true);
+                const includeSourceStat = await workspaceProvider.fs.stat(
+                    includeSourceWorkspaceUri,
+                );
+                // Get all matching files, finding files recursively for directories
+                const includeFilesWorkspaceUris = await getFilesFromSources(
+                    [
+                        includeSourceStat.type === FileType.Directory
+                            ? includeSourcePath + "/**/*"
+                            : includeSourcePath,
+                    ],
+                    currentConfig.build.ignores,
+                    workspaceProvider,
+                );
+                let results: PromiseSettledResult<void>[];
+                if (includeSourceStat.type === FileType.Directory) {
+                    // To replicate the structure of an included directory, we
+                    // can't just copy the file to the build directory. Instead,
+                    // we need to copy the file to the build directory *plus the
+                    // sub-directories beneath the includeSourcePath*.
+                    results = await Promise.allSettled(
+                        includeFilesWorkspaceUris.map((fileWorkspaceUri) => {
+                            let fileRelativePath: string;
+                            const fileWorkspacePath =
+                                fileWorkspaceUri.toString(true);
+                            // First: is the raw include src path in the found file's path?
+                            const ndx = fileWorkspacePath.indexOf(
+                                includeSourceWorkspacePath,
+                            );
+                            if (ndx !== -1) {
+                                fileRelativePath = fileWorkspacePath.slice(
+                                    ndx + includeSourceWorkspacePath.length,
+                                );
+                            } else {
+                                // Fallback: Remove everything before the name of the
+                                // raw include directory, which can give odd results if
+                                // that directory's name shows up multiple times in
+                                // the URI (ex: `file://root/include/fonts/include/font.otf`)
+                                fileRelativePath = fileWorkspacePath
+                                    .split(includeSourcePath, 1)
+                                    .slice(-1)[0];
+                            }
+                            return copyIfChanged(
+                                fileWorkspaceUri,
+                                UriUtils.joinPath(
+                                    outUris.build,
+                                    fileRelativePath,
+                                ),
+                                workspaceProvider,
+                            );
+                        }),
                     );
                 } else {
-                    // As a fallback, try to remove everything before the name of the include
-                    // directory, which can give odd results if that name shows up multiple
-                    // times in the URI (ex: `file://root/include/fonts/include/font.otf`)
-                    includeFilepath = includeFileStr
-                        .split(includeDir, 1)
-                        .slice(-1)[0];
+                    results = await Promise.allSettled(
+                        includeFilesWorkspaceUris.map((fileUri) =>
+                            copyIfChanged(
+                                fileUri,
+                                UriUtils.joinPath(
+                                    outUris.build,
+                                    UriUtils.basename(fileUri),
+                                ),
+                                workspaceProvider,
+                            ),
+                        ),
+                    );
                 }
-                await workspaceProvider.fs.copy(
-                    includeFileUri,
-                    UriUtils.joinPath(outUris.build, includeFilepath),
-                    { overwrite: true },
-                );
+                for (const result of results) {
+                    if (result.status === "rejected") {
+                        includeErrors.push(result.reason);
+                    }
+                }
+            } catch (err) {
+                if (err instanceof Error) includeErrors.push(err.message);
             }
         }
 
-        // Tell everyone our build was successful
-        signalContextEvent("buildSuccessful", outUris.story);
+        if (includeErrors.length !== 0) {
+            vscode.window.showErrorMessage(
+                `Build failed: Problems copying included files\n${includeErrors.join("\n")}`,
+            );
+        } else {
+            // Tell everyone our build was successful
+            signalContextEvent("buildSuccessful", outUris.story);
+        }
     } catch (err) {
         const message = err instanceof Error ? err.message : "unknown error";
         vscode.window.showErrorMessage(`Build failed: ${message}`);

@@ -9,6 +9,7 @@ import { StoryFormat } from "../client-server";
 import { buildWorkspaceProvider } from "./builders";
 
 import * as uut from "../manage-storyformats";
+import { updateConfig } from "../config";
 
 describe("Manage Story Formats", () => {
     describe("Cache Story Formats", () => {
@@ -21,7 +22,7 @@ describe("Manage Story Formats", () => {
             provider.findFiles = async () => [];
 
             await uut.cacheStoryFormat(storyFormat, provider);
-            const result = uut.getCachedStoryFormat();
+            const result = uut.cachedStoryFormat;
 
             expect(result).to.eql({
                 format: {
@@ -42,7 +43,7 @@ describe("Manage Story Formats", () => {
             };
 
             await uut.cacheStoryFormat(storyFormat, provider);
-            const result = uut.getCachedStoryFormat();
+            const result = uut.cachedStoryFormat;
 
             expect(result).to.eql({
                 format: {
@@ -57,6 +58,15 @@ describe("Manage Story Formats", () => {
                 format: "Chapbook",
                 formatVersion: "2.1.3",
             };
+            updateConfig({
+                build: {
+                    storyFormatPaths: ["meep", ".fmtpath"],
+                    storySourceFiles: ["default"],
+                    includeSourcePaths: ["default"],
+                    outputPath: "build",
+                },
+                tt3: { disabledDiagnostics: [] },
+            });
             const provider = buildWorkspaceProvider({
                 configurationItem: ".fmtpath",
             });
@@ -74,7 +84,7 @@ describe("Manage Story Formats", () => {
             };
 
             await uut.cacheStoryFormat(storyFormat, provider);
-            const result = uut.getCachedStoryFormat();
+            const result = uut.cachedStoryFormat;
 
             expect(result).to.eql({
                 format: {
@@ -129,36 +139,35 @@ describe("Manage Story Formats", () => {
         });
     });
 
-    describe("Story Format to Local Path", () => {
+    describe("Local Path to Write Story Formats To", () => {
         it("should return undefined for a story format with no version", () => {
             const storyFormat: StoryFormat = {
                 format: "Chapbook",
             };
-            const provider = buildWorkspaceProvider({});
 
-            const result = uut.storyFormatToWorkspacePath(
-                storyFormat,
-                provider,
-            );
+            const result = uut.workspacePathToWriteStoryFormatTo(storyFormat);
 
             expect(result).to.be.undefined;
         });
 
-        it("should return a path that starts with the story format directory configuration item", () => {
+        it("should return a path that starts with the first story format directory in the configuration item", () => {
             const storyFormat: StoryFormat = {
                 format: "Chapbook",
                 formatVersion: "2.1.3",
             };
-            const provider = buildWorkspaceProvider({
-                configurationItem: ".storyformatpath",
+            updateConfig({
+                build: {
+                    storyFormatPaths: ["meep", "other"],
+                    storySourceFiles: ["default"],
+                    includeSourcePaths: ["default"],
+                    outputPath: "build",
+                },
+                tt3: { disabledDiagnostics: [] },
             });
 
-            const result = uut.storyFormatToWorkspacePath(
-                storyFormat,
-                provider,
-            );
+            const result = uut.workspacePathToWriteStoryFormatTo(storyFormat);
 
-            expect(result).to.match(/^\.storyformatpath\//);
+            expect(result).to.match(/^meep\//);
         });
 
         it("should return a path that includes the version", () => {
@@ -166,18 +175,19 @@ describe("Manage Story Formats", () => {
                 format: "Chapbook",
                 formatVersion: "2.1.3",
             };
-            const provider = buildWorkspaceProvider({
-                configurationItem: ".storyformatpath",
+            updateConfig({
+                build: {
+                    storyFormatPaths: ["meep"],
+                    storySourceFiles: ["default"],
+                    includeSourcePaths: ["default"],
+                    outputPath: "build",
+                },
+                tt3: { disabledDiagnostics: [] },
             });
 
-            const result = uut.storyFormatToWorkspacePath(
-                storyFormat,
-                provider,
-            );
+            const result = uut.workspacePathToWriteStoryFormatTo(storyFormat);
 
-            expect(result).to.equal(
-                ".storyformatpath/chapbook-2-1-3/format.js",
-            );
+            expect(result).to.equal("meep/chapbook-2-1-3/format.js");
         });
 
         it("should return a path that is properly resolved for a story format directory that ends in `/`", () => {
@@ -185,18 +195,19 @@ describe("Manage Story Formats", () => {
                 format: "Chapbook",
                 formatVersion: "2.1.3",
             };
-            const provider = buildWorkspaceProvider({
-                configurationItem: ".storyformatpath/",
+            updateConfig({
+                build: {
+                    storyFormatPaths: ["meep/"],
+                    storySourceFiles: ["default"],
+                    includeSourcePaths: ["default"],
+                    outputPath: "build",
+                },
+                tt3: { disabledDiagnostics: [] },
             });
 
-            const result = uut.storyFormatToWorkspacePath(
-                storyFormat,
-                provider,
-            );
+            const result = uut.workspacePathToWriteStoryFormatTo(storyFormat);
 
-            expect(result).to.equal(
-                ".storyformatpath/chapbook-2-1-3/format.js",
-            );
+            expect(result).to.equal("meep/chapbook-2-1-3/format.js");
         });
     });
 
@@ -206,6 +217,15 @@ describe("Manage Story Formats", () => {
                 format: "Chapbook",
                 formatVersion: "2.1.3",
             };
+            updateConfig({
+                build: {
+                    storyFormatPaths: ["meep", ".fmtpath"],
+                    storySourceFiles: ["default"],
+                    includeSourcePaths: ["default"],
+                    outputPath: "build",
+                },
+                tt3: { disabledDiagnostics: [] },
+            });
             const provider = buildWorkspaceProvider({
                 configurationItem: ".fmtpath",
             });
@@ -235,6 +255,15 @@ describe("Manage Story Formats", () => {
                 format: "Chapbook",
                 formatVersion: "2.1.3",
             };
+            updateConfig({
+                build: {
+                    storyFormatPaths: ["meep", ".fmtpath"],
+                    storySourceFiles: ["default"],
+                    includeSourcePaths: ["default"],
+                    outputPath: "build",
+                },
+                tt3: { disabledDiagnostics: [] },
+            });
             const provider = buildWorkspaceProvider({
                 configurationItem: ".fmtpath",
             });
@@ -265,11 +294,11 @@ describe("Manage Story Formats", () => {
             };
             const provider = buildWorkspaceProvider({});
 
-            let result: Error;
+            let result = new Error();
             try {
                 await uut.readLocalStoryFormat(storyFormat, provider);
             } catch (e) {
-                result = e;
+                result = e as Error;
             }
 
             expect(result.message).to.equal(
@@ -278,26 +307,35 @@ describe("Manage Story Formats", () => {
         });
     });
 
-    describe("Local Story Format Existence", () => {
-        it("should return false if the story format has no Tweego ID (i.e. has no version)", async () => {
+    describe("Find Local Story Format", () => {
+        it("should return undefined if the story format has no Tweego ID (i.e. has no version)", async () => {
             const storyFormat: StoryFormat = {
                 format: "Chapbook",
             };
             const provider = buildWorkspaceProvider({});
 
-            const result = await uut.localStoryFormatExists(
+            const result = await uut.findLocalStoryFormat(
                 storyFormat,
                 provider,
             );
 
-            expect(result).to.be.false;
+            expect(result).to.be.undefined;
         });
 
-        it("should return true if the `format.js` file exists at the expected location", async () => {
+        it("should return a URI if the `format.js` file exists at the expected location", async () => {
             const storyFormat: StoryFormat = {
                 format: "Chapbook",
                 formatVersion: "2.1.3",
             };
+            updateConfig({
+                build: {
+                    storyFormatPaths: ["meep", ".fmtpath"],
+                    storySourceFiles: ["default"],
+                    includeSourcePaths: ["default"],
+                    outputPath: "build",
+                },
+                tt3: { disabledDiagnostics: [] },
+            });
             const provider = buildWorkspaceProvider({
                 configurationItem: ".fmtpath",
             });
@@ -308,15 +346,15 @@ describe("Manage Story Formats", () => {
                 return [];
             };
 
-            const result = await uut.localStoryFormatExists(
+            const result = await uut.findLocalStoryFormat(
                 storyFormat,
                 provider,
             );
 
-            expect(result).to.be.true;
+            expect(result).to.eql(URI.parse("mock-chapbook-uri"));
         });
 
-        it("should return false if the `format.js` file doesn't exist at the expected location", async () => {
+        it("should return undefined if the `format.js` file doesn't exist at the expected location", async () => {
             const storyFormat: StoryFormat = {
                 format: "Chapbook",
                 formatVersion: "2.1.3",
@@ -324,12 +362,12 @@ describe("Manage Story Formats", () => {
             const provider = buildWorkspaceProvider({});
             provider.findFiles = async () => [];
 
-            const result = await uut.localStoryFormatExists(
+            const result = await uut.findLocalStoryFormat(
                 storyFormat,
                 provider,
             );
 
-            expect(result).to.be.false;
+            expect(result).to.be.undefined;
         });
     });
 

@@ -2,7 +2,7 @@ import JSZip from "jszip";
 import { URI, Utils } from "vscode-uri";
 
 import { StoryFormat } from "./client-server";
-import { Configuration } from "./constants";
+import { currentConfig } from "./config";
 import { WorkspaceProvider } from "./workspace-provider";
 
 /**
@@ -19,7 +19,7 @@ export interface CachedStoryFormat {
     contents?: string;
 }
 
-let cachedStoryFormat: CachedStoryFormat | undefined;
+export let cachedStoryFormat: CachedStoryFormat | undefined;
 
 /**
  * Cache a story format.
@@ -44,10 +44,6 @@ export async function cacheStoryFormat(
     } catch {
         // If we fail, we don't care
     }
-}
-
-export function getCachedStoryFormat(): CachedStoryFormat | undefined {
-    return cachedStoryFormat;
 }
 
 /**
@@ -109,9 +105,7 @@ export function storyFormatToLanguageID(
  * @param storyFormat Story format.
  * @returns Tweego ID for the story format, or undefined if it can't be created.
  */
-export function storyFormatToTweegoID(
-    storyFormat: StoryFormat,
-): string | undefined {
+function storyFormatToTweegoID(storyFormat: StoryFormat): string | undefined {
     if (storyFormat.formatVersion === undefined) {
         return undefined;
     }
@@ -119,25 +113,19 @@ export function storyFormatToTweegoID(
 }
 
 /**
- * Get the (relative) path to the story format file in the workspace.
+ * Get the (relative) path to write a story format file to in the workspace.
  *
  * @param storyFormat Story format.
- * @param workspaceProvider Workspace function provider.
  * @returns Workspace path to the story format's local files, or undefined if it can't be created.
  */
-export function storyFormatToWorkspacePath(
+export function workspacePathToWriteStoryFormatTo(
     storyFormat: StoryFormat,
-    workspaceProvider: WorkspaceProvider,
 ): string | undefined {
     const tweegoId = storyFormatToTweegoID(storyFormat);
     if (tweegoId === undefined) {
         return undefined;
     }
-    const storyFormatDirectory =
-        workspaceProvider.getConfigurationItem<string>(
-            Configuration.BaseSection,
-            Configuration.StoryFormatsDirectory,
-        ) ?? ".";
+    const storyFormatDirectory = currentConfig.build.storyFormatPaths[0];
     const path = Utils.joinPath(
         URI.file(storyFormatDirectory),
         tweegoId,
@@ -201,63 +189,66 @@ export async function readLocalStoryFormat(
     storyFormat: StoryFormat,
     workspaceProvider: WorkspaceProvider,
 ): Promise<string> {
+    const storyFormatUri = await findLocalStoryFormat(
+        storyFormat,
+        workspaceProvider,
+    );
+    if (storyFormatUri === undefined) {
+        throw new Error(
+            `Couldn't find a local copy of story format ${storyFormat.format} version ${storyFormat.formatVersion}`,
+        );
+    }
+    return Buffer.from(
+        await workspaceProvider.fs.readFile(storyFormatUri),
+    ).toString("utf-8");
+}
+
+/**
+ * Find a local copy of a story format (if it exists).
+ *
+ * @param storyFormat Story format to find.
+ * @param workspaceProvider Workspace provider.
+ * @returns The URI to the local story format, or undefined if not found.
+ */
+export async function findLocalStoryFormat(
+    storyFormat: StoryFormat,
+    workspaceProvider: WorkspaceProvider,
+): Promise<URI | undefined> {
     const currentStoryFormat = {
         format: storyFormat.format,
         formatVersion: storyFormat.formatVersion,
     };
     while (currentStoryFormat.formatVersion) {
-        const path = storyFormatToWorkspacePath(
-            currentStoryFormat,
-            workspaceProvider,
-        );
-        if (path === undefined) {
-            throw new Error(
-                `Couldn't create a local path for story format ${currentStoryFormat.format} version ${currentStoryFormat.formatVersion}`,
-            );
-        }
-        const storyFormatUri = (
-            await workspaceProvider.findFiles(path, undefined, 1)
-        )[0];
-        // If we didn't find a file, try reducing the precision of the story format version
-        // (so "2.1.3" becomes "2.1", while "2.1" would become "2")
-        if (storyFormatUri === undefined) {
-            const formatParts = currentStoryFormat.formatVersion.split(".");
-            if (formatParts.length < 2) {
-                break;
+        const tweegoId = storyFormatToTweegoID(currentStoryFormat);
+        if (tweegoId === undefined) return undefined;
+
+        for (const storyFormatPath of currentConfig.build.storyFormatPaths) {
+            let path = Utils.joinPath(
+                URI.file(storyFormatPath),
+                tweegoId,
+                "format.js",
+            ).path;
+            if (path.startsWith("/") && !storyFormatPath.startsWith("/"))
+                path = path.slice(1);
+
+            const storyFormatUri = (
+                await workspaceProvider.findFiles(path, undefined, 1)
+            )[0];
+            if (storyFormatUri !== undefined) {
+                return storyFormatUri;
             }
-            currentStoryFormat.formatVersion = formatParts
-                .slice(0, -1)
-                .join(".");
-        } else {
-            return Buffer.from(
-                await workspaceProvider.fs.readFile(storyFormatUri),
-            ).toString("utf-8");
         }
+        // If we didn't find a file, try reducing the precision of the story
+        // format version (so "2.1.3" becomes "2.1", while "2.1" would become "2")
+        const formatParts = currentStoryFormat.formatVersion.split(".");
+        if (formatParts.length < 2) {
+            break;
+        }
+        currentStoryFormat.formatVersion = formatParts.slice(0, -1).join(".");
     }
-    throw new Error(
-        `Couldn't find a local copy of story format ${currentStoryFormat.format} version ${currentStoryFormat.formatVersion}`,
-    );
 }
 
-/**
- * See if the project contains a local copy of the story format.
- *
- * @param storyFormat Story format to check.
- * @param workspaceProvider Workspace provider.
- * @returns True if the story format exists locally.
- */
-export async function localStoryFormatExists(
-    storyFormat: StoryFormat,
-    workspaceProvider: WorkspaceProvider,
-): Promise<boolean> {
-    const path = storyFormatToWorkspacePath(storyFormat, workspaceProvider);
-    if (path === undefined) {
-        return false;
-    }
-    const files = await workspaceProvider.findFiles(path, undefined, 1);
-    return files.length > 0;
-}
-
+// I'm exporting these to use in unit tests
 export const ChapbookMainPage = "https://klembot.github.io/chapbook/";
 export const ChapbookArchiveUri = URI.parse(
     "https://github.com/klembot/chapbook/blob/develop/previous-versions/",

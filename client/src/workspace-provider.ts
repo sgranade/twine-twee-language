@@ -20,7 +20,7 @@ export interface WorkspaceProvider {
      */
     findFiles(
         include: string,
-        exclude?: string,
+        exclude?: string | null,
         maxResults?: number,
     ): Thenable<URI[]>;
     /**
@@ -44,14 +44,12 @@ export interface WorkspaceProvider {
     rootWorkspaceUri(): URI | undefined;
     fs: {
         /**
-         * Create a new directory (Note, that new files are created via `write`-calls).
+         * Retrieve metadata about a file.
          *
-         * *Note* that missing directories are created automatically, e.g this call has
-         * `mkdirp` semantics.
-         *
-         * @param uri The uri of the new folder.
+         * @param uri The uri of the file to retrieve metadata about.
+         * @returns The file metadata about the file.
          */
-        createDirectory(uri: URI): Thenable<void>;
+        stat(uri: URI): Thenable<FileStat>;
         /**
          * Retrieve all entries of a {@link FileType.Directory directory}.
          *
@@ -61,10 +59,20 @@ export interface WorkspaceProvider {
          */
         readDirectory(uri: URI): Thenable<[string, FileType][]>;
         /**
+         * Create a new directory (Note, that new files are created via `write`-calls).
+         *
+         * *Note* that missing directories are created automatically, e.g this call has
+         * `mkdirp` semantics.
+         *
+         * @param uri The uri of the new folder.
+         */
+        createDirectory(uri: URI): Thenable<void>;
+        /**
          * Read the entire contents of a file.
          *
          * @param uri The uri of the file.
          * @returns An array of bytes or a thenable that resolves to such.
+         * @throws Error (FileNotFound) if the directory isn't found.
          */
         readFile: (uri: URI) => Thenable<Uint8Array>;
         /**
@@ -95,7 +103,7 @@ export interface WorkspaceProvider {
 }
 
 /**
- * Enumerations taken from vscode.
+ * Enumerations and interfaces taken from vscode.
  */
 
 /**
@@ -120,4 +128,52 @@ export enum FileType {
      * A symbolic link to a file.
      */
     SymbolicLink = 64,
+}
+
+enum FilePermission {
+    /**
+     * The file is readonly.
+     *
+     * *Note:* All `FileStat` from a `FileSystemProvider` that is registered with
+     * the option `isReadonly: true` will be implicitly handled as if `FilePermission.Readonly`
+     * is set. As a consequence, it is not possible to have a readonly file system provider
+     * registered where some `FileStat` are not readonly.
+     */
+    Readonly = 1,
+}
+
+interface FileStat {
+    /**
+     * The type of the file, e.g. is a regular file, a directory, or symbolic link
+     * to a file.
+     *
+     * *Note:* This value might be a bitmask, e.g. `FileType.File | FileType.SymbolicLink`.
+     */
+    type: FileType;
+    /**
+     * The creation timestamp in milliseconds elapsed since January 1, 1970 00:00:00 UTC.
+     */
+    ctime: number;
+    /**
+     * The modification timestamp in milliseconds elapsed since January 1, 1970 00:00:00 UTC.
+     *
+     * *Note:* If the file changed, it is important to provide an updated `mtime` that advanced
+     * from the previous value. Otherwise there may be optimizations in place that will not show
+     * the updated file contents in an editor for example.
+     */
+    mtime: number;
+    /**
+     * The size in bytes.
+     *
+     * *Note:* If the file changed, it is important to provide an updated `size`. Otherwise there
+     * may be optimizations in place that will not show the updated file contents in an editor for
+     * example.
+     */
+    size: number;
+    /**
+     * The permissions of the file, e.g. whether the file is readonly.
+     *
+     * *Note:* This value might be a bitmask, e.g. `FilePermission.Readonly | FilePermission.Other`.
+     */
+    permissions?: FilePermission;
 }

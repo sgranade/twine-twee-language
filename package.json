@@ -46,6 +46,12 @@
     ],
     "main": "./dist/client/src/extension",
     "contributes": {
+        "jsonValidation": [
+            {
+                "fileMatch": "tt3.config.json",
+                "url": "./schema/tt3.config.schema.json"
+            }
+        ],
         "languages": [
             {
                 "id": "twee3",
@@ -181,31 +187,13 @@
                     "type": "boolean",
                     "default": true,
                     "order": 1,
-                    "description": "Offer to create a project directory structure."
+                    "description": "Offer to create a project with a configuration file and directory structure."
                 },
                 "twineTweeLanguage.project.downloadStoryFormat": {
                     "type": "boolean",
                     "default": true,
                     "order": 2,
                     "markdownDescription": "Offer to download the Twine story format used in a project. (Currently only supports [Chapbook](https://klembot.github.io/chapbook/) and [SugarCube 2](https://motoslave.net/sugarcube/2/).)"
-                },
-                "twineTweeLanguage.project.storyFilesDirectory": {
-                    "type": "string",
-                    "default": "src",
-                    "order": 3,
-                    "markdownDescription": "Directory with game source files (relative to the workspace). Files in this directory and all of its subdirectories will be compiled. Supports [all Tweego-supported files](http://www.motoslave.net/tweego/docs/#usage-supported-files) except for `.tw2`, `.twee2`, `.htm`, and `.html`."
-                },
-                "twineTweeLanguage.project.storyFormatsDirectory": {
-                    "type": "string",
-                    "default": ".storyformats",
-                    "order": 4,
-                    "description": "Directory relative to the root level of the project where Twine story formats are stored."
-                },
-                "twineTweeLanguage.build.outputFile": {
-                    "type": "string",
-                    "default": "",
-                    "order": 5,
-                    "markdownDescription": "Name to give the game when turned into an HTML file, such as `story.html`. If blank, the game's filename will be its name from the `StoryTitle` passage, with spaces replaced by hyphens."
                 },
                 "twineTweeLanguage.build.runningGameUpdate": {
                     "type": "string",
@@ -220,20 +208,48 @@
                         "Reload the game and restart it.",
                         "Don't reload the game."
                     ],
-                    "order": 6,
+                    "order": 3,
                     "markdownDescription": "What to do with a running game after building a new version."
+                },
+                "twineTweeLanguage.project.storyFilesDirectory": {
+                    "type": "string",
+                    "default": "src",
+                    "order": 4,
+                    "markdownDescription": "Directory with game source files (relative to the workspace). Files in this directory and all of its subdirectories will be compiled. Supports [all Tweego-supported files](http://www.motoslave.net/tweego/docs/#usage-supported-files) except for `.tw2`, `.twee2`, `.htm`, and `.html`.",
+                    "deprecationMessage": "This setting is now handled by the tt3.config.json file and will be ignored.",
+                    "markdownDeprecationMessage": "This setting is now handled by the `tt3.config.json` file and will be ignored."
+                },
+                "twineTweeLanguage.project.storyFormatsDirectory": {
+                    "type": "string",
+                    "default": ".storyformats",
+                    "order": 5,
+                    "description": "Directory relative to the root level of the project where Twine story formats are stored.",
+                    "deprecationMessage": "This setting is now handled by the tt3.config.json file and will be ignored.",
+                    "markdownDeprecationMessage": "This setting is now handled by the `tt3.config.json` file and will be ignored."
+                },
+                "twineTweeLanguage.build.outputFile": {
+                    "type": "string",
+                    "default": "",
+                    "order": 6,
+                    "markdownDescription": "Name to give the game when turned into an HTML file, such as `story.html`. If blank, the game's filename will be its name from the `StoryTitle` passage, with spaces replaced by hyphens.",
+                    "deprecationMessage": "This setting is now handled by the tt3.config.json file and will be ignored.",
+                    "markdownDeprecationMessage": "This setting is now handled by the `tt3.config.json` file and will be ignored."
                 },
                 "twineTweeLanguage.build.buildDirectory": {
                     "type": "string",
                     "default": "build",
                     "order": 7,
-                    "markdownDescription": "Directory to put the output `.html` file in (relative to the workspace)."
+                    "markdownDescription": "Directory to put the output `.html` file in (relative to the workspace).",
+                    "deprecationMessage": "This setting is now handled by the tt3.config.json file and will be ignored.",
+                    "markdownDeprecationMessage": "This setting is now handled by the `tt3.config.json` file and will be ignored."
                 },
                 "twineTweeLanguage.build.includeDirectory": {
                     "type": "string",
                     "default": "include",
                     "order": 8,
-                    "markdownDescription": "Directory with non-game files to add to the build directory (relative to the workspace). Files in this directory and all of its subdirectories will be added as-is to the build directory. If blank, no files will be included. Useful for images, fonts, and other files you don't want to bundle directly into the compiled `.html` file."
+                    "markdownDescription": "Directory with non-game files to add to the build directory (relative to the workspace). Files in this directory and all of its subdirectories will be added as-is to the build directory. If blank, no files will be included. Useful for images, fonts, and other files you don't want to bundle directly into the compiled `.html` file.",
+                    "deprecationMessage": "This setting is now handled by the tt3.config.json file and will be ignored.",
+                    "markdownDeprecationMessage": "This setting is now handled by the `tt3.config.json` file and will be ignored."
                 }
             }
         },
@@ -289,5 +305,6 @@
         "tsx": "^4.23.1",
         "typescript": "^6.0.2",
         "typescript-eslint": "^8.0.0-alpha.10",
+        "zod": "^4.4.3"
     }
 }

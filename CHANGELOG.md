@@ -4,8 +4,9 @@ Changes to the extension.
 
 ## Unreleased
 
-Two big changes:
+Three big changes:
 
+- Story build configuration is now handled a `tt3.config.json` file instead of in extension settings.
 - Diagnostics have been extensively re-worked.
     - The extension now reports JavaScript errors.
     - It flags variables that (it thinks) have never been defined.

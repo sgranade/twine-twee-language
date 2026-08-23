@@ -1,5 +1,6 @@
 import * as path from "path";
 import * as vscode from "vscode";
+import { URI as VSCodeURI, Utils as UriUtils } from "vscode-uri";
 import {
     LanguageClient,
     LanguageClientOptions,
@@ -14,6 +15,7 @@ import {
     downloadLocalStoryFormatIfNeeded,
     buildProjectDirectoriesIfNeeded,
     getBuildAndStoryUris,
+    getFilesFromSources,
 } from "./build-system";
 import {
     createSC2CloseContainerMacroPattern,
@@ -25,13 +27,21 @@ import {
     SC2MacroInfo,
     StoryFormat,
 } from "./client-server";
+import {
+    ConfigFilename,
+    currentConfig,
+    SupportedStoryFileTypes,
+    updateConfig,
+    updateConfigFromJson,
+    validateConfigDiagnosticCodes,
+} from "./config";
 import { Configuration, CustomCommands } from "./constants";
 import { signalContextEvent } from "./context";
 import { setEditorDecorationRanges, updateDecoration } from "./decorations";
 import { reloadRunningGame, viewCompiledGame } from "./game-view";
 import {
+    cachedStoryFormat,
     cacheStoryFormat,
-    getCachedStoryFormat,
     storyFormatToLanguageID,
 } from "./manage-storyformats";
 import * as notifications from "./notifications";
@@ -43,7 +53,8 @@ let client: LanguageClient | undefined;
 let currentStoryTitle: string;
 let currentStoryFormatLanguageID: string;
 let currentStoryFormatLanguageConfiguration: vscode.Disposable | undefined; // Any current language settings
-let directoryBuildPromise: Promise<void> | undefined;
+let currentDiagnosticCodes: string[] | undefined;
+let projectSetupHandled = false;
 
 const workspaceProvider = new VSCodeWorkspaceProvider();
 
@@ -73,14 +84,13 @@ function registerCommands(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand(
             CustomCommands.DownloadStoryFormat,
             () => {
-                const format = getCachedStoryFormat();
-                if (format === undefined) {
+                if (cachedStoryFormat === undefined) {
                     vscode.window.showErrorMessage(
                         `Can't download the project's Twine story format because it isn't known`,
                     );
                 } else {
                     downloadLocalStoryFormatIfNeeded(
-                        format.format,
+                        cachedStoryFormat.format,
                         true,
                         workspaceProvider,
                     );
@@ -136,9 +146,213 @@ async function updateTweeDocumentLanguage(
     return document;
 }
 
+/**
+ * Erase all configuration sections: global, workspace, folder.
+ *
+ * @param config Workspace configuration.
+ * @param section Section to erase.
+ */
+async function eraseAllConfig(
+    config: vscode.WorkspaceConfiguration,
+    section: string,
+) {
+    for (const scope of [
+        vscode.ConfigurationTarget.Global,
+        vscode.ConfigurationTarget.Workspace,
+        vscode.ConfigurationTarget.WorkspaceFolder,
+    ]) {
+        try {
+            await config.update(section, undefined, scope);
+        } catch {
+            // Ignore
+        }
+    }
+}
+
+/**
+ * Update a project's configuration from the legacy extension configuration.
+ *
+ * @returns True if any configuration value changed.
+ */
+async function updateConfigFromLegacyConfig(): Promise<boolean> {
+    const newConfig = currentConfig;
+    let configChanged = false;
+    const workspaceConfig = vscode.workspace.getConfiguration(
+        Configuration.BaseSection,
+    );
+
+    const storyFilesDirectory = workspaceConfig.get<string>(
+        Configuration.StoryFilesDirectory,
+    );
+    if (storyFilesDirectory !== undefined) {
+        configChanged = true;
+        newConfig.build.storySourceFiles = SupportedStoryFileTypes.map(
+            (type) => `${storyFilesDirectory}/**/${type}`,
+        );
+        await eraseAllConfig(
+            workspaceConfig,
+            Configuration.StoryFilesDirectory,
+        );
+    }
+
+    const storyFormatsDirectory = workspaceConfig.get<string>(
+        Configuration.StoryFormatsDirectory,
+    );
+    if (storyFormatsDirectory !== undefined) {
+        if (
+            newConfig.build.storyFormatPaths.length !== 1 ||
+            newConfig.build.storyFormatPaths[0] !== storyFormatsDirectory
+        ) {
+            configChanged = true;
+            newConfig.build.storyFormatPaths = [storyFormatsDirectory];
+        }
+        await eraseAllConfig(
+            workspaceConfig,
+            Configuration.StoryFormatsDirectory,
+        );
+    }
+
+    let outputFile = workspaceConfig.get<string>(Configuration.OutputFile);
+    if (outputFile !== undefined) {
+        // Remember that a blank outputFile === default value (undefined)
+        outputFile = outputFile === "" ? undefined : outputFile;
+        if (newConfig.build.outputFilename !== outputFile) {
+            configChanged = true;
+            newConfig.build.outputFilename = outputFile;
+        }
+        await eraseAllConfig(
+            workspaceConfig,
+            Configuration.StoryFormatsDirectory,
+        );
+    }
+
+    const buildDirectory = workspaceConfig.get<string>(
+        Configuration.BuildDirectory,
+    );
+    if (buildDirectory !== undefined) {
+        if (newConfig.build.outputPath !== buildDirectory) {
+            configChanged = true;
+            newConfig.build.outputPath = buildDirectory;
+        }
+        await eraseAllConfig(workspaceConfig, Configuration.BuildDirectory);
+    }
+
+    const includeDirectory = workspaceConfig.get<string>(
+        Configuration.IncludeDirectory,
+    );
+    if (includeDirectory !== undefined) {
+        if (
+            newConfig.build.includeSourcePaths.length !== 1 ||
+            newConfig.build.includeSourcePaths[0] !== includeDirectory
+        ) {
+            configChanged = true;
+            newConfig.build.includeSourcePaths = [includeDirectory];
+        }
+        await eraseAllConfig(workspaceConfig, Configuration.IncludeDirectory);
+    }
+
+    updateConfig(newConfig);
+
+    return configChanged;
+}
+
+/**
+ * Update the project's configuration from the configuration file.
+ *
+ * @param uri URI to the configuration file. If undefined, the default URI will be used
+ * @returns True if the config file was found; false otherwise.
+ */
+async function updateConfigFromFile(uri?: VSCodeURI): Promise<boolean> {
+    if (!uri) {
+        uri = UriUtils.joinPath(
+            workspaceProvider.rootWorkspaceUri() ?? VSCodeURI.file("."),
+            ConfigFilename,
+        );
+    }
+
+    try {
+        const configContents = new TextDecoder().decode(
+            await workspaceProvider.fs.readFile(uri),
+        );
+        const configError = updateConfigFromJson(
+            configContents,
+            currentDiagnosticCodes,
+        );
+        if (configError) {
+            vscode.window.showErrorMessage(
+                `There are issues with ${ConfigFilename}:\n${configError}`,
+            );
+        } else {
+            // TODO If disabled diagnostics have changed, let the server know
+        }
+    } catch (e) {
+        // If we didn't find the file, let the caller know
+        if (e instanceof vscode.FileSystemError && e.code === "FileNotFound") {
+            return false;
+        } else {
+            vscode.window.showErrorMessage(
+                `There are issues with ${ConfigFilename}:\n${(e as Error).message}`,
+            );
+        }
+    }
+
+    return true; // The file exists, at least
+}
+
+/**
+ * Write the current configuration to a file.
+ *
+ * @param uri URI to write the configuration to. If undefined, the default URI will be used
+ */
+async function writeConfigToFile(uri?: VSCodeURI) {
+    if (!uri) {
+        uri = UriUtils.joinPath(
+            workspaceProvider.rootWorkspaceUri() ?? VSCodeURI.file("."),
+            ConfigFilename,
+        );
+    }
+
+    let indent = "    ";
+    let eol = "\n";
+    // See if we can get the indent and line endings from an existing config file
+    try {
+        const configContents = new TextDecoder().decode(
+            await workspaceProvider.fs.readFile(uri),
+        );
+        const match = configContents.match(/^([ \t]+)(?=\S)/m);
+        // Assume the first ever match sets the indent
+        if (match?.[1]) {
+            indent = match[1];
+        }
+        // Also get whether the file uses CRLF
+        if (configContents.includes("\r\n")) eol = "\r\n";
+    } catch (e) {
+        if (
+            !(e instanceof vscode.FileSystemError) ||
+            e.code !== "FileNotFound"
+        ) {
+            vscode.window.showErrorMessage(
+                `Unable to read config file ${ConfigFilename}:\n${(e as Error).message}`,
+            );
+            return;
+        }
+    }
+
+    const output =
+        JSON.stringify(currentConfig, null, indent).replace("\n", eol) + eol;
+
+    try {
+        await workspaceProvider.fs.writeFile(uri, Buffer.from(output));
+    } catch (e) {
+        vscode.window.showErrorMessage(
+            `Unable to save config file ${ConfigFilename}:\n${(e as Error).message}`,
+        );
+    }
+}
+
 async function onUpdatedStoryFormat(e: StoryFormat) {
     // Let's bounce if the story format hasn't changed
-    const oldFormat = getCachedStoryFormat()?.format;
+    const oldFormat = cachedStoryFormat?.format;
     if (
         e.format === oldFormat?.format &&
         e.formatVersion === oldFormat?.formatVersion
@@ -226,25 +440,32 @@ async function onUpdatedSugarCube2MacroInfo(e: SC2MacroInfo[]) {
         );
 }
 
-const storyFilesGlob = (): string => {
-    let dir = workspaceProvider.getConfigurationItem<string>(
-        Configuration.BaseSection,
-        Configuration.StoryFilesDirectory,
-    );
-    if (dir !== "" && !dir.endsWith("/")) {
-        dir += "/";
+/**
+ * Set up the TT3 project configuration.
+ */
+async function setupProjectConfiguration() {
+    // Step one: load from config file
+    await updateConfigFromFile();
+
+    // Step two: see if there's a legacy config
+    const configUpdated = await updateConfigFromLegacyConfig();
+
+    // Step three: if the legacy config changed values, write the new values to the config file
+    if (configUpdated) {
+        await writeConfigToFile();
     }
-    return dir + "**/**.{tw,twee}";
-};
+}
 
 export function activate(context: vscode.ExtensionContext) {
     // We activate both on workspace load finished and if there's a `.twee` file.
     // In either case we check whether the workspace needs setting up, but we
     // only fully start our server when we detect an open `.twee` file.
-    if (directoryBuildPromise === undefined) {
-        // Only fire this off once
-        directoryBuildPromise =
-            buildProjectDirectoriesIfNeeded(workspaceProvider);
+    if (!projectSetupHandled) {
+        projectSetupHandled = true;
+        (async () => {
+            await setupProjectConfiguration();
+            await buildProjectDirectoriesIfNeeded(workspaceProvider);
+        })();
     }
 
     const tweeFileOpen = vscode.workspace.textDocuments.some(
@@ -301,8 +522,8 @@ export function startClient(context: vscode.ExtensionContext) {
 
     // Create the language client
     client = new LanguageClient(
-        "twineChapbook",
-        "Twine Chapbook",
+        "twineTwee3",
+        "Twine (Twee 3)",
         serverOptions,
         clientOptions,
     );
@@ -340,20 +561,39 @@ export function startClient(context: vscode.ExtensionContext) {
     notifications.addNotificationHandler(CustomMessages.IndexingComplete, () =>
         signalContextEvent("indexingEnds"),
     );
-
-    // Handle configuration changes
-    context.subscriptions.push(
-        vscode.workspace.onDidChangeConfiguration((e) => {
-            // If the user changes what directories include story files, request a re-index
-            if (
-                e.affectsConfiguration(
-                    `${Configuration.BaseSection}.${Configuration.StoryFilesDirectory}`,
-                )
-            ) {
-                client?.sendNotification(CustomMessages.RequestReindex);
+    notifications.addNotificationHandler(
+        CustomMessages.DiagnosticCodes,
+        (e) => {
+            currentDiagnosticCodes = e[0].codes;
+            if (currentDiagnosticCodes !== undefined) {
+                const badCodes = validateConfigDiagnosticCodes(
+                    currentDiagnosticCodes,
+                );
+                if (badCodes !== undefined) {
+                    vscode.window.showErrorMessage(
+                        `${ConfigFilename} has non-existent diagnostic codes in tt3.disabledDiagnostics:\n${badCodes.join(", ")}`,
+                    );
+                }
             }
-        }),
+        },
     );
+    // Get diagnostic codes from the server
+    client.sendNotification(CustomMessages.RequestDiagnosticCodes);
+
+    // If our configuration file changes, update configuration
+    const configWatcher = vscode.workspace.createFileSystemWatcher(
+        new vscode.RelativePattern(
+            (vscode.workspace.workspaceFolders ?? [""])[0],
+            ConfigFilename,
+        ),
+    );
+    configWatcher.onDidChange(async (uri) => {
+        await updateConfigFromFile(uri);
+        // Since the new configuration can change what files are part of the
+        // story, request a re-index
+        client?.sendNotification(CustomMessages.RequestReindex);
+    });
+    context.subscriptions.push(configWatcher);
 
     // Adjust document languages and decorations on editor change if needed
     context.subscriptions.push(
@@ -381,9 +621,15 @@ export function startClient(context: vscode.ExtensionContext) {
 
     // Handle file requests
     client.onRequest(FindTweeFilesRequest, async () => {
-        return (await workspaceProvider.findFiles(storyFilesGlob())).map((f) =>
-            f.toString(),
-        );
+        // Get all source files that end in ".tw" or ".twee"
+        const files = (
+            await getFilesFromSources(
+                currentConfig.build.storySourceFiles,
+                currentConfig.build.ignores,
+                workspaceProvider,
+            )
+        ).filter((f) => f.path.endsWith(".tw") || f.path.endsWith(".twee"));
+        return files.map((f) => f.toString());
     });
     client.onRequest(FindFilesRequest, async (glob: string) => {
         return (

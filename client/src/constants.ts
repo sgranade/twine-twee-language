@@ -5,10 +5,13 @@ export enum Configuration {
     BaseSection = "twineTweeLanguage",
     ProjectCreate = "project.create",
     DownloadStoryFormat = "project.downloadStoryFormat",
+    RunningGameUpdate = "build.runningGameUpdate",
+    // Depreciated configurations after 1.1.5
+    // We're keeping them to let us move their values to a
+    // configuration file
     StoryFilesDirectory = "project.storyFilesDirectory",
     StoryFormatsDirectory = "project.storyFormatsDirectory",
     OutputFile = "build.outputFile",
-    RunningGameUpdate = "build.runningGameUpdate",
     BuildDirectory = "build.buildDirectory",
     IncludeDirectory = "build.includeDirectory",
 }
