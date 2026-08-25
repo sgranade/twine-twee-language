@@ -1,6 +1,8 @@
 import "mocha";
 import { expect } from "chai";
 
+import { DiagnosticCodes } from "@tt3/shared";
+
 import * as uut from "../config";
 
 describe("TT3 Config From JSON", () => {
@@ -144,24 +146,27 @@ describe("TT3 Config From JSON", () => {
         // No arrange
 
         const ret = uut.updateConfigFromJson(
-            '{"tt3": {"disabledDiagnostics": ["meep"]}}',
+            `{"tt3": {"disabledDiagnostics": ["${DiagnosticCodes.ChapbookMissingColon}"]}}`,
         );
         const result = uut.currentConfig;
 
         expect(ret).to.be.undefined;
-        expect(result.tt3.disabledDiagnostics).to.eql(["meep"]);
+        expect(result.tt3.disabledDiagnostics).to.eql([
+            DiagnosticCodes.ChapbookMissingColon,
+        ]);
     });
 
     it("should cull tt3.disabledDiagnostics to keep only known diagnostic codes", () => {
         // No arrange
 
         uut.updateConfigFromJson(
-            '{"tt3": {"disabledDiagnostics": ["meep", "meep-meep"]}}',
-            ["meep-meep"],
+            `{"tt3": {"disabledDiagnostics": ["meep", "${DiagnosticCodes.ChapbookMissingColon}"]}}`,
         );
         const result = uut.currentConfig;
 
-        expect(result.tt3.disabledDiagnostics).to.eql(["meep-meep"]);
+        expect(result.tt3.disabledDiagnostics).to.eql([
+            DiagnosticCodes.ChapbookMissingColon,
+        ]);
     });
 
     it("should return an error containing unknown diagnostic codes", () => {
@@ -169,7 +174,6 @@ describe("TT3 Config From JSON", () => {
 
         const result = uut.updateConfigFromJson(
             '{"tt3": {"disabledDiagnostics": ["meep", "meep-meep"]}}',
-            ["meep-meep"],
         );
 
         expect(result).to.contain("meep");
@@ -178,7 +182,7 @@ describe("TT3 Config From JSON", () => {
     it("should return no error when there are no diagnostic codes defined", () => {
         // No arrange
 
-        const result = uut.updateConfigFromJson("", ["meep-meep"]);
+        const result = uut.updateConfigFromJson("");
 
         expect(result).to.be.undefined;
     });

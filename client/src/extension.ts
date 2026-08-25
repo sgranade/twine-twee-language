@@ -33,7 +33,6 @@ import {
     SupportedStoryFileTypes,
     updateConfig,
     updateConfigFromJson,
-    validateConfigDiagnosticCodes,
 } from "./config";
 import { Configuration, CustomCommands } from "./constants";
 import { signalContextEvent } from "./context";
@@ -53,7 +52,6 @@ let client: LanguageClient | undefined;
 let currentStoryTitle: string;
 let currentStoryFormatLanguageID: string;
 let currentStoryFormatLanguageConfiguration: vscode.Disposable | undefined; // Any current language settings
-let currentDiagnosticCodes: string[] | undefined;
 let projectSetupHandled = false;
 
 const workspaceProvider = new VSCodeWorkspaceProvider();
@@ -274,10 +272,7 @@ async function updateConfigFromFile(uri?: VSCodeURI): Promise<boolean> {
         const configContents = new TextDecoder().decode(
             await workspaceProvider.fs.readFile(uri),
         );
-        const configError = updateConfigFromJson(
-            configContents,
-            currentDiagnosticCodes,
-        );
+        const configError = updateConfigFromJson(configContents);
         if (configError) {
             vscode.window.showErrorMessage(
                 `There are issues with ${ConfigFilename}:\n${configError}`,
@@ -499,8 +494,8 @@ export function startClient(context: vscode.ExtensionContext) {
         path.join("dist", "server", "src", "server.js"),
     );
 
-    // If the extension is launched in debug mode then the debug server options are used
-    // Otherwise the run options are used
+    // If the extension is launched in debug mode then the debug server
+    // options are used; otherwise the run options are used
     const serverOptions: ServerOptions = {
         run: { module: serverModule, transport: TransportKind.ipc },
         debug: {
@@ -513,7 +508,8 @@ export function startClient(context: vscode.ExtensionContext) {
     const clientOptions: LanguageClientOptions = {
         documentSelector: [{ scheme: "file", pattern: "**/*.{tw,twee}" }],
         synchronize: {
-            // Notify the server about file changes to SugarCube 2 macro definition files
+            // Notify the server about file changes to SugarCube 2 macro
+            // definition files
             fileEvents: vscode.workspace.createFileSystemWatcher(
                 "**/*.twee-config.{json,yaml,yml}",
             ),
@@ -561,24 +557,6 @@ export function startClient(context: vscode.ExtensionContext) {
     notifications.addNotificationHandler(CustomMessages.IndexingComplete, () =>
         signalContextEvent("indexingEnds"),
     );
-    notifications.addNotificationHandler(
-        CustomMessages.DiagnosticCodes,
-        (e) => {
-            currentDiagnosticCodes = e[0].codes;
-            if (currentDiagnosticCodes !== undefined) {
-                const badCodes = validateConfigDiagnosticCodes(
-                    currentDiagnosticCodes,
-                );
-                if (badCodes !== undefined) {
-                    vscode.window.showErrorMessage(
-                        `${ConfigFilename} has non-existent diagnostic codes in tt3.disabledDiagnostics:\n${badCodes.join(", ")}`,
-                    );
-                }
-            }
-        },
-    );
-    // Get diagnostic codes from the server
-    client.sendNotification(CustomMessages.RequestDiagnosticCodes);
 
     // If our configuration file changes, update configuration
     const configWatcher = vscode.workspace.createFileSystemWatcher(

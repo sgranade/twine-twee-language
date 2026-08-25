@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { DiagnosticCode, diagnosticCodeSet } from "@tt3/shared";
+
 /**
  * Config file name.
  */
@@ -87,21 +89,15 @@ export let currentConfig: Tt3Config = Tt3ConfigSchema.parse({});
  * Update the project's config wholesale.
  *
  * @param newConfig New configuration.
- * @param diagnosticCodes The language server's diagnostic codes, if known.
  * @returns Description of any errors found in the config, or undefined if none.
  */
-export function updateConfig(
-    newConfig: Tt3Config,
-    diagnosticCodes?: string[],
-): string | undefined {
+export function updateConfig(newConfig: Tt3Config): string | undefined {
     const maybeConfig = Tt3ConfigSchema.safeParse(newConfig);
     if (maybeConfig.success) {
         currentConfig = maybeConfig.data;
-        if (diagnosticCodes !== undefined) {
-            const badCodes = validateConfigDiagnosticCodes(diagnosticCodes);
-            if (badCodes !== undefined) {
-                return `Non-existent diagnostic codes: ${badCodes.join(", ")}`;
-            }
+        const badCodes = validateConfigDiagnosticCodes();
+        if (badCodes !== undefined) {
+            return `Non-existent diagnostic codes: ${badCodes.join(", ")}`;
         }
     } else {
         return z.prettifyError(maybeConfig.error);
@@ -112,13 +108,9 @@ export function updateConfig(
  * Update the extension's config from JSON.
  *
  * @param contents JSON contents of the config file.
- * @param diagnosticCodes The language server's diagnostic codes, if known.
  * @returns Description of any errors found in the config, or undefined if none.
  */
-export function updateConfigFromJson(
-    contents: string,
-    diagnosticCodes?: string[],
-): string | undefined {
+export function updateConfigFromJson(contents: string): string | undefined {
     // If contents is blank, turn it into a blank JSON object
     if (!contents) contents = "{}";
 
@@ -128,26 +120,22 @@ export function updateConfigFromJson(
     } catch (e) {
         return `The contents aren't valid JSON: ${(e as Error).message}`;
     }
-    return updateConfig(jsonContents, diagnosticCodes);
+    return updateConfig(jsonContents);
 }
 
 /**
  * Check that the current configuration's diagnostic codes are all real ones.
  *
- * @param diagnosticCodes Diagnostic codes.
  * @returns List of unrecognized diagnostic codes, or undefined if none.
  */
-export function validateConfigDiagnosticCodes(
-    diagnosticCodes: string[],
-): string[] | undefined {
+function validateConfigDiagnosticCodes(): string[] | undefined {
     // TODO When we target es2024 (starting w/VS Code 1.123 2026-06-03), use Set operations
-    const diagnosticCodesSet = new Set(diagnosticCodes);
     const badCodes = currentConfig.tt3.disabledDiagnostics.filter(
-        (c) => !diagnosticCodesSet.has(c),
+        (c) => !diagnosticCodeSet.has(c as DiagnosticCode),
     );
     currentConfig.tt3.disabledDiagnostics =
         currentConfig.tt3.disabledDiagnostics.filter((c) =>
-            diagnosticCodesSet.has(c),
+            diagnosticCodeSet.has(c as DiagnosticCode),
         );
     if (badCodes.length > 0) return badCodes;
 }

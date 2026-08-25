@@ -32,7 +32,6 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 import {
     CustomMessages,
     DecorationRangeInfo,
-    DiagnosticCodeInfo,
     DiagnosticCodes,
     FindFilesRequest,
     FindTweeFilesRequest,
@@ -478,10 +477,6 @@ connection.onNotification(CustomMessages.RequestDecorationRanges, (uri) => {
     sendDecorationRanges(uri);
 });
 
-connection.onNotification(CustomMessages.RequestDiagnosticCodes, () => {
-    sendDiagnosticCodes();
-});
-
 connection.onPrepareRename((params: PrepareRenameParams): Range | undefined => {
     return prepareRename(
         params.textDocument.uri,
@@ -624,21 +619,6 @@ function sendDecorationRanges(uri: string) {
         ranges: generateDecorationRanges(uri, projectIndex),
     };
     connection.sendNotification(CustomMessages.DecorationRanges, rangeInfo);
-}
-
-/**
- * Send decoration ranges for a document.
- *
- * @param uri Document to send decoration ranges for.
- */
-function sendDiagnosticCodes() {
-    const diagnosticCodesInfo: DiagnosticCodeInfo = {
-        codes: Object.values(DiagnosticCodes),
-    };
-    connection.sendNotification(
-        CustomMessages.DiagnosticCodes,
-        diagnosticCodesInfo,
-    );
 }
 
 /**

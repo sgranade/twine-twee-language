@@ -8,8 +8,6 @@ export enum CustomMessages {
     RequestReindex = "twee3/requestReindex",
     IndexingStarted = "twee3/indexingStarted",
     IndexingComplete = "twee3/indexingComplete",
-    RequestDiagnosticCodes = "twee3/requestDiagnosticCodes",
-    DiagnosticCodes = "twee3/diagnosticCodes",
     RequestDecorationRanges = "twee3/requestDecorationRanges",
     DecorationRanges = "twee3/decorationRanges",
     UpdatedStoryFormat = "twee3/storyformat",
