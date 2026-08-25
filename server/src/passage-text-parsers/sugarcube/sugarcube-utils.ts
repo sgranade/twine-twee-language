@@ -1,4 +1,5 @@
-import { createDiagnosticFromRange, DiagnosticCodes } from "../../diagnostics";
+import { DiagnosticCodes } from "@tt3/shared";
+import { createDiagnosticFromRange } from "../../diagnostics";
 import { TokenizedJS } from "../../js-parser";
 import { logDiagnosticFor, logRawDiagnostic, ParsingState } from "../../parser";
 import { positionInRange } from "../../utilities";

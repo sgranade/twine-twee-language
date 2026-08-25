@@ -3,13 +3,9 @@ import * as acornWalk from "acorn-walk";
 import { Range } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
+import { DecorationType, DiagnosticCodes } from "@tt3/shared";
 import { improveAcornErrorMessage } from "../../acorn-errors";
-import { DecorationType } from "../../client-server";
-import {
-    createDiagnosticFor,
-    DiagnosticCodes,
-    TwineDiagnostic,
-} from "../../diagnostics";
+import { createDiagnosticFor, TwineDiagnostic } from "../../diagnostics";
 import { EmbeddedDocument } from "../../embedded-languages";
 import {
     parseJSStrict,

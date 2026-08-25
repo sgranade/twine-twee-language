@@ -10,7 +10,7 @@ import {
 } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
-import { diagnosticCodeSet } from "./diagnostics";
+import { diagnosticCodeSet } from "@tt3/shared";
 import {
     EmbeddedDocument,
     doComplete,

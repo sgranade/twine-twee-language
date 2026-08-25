@@ -3,7 +3,7 @@
  * as well as Twee3-Language-Tools's `arguments.ts`
  */
 
-import { DiagnosticCodes } from "../../../diagnostics";
+import { DiagnosticCodes } from "@tt3/shared";
 import {
     logDiagnosticFor,
     parsePassageReference,

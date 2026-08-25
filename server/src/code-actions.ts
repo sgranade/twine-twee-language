@@ -6,12 +6,9 @@ import {
     TextEdit,
 } from "vscode-languageserver";
 
+import { DisableDiagnosticTag, isDiagnosticCode } from "@tt3/shared";
 import { Label, Passage } from "./project-index";
-import {
-    DisableDiagnosticTag,
-    isDiagnosticCode,
-    TwineDiagnostic,
-} from "./diagnostics";
+import { TwineDiagnostic } from "./diagnostics";
 
 /**
  * Generate a position at the end of a label.

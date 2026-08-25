@@ -1,13 +1,13 @@
 import { Diagnostic, Range } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
-import { DecorationRange } from "./client-server";
 import {
-    createDiagnosticFromRange,
+    DecorationRange,
     DiagnosticCode,
     DiagnosticCodes,
     DiagnosticMap,
-} from "./diagnostics";
+} from "@tt3/shared";
+import { createDiagnosticFromRange } from "./diagnostics";
 import { EmbeddedDocument } from "./embedded-languages";
 import { ParseLevel, ParserCallbacks, parse } from "./parser";
 import { getStoryFormatParser } from "./passage-text-parsers";

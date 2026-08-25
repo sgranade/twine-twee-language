@@ -9,14 +9,6 @@ import {
     URI,
 } from "vscode-languageclient/node";
 
-import { clearAnnotationOnChangeEvent } from "./annotations";
-import {
-    build,
-    downloadLocalStoryFormatIfNeeded,
-    buildProjectDirectoriesIfNeeded,
-    getBuildAndStoryUris,
-    getFilesFromSources,
-} from "./build-system";
 import {
     createSC2CloseContainerMacroPattern,
     createSC2OpenContainerMacroPattern,
@@ -26,7 +18,15 @@ import {
     ReadFileRequest,
     SC2MacroInfo,
     StoryFormat,
-} from "./client-server";
+} from "@tt3/shared";
+import { clearAnnotationOnChangeEvent } from "./annotations";
+import {
+    build,
+    downloadLocalStoryFormatIfNeeded,
+    buildProjectDirectoriesIfNeeded,
+    getBuildAndStoryUris,
+    getFilesFromSources,
+} from "./build-system";
 import {
     ConfigFilename,
     currentConfig,

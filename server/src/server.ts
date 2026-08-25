@@ -33,14 +33,15 @@ import {
     CustomMessages,
     DecorationRangeInfo,
     DiagnosticCodeInfo,
+    DiagnosticCodes,
     FindFilesRequest,
     FindTweeFilesRequest,
     ReadFileRequest,
     StoryFormat,
-} from "./client-server";
+} from "@tt3/shared";
 import { generateCompletions } from "./completions";
 import { getDefinitionAt } from "./definition";
-import { createDiagnosticFromRange, DiagnosticCodes } from "./diagnostics";
+import { createDiagnosticFromRange } from "./diagnostics";
 import { generateHover } from "./hover";
 import { updateProjectIndex } from "./indexer";
 import { ParseLevel } from "./parser";

@@ -5,7 +5,7 @@ import { ImportMock } from "ts-mock-imports";
 import JSZip from "jszip";
 import { URI } from "vscode-uri";
 
-import { StoryFormat } from "../client-server";
+import { StoryFormat } from "@tt3/shared";
 import { buildWorkspaceProvider } from "./builders";
 
 import * as uut from "../manage-storyformats";

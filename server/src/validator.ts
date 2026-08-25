@@ -4,11 +4,8 @@ import {
 } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
-import {
-    createDiagnosticFromRange,
-    DiagnosticCode,
-    DiagnosticCodes,
-} from "./diagnostics";
+import { DiagnosticCode, DiagnosticCodes } from "@tt3/shared";
+import { createDiagnosticFromRange } from "./diagnostics";
 import { doValidation } from "./embedded-languages";
 import { getStoryFormatParser } from "./passage-text-parsers";
 import { ProjectIndex, References, TwineSymbolKind } from "./project-index";

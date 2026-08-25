@@ -4,8 +4,7 @@ import { expect } from "chai";
 import { Range, Position, Location } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
-import { StoryFormat } from "../client-server";
-import { DiagnosticCodes } from "../diagnostics";
+import { DiagnosticCodes, StoryFormat } from "@tt3/shared";
 import { StoryFormatParser } from "../passage-text-parsers";
 import { TwineSymbolKind } from "../project-index";
 import { ETokenType } from "../semantic-tokens";

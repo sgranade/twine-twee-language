@@ -1,4 +1,4 @@
-import { StoryFormat } from "../client-server";
+import { StoryFormat } from "@tt3/shared";
 
 /**
  * A Twine story.

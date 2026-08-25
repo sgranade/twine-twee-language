@@ -1,7 +1,8 @@
 import { Range } from "vscode-languageserver";
 
+import { DiagnosticCodes } from "@tt3/shared";
 import { capturePreSemanticTokenFor, StoryFormatParsingState } from "..";
-import { createDiagnosticFromRange, DiagnosticCodes } from "../../diagnostics";
+import { createDiagnosticFromRange } from "../../diagnostics";
 import { EmbeddedDocument } from "../../embedded-languages";
 import { tokenizeJavaScript } from "../../js-parser";
 import {

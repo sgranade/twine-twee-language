@@ -11,13 +11,13 @@ import {
 } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
+import { diagnosticCodeSet, DisableDiagnosticTag } from "@tt3/shared";
 import { Index } from "../project-index";
 import { buildPassage, buildTag } from "./builders";
 import * as ptpModule from "../passage-text-parsers";
 import * as embeddedLanguagesModule from "../embedded-languages";
 
 import * as uut from "../completions";
-import { diagnosticCodeSet, DisableDiagnosticTag } from "../diagnostics";
 
 describe("Completions", () => {
     describe("Embedded Documents", () => {

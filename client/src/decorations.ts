@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 
-import { DecorationRange, DecorationType } from "./client-server";
+import { DecorationRange, DecorationType } from "@tt3/shared";
 
 /**
  * Text decorations for each decoration type.

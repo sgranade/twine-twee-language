@@ -1,8 +1,8 @@
 import * as vscode from "vscode";
 import { URI, Utils as UriUtils } from "vscode-uri";
 
+import { StoryFormat } from "@tt3/shared";
 import { addTrailingAnnotation } from "./annotations";
-import { StoryFormat } from "./client-server";
 import { currentConfig } from "./config";
 import { Configuration, CustomWhenContext } from "./constants";
 import {
@@ -538,7 +538,7 @@ export async function build(
             cachedStoryFormat === undefined ||
             story.storyData?.storyFormat?.format !==
                 cachedStoryFormat.format.format ||
-            story.storyData.storyFormat.formatVersion !==
+            story.storyData?.storyFormat?.formatVersion !==
                 cachedStoryFormat.format.formatVersion
         ) {
             const maybeStoryFormatData =

@@ -1,4 +1,4 @@
-import { DiagnosticCodes } from "../../../diagnostics";
+import { DiagnosticCodes } from "@tt3/shared";
 import { logDiagnosticFor } from "../../../parser";
 import { ArgumentRequirement, ValueType } from "../types";
 import { InsertInfo } from "./types";

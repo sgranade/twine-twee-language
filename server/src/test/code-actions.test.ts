@@ -8,7 +8,7 @@ import {
     TextEdit,
 } from "vscode-languageserver";
 
-import { DiagnosticCodes, DisableDiagnosticTag } from "../diagnostics";
+import { DiagnosticCodes, DisableDiagnosticTag } from "@tt3/shared";
 import { buildPassage, buildTag } from "./builders";
 
 import * as uut from "../code-actions";

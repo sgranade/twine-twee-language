@@ -48,7 +48,7 @@
                     "description": "Path (relative to the project's root) to write the story file to. If omitted, defaults to 'build'.",
                     "type": "string",
                     "pattern": "^(?!\\/)(?![A-Za-z]:[\\\\/])(?!https?:\\/\\/).+",
-                    "markdownDescription": "Path (relative to the project's root) to write the story file to. If omitted, defaults to `build`."
+                    "markdownDescription": "Optional path (relative to the project's root) to write the story file to. If omitted, defaults to `build`."
                 },
                 "outputFilename": {
                     "description": "Name for the story file. If omitted, defaults to the game's filename from the StoryTitle passage, with spaces replaced by hyphens.",

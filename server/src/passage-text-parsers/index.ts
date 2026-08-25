@@ -10,7 +10,7 @@ import {
 } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
-import { StoryFormat } from "../client-server";
+import { StoryFormat } from "@tt3/shared";
 import { EmbeddedDocument } from "../embedded-languages";
 import { ParsingState } from "../parser";
 import { ProjectIndex } from "../project-index";

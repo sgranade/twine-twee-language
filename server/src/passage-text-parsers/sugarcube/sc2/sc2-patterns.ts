@@ -5,11 +5,7 @@
  * to do some client-side parsing.
  */
 
-import {
-    sc2MacroBody,
-    sc2MacroEnd,
-    sc2MacroSelfClose,
-} from "../../../client-server";
+import { sc2MacroBody, sc2MacroEnd, sc2MacroSelfClose } from "@tt3/shared";
 
 /**
  * \s character class without a line terminator.

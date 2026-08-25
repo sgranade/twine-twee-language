@@ -2,7 +2,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
 
-import { DiagnosticCodes } from "../server/src/diagnostics";
+import { DiagnosticCodes } from "@tt3/shared";
 import { Tt3ConfigSchema } from "../client/src/config";
 
 const outputPath = path.resolve("schema", "tt3.config.schema.json");

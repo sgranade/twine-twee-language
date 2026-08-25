@@ -1,0 +1,10 @@
+{
+    "name": "@tt3/shared",
+    "version": "0.0.0",
+    "private": true,
+    "main": "src/index.ts",
+    "types": "src/index.ts",
+    "dependencies": {
+        "vscode-languageserver-protocol": "^3.17.0"
+    }
+}

@@ -4,7 +4,8 @@ import {
     Range,
 } from "vscode-languageserver";
 
-import { createDiagnosticFor, DiagnosticCodes } from "../../../diagnostics";
+import { DiagnosticCodes } from "@tt3/shared";
+import { createDiagnosticFor } from "../../../diagnostics";
 import { TokenizedJS } from "../../../js-parser";
 import { logDiagnosticFor, logRawDiagnostic } from "../../../parser";
 import { skipSpaces } from "../../../utilities";

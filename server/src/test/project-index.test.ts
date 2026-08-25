@@ -3,7 +3,7 @@ import "mocha";
 import { Diagnostic, Location, Position, Range } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
-import { DiagnosticCodes } from "../diagnostics";
+import { DiagnosticCodes } from "@tt3/shared";
 import { EmbeddedDocument } from "../embedded-languages";
 import { SemanticToken } from "../semantic-tokens";
 

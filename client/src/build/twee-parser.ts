@@ -1,4 +1,4 @@
-import { StoryFormat } from "../client-server";
+import { StoryFormat } from "@tt3/shared";
 import { PassageMetadata, Passage, Story, StoryData } from "./types";
 
 export class TweeParseError extends Error {

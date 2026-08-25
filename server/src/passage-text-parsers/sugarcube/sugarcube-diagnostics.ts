@@ -4,7 +4,8 @@ import {
 } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
-import { createDiagnosticFromRange, DiagnosticCodes } from "../../diagnostics";
+import { DiagnosticCodes } from "@tt3/shared";
+import { createDiagnosticFromRange } from "../../diagnostics";
 import { isBuiltinJSObjectInstanceProperty } from "../../js-parser";
 import { ProjectIndex } from "../../project-index";
 import { referencesToDiagnostics } from "../../validator";

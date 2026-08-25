@@ -1,13 +1,16 @@
 import { Diagnostic, Location, Range } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
-import { DecorationRange, StoryFormat } from "./client-server";
+import {
+    DecorationRange,
+    DiagnosticCode,
+    DiagnosticCodes,
+    StoryFormat,
+} from "@tt3/shared";
 import {
     createDiagnostic,
     createDiagnosticFor,
     createDiagnosticFromRange,
-    DiagnosticCode,
-    DiagnosticCodes,
     disabledDiagnosticsFromPassageTagLabels,
     TwineDiagnostic,
 } from "./diagnostics";

@@ -1,5 +1,5 @@
 {
-    "name": "twine-twee-language",
+    "name": "@tt3/client",
     "description": "Twine (Twee 3) language client",
     "author": "Stephen Granade",
     "license": "MIT",
@@ -14,11 +14,12 @@
     },
     "dependencies": {
         "jszip": "^3.10.1",
-        "vscode-languageclient": "^9.0.1",
+        "vscode-languageclient": "^10.1.0",
         "vscode-uri": "^3.0.8",
         "zod": "^4.4.3"
     },
     "devDependencies": {
+        "@types/node": "^20.19.43",
         "@types/vscode": "^1.90.0"
     }
 }

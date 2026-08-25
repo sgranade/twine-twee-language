@@ -1,7 +1,6 @@
 import "mocha";
 import { expect } from "chai";
 
-import { StoryFormat } from "../../client-server";
 import { CLIENT_VERSION } from "../../version";
 import { Passage, Story, StoryData } from "../../build/types";
 
@@ -39,14 +38,6 @@ function buildStoryData({
         tagColors: tagColors,
         zoom: zoom,
     };
-}
-
-function buildStoryFormat({
-    format = "MyFormat",
-    formatVersion = "1.2.3",
-    content = '{"source": "{{STORY_DATA}}"}',
-}): [StoryFormat, Buffer] {
-    return [{ format, formatVersion }, Buffer.from(content)];
 }
 
 describe("Story Output", () => {
@@ -99,7 +90,7 @@ describe("Story Output", () => {
 
         const html = uut.compileStory(story, storyFormatData, {});
         const m = /<style (.*?)<\/style>/s.exec(html);
-        const result = m[1];
+        const result = m?.[1];
 
         expect(result).to.equal(
             'role="stylesheet" id="twine-user-stylesheet" type="text/twine-css">',
@@ -119,7 +110,7 @@ describe("Story Output", () => {
 
         const html = uut.compileStory(story, storyFormatData, {});
         const m = /<style.*?>(.*?)<\/style>/s.exec(html);
-        const result = m[1];
+        const result = m?.[1];
 
         expect(result).to.equal(
             '/* twine-user-stylesheet #1: "Stylish" */\nstylin\'',
@@ -144,7 +135,7 @@ describe("Story Output", () => {
 
         const html = uut.compileStory(story, storyFormatData, {});
         const m = /<style.*?>(.*?)<\/style>/s.exec(html);
-        const result = m[1];
+        const result = m?.[1];
 
         expect(result).to.equal(
             '/* twine-user-stylesheet #1: "Stylish" */\nstylin\'\n' +
@@ -172,7 +163,7 @@ describe("Story Output", () => {
 
         const html = uut.compileStory(story, storyFormatData, {});
         const m = /<style.*?>(.*?)<\/style>/s.exec(html);
-        const result = m[1];
+        const result = m?.[1];
 
         expect(result).to.equal(
             '/* twine-user-stylesheet #1: "Style 2" */\nso stylish',
@@ -186,7 +177,7 @@ describe("Story Output", () => {
 
         const html = uut.compileStory(story, storyFormatData, {});
         const m = /<script (.*?)<\/script>/s.exec(html);
-        const result = m[1];
+        const result = m?.[1];
 
         expect(result).to.equal(
             'role="script" id="twine-user-script" type="text/twine-javascript">',
@@ -206,7 +197,7 @@ describe("Story Output", () => {
 
         const html = uut.compileStory(story, storyFormatData, {});
         const m = /<script.*?>(.*?)<\/script>/s.exec(html);
-        const result = m[1];
+        const result = m?.[1];
 
         expect(result).to.equal(
             '/* twine-user-script #1: "Scripty" */\nscriptin\'',
@@ -231,7 +222,7 @@ describe("Story Output", () => {
 
         const html = uut.compileStory(story, storyFormatData, {});
         const m = /<script.*?>(.*?)<\/script>/s.exec(html);
-        const result = m[1];
+        const result = m?.[1];
 
         expect(result).to.equal(
             '/* twine-user-script #1: "Scripty" */\nscriptin\'\n' +
@@ -259,7 +250,7 @@ describe("Story Output", () => {
 
         const html = uut.compileStory(story, storyFormatData, {});
         const m = /<script.*?>(.*?)<\/script>/s.exec(html);
-        const result = m[1];
+        const result = m?.[1];
 
         expect(result).to.equal(
             '/* twine-user-script #1: "Script 2" */\nso scriptish',
@@ -268,7 +259,7 @@ describe("Story Output", () => {
 
     it("should not include a tw-tag element if there are no tag colors", () => {
         const story = buildStory({});
-        story.storyData.tagColors = undefined;
+        if (story.storyData) story.storyData.tagColors = undefined;
         const storyFormatData = '{"source": "{{STORY_DATA}}"}';
 
         const result = uut.compileStory(story, storyFormatData, {});
@@ -278,10 +269,11 @@ describe("Story Output", () => {
 
     it("should include a tw-tag element for each tag color", () => {
         const story = buildStory({});
-        story.storyData.tagColors = {
-            ex1: "chartreuse",
-            another: "ochre",
-        };
+        if (story.storyData)
+            story.storyData.tagColors = {
+                ex1: "chartreuse",
+                another: "ochre",
+            };
         const storyFormatData = '{"source": "{{STORY_DATA}}"}';
 
         const html = uut.compileStory(story, storyFormatData, {});

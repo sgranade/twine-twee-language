@@ -1,8 +1,7 @@
 import { Diagnostic, Range } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
-import { DecorationRange } from "../client-server";
-import { DiagnosticCode, DiagnosticMap } from "../diagnostics";
+import { DecorationRange, DiagnosticCode, DiagnosticMap } from "@tt3/shared";
 import { EmbeddedDocument } from "../embedded-languages";
 import { ParseLevel, ParserCallbacks, ParsingState } from "../parser";
 import { Label, Passage, ProjSymbol, StoryData } from "../project-index";

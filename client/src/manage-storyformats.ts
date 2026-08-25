@@ -1,7 +1,7 @@
 import JSZip from "jszip";
 import { URI, Utils } from "vscode-uri";
 
-import { StoryFormat } from "./client-server";
+import { StoryFormat } from "@tt3/shared";
 import { currentConfig } from "./config";
 import { WorkspaceProvider } from "./workspace-provider";
 

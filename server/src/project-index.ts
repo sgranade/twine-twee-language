@@ -1,12 +1,13 @@
 import { Diagnostic, Location, Position, Range } from "vscode-languageserver";
 
-import { DecorationRange, StoryFormat } from "./client-server";
 import {
+    DecorationRange,
     DiagnosticCode,
     DiagnosticMap,
     DisableDiagnosticTag,
-    TwineDiagnostic,
-} from "./diagnostics";
+    StoryFormat,
+} from "@tt3/shared";
+import { TwineDiagnostic } from "./diagnostics";
 import { EmbeddedDocument } from "./embedded-languages";
 import { SemanticToken } from "./semantic-tokens";
 import { positionInRange, rangeInRange } from "./utilities";

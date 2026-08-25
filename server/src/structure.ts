@@ -6,8 +6,8 @@ import {
     SymbolKind,
 } from "vscode-languageserver";
 
+import { DecorationRange } from "@tt3/shared";
 import { ProjectIndex } from "./project-index";
-import { DecorationRange } from "./client-server";
 
 /**
  * Generate symbols for a document.

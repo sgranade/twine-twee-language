@@ -1,7 +1,5 @@
-import {
-    createDiagnosticFromRange,
-    DiagnosticCodes,
-} from "../../../diagnostics";
+import { DiagnosticCodes } from "@tt3/shared";
+import { createDiagnosticFromRange } from "../../../diagnostics";
 import { createLocationFor, logRawDiagnostic } from "../../../parser";
 import { ETokenModifier, ETokenType } from "../../../semantic-tokens";
 import { capturePreSemanticTokenFor } from "../..";

@@ -1,6 +1,6 @@
 import { URI } from "vscode-uri";
 
-import { WorkspaceProvider } from "../workspace-provider";
+import { WorkspaceProvider, FileType } from "../workspace-provider";
 
 export function buildWorkspaceProvider({
     files = ["/"],
@@ -19,6 +19,14 @@ export function buildWorkspaceProvider({
             readFile: async () => Buffer.from(fileContents),
             writeFile: async () => {},
             copy: async () => {},
+            stat: async () => {
+                return {
+                    type: FileType.File,
+                    ctime: 0,
+                    mtime: 0,
+                    size: 0,
+                };
+            },
         },
     };
 }

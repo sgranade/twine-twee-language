@@ -3,7 +3,7 @@ import "mocha";
 import { Diagnostic, Location, Range } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
-import { DiagnosticCodes } from "../diagnostics";
+import { DiagnosticCodes } from "@tt3/shared";
 import { EmbeddedDocument } from "../embedded-languages";
 import { Index, TwineSymbolKind } from "../project-index";
 

@@ -8,7 +8,7 @@ import {
 } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
-import { DiagnosticCodes } from "../../../diagnostics";
+import { DiagnosticCodes } from "@tt3/shared";
 import { Index } from "../../../project-index";
 import {
     ChapbookSymbol,

@@ -8,8 +8,7 @@ import {
 } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
-import { DecorationType } from "../client-server";
-import { DiagnosticCodes } from "../diagnostics";
+import { DecorationType, DiagnosticCodes } from "@tt3/shared";
 import { ParseLevel, ParsingState } from "../parser";
 import { Index } from "../project-index";
 

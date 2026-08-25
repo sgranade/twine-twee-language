@@ -2,10 +2,10 @@ import "mocha";
 import { expect } from "chai";
 import { DiagnosticSeverity, Location, Range } from "vscode-languageserver";
 
+import { DecorationType } from "@tt3/shared";
 import { buildInsertInfo } from "./inserts/insert-builders";
 import { buildModifierInfo } from "./modifiers/modifier-builders";
 import { MockCallbacks, buildParsingState, buildPassage } from "../../builders";
-import { DecorationType } from "../../../client-server";
 import { ParseLevel } from "../../../parser";
 import { TwineSymbolKind } from "../../../project-index";
 import { ETokenModifier, ETokenType } from "../../../semantic-tokens";
