@@ -285,7 +285,7 @@
         "watch:esbuild": "npm run prebuild && node esbuild.jsx --watch",
         "watch:tsc": "tsc -b --noEmit --watch",
         "package": "npm-run-all2 check-types prebuild \"esbuild -- --production\"",
-        "test": "cross-env TS_NODE_PROJECT=tsconfig.test.json nyc mocha",
+        "test": "cross-env nyc mocha --import=tsx",
         "coverage": "nyc report --reporter=text-lcov > coverage.lcov",
         "lint": "eslint ./client/src ./server/src ./shared/src"
     },

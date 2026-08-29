@@ -83,7 +83,7 @@ type Tt3Config = z.infer<typeof Tt3ConfigSchema>;
 /**
  * Current TT3 project configuration.
  */
-export let currentConfig: Tt3Config = Tt3ConfigSchema.parse({});
+export let currentConfig: Readonly<Tt3Config> = Tt3ConfigSchema.parse({});
 
 /**
  * Update the project's config wholesale.

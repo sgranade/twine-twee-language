@@ -90,7 +90,9 @@ export type DiagnosticMap<T> = Partial<Record<DiagnosticCode, T>>;
 export const DisableDiagnosticTag = "tt3-disable";
 
 // A set of the codes for quick lookup
-export const diagnosticCodeSet = new Set(Object.values(DiagnosticCodes));
+export const diagnosticCodeSet: ReadonlySet<DiagnosticCode> = new Set(
+    Object.values(DiagnosticCodes),
+);
 
 /**
  * Does a string correspond to a diagnostic code?

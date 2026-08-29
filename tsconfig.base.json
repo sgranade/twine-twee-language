@@ -1,7 +1,7 @@
 // tsconfig.base.json (new, at repo root)
 {
     "compilerOptions": {
-        "module": "commonjs",
+        "module": "nodenext",
         "target": "es2024",
         "lib": ["es2024"],
         "sourceMap": true,

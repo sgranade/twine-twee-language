@@ -755,7 +755,6 @@ describe("Completions", () => {
             ];
             const index = new Index();
             index.setPassages("fake-uri", [passage1]);
-            diagnosticCodeSet.delete("missing-passage");
 
             const results = await uut.generateCompletions(
                 doc,
@@ -764,9 +763,9 @@ describe("Completions", () => {
                 true,
             );
 
-            expect(results?.items.map((i) => i.label)).to.eql([
-                ...diagnosticCodeSet,
-            ]);
+            expect(results?.items.map((i) => i.label)).to.eql(
+                [...diagnosticCodeSet].filter((c) => c !== "missing-passage"),
+            );
             expect(results?.itemDefaults?.editRange).to.eql(
                 Range.create(0, 38, 0, 38),
             );
