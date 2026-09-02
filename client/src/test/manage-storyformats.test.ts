@@ -9,7 +9,7 @@ import { StoryFormat } from "@tt3/shared";
 import { buildWorkspaceProvider } from "./builders";
 
 import * as uut from "../manage-storyformats";
-import { updateConfig } from "../config";
+import { updateConfig, updateConfigFromJson } from "../config";
 
 describe("Manage Story Formats", () => {
     describe("Cache Story Formats", () => {
@@ -85,6 +85,7 @@ describe("Manage Story Formats", () => {
 
             await uut.cacheStoryFormat(storyFormat, provider);
             const result = uut.cachedStoryFormat;
+            updateConfigFromJson(""); // reset
 
             expect(result).to.eql({
                 format: {
@@ -166,6 +167,7 @@ describe("Manage Story Formats", () => {
             });
 
             const result = uut.workspacePathToWriteStoryFormatTo(storyFormat);
+            updateConfigFromJson(""); // reset
 
             expect(result).to.match(/^meep\//);
         });
@@ -186,6 +188,7 @@ describe("Manage Story Formats", () => {
             });
 
             const result = uut.workspacePathToWriteStoryFormatTo(storyFormat);
+            updateConfigFromJson(""); // reset
 
             expect(result).to.equal("meep/chapbook-2-1-3/format.js");
         });
@@ -206,6 +209,7 @@ describe("Manage Story Formats", () => {
             });
 
             const result = uut.workspacePathToWriteStoryFormatTo(storyFormat);
+            updateConfigFromJson(""); // reset
 
             expect(result).to.equal("meep/chapbook-2-1-3/format.js");
         });
@@ -246,6 +250,7 @@ describe("Manage Story Formats", () => {
                 storyFormat,
                 provider,
             );
+            updateConfigFromJson(""); // reset
 
             expect(result).to.equal("I'm a story format!");
         });
@@ -284,6 +289,7 @@ describe("Manage Story Formats", () => {
                 storyFormat,
                 provider,
             );
+            updateConfigFromJson(""); // reset
 
             expect(result).to.equal("I'm a story format!");
         });
@@ -350,6 +356,7 @@ describe("Manage Story Formats", () => {
                 storyFormat,
                 provider,
             );
+            updateConfigFromJson(""); // reset
 
             expect(result).to.eql(URI.parse("mock-chapbook-uri"));
         });

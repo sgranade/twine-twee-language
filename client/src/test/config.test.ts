@@ -11,6 +11,33 @@ describe("TT3 Config From JSON", () => {
 
         const result = uut.currentConfig;
 
+        // TODO DEBUG
+        expect(result.build.storySourceFiles).to.eql([
+            "src/**/*.{tw,twee}",
+            "src/**/*.css",
+            "src/**/*.js",
+            "src/**/*.{otf,ttf,woff,woff2}",
+            "src/**/*.{gif,jpeg,jpg,png,svg,tif,tiff,webp}",
+            "src/**/*.{aac,flac,m4a,mp3,oga,ogg,opus,wav,wave,weba}",
+            "src/**/*.{mp4,ogb,webm}",
+            "src/**/*.vtt",
+        ]);
+        expect(result.build).to.eql({
+            storySourceFiles: [
+                "src/**/*.{tw,twee}",
+                "src/**/*.css",
+                "src/**/*.js",
+                "src/**/*.{otf,ttf,woff,woff2}",
+                "src/**/*.{gif,jpeg,jpg,png,svg,tif,tiff,webp}",
+                "src/**/*.{aac,flac,m4a,mp3,oga,ogg,opus,wav,wave,weba}",
+                "src/**/*.{mp4,ogb,webm}",
+                "src/**/*.vtt",
+            ],
+            includeSourcePaths: ["include"],
+            outputPath: "build",
+            storyFormatPaths: [".storyformats"],
+        });
+        // TODO END DEBUG
         expect(result).to.eql({
             build: {
                 storySourceFiles: [
@@ -65,6 +92,7 @@ describe("TT3 Config From JSON", () => {
             '{"build": {"storySourceFiles": ["meep"]}}',
         );
         const result = uut.currentConfig;
+        uut.updateConfigFromJson("");
 
         expect(ret).to.be.undefined;
         expect(result.build.storySourceFiles).to.eql(["meep"]);
@@ -77,6 +105,7 @@ describe("TT3 Config From JSON", () => {
             '{"build": {"includeSourcePaths": ["meep"]}}',
         );
         const result = uut.currentConfig;
+        uut.updateConfigFromJson("");
 
         expect(ret).to.be.undefined;
         expect(result.build.includeSourcePaths).to.eql(["meep"]);
@@ -89,6 +118,7 @@ describe("TT3 Config From JSON", () => {
             '{"build": {"ignores": ["meep"]}}',
         );
         const result = uut.currentConfig;
+        uut.updateConfigFromJson("");
 
         expect(ret).to.be.undefined;
         expect(result.build.ignores).to.eql(["meep"]);
@@ -101,6 +131,7 @@ describe("TT3 Config From JSON", () => {
             '{"build": {"outputPath": "meep"}}',
         );
         const result = uut.currentConfig;
+        uut.updateConfigFromJson("");
 
         expect(ret).to.be.undefined;
         expect(result.build.outputPath).to.eql("meep");
@@ -113,6 +144,7 @@ describe("TT3 Config From JSON", () => {
             '{"build": {"outputFilename": "meep"}}',
         );
         const result = uut.currentConfig;
+        uut.updateConfigFromJson("");
 
         expect(ret).to.be.undefined;
         expect(result.build.outputFilename).to.eql("meep");
@@ -125,6 +157,7 @@ describe("TT3 Config From JSON", () => {
             '{"build": {"storyFormatPaths": ["meep"]}}',
         );
         const result = uut.currentConfig;
+        uut.updateConfigFromJson("");
 
         expect(ret).to.be.undefined;
         expect(result.build.storyFormatPaths).to.eql(["meep"]);
@@ -137,6 +170,7 @@ describe("TT3 Config From JSON", () => {
             '{"build": {"startPassage": "meep"}}',
         );
         const result = uut.currentConfig;
+        uut.updateConfigFromJson("");
 
         expect(ret).to.be.undefined;
         expect(result.build.startPassage).to.eql("meep");
@@ -149,6 +183,7 @@ describe("TT3 Config From JSON", () => {
             `{"tt3": {"disabledDiagnostics": ["${DiagnosticCodes.ChapbookMissingColon}"]}}`,
         );
         const result = uut.currentConfig;
+        uut.updateConfigFromJson("");
 
         expect(ret).to.be.undefined;
         expect(result.tt3.disabledDiagnostics).to.eql([
@@ -163,6 +198,7 @@ describe("TT3 Config From JSON", () => {
             `{"tt3": {"disabledDiagnostics": ["meep", "${DiagnosticCodes.ChapbookMissingColon}"]}}`,
         );
         const result = uut.currentConfig;
+        uut.updateConfigFromJson("");
 
         expect(result.tt3.disabledDiagnostics).to.eql([
             DiagnosticCodes.ChapbookMissingColon,
@@ -175,6 +211,7 @@ describe("TT3 Config From JSON", () => {
         const result = uut.updateConfigFromJson(
             '{"tt3": {"disabledDiagnostics": ["meep", "meep-meep"]}}',
         );
+        uut.updateConfigFromJson("");
 
         expect(result).to.contain("meep");
     });
