@@ -26,12 +26,14 @@ async function main() {
 
     if (watch) {
         await ctx.watch();
+        await fs.mkdir("dist/client/src", { recursive: true });
         await fs.copyFile(
             path.resolve("client/src/media-rewriter.js"),
             path.resolve("dist/client/src/media-rewriter.js"),
         );
     } else {
         await ctx.rebuild();
+        await fs.mkdir("dist/client/src", { recursive: true });
         await fs.copyFile(
             path.resolve("client/src/media-rewriter.js"),
             path.resolve("dist/client/src/media-rewriter.js"),
