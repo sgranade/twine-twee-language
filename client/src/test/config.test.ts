@@ -11,33 +11,6 @@ describe("TT3 Config From JSON", () => {
 
         const result = uut.currentConfig;
 
-        // TODO DEBUG
-        expect(result.build.storySourceFiles).to.eql([
-            "src/**/*.{tw,twee}",
-            "src/**/*.css",
-            "src/**/*.js",
-            "src/**/*.{otf,ttf,woff,woff2}",
-            "src/**/*.{gif,jpeg,jpg,png,svg,tif,tiff,webp}",
-            "src/**/*.{aac,flac,m4a,mp3,oga,ogg,opus,wav,wave,weba}",
-            "src/**/*.{mp4,ogb,webm}",
-            "src/**/*.vtt",
-        ]);
-        expect(result.build).to.eql({
-            storySourceFiles: [
-                "src/**/*.{tw,twee}",
-                "src/**/*.css",
-                "src/**/*.js",
-                "src/**/*.{otf,ttf,woff,woff2}",
-                "src/**/*.{gif,jpeg,jpg,png,svg,tif,tiff,webp}",
-                "src/**/*.{aac,flac,m4a,mp3,oga,ogg,opus,wav,wave,weba}",
-                "src/**/*.{mp4,ogb,webm}",
-                "src/**/*.vtt",
-            ],
-            includeSourcePaths: ["include"],
-            outputPath: "build",
-            storyFormatPaths: [".storyformats"],
-        });
-        // TODO END DEBUG
         expect(result).to.eql({
             build: {
                 storySourceFiles: [

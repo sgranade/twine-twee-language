@@ -75,15 +75,17 @@ export function generateCodeActions(
         } else {
             editText = `,${d.code}`;
         }
-        actions.push(
-            CodeAction.create(
-                `Disable ${d.code} for this passage`,
-                {
-                    changes: { [uri]: [TextEdit.insert(insertPos, editText)] },
-                },
-                CodeActionKind.QuickFix,
-            ),
+
+        const action = CodeAction.create(
+            `Disable ${d.code} for this passage`,
+            {
+                changes: { [uri]: [TextEdit.insert(insertPos, editText)] },
+            },
+            CodeActionKind.QuickFix,
         );
+        // Make this action the preferred one over any client extension's
+        action.isPreferred = true;
+        actions.push(action);
     }
 
     return actions;

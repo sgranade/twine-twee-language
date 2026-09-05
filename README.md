@@ -85,6 +85,13 @@ Whenever you build a new version of your game, the running game updates to inclu
 
 ![Reload Game](https://raw.githubusercontent.com/sgranade/twine-twee-language/main/images/twine-extension-reload-game.png)
 
+## Special Passage Tags
+
+The extension recognizes the following special passage tags:
+
+- `Twine.private`: Omits the passage from being included in your built game.
+- `tt3-disable <diagnostic-code-1>,<diagnostic-code-2>`: Disables errors for the given passage. Error codes are available by hovering over an error. The error also includes a Quick Action to add the tags to the passage.
+
 [Chapbook]: https://klembot.github.io/chapbook/
 [command palette]: https://code.visualstudio.com/docs/getstarted/userinterface#_command-palette
 [configuration file]: docs/configuration-file.md

@@ -68,4 +68,4 @@ Settings for building the story.
 
 Settings for the Twine (Twee 3) extension.
 
-- `disabledDiagnostics`: A list of diagnostic codes to be disabled project-wide.
+- `disabledDiagnostics`: A list of diagnostic codes to be disabled project-wide. Can be populated by using a [Quick Fix action](https://code.visualstudio.com/docs/editing/refactoring#_code-actions-quick-fixes-and-refactorings) on an error in your game.

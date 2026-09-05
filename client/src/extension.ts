@@ -27,6 +27,7 @@ import {
     getBuildAndStoryUris,
     getFilesFromSources,
 } from "./build-system";
+import { DisableDiagnosticCodeActionProvider } from "./code-actions";
 import {
     ConfigFilename,
     currentConfig,
@@ -92,6 +93,27 @@ function registerCommands(context: vscode.ExtensionContext) {
                         true,
                         workspaceProvider,
                     );
+                }
+            },
+        ),
+        vscode.commands.registerCommand(
+            CustomCommands.DisableDiagnosticGlobally,
+            async (diagnosticCode: string) => {
+                const disabledDiagnostics = new Set(
+                    currentConfig.tt3.disabledDiagnostics,
+                );
+                if (!disabledDiagnostics.has(diagnosticCode)) {
+                    const newConfig = {
+                        ...currentConfig,
+                        tt3: {
+                            disabledDiagnostics: [
+                                ...currentConfig.tt3.disabledDiagnostics,
+                                diagnosticCode,
+                            ],
+                        },
+                    };
+                    updateConfig(newConfig);
+                    await writeConfigToFile();
                 }
             },
         ),
@@ -514,6 +536,21 @@ export function startClient(context: vscode.ExtensionContext) {
                 "**/*.twee-config.{json,yaml,yml}",
             ),
         },
+        middleware: {
+            handleDiagnostics(uri, diagnostics, next) {
+                // Strip out any disabled diagnostics
+                const disabledConfigs = new Set(
+                    currentConfig.tt3.disabledDiagnostics,
+                );
+                const filtered = diagnostics.filter((diagnostic) => {
+                    if (typeof diagnostic.code === "string")
+                        return !disabledConfigs.has(diagnostic.code);
+                    return true;
+                });
+
+                next(uri, filtered);
+            },
+        },
     };
 
     // Create the language client
@@ -621,6 +658,21 @@ export function startClient(context: vscode.ExtensionContext) {
                 await workspaceProvider.fs.readFile(vscode.Uri.parse(args.uri)),
             );
         },
+    );
+
+    // Add our code actions
+    context.subscriptions.push(
+        vscode.languages.registerCodeActionsProvider(
+            [
+                { language: "twee3" },
+                { language: "twee3-chapbook-2" },
+                { language: "twee3-sugarcube-2" },
+            ],
+            new DisableDiagnosticCodeActionProvider(),
+            {
+                providedCodeActionKinds: [vscode.CodeActionKind.QuickFix],
+            },
+        ),
     );
 
     // Register our custom commands

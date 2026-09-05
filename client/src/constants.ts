@@ -27,6 +27,7 @@ export enum CustomCommands {
     RunGame = "twineTweeLanguage.runGame",
     ReloadGame = "twineTweeLanguage.reloadGame",
     DownloadStoryFormat = "twineTweeLanguage.downloadStoryFormat",
+    DisableDiagnosticGlobally = "twineTweeLanguage.disableDiagnosticGlobally",
 }
 
 /**

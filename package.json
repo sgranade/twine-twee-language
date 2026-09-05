@@ -285,8 +285,8 @@
         "watch:esbuild": "npm run prebuild && node esbuild.jsx --watch",
         "watch:tsc": "tsc -b --noEmit --watch",
         "package": "npm-run-all2 check-types prebuild \"esbuild -- --production\"",
-        "test": "cross-env nyc mocha --import=tsx",
-        "coverage": "nyc report --reporter=text-lcov > coverage.lcov",
+        "test": "mocha --import=tsx",
+        "coverage": "nyc npm run test && nyc report --reporter=text-lcov > coverage.lcov",
         "lint": "eslint ./client/src ./server/src ./shared/src"
     },
     "devDependencies": {
@@ -296,7 +296,6 @@
         "@types/node": "^20.19.43",
         "@types/sinon": "^21.0.1",
         "chai": "^6.2.2",
-        "cross-env": "^10.1.0",
         "esbuild": "^0.28.0",
         "eslint": "^10.2.0",
         "globals": "^17.5.0",
