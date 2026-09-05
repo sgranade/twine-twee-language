@@ -92,7 +92,7 @@
         "grammars": [
             {
                 "language": "twee3",
-                "scopeName": "source.twee3",
+                "scopeName": "source.tt3",
                 "path": "./syntaxes/twee3.tmLanguage.json",
                 "embeddedLanguages": {
                     "source.json.twee3": "json",
@@ -103,7 +103,7 @@
             },
             {
                 "language": "twee3-chapbook-2",
-                "scopeName": "source.twee3.chapbook-2",
+                "scopeName": "source.tt3.chapbook-2",
                 "path": "./syntaxes/twee3.chapbook-2.tmLanguage.json",
                 "embeddedLanguages": {
                     "source.json.twee3": "json",
@@ -115,7 +115,7 @@
             },
             {
                 "language": "twee3-sugarcube-2",
-                "scopeName": "source.twee3.sugarcube-2",
+                "scopeName": "source.tt3.sugarcube-2",
                 "path": "./syntaxes/twee3.sugarcube-2.tmLanguage.json",
                 "embeddedLanguages": {
                     "source.json.twee3": "json",
