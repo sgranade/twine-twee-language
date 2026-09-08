@@ -1231,8 +1231,8 @@ describe("JS Parser", () => {
                 storyState,
             );
 
-            expect(result.error?.contents).to.equal("'1234");
-            expect(result.error?.at).to.equal(21);
+            expect(result.error?.start).to.equal(21);
+            expect(result.error?.end).to.equal(26);
             expect(result.error?.message).to.equal(
                 "Unterminated string constant",
             );
@@ -1258,8 +1258,8 @@ describe("JS Parser", () => {
                 storyState,
             );
 
-            expect(result.error?.contents).to.equal("'1234\\\n56");
-            expect(result.error?.at).to.equal(21);
+            expect(result.error?.start).to.equal(21);
+            expect(result.error?.end).to.equal(30);
             expect(result.error?.message).to.equal(
                 "Unterminated string constant",
             );
@@ -1285,8 +1285,8 @@ describe("JS Parser", () => {
                 storyState,
             );
 
-            expect(result.error?.contents).to.equal("1234");
-            expect(result.error?.at).to.equal(22);
+            expect(result.error?.start).to.equal(22);
+            expect(result.error?.end).to.equal(26);
             expect(result.error?.message).to.equal("Unterminated template");
         });
 
@@ -1310,8 +1310,8 @@ describe("JS Parser", () => {
                 storyState,
             );
 
-            expect(result.error?.contents).to.equal("{");
-            expect(result.error?.at).to.equal(21);
+            expect(result.error?.start).to.equal(21);
+            expect(result.error?.end).to.equal(22);
             expect(result.error?.message).to.equal(
                 "Opening '{' is missing a matching '}'",
             );
@@ -1337,8 +1337,8 @@ describe("JS Parser", () => {
                 storyState,
             );
 
-            expect(result.error?.contents).to.equal(".");
-            expect(result.error?.at).to.equal(14);
+            expect(result.error?.start).to.equal(14);
+            expect(result.error?.end).to.equal(15);
             expect(result.error?.message).to.equal(
                 "Expected property or method name after '.'",
             );
@@ -1364,8 +1364,8 @@ describe("JS Parser", () => {
                 storyState,
             );
 
-            expect(result.error?.contents).to.equal("?.");
-            expect(result.error?.at).to.equal(22);
+            expect(result.error?.start).to.equal(22);
+            expect(result.error?.end).to.equal(24);
             expect(result.error?.message).to.equal(
                 "Expected property, method, or call after optional chaining operator",
             );
@@ -1391,8 +1391,8 @@ describe("JS Parser", () => {
                 storyState,
             );
 
-            expect(result.error?.contents).to.equal("+");
-            expect(result.error?.at).to.equal(16);
+            expect(result.error?.start).to.equal(16);
+            expect(result.error?.end).to.equal(17);
             expect(result.error?.message).to.equal(
                 "Unexpected token; expression appears incomplete after operator",
             );
@@ -1418,8 +1418,8 @@ describe("JS Parser", () => {
                 storyState,
             );
 
-            expect(result.error?.contents).to.equal(":");
-            expect(result.error?.at).to.equal(26);
+            expect(result.error?.start).to.equal(26);
+            expect(result.error?.end).to.equal(27);
             expect(result.error?.message).to.equal("Expected value after ':'");
         });
 
@@ -1443,8 +1443,8 @@ describe("JS Parser", () => {
                 storyState,
             );
 
-            expect(result.error?.contents).to.equal("f");
-            expect(result.error?.at).to.equal(16);
+            expect(result.error?.start).to.equal(16);
+            expect(result.error?.end).to.equal(17);
             expect(result.error?.message).to.equal(
                 "Unexpected token; expected '('",
             );
@@ -1470,8 +1470,8 @@ describe("JS Parser", () => {
                 storyState,
             );
 
-            expect(result.error?.contents).to.equal("");
-            expect(result.error?.at).to.equal(25);
+            expect(result.error?.start).to.equal(25);
+            expect(result.error?.end).to.equal(25);
             expect(result.error?.message).to.equal(
                 "Unexpected token; expected '{'",
             );

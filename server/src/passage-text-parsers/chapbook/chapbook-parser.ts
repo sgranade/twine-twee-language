@@ -144,10 +144,10 @@ function createVariableAndPropertyReferences(
         });
     }
     if (jsTokens.error) {
-        logDiagnosticFor(
+        logDiagnostic(
             DiagnosticCodes.IncorrectJavaScript,
-            jsTokens.error.contents,
-            jsTokens.error.at,
+            jsTokens.error.start,
+            jsTokens.error.end,
             state,
             jsTokens.error.message,
         );
@@ -775,11 +775,12 @@ function parseCustomInsertOrModifierDefinition(
                         column: number;
                     };
                 },
+                contentsIndex,
             );
-            logDiagnosticFor(
+            logDiagnostic(
                 DiagnosticCodes.IncorrectJavaScript,
-                errMessage.contents,
-                errMessage.at,
+                errMessage.start,
+                errMessage.end,
                 state,
                 errMessage.message,
             );

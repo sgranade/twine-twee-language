@@ -81,13 +81,13 @@ export namespace JSPropertyLabel {
  */
 export interface JSDiagnostic {
     /**
-     * Contents that the diagnostic refers to.
+     * Start index in the document where the diagnostic occurs.
      */
-    contents: string;
+    start: number;
     /**
-     * Index in the document where the diagnostic occurs.
+     * End index in the document where the diagnostic occurs.
      */
-    at: number;
+    end: number;
     message: string;
     severity: DiagnosticSeverity;
 }
@@ -471,8 +471,7 @@ export function annotateVariableScopes(
                 // ...unless it's the LHS of an assignment and we're forcing assignment to be definition
                 if (assignmentIsDefinition) {
                     const parent = ancestors[ancestors.length - 1] as
-                        | acorn.AnyNode
-                        | undefined;
+                        acorn.AnyNode | undefined;
                     if (
                         parent &&
                         parent.type === "AssignmentExpression" &&
@@ -986,11 +985,13 @@ export function parseJSStrict(text: string, isProgram: boolean): acorn.Node {
  *
  * @param text Text to parse as JavaScript.
  * @param isProgram Whether to parse it as a full JS program or a small expression
+ * @param offset Offset into the containing document where the text occurs.
  * @returns Top-most node in the AST, or undefined if the parsing failed.
  */
 export function parseJS(
     text: string,
     isProgram: boolean,
+    offset = 0,
 ): [acorn.Node | undefined, JSDiagnostic | undefined] {
     // Don't do anything if no text is passed (as that would create an error)
     if (!text.trim()) return [undefined, undefined];
@@ -1012,6 +1013,7 @@ export function parseJS(
                         column: number;
                     };
                 },
+                offset,
             ),
             severity: DiagnosticSeverity.Error,
         };
@@ -1072,7 +1074,7 @@ export function tokenizeJavaScript(
         properties: [],
     };
 
-    const [ast, diagnostic] = parseJS(text, isProgram);
+    const [ast, diagnostic] = parseJS(text, isProgram, offset);
     tokenized.error = diagnostic;
     if (ast !== undefined) {
         annotateVariableScopes(ast, !!assignmentIsDefinition);
@@ -1114,9 +1116,6 @@ export function tokenizeJavaScript(
                 storyFormatState,
             );
         }
-    }
-    if (tokenized.error !== undefined) {
-        tokenized.error.at += offset;
     }
 
     return tokenized;
