@@ -5,6 +5,7 @@ import { DiagnosticSeverity } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { improveAcornErrorMessage } from "./acorn-errors";
+import { ParserWithState } from "./acorn-errors/parser-state";
 import { createLocationFor } from "./parser";
 import {
     StoryFormatParsingState,
@@ -955,7 +956,8 @@ function fullAncestorTokenizingCallback(
 /**
  * Parse text as a JavaScript program or expression.
  *
- * This performs strict parsing, and throws SyntaxError if the program doesn't parse correctly.
+ * This performs strict parsing, and throws an augmented SyntaxError if
+ * the program doesn't parse correctly.
  *
  * A program has to have full statements. An expression can be just a snippet.
  *
@@ -964,13 +966,15 @@ function fullAncestorTokenizingCallback(
  * @returns Top-most node in the AST.
  */
 export function parseJSStrict(text: string, isProgram: boolean): acorn.Node {
+    // n.b. we're using ParserWithState so's we get actual useful information
+    // out of any thrown SyntaxError.
     if (isProgram) {
-        return acorn.parse(text, {
+        return ParserWithState.parse(text, {
             ecmaVersion: 2020,
             sourceType: "script",
         });
     } else {
-        return acorn.parseExpressionAt(text, 0, {
+        return ParserWithState.parseExpressionAt(text, 0, {
             ecmaVersion: 2020,
             sourceType: "script",
         });
@@ -1012,6 +1016,7 @@ export function parseJS(
                         line: number;
                         column: number;
                     };
+                    raisedAt?: number;
                 },
                 offset,
             ),

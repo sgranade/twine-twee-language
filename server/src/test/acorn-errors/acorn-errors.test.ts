@@ -2,7 +2,7 @@ import { expect } from "chai";
 import "mocha";
 import * as acorn from "acorn";
 
-import * as uut from "../acorn-errors";
+import * as uut from "../../acorn-errors";
 
 /**
  * One row of the baseline corpus.

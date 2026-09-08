@@ -140,6 +140,7 @@ export function improveAcornErrorMessage(
             line: number;
             column: number;
         };
+        raisedAt?: number;
     },
     offset = 0,
 ): {

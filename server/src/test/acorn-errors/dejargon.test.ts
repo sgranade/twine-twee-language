@@ -1,9 +1,9 @@
 import { expect } from "chai";
 import "mocha";
 
-import * as uut from "../acorn-errors/dejargon";
+import * as uut from "../../acorn-errors/dejargon";
 
-describe("dejargon", () => {
+describe("Acorn Error De-Jargoning", () => {
     it("should leave a message with no matching entry unchanged", () => {
         const message = "Some message Acorn never actually sends";
 
