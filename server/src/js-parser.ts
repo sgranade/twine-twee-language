@@ -15,6 +15,11 @@ import { Label } from "./project-index";
 import { ETokenType, TokenModifier, TokenType } from "./semantic-tokens";
 
 /**
+ * The ECMA version we're going to parse with.
+ */
+export const EcmaVersion: acorn.ecmaVersion = 2020;
+
+/**
  * Conversion from Javascript typeof string to semantic token type.
  */
 const typeofToSemantic: Record<string, TokenType> = {
@@ -970,12 +975,12 @@ export function parseJSStrict(text: string, isProgram: boolean): acorn.Node {
     // out of any thrown SyntaxError.
     if (isProgram) {
         return ParserWithState.parse(text, {
-            ecmaVersion: 2020,
+            ecmaVersion: EcmaVersion,
             sourceType: "script",
         });
     } else {
         return ParserWithState.parseExpressionAt(text, 0, {
-            ecmaVersion: 2020,
+            ecmaVersion: EcmaVersion,
             sourceType: "script",
         });
     }
@@ -1027,7 +1032,7 @@ export function parseJS(
     // Finally try whatever parsing we can get away with
     return [
         acornLoose.parse(text, {
-            ecmaVersion: 2020,
+            ecmaVersion: EcmaVersion,
         }),
         diagnostic,
     ];
