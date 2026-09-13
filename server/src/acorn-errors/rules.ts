@@ -292,6 +292,25 @@ export const rules: readonly Rule[] = [
 ];
 
 /**
+ * If no rule matches, fall back to the original Acorn message but with an
+ * improved span.
+ *
+ * @param failure The parse failure context.
+ * @param message The message to report.
+ * @returns The improved message.
+ */
+export function fallbackMessage(
+    failure: ParseFailure,
+    message: string,
+): ImprovedMessage {
+    return {
+        kind: "unknown",
+        ...failure.fallbackSpan(),
+        message,
+    };
+}
+
+/**
  * What to report when no rule matched.
  *
  * @param failure The parse failure context.
@@ -314,10 +333,5 @@ export function unknownErrorMessage(
         }
     }
 
-    return {
-        kind: "unknown",
-        start: failure.pos,
-        end: failure.pos,
-        message,
-    };
+    return fallbackMessage(failure, message);
 }
