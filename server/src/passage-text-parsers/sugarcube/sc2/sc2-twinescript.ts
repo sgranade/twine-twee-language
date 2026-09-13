@@ -306,12 +306,14 @@ export function tokenizeTwineScriptExpression(
 
     // Adjust diagnostic location
     if (jsTokens.error) {
+        const length = jsTokens.error.end - jsTokens.error.start;
         const { sugaredPosition, sugaredText } = getSugaredPositionAndNewText(
-            jsTokens.error.at,
+            jsTokens.error.start,
             positionMapping,
         );
-        jsTokens.error.at = offset + sugaredPosition;
-        jsTokens.error.contents = sugaredText ?? jsTokens.error.contents;
+        jsTokens.error.start = offset + sugaredPosition;
+        jsTokens.error.end =
+            jsTokens.error.start + (sugaredText?.length ?? length);
     }
 
     // Adjust semantic token locations and (if needed) text

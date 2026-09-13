@@ -676,8 +676,8 @@ describe("SugarCube TwineScript", () => {
                 storyState,
             ).error;
 
-            expect(result?.contents).to.equal("=");
-            expect(result?.at).to.equal(139);
+            expect(result?.start).to.equal(138);
+            expect(result?.end).to.equal(140);
         });
     });
 });

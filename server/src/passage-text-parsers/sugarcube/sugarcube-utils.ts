@@ -1,7 +1,7 @@
 import { DiagnosticCodes } from "@tt3/shared";
 import { createDiagnosticFromRange } from "../../diagnostics";
 import { TokenizedJS } from "../../js-parser";
-import { logDiagnosticFor, logRawDiagnostic, ParsingState } from "../../parser";
+import { logDiagnostic, logRawDiagnostic, ParsingState } from "../../parser";
 import { positionInRange } from "../../utilities";
 import { SugarCubeParsingState } from "./sugarcube-parser";
 import { builtinVars, builtInVarsAndProperties } from "./sugarcube-variables";
@@ -126,10 +126,10 @@ export function createVariableAndPropertyReferences(
             });
     }
     if (jsTokens.error) {
-        logDiagnosticFor(
+        logDiagnostic(
             DiagnosticCodes.IncorrectJavaScript,
-            jsTokens.error.contents,
-            jsTokens.error.at,
+            jsTokens.error.start,
+            jsTokens.error.end,
             state,
             jsTokens.error.message,
         );

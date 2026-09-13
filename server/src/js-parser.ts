@@ -5,6 +5,7 @@ import { DiagnosticSeverity } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { improveAcornErrorMessage } from "./acorn-errors";
+import { ParserWithState } from "./acorn-errors/parser-state";
 import { createLocationFor } from "./parser";
 import {
     StoryFormatParsingState,
@@ -12,6 +13,11 @@ import {
 } from "./passage-text-parsers";
 import { Label } from "./project-index";
 import { ETokenType, TokenModifier, TokenType } from "./semantic-tokens";
+
+/**
+ * The ECMA version we're going to parse with.
+ */
+export const EcmaVersion: acorn.ecmaVersion = 2020;
 
 /**
  * Conversion from Javascript typeof string to semantic token type.
@@ -81,13 +87,13 @@ export namespace JSPropertyLabel {
  */
 export interface JSDiagnostic {
     /**
-     * Contents that the diagnostic refers to.
+     * Start index in the document where the diagnostic occurs.
      */
-    contents: string;
+    start: number;
     /**
-     * Index in the document where the diagnostic occurs.
+     * End index in the document where the diagnostic occurs.
      */
-    at: number;
+    end: number;
     message: string;
     severity: DiagnosticSeverity;
 }
@@ -471,8 +477,7 @@ export function annotateVariableScopes(
                 // ...unless it's the LHS of an assignment and we're forcing assignment to be definition
                 if (assignmentIsDefinition) {
                     const parent = ancestors[ancestors.length - 1] as
-                        | acorn.AnyNode
-                        | undefined;
+                        acorn.AnyNode | undefined;
                     if (
                         parent &&
                         parent.type === "AssignmentExpression" &&
@@ -956,7 +961,8 @@ function fullAncestorTokenizingCallback(
 /**
  * Parse text as a JavaScript program or expression.
  *
- * This performs strict parsing, and throws SyntaxError if the program doesn't parse correctly.
+ * This performs strict parsing, and throws an augmented SyntaxError if
+ * the program doesn't parse correctly.
  *
  * A program has to have full statements. An expression can be just a snippet.
  *
@@ -965,14 +971,16 @@ function fullAncestorTokenizingCallback(
  * @returns Top-most node in the AST.
  */
 export function parseJSStrict(text: string, isProgram: boolean): acorn.Node {
+    // n.b. we're using ParserWithState so's we get actual useful information
+    // out of any thrown SyntaxError.
     if (isProgram) {
-        return acorn.parse(text, {
-            ecmaVersion: 2020,
+        return ParserWithState.parse(text, {
+            ecmaVersion: EcmaVersion,
             sourceType: "script",
         });
     } else {
-        return acorn.parseExpressionAt(text, 0, {
-            ecmaVersion: 2020,
+        return ParserWithState.parseExpressionAt(text, 0, {
+            ecmaVersion: EcmaVersion,
             sourceType: "script",
         });
     }
@@ -986,11 +994,13 @@ export function parseJSStrict(text: string, isProgram: boolean): acorn.Node {
  *
  * @param text Text to parse as JavaScript.
  * @param isProgram Whether to parse it as a full JS program or a small expression
+ * @param offset Offset into the containing document where the text occurs.
  * @returns Top-most node in the AST, or undefined if the parsing failed.
  */
 export function parseJS(
     text: string,
     isProgram: boolean,
+    offset = 0,
 ): [acorn.Node | undefined, JSDiagnostic | undefined] {
     // Don't do anything if no text is passed (as that would create an error)
     if (!text.trim()) return [undefined, undefined];
@@ -1011,7 +1021,9 @@ export function parseJS(
                         line: number;
                         column: number;
                     };
+                    raisedAt?: number;
                 },
+                offset,
             ),
             severity: DiagnosticSeverity.Error,
         };
@@ -1020,7 +1032,7 @@ export function parseJS(
     // Finally try whatever parsing we can get away with
     return [
         acornLoose.parse(text, {
-            ecmaVersion: 2020,
+            ecmaVersion: EcmaVersion,
         }),
         diagnostic,
     ];
@@ -1072,7 +1084,7 @@ export function tokenizeJavaScript(
         properties: [],
     };
 
-    const [ast, diagnostic] = parseJS(text, isProgram);
+    const [ast, diagnostic] = parseJS(text, isProgram, offset);
     tokenized.error = diagnostic;
     if (ast !== undefined) {
         annotateVariableScopes(ast, !!assignmentIsDefinition);
@@ -1114,9 +1126,6 @@ export function tokenizeJavaScript(
                 storyFormatState,
             );
         }
-    }
-    if (tokenized.error !== undefined) {
-        tokenized.error.at += offset;
     }
 
     return tokenized;
