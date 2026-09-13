@@ -274,6 +274,7 @@
         "shared"
     ],
     "scripts": {
+        "vsce-package": "vsce package",
         "vscode:prepublish": "npm run package",
         "build": "npm-run-all2 check-types prebuild esbuild",
         "prebuild": "npm-run-all2 capture-version build-schema",
@@ -295,6 +296,7 @@
         "@types/mocha": "^10.0.6",
         "@types/node": "^20.19.43",
         "@types/sinon": "^21.0.1",
+        "@vscode/vsce": "^3.9.2",
         "chai": "^6.2.2",
         "esbuild": "^0.28.0",
         "eslint": "^10.2.0",
@@ -311,6 +313,8 @@
         "zod": "^4.4.3"
     },
     "allowScripts": {
-        "esbuild@0.28.2": true
+        "esbuild@0.28.2": true,
+        "@vscode/vsce-sign@2.1.0": true,
+        "keytar@7.9.0": true
     }
 }
