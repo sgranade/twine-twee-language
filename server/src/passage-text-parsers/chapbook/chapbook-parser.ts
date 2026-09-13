@@ -5,6 +5,7 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { DecorationType, DiagnosticCodes } from "@tt3/shared";
 import { improveAcornErrorMessage } from "../../acorn-errors";
+import type { AcornSyntaxError } from "../../acorn-errors";
 import { createDiagnosticFor, TwineDiagnostic } from "../../diagnostics";
 import { EmbeddedDocument } from "../../embedded-languages";
 import {
@@ -768,13 +769,7 @@ function parseCustomInsertOrModifierDefinition(
         if (err instanceof SyntaxError) {
             const errMessage = improveAcornErrorMessage(
                 contents,
-                err as SyntaxError & {
-                    pos?: number;
-                    loc?: {
-                        line: number;
-                        column: number;
-                    };
-                },
+                err as AcornSyntaxError,
                 contentsIndex,
             );
             logDiagnostic(

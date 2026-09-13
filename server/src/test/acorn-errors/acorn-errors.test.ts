@@ -1,6 +1,7 @@
 import { expect } from "chai";
 import "mocha";
-import * as acorn from "acorn";
+
+import { ParserWithState } from "../../acorn-errors/parser-state";
 
 import * as uut from "../../acorn-errors";
 
@@ -19,10 +20,8 @@ interface TestCase {
  * Parse `input` the same way `parseJS` does and return the resulting
  * SyntaxError, or throw if the input actually parses.
  */
-function parseAndCaptureError(
-    input: string,
-): SyntaxError & { pos?: number; loc?: { line: number; column: number } } {
-    acorn.parse(input, { ecmaVersion: 2020, sourceType: "script" });
+function parseAndCaptureError(input: string): uut.AcornSyntaxError {
+    ParserWithState.parse(input, { ecmaVersion: 2020, sourceType: "script" });
     throw new Error(`expected "${input}" to fail to parse, but it parsed`);
 }
 
@@ -31,14 +30,14 @@ const testCases: TestCase[] = [
     {
         description: "generic sweep: bare identifiers",
         input: "a b c",
-        expectedMessage: "Unexpected token",
+        expectedMessage: "Unexpected token 'b'",
         expectedStart: 2,
         expectedEnd: 2,
     },
     {
         description: "generic sweep: empty object property value",
         input: "{a: }",
-        expectedMessage: "Expected value after ':'",
+        expectedMessage: "Missing value after ':'",
         expectedStart: 2,
         expectedEnd: 3,
     },
@@ -59,7 +58,7 @@ const testCases: TestCase[] = [
     {
         description: "generic sweep: bare catch keyword",
         input: "catch ",
-        expectedMessage: "Unexpected token",
+        expectedMessage: "Unexpected token 'catch'",
         expectedStart: 0,
         expectedEnd: 0,
     },
@@ -155,52 +154,61 @@ const testCases: TestCase[] = [
     {
         description: "rule: missing property name after dot",
         input: "foo.",
-        expectedMessage: "Expected property or method name after '.'",
+        expectedMessage: "Missing property or method name after '.'",
         expectedStart: 3,
         expectedEnd: 4,
     },
     {
-        description:
-            "rule: optional chaining operator (falls through to the incomplete-expression rule, " +
-            "not the property rule, because err.pos lands on the trailing '.' and excludes it " +
-            "from the line context the property regex matches against)",
+        description: "rule: optional chaining operator",
         input: "foo?.",
-        expectedMessage:
-            "Unexpected token; expression appears incomplete after operator",
+        expectedMessage: "Missing property, method, or call after '?.'",
         expectedStart: 3,
-        expectedEnd: 4,
+        expectedEnd: 5,
     },
     {
         description: "rule: incomplete expression after operator",
         input: "foo +",
-        expectedMessage:
-            "Unexpected token; expression appears incomplete after operator",
+        expectedMessage: "Incomplete expression after the operator '+'",
         expectedStart: 4,
         expectedEnd: 5,
     },
     {
         description: "rule: incomplete property definition",
         input: "let obj = {foo: }",
-        expectedMessage: "Expected value after ':'",
+        expectedMessage: "Missing value after ':'",
         expectedStart: 14,
         expectedEnd: 15,
     },
     {
         description: "rule: incomplete if statement",
         input: "let x = 1; if ",
-        expectedMessage: "Unexpected token; expected '('",
-        expectedStart: 14,
-        expectedEnd: 14,
+        expectedMessage: "Missing '(' after 'if'",
+        expectedStart: 11,
+        expectedEnd: 13,
+    },
+    {
+        description: "rule: incomplete while statement",
+        input: "while ",
+        expectedMessage: "Missing '(' after 'while'",
+        expectedStart: 0,
+        expectedEnd: 5,
     },
     {
         description: "rule: incomplete catch statement",
         input: "let x = 1; try {} catch ",
-        expectedMessage: "Unexpected token; expected '{'",
-        expectedStart: 24,
-        expectedEnd: 24,
+        expectedMessage: "Missing '{' after 'catch'",
+        expectedStart: 18,
+        expectedEnd: 23,
+    },
+    {
+        description: "rule: catch clause with a binding but no block",
+        input: "let x = 1; try {} catch (e)",
+        expectedMessage: "Missing '{' after 'catch'",
+        expectedStart: 18,
+        expectedEnd: 23,
     },
 
-    // --- Dejargon table (phase 02): plain-language rewrites of Acorn's ---
+    // --- Dejargon table: plain-language rewrites of Acorn's ---
     // --- jargon-heavy messages, which never reach the rules above ---
     {
         description: "dejargon: assigning to a non-assignable expression",
@@ -343,32 +351,48 @@ const testCases: TestCase[] = [
         expectedEnd: 40,
     },
 
-    // --- Known-wrong behaviour, recorded as-is ---
+    // --- Rule arbitration ---
     {
-        description:
-            "known bug (phase 06, findUnmatchedDelimiter position drift): a string " +
-            "before the unclosed paren shifts the reported position left of the real '('," +
-            " which is at index 14, not 7",
+        description: "the unclosed '(' is reported at the paren itself",
         input: "x = 'hello' + (1",
         expectedMessage: "Opening '(' is missing a matching ')'",
-        expectedStart: 7,
-        expectedEnd: 8,
+        expectedStart: 14,
+        expectedEnd: 15,
     },
     {
-        description:
-            "known bug (phase 06, findUnmatchedDelimiter position drift): a string " +
-            "before the unclosed bracket shifts the reported position left of the real '['," +
-            " which is at index 12, not 7",
+        description: "the unclosed '[' is reported at the bracket itself",
         input: 'x = "foo" + [1',
         expectedMessage: "Opening '[' is missing a matching ']'",
-        expectedStart: 7,
-        expectedEnd: 8,
+        expectedStart: 12,
+        expectedEnd: 13,
+    },
+    {
+        description: "the missing property value beats the open '('",
+        input: "let x = (1, {a: }",
+        expectedMessage: "Missing value after ':'",
+        expectedStart: 14,
+        expectedEnd: 15,
     },
     {
         description:
-            "known bug (phase 06, delimiter scan short-circuits ahead of every specific " +
-            "rule): the unclosed '{' does mask a more specific incomplete-property-value " +
-            "diagnostic for 'c:'",
+            "at end of input the unclosed delimiter wins even though the " +
+            "missing property after '.' is nearer to the failure position",
+        input: "foo(bar.",
+        expectedMessage: "Opening '(' is missing a matching ')'",
+        expectedStart: 3,
+        expectedEnd: 4,
+    },
+    {
+        description: "a mismatched close is reported",
+        input: "let x = (]",
+        expectedMessage: "Opening '(' is closed by ']' instead of ')'",
+        expectedStart: 9,
+        expectedEnd: 10,
+    },
+    {
+        description:
+            "the unclosed '{' is all there is to report here b/c the failure's " +
+            "two tokens past the dangling 'c:'",
         input: "let a = { b: 1, c:  \nlet d = 2;",
         expectedMessage: "Opening '{' is missing a matching '}'",
         expectedStart: 8,
@@ -376,23 +400,13 @@ const testCases: TestCase[] = [
     },
     {
         description:
-            "known bug (phase 05, only one line of context is visible): the incomplete " +
-            "'+' operator is on the line before the error, so the incomplete-expression " +
-            "rule never sees it and the message falls back to the bare generic one",
+            "coverage gap: the dangling '+' is two tokens back, so the " +
+            "incomplete-expression rule -- which looks at the token immediately " +
+            "before the failure -- doesn't see it",
         input: "let a = 1 +\nlet b = 2;",
-        expectedMessage: "Unexpected token",
+        expectedMessage: "Unexpected token 'b'",
         expectedStart: 16,
         expectedEnd: 16,
-    },
-    {
-        description:
-            "known bug (phase 06, findUnmatchedDelimiter returns undefined on a " +
-            "mismatched close): '(]' should report a mismatched delimiter, but the " +
-            "scan bails out and the message falls back to the bare generic one",
-        input: "let x = (]",
-        expectedMessage: "Unexpected token",
-        expectedStart: 9,
-        expectedEnd: 9,
     },
 ];
 
@@ -404,7 +418,7 @@ describe("Acorn Error Messages", () => {
         expectedStart,
         expectedEnd,
     } of testCases) {
-        it(`should match today's behavior for: ${description}`, () => {
+        it(`should report: ${description}`, () => {
             const err = (() => {
                 try {
                     return parseAndCaptureError(input);

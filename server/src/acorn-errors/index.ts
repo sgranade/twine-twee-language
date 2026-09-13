@@ -1,128 +1,72 @@
 import { dejargon } from "./dejargon";
-
-const endOfUnterminatedStringRegex = /(\\?)(?:\r?\n|$)/g;
+import { ParseFailure } from "./parse-failure";
+import type { ErrorWithParserState } from "./parser-state";
+import {
+    rules,
+    unclosedDelimiterRule,
+    unknownErrorMessage,
+    unterminatedStringRule,
+} from "./rules";
+import type { ImprovedMessage } from "./rules";
 
 /**
- * Extract an unterminated JavaScript string.
- *
- * @param document Document containing the unterminated string.
- * @param startIndex Index where the unterminated string begins.
- * @returns The unterminated string.
+ * A `SyntaxError` as Acorn throws it plus possible `ParserWithState` state
+ * info.
  */
-function extractUnterminatedString(
-    document: string,
-    startIndex: number,
-): string {
-    let lineEnd = document.length - 1; // Default to the end of the excerpt
-    let m: RegExpExecArray | null;
+export type AcornSyntaxError = ErrorWithParserState & {
+    pos?: number;
+    loc?: {
+        line: number;
+        column: number;
+    };
+    raisedAt?: number;
+};
 
-    endOfUnterminatedStringRegex.lastIndex = startIndex;
-    do {
-        m = endOfUnterminatedStringRegex.exec(document);
-        // Go to the end of the line (if there's no line continuation char)
-        if (m && m[1] !== "\\") {
-            lineEnd = endOfUnterminatedStringRegex.lastIndex;
-            break;
-        }
-    } while (m);
-
-    return document.slice(startIndex, lineEnd);
+/**
+ * Acorn messages that say only that something went wrong w/o    saying what.
+ */
+function isGenericMessage(message: string): boolean {
+    return (
+        message.startsWith("Unexpected token") ||
+        message.startsWith("Unexpected character") ||
+        message.startsWith("Unexpected keyword") ||
+        message.includes("Unexpected token")
+    );
 }
 
 /**
- * Find an unmatched delimiter in text.
- */
-function findUnmatchedDelimiter(
-    text: string,
-): { open: string; close: string; contents: string; pos: number } | undefined {
-    // Stack of opening delimiter pairs and where they occur
-    const stack: [string, number][] = [];
-
-    const pairs: Record<string, string> = {
-        "(": ")",
-        "[": "]",
-        "{": "}",
-    };
-
-    const closing = new Set(Object.values(pairs));
-
-    let inString: string | undefined;
-    let escaped = false;
-    let ndx = 0;
-
-    for (const ch of text) {
-        // Ignore escaped characters
-        if (escaped) {
-            escaped = false;
-            continue;
-        }
-
-        if (ch === "\\") {
-            escaped = true;
-            continue;
-        }
-
-        // Ignore delimiters inside strings
-        if (inString) {
-            if (ch === inString) {
-                inString = undefined;
-            }
-            continue;
-        }
-
-        if (ch === "'" || ch === '"' || ch === "`") {
-            inString = ch;
-            continue;
-        }
-
-        if (pairs[ch]) {
-            stack.push([ch, ndx]);
-        } else if (closing.has(ch)) {
-            const last = stack.pop();
-
-            if (!last || pairs[last[0]] !== ch) {
-                return undefined;
-            }
-        }
-
-        ndx++;
-    }
-
-    const unclosed = stack.pop();
-
-    if (!unclosed) {
-        return undefined;
-    }
-
-    const [openPair, openNdx] = unclosed;
-
-    return {
-        open: openPair,
-        close: pairs[openPair],
-        contents: openPair,
-        pos: openNdx,
-    };
-}
-
-/**
- * Regex to match an identifier that ends in a period or question mark + period.
+ * Find the best fix for a given parsing error.
  *
- * Javascript identifier regex uses unicode property escapes; see
- * https://github.com/tc39/proposal-regexp-unicode-property-escapes#other-examples
+ * @param candidates Improved error messages proposed by the rules, in rule order.
+ * @param pos Position Acorn reported the failure at.
+ * @returns The winning message, or `undefined` if there are no candidates.
  */
-const incompletePropertyOrOptionalChainingOperatorRegex =
-    /((?:[$_\p{ID_Start}])(?:[$\u200C\u200D\p{ID_Continue}])*)(\??)\.\s*$/du;
-/**
- * Regex to match an operator in an incomplete expression.
- */
-const incompleteExpressionRegex = /([+\-*/%=&|^!<>?])\s*$/d;
-/**
- * Regex to match a possible incomplete proprety definition (foo: ).
- */
-const incompletePropertyDefinitionRegex =
-    /((?:[$_\p{ID_Start}])(?:[$\u200C\u200D\p{ID_Continue}])*\s*):\s*$/du;
-const incompleteControlRegex = /\b(if|for|while|switch)(\s*)$/d;
-const incompleteCatchRegex = /\b(catch)(\s*)$/d;
+function arbitrate(
+    candidates: ImprovedMessage[],
+    pos: number,
+): ImprovedMessage | undefined {
+    // A rule shouldn't report a position past the failure, since every rule
+    // recognizes something Acorn had already read. If one does, it's still
+    // better than nothing, so it's considered only when nothing else is.
+    const atOrBefore = candidates.filter((c) => c.start <= pos);
+    const eligible = atOrBefore.length > 0 ? atOrBefore : candidates;
+
+    // The winner's the candidate closest to Acorn's reported position,
+    // w/ties broken by rule order.
+    let winner: ImprovedMessage | undefined;
+    for (const candidate of eligible) {
+        // `<`, not `<=`, so that an equal distance leaves the earlier (and
+        // therefore higher-priority) rule in place.
+        if (
+            winner === undefined ||
+            Math.abs(candidate.start - pos) < Math.abs(winner.start - pos)
+        ) {
+            winner = candidate;
+        }
+    }
+
+    return winner;
+}
 
 /**
  * Improve Acorn's not-that-great error messages.
@@ -134,130 +78,57 @@ const incompleteCatchRegex = /\b(catch)(\s*)$/d;
  */
 export function improveAcornErrorMessage(
     text: string,
-    err: SyntaxError & {
-        pos?: number;
-        loc?: {
-            line: number;
-            column: number;
-        };
-        raisedAt?: number;
-    },
+    err: AcornSyntaxError,
     offset = 0,
 ): {
     start: number;
     end: number;
     message: string;
 } {
-    let pos = err.pos ?? 0;
-    const originalMessage = err.message;
+    const failure = new ParseFailure(text, err);
 
-    // Get rid of Acorn's position information "(line, char)" and
-    // change any jargon-heavy messages (other than the ones the
-    // rules below handle)
-    const improvedError = {
-        contents: "",
-        at: pos,
-        message: dejargon(originalMessage.replace(/\s*\(.*?\)\s*$/, "")),
-    };
-
-    // Convert improvedError's {contents, at} to start and end locations
-    // relative to the enclosing document
-    const toResult = (): { start: number; end: number; message: string } => ({
-        start: improvedError.at + offset,
-        end: improvedError.at + improvedError.contents.length + offset,
-        message: improvedError.message,
+    // Function to rebase an error message's location to the passed offset
+    const toResult = (improvedMessage: ImprovedMessage) => ({
+        start: improvedMessage.start + offset,
+        end: improvedMessage.end + offset,
+        message: improvedMessage.message,
     });
 
-    if (
-        originalMessage.startsWith("Unterminated string constant") ||
-        originalMessage.startsWith("Unterminated template")
-    ) {
-        improvedError.contents = extractUnterminatedString(text, pos);
-        return toResult();
+    // Handle unterminated strings & templates 1st since they're lexical
+    // failures w/no parser state.
+    const unterminated = unterminatedStringRule(failure);
+    if (unterminated !== undefined) return toResult(unterminated);
+
+    if (!isGenericMessage(failure.message)) {
+        return toResult({
+            kind: "unknown",
+            start: failure.pos,
+            end: failure.pos,
+            message: dejargon(failure.message),
+        });
     }
 
-    // The only other messages we tweak are for generic messages
-    if (!(
-        originalMessage.startsWith("Unexpected token") ||
-        originalMessage.startsWith("Unexpected character") ||
-        originalMessage.includes("Unexpected token")
-    ))
-        return toResult();
-
-    // Unmatched delimiters
-    const unmatched = findUnmatchedDelimiter(text);
-
-    if (unmatched) {
-        improvedError.contents = unmatched.contents;
-        improvedError.at = unmatched.pos;
-        improvedError.message = `Opening '${unmatched.open}' is missing a matching '${unmatched.close}'`;
-        return toResult();
-    }
-
-    const context = text.slice(0, pos);
-
-    // Find the final non-blank line before the error
-    const lines = [...context.matchAll(/(?<=^|\n).*?(?=\r?\n|$)/dg)];
-    let ndx = lines.length - 1;
-    while (/^\s*$/.test(lines[ndx][0]) && ndx > 0) {
-        ndx--;
-    }
-    const line = lines[ndx][0];
-    const lineNdx = lines[ndx].indices?.at(0)?.at(0) ?? 0;
-
-    // Missing a property, method, or call? (`foo.` or `foo?.`)
-    let m = incompletePropertyOrOptionalChainingOperatorRegex.exec(line);
-    if (m) {
-        improvedError.at =
-            (m.indices?.at(0)?.at(0) ?? 0) + m[1].length + lineNdx;
-        improvedError.contents = m[2] + ".";
-        if (m[2]) {
-            improvedError.message =
-                "Expected property, method, or call after optional chaining operator";
-        } else {
-            improvedError.message =
-                "Expected property or method name after '.'";
+    const candidates: ImprovedMessage[] = [];
+    let unclosedDelimiterCandidate: ImprovedMessage | undefined;
+    for (const rule of rules) {
+        const improvedMessage = rule(failure);
+        if (improvedMessage === undefined) continue;
+        if (rule === unclosedDelimiterRule) {
+            unclosedDelimiterCandidate = improvedMessage;
         }
-        return toResult();
+        candidates.push(improvedMessage);
     }
 
-    // Incomplete expression? (`foo +`)
-    m = incompleteExpressionRegex.exec(line);
-    if (m) {
-        improvedError.at = (m.indices?.at(0)?.at(0) ?? 0) + lineNdx;
-        improvedError.contents = m[1];
-        improvedError.message =
-            "Unexpected token; expression appears incomplete after operator";
-        return toResult();
+    // If the failure's at the end of the input, then all we know is "we ran
+    // out of text", and the rule closest to that position doesn't actually
+    // tell us anything. Given that, if we have a candidate unclosed delimeter,
+    // return that outright.
+    if (failure.isAtEof() && unclosedDelimiterCandidate !== undefined) {
+        return toResult(unclosedDelimiterCandidate);
     }
 
-    // Incomplete property definition? (`foo :`)
-    m = incompletePropertyDefinitionRegex.exec(line);
-    if (m) {
-        improvedError.at =
-            (m.indices?.at(0)?.at(0) ?? 0) + m[1].length + lineNdx;
-        improvedError.contents = ":";
-        improvedError.message = "Expected value after ':'";
-        return toResult();
-    }
-
-    // Incomplete control statement? (`if `)
-    m = incompleteControlRegex.exec(line);
-    if (m) {
-        // Leave the original position alone but mark that character
-        improvedError.contents = text.slice(pos, pos + 1);
-        improvedError.message = "Unexpected token; expected '('";
-        return toResult();
-    }
-
-    // Incomplete catch statement? (`catch `)
-    m = incompleteCatchRegex.exec(line);
-    if (m) {
-        // Leave the original position alone but mark that character
-        improvedError.contents = text.slice(pos, pos + 1);
-        improvedError.message = "Unexpected token; expected '{'";
-        return toResult();
-    }
-
-    return toResult();
+    const winner = arbitrate(candidates, failure.pos);
+    return toResult(
+        winner ?? unknownErrorMessage(failure, failure.failingToken()),
+    );
 }

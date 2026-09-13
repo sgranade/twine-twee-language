@@ -1340,7 +1340,7 @@ describe("JS Parser", () => {
             expect(result.error?.start).to.equal(14);
             expect(result.error?.end).to.equal(15);
             expect(result.error?.message).to.equal(
-                "Expected property or method name after '.'",
+                "Missing property or method name after '.'",
             );
         });
 
@@ -1367,7 +1367,7 @@ describe("JS Parser", () => {
             expect(result.error?.start).to.equal(22);
             expect(result.error?.end).to.equal(24);
             expect(result.error?.message).to.equal(
-                "Expected property, method, or call after optional chaining operator",
+                "Missing property, method, or call after '?.'",
             );
         });
 
@@ -1394,7 +1394,7 @@ describe("JS Parser", () => {
             expect(result.error?.start).to.equal(16);
             expect(result.error?.end).to.equal(17);
             expect(result.error?.message).to.equal(
-                "Unexpected token; expression appears incomplete after operator",
+                "Incomplete expression after the operator '+'",
             );
         });
 
@@ -1420,7 +1420,7 @@ describe("JS Parser", () => {
 
             expect(result.error?.start).to.equal(26);
             expect(result.error?.end).to.equal(27);
-            expect(result.error?.message).to.equal("Expected value after ':'");
+            expect(result.error?.message).to.equal("Missing value after ':'");
         });
 
         it("should error on an incomplete non-catch control statement", () => {
@@ -1443,11 +1443,9 @@ describe("JS Parser", () => {
                 storyState,
             );
 
-            expect(result.error?.start).to.equal(16);
-            expect(result.error?.end).to.equal(17);
-            expect(result.error?.message).to.equal(
-                "Unexpected token; expected '('",
-            );
+            expect(result.error?.start).to.equal(13);
+            expect(result.error?.end).to.equal(15);
+            expect(result.error?.message).to.equal("Missing '(' after 'if'");
         });
 
         it("should error on an incomplete catch statement", () => {
@@ -1470,11 +1468,9 @@ describe("JS Parser", () => {
                 storyState,
             );
 
-            expect(result.error?.start).to.equal(25);
+            expect(result.error?.start).to.equal(20);
             expect(result.error?.end).to.equal(25);
-            expect(result.error?.message).to.equal(
-                "Unexpected token; expected '{'",
-            );
+            expect(result.error?.message).to.equal("Missing '{' after 'catch'");
         });
     });
 });

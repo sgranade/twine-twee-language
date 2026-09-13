@@ -397,39 +397,106 @@ describe("Acorn Parse Failures", () => {
         });
     });
 
-    describe("Text Before", () => {
-        it("is the source text up to the failure", () => {
-            expect(failureFor("a b c").textBefore()).to.equal("a ");
+    describe("Token Before Matched Operator", () => {
+        it("reports the token before the opener of a group the failure follows", () => {
+            // No arrange
+
+            const result =
+                failureFor("try {} catch (e)").tokenBeforeMatchedOpener();
+
+            expect(result).to.eql({
+                label: "catch",
+                value: "catch",
+                start: 7,
+                end: 12,
+                text: "catch",
+            });
         });
 
-        it("is the whole text when the failure is at the end", () => {
-            expect(failureFor("foo(").textBefore()).to.equal("foo(");
+        it("looks past the group's contents", () => {
+            // No arrange
+
+            const result = failureFor(
+                "try {} catch ({message, stack})",
+            ).tokenBeforeMatchedOpener();
+
+            expect(result?.text).to.equal("catch");
+        });
+
+        it("reports nothing when the failure doesn't follow a close", () => {
+            expect(failureFor("foo(").tokenBeforeMatchedOpener()).to.be
+                .undefined;
+        });
+
+        it("reports nothing when the group opens the text", () => {
+            expect(failureFor("(a) b c").tokenBeforeMatchedOpener()).to.be
+                .undefined;
         });
     });
 
-    describe("Line Before", () => {
-        it("is the text of the failing line, truncated at the failure", () => {
+    describe("Mismatched Closer", () => {
+        it("reports a close that doesn't match the delimiter it closes", () => {
             // No arrange
 
-            const result = failureFor("a b c").lineBefore();
+            const result = failureFor("let x = (]").mismatchedCloser();
 
-            expect(result).to.eql({ text: "a ", start: 0 });
+            expect(result).to.eql({
+                open: { open: "(", close: ")", start: 8, end: 9 },
+                closer: {
+                    label: "]",
+                    value: undefined,
+                    start: 9,
+                    end: 10,
+                    text: "]",
+                },
+            });
         });
 
-        it("skips blank lines to find the last line with content", () => {
-            // No arrange
-
-            const result = failureFor("var a = 1;\nfoo.\n\n").lineBefore();
-
-            expect(result).to.eql({ text: "foo.", start: 11 });
+        it("reports nothing when the close matches", () => {
+            expect(failureFor("{a: }").mismatchedCloser()).to.be.undefined;
         });
 
-        it("is empty when the failure is at the start of the text", () => {
+        it("reports nothing when the close matches the innermost delimiter, even with an outer one still open", () => {
+            // The `}` closes the `{`; the `(` is unclosed, but that's the
+            // unclosed-delimiter case, not a mismatch.
+            expect(failureFor("let x = (1, {a: }").mismatchedCloser()).to.be
+                .undefined;
+        });
+
+        it("reports nothing when nothing is open to close", () => {
+            expect(failureFor("x = )").mismatchedCloser()).to.be.undefined;
+        });
+
+        it("reports nothing when the failure isn't at a closing delimiter", () => {
+            expect(failureFor("foo(").mismatchedCloser()).to.be.undefined;
+        });
+
+        it("falls back to the token stream when there's no parser state", () => {
             // No arrange
 
-            const result = failureFor("catch ").lineBefore();
+            const result = failureWithoutParserState(
+                "let x = (]",
+                9,
+            ).mismatchedCloser();
 
-            expect(result).to.eql({ text: "", start: 0 });
+            expect(result?.open).to.eql({
+                open: "(",
+                close: ")",
+                start: 8,
+                end: 9,
+            });
+        });
+    });
+
+    describe("Message", () => {
+        it("is Acorn's message without its trailing position", () => {
+            expect(failureFor("a b c").message).to.equal("Unexpected token");
+        });
+
+        it("keeps parenthesized text that isn't a position", () => {
+            expect(failureFor("let x = 'abc").message).to.equal(
+                "Unterminated string constant",
+            );
         });
     });
 });
