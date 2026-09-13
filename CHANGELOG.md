@@ -17,6 +17,7 @@ Three big changes:
 
 ### Added
 
+- `tt3.config.json` to set story build configuration.
 - JavaScript diagnostics (warnings and errors) are now reported.
 - Diagnostics can now be disabled in a passage by adding `tt3-disable` followed by comma-separated list of diagnostics to the passage's tags: `[tt3-disable <diagnostic-code-1>,<diagnostic-code-2>]`.
 - Added Quick Fix actions for disabling diagnostics for a passage or globally.
@@ -40,9 +41,11 @@ Three big changes:
 ### Fixed
 
 - When running a game in VS Code, error modals are now shown in VS Code instead of being silently swallowed.
+- Deconflicted language scope names with T3LT. (issue #10)
 - SugarCube: Improved syntax highlighting of twee links.
 - SugarCube: Fixed parsing of special variables in `<<script>>` macros.
 - SugarCube: No longer incorrectly indexes apparent variables in non-data HTML attributes.
+- SugarCube: Now correctly places the end of diagnostic squiggles on TwineScript expressions.
 
 ## [1.1.5] - 2026 04 12
 

@@ -679,5 +679,86 @@ describe("SugarCube TwineScript", () => {
             expect(result?.start).to.equal(138);
             expect(result?.end).to.equal(140);
         });
+
+        it("should map a diagnostic's end position that falls after a variable sigil substitution", () => {
+            const expression = "$a gt $b to 1";
+            const offset = 133;
+            const textDocument = TextDocument.create(
+                "fake-uri",
+                "twine",
+                1,
+                `twinescript: ${expression}`,
+            );
+            const storyState: StoryFormatParsingState = {
+                passageTokens: {},
+            };
+
+            const result = uut.tokenizeTwineScriptExpression(
+                expression,
+                offset,
+                textDocument,
+                storyState,
+            ).error;
+
+            // The span covers `$a`, whose sugared width differs from the
+            // width of the `$` sigil substitution its start lands on.
+            expect(result?.start).to.equal(133);
+            expect(result?.end).to.equal(135);
+        });
+
+        it("should map a diagnostic's end position that falls after a length-changing substitution", () => {
+            const expression = "$aa gt 1 $bb";
+            const offset = 133;
+            const textDocument = TextDocument.create(
+                "fake-uri",
+                "twine",
+                1,
+                `twinescript: ${expression}`,
+            );
+            const storyState: StoryFormatParsingState = {
+                passageTokens: {},
+            };
+
+            const result = uut.tokenizeTwineScriptExpression(
+                expression,
+                offset,
+                textDocument,
+                storyState,
+                false,
+                true,
+            ).error;
+
+            // The span covers `$bb`, which sits after the `gt` -> `>`
+            // substitution, so the desugared-to-sugared delta at the span's
+            // end differs from the one at its start.
+            expect(result?.start).to.equal(142);
+            expect(result?.end).to.equal(145);
+        });
+
+        it("should map a diagnostic's end position that falls on the start of a substitution", () => {
+            const expression = "($aa to 1";
+            const offset = 133;
+            const textDocument = TextDocument.create(
+                "fake-uri",
+                "twine",
+                1,
+                `twinescript: ${expression}`,
+            );
+            const storyState: StoryFormatParsingState = {
+                passageTokens: {},
+            };
+
+            const result = uut.tokenizeTwineScriptExpression(
+                expression,
+                offset,
+                textDocument,
+                storyState,
+            ).error;
+
+            // The span covers the unclosed `(`, so its (exclusive) end sits
+            // exactly on the start of the `$` sigil substitution.
+            expect(result?.start).to.equal(133);
+            expect(result?.end).to.equal(134);
+        });
     });
 });
