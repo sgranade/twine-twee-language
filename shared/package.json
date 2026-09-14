@@ -6,5 +6,6 @@
     "types": "src/index.ts",
     "dependencies": {
         "vscode-languageserver-protocol": "^3.17.0"
-    }
+    },
+    "type": "module"
 }

@@ -23,5 +23,6 @@
         "vscode-languageserver-textdocument": "^1.0.11",
         "yaml": "^2.6.0"
     },
-    "scripts": {}
+    "scripts": {},
+    "type": "module"
 }
