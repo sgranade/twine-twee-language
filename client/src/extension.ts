@@ -356,7 +356,7 @@ async function writeConfigToFile(uri?: VSCodeURI) {
     }
 
     const output =
-        JSON.stringify(currentConfig, null, indent).replace("\n", eol) + eol;
+        JSON.stringify(currentConfig, null, indent).replaceAll("\n", eol) + eol;
 
     try {
         await workspaceProvider.fs.writeFile(uri, Buffer.from(output));

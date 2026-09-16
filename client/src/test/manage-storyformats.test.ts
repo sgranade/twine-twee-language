@@ -489,7 +489,7 @@ describe("Manage Story Formats", () => {
                 )
                 .returns(Promise.resolve(new Response("totally a format")));
             mockFunction
-                .withArgs(sinon.match(new RegExp(uut.ChapbookMainPage)))
+                .withArgs(uut.ChapbookMainPage)
                 .returns(
                     Promise.resolve(new Response(undefined, { status: 404 })),
                 );
