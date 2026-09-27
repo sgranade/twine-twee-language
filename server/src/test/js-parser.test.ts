@@ -1210,6 +1210,615 @@ describe("JS Parser", () => {
         });
     });
 
+    describe("Returned Variables and Properties", () => {
+        /**
+         * One variable-extraction test case.
+         */
+        interface TestCase {
+            description: string; // What the test is
+            input: string; // Input to `tokenizeJavaScript()`
+            isProgram: boolean; // Whether the input is a full program (instead of a snippet)
+            assignmentIsDefinition?: boolean; // Whether to treat assignment as a definition
+            variables: string[]; // Expected variables
+            properties: string[]; // Expected property
+            error?: string; // Expected error message, if any
+        }
+
+        /**
+         * Turn tokenized JS into compact lists of strings.
+         *
+         * Variables are returned as "varname", or "varname=" if it's being
+         * assigned to.
+         *
+         * Properties are returned as "varname.p.q", or "varname.p.q=" if it's
+         * being assigned to.
+         */
+        function tokensToCompactStrings(result: uut.TokenizedJS) {
+            return {
+                variables: result.variables.map(
+                    (v) => v.contents + (v.defined ? "=" : ""),
+                ),
+                properties: result.properties.map(
+                    (p) =>
+                        (p.prefix !== undefined ? p.prefix + "." : "") +
+                        p.contents +
+                        (p.defined ? "=" : ""),
+                ),
+                error: result.error?.message,
+            };
+        }
+
+        const testCases: TestCase[] = [
+            // --- Chains ---
+            {
+                description: "a.b = 1",
+                input: "a.b = 1",
+                isProgram: true,
+                variables: ["a"],
+                properties: ["a.b="],
+            },
+            {
+                description: "obj.a.b.c = 1",
+                input: "obj.a.b.c = 1",
+                isProgram: true,
+                variables: ["obj"],
+                properties: ["obj.a=", "obj.a.b=", "obj.a.b.c="],
+            },
+            {
+                description: "obj?.a?.b",
+                input: "obj?.a?.b",
+                isProgram: false,
+                variables: ["obj"],
+                properties: ["obj.a", "obj.a.b"],
+            },
+            {
+                description: "obj['k']",
+                input: "obj['k']",
+                isProgram: false,
+                variables: ["obj"],
+                properties: ["obj.k"],
+            },
+            {
+                description: "obj[1]",
+                input: "obj[1]",
+                isProgram: false,
+                variables: ["obj"],
+                properties: [],
+            },
+            {
+                description: "obj['a b']",
+                input: "obj['a b']",
+                isProgram: false,
+                variables: ["obj"],
+                properties: ["obj.a b"],
+            },
+            {
+                description: "obj[i].name",
+                input: "obj[i].name",
+                isProgram: false,
+                variables: ["obj", "i"],
+                properties: [],
+            },
+            {
+                description: "obj.items[0].name",
+                input: "obj.items[0].name",
+                isProgram: false,
+                variables: ["obj"],
+                properties: ["obj.items"],
+            },
+            {
+                description: "obj().a",
+                input: "obj().a",
+                isProgram: false,
+                variables: [],
+                properties: [],
+            },
+            {
+                description: "obj.a.b().c",
+                input: "obj.a.b().c",
+                isProgram: false,
+                variables: ["obj"],
+                properties: ["obj.a"],
+            },
+
+            // --- Object literals ---
+            {
+                description: "obj = {a: {b: 1}}",
+                input: "obj = {a: {b: 1}}",
+                isProgram: true,
+                variables: ["obj"],
+                properties: ["obj.a=", "obj.a.b="],
+            },
+            {
+                description: "obj.x = {a: 1}",
+                input: "obj.x = {a: 1}",
+                isProgram: true,
+                variables: ["obj"],
+                properties: ["obj.x=", "obj.x.a="],
+            },
+            {
+                description: "var obj = {a: 1}",
+                input: "var obj = {a: 1}",
+                isProgram: true,
+                variables: ["obj="],
+                properties: ["obj.a="],
+            },
+            {
+                description: "obj = {a} // defect 10: missing read of `a`",
+                input: "obj = {a}",
+                isProgram: true,
+                variables: ["obj"], // defect 10
+                properties: ["obj.a="],
+            },
+            {
+                description: "obj = {a: b}",
+                input: "obj = {a: b}",
+                isProgram: true,
+                variables: ["obj", "b"],
+                properties: ["obj.a="],
+            },
+            {
+                description: "obj = {'k': 1} // defect 6: string key dropped",
+                input: "obj = {'k': 1}",
+                isProgram: true,
+                variables: ["obj"],
+                properties: [], // defect 6
+            },
+            {
+                description: "obj = {1: 'x'} // defect 6: numeric key dropped",
+                input: "obj = {1: 'x'}",
+                isProgram: true,
+                variables: ["obj"],
+                properties: [], // defect 6
+            },
+            {
+                description: "x = {[k]: 1}",
+                input: "x = {[k]: 1}",
+                isProgram: true,
+                variables: ["x", "k"],
+                properties: [],
+            },
+            {
+                description: "obj = {get a(){return 1}}",
+                input: "obj = {get a(){return 1}}",
+                isProgram: true,
+                variables: ["obj"],
+                properties: ["obj.a="],
+            },
+
+            // --- Binding forms ---
+            {
+                description: "let {a, b} = obj",
+                input: "let {a, b} = obj",
+                isProgram: true,
+                variables: ["a=", "b=", "obj"],
+                properties: [],
+            },
+            {
+                description: "const {a, b} = obj",
+                input: "const {a, b} = obj",
+                isProgram: true,
+                variables: ["a=", "b=", "obj"],
+                properties: [],
+            },
+            {
+                description: "var {a, b} = obj",
+                input: "var {a, b} = obj",
+                isProgram: true,
+                variables: ["a=", "b=", "obj"],
+                properties: [],
+            },
+            {
+                description: "function f(){ var o = {a:1} }",
+                input: "function f(){ var o = {a:1} }",
+                isProgram: true,
+                variables: [],
+                properties: [],
+            },
+            {
+                description:
+                    "for (let i=0;i<n;i++){i} // defect 2: loop head leaks `i` into globals",
+                input: "for (let i=0;i<n;i++){i}",
+                isProgram: true,
+                variables: ["i=", "i", "n", "i", "i"], // defect 2
+                properties: [],
+            },
+            {
+                description:
+                    "for (var j in obj){j} // defect 2: loop head leaks `j` into globals",
+                input: "for (var j in obj){j}",
+                isProgram: true,
+                variables: ["j=", "obj", "j"], // defect 2
+                properties: [],
+            },
+            {
+                description: "for (a of b){}",
+                input: "for (a of b){}",
+                isProgram: true,
+                variables: ["a", "b"],
+                properties: [],
+            },
+            {
+                description: "while(a){let b=1;b}",
+                input: "while(a){let b=1;b}",
+                isProgram: true,
+                variables: ["a"],
+                properties: [],
+            },
+            {
+                description:
+                    "try{a()}catch(e){e.message} // defect 3: catch param leaks `e` into globals",
+                input: "try{a()}catch(e){e.message}",
+                isProgram: true,
+                variables: ["e", "e"], // defect 3
+                properties: ["e.message"], // defect 3
+            },
+            {
+                description: "class A {} // defect 4: class name unbound",
+                input: "class A {}",
+                isProgram: true,
+                variables: ["A"], // defect 4
+                properties: [],
+            },
+            {
+                description: "a = () => { b = 1 }",
+                input: "a = () => { b = 1 }",
+                isProgram: true,
+                variables: ["a", "b"],
+                properties: [],
+            },
+            {
+                description: "foo = function(){ inner = 1 }",
+                input: "foo = function(){ inner = 1 }",
+                isProgram: true,
+                variables: ["foo", "inner"],
+                properties: [],
+            },
+
+            // --- Writes, w/ & w/o assignmentIsDefinition ---
+            {
+                description: "a = b = 1",
+                input: "a = b = 1",
+                isProgram: true,
+                variables: ["a", "b"],
+                properties: [],
+            },
+            {
+                description: "a = b = 1, assignmentIsDefinition",
+                input: "a = b = 1",
+                isProgram: true,
+                assignmentIsDefinition: true,
+                variables: ["a=", "b="],
+                properties: [],
+            },
+            {
+                description: "a += 1",
+                input: "a += 1",
+                isProgram: true,
+                variables: ["a"],
+                properties: [],
+            },
+            {
+                description: "a += 1, assignmentIsDefinition",
+                input: "a += 1",
+                isProgram: true,
+                assignmentIsDefinition: true,
+                variables: ["a="],
+                properties: [],
+            },
+            {
+                description: "a++",
+                input: "a++",
+                isProgram: true,
+                variables: ["a"],
+                properties: [],
+            },
+            {
+                description:
+                    "a++, assignmentIsDefinition // defect 9: ++ never counts as a write",
+                input: "a++",
+                isProgram: true,
+                assignmentIsDefinition: true,
+                variables: ["a"], // defect 9
+                properties: [],
+            },
+            {
+                description: "[a,b] = c",
+                input: "[a,b] = c",
+                isProgram: true,
+                variables: ["a", "b", "c"],
+                properties: [],
+            },
+            {
+                description:
+                    "[a,b] = c, assignmentIsDefinition // defect 9: destructuring never counts as a write",
+                input: "[a,b] = c",
+                isProgram: true,
+                assignmentIsDefinition: true,
+                variables: ["a", "b", "c"], // defect 9
+                properties: [],
+            },
+            {
+                description: "({a} = c)",
+                input: "({a} = c)",
+                isProgram: true,
+                variables: ["a", "c"],
+                properties: [],
+            },
+            {
+                description:
+                    "({a} = c), assignmentIsDefinition // defect 9: destructuring never counts as a write",
+                input: "({a} = c)",
+                isProgram: true,
+                assignmentIsDefinition: true,
+                variables: ["a", "c"], // defect 9
+                properties: [],
+            },
+            {
+                description: "a.b += 1",
+                input: "a.b += 1",
+                isProgram: true,
+                variables: ["a"],
+                properties: ["a.b="],
+            },
+            {
+                description: "a.b += 1, assignmentIsDefinition",
+                input: "a.b += 1",
+                isProgram: true,
+                assignmentIsDefinition: true,
+                variables: ["a"],
+                properties: ["a.b="],
+            },
+            {
+                description: "var a; a = 1",
+                input: "var a; a = 1",
+                isProgram: true,
+                variables: ["a=", "a"],
+                properties: [],
+            },
+            {
+                description: "var a; a = 1, assignmentIsDefinition",
+                input: "var a; a = 1",
+                isProgram: true,
+                assignmentIsDefinition: true,
+                variables: ["a=", "a="],
+                properties: [],
+            },
+
+            // --- Calls ---
+            {
+                description: "foo(bar) // defect 1: argument lost entirely",
+                input: "foo(bar)",
+                isProgram: true,
+                variables: [], // defect 1
+                properties: [],
+            },
+            {
+                description:
+                    "foo(bar.baz) // inconsistent with foo(bar): the member-expression path still yields `bar`",
+                input: "foo(bar.baz)",
+                isProgram: true,
+                variables: ["bar"],
+                properties: ["bar.baz"],
+            },
+            {
+                description: "a = foo(b) // defect 1: argument lost entirely",
+                input: "a = foo(b)",
+                isProgram: true,
+                variables: ["a"], // defect 1
+                properties: [],
+            },
+            {
+                description: "new Foo(bar)",
+                input: "new Foo(bar)",
+                isProgram: true,
+                variables: [],
+                properties: [],
+            },
+            {
+                description: "obj.method(x)",
+                input: "obj.method(x)",
+                isProgram: true,
+                variables: ["obj"],
+                properties: [],
+            },
+            {
+                description: "obj.a.method(x)",
+                input: "obj.a.method(x)",
+                isProgram: true,
+                variables: ["obj"],
+                properties: ["obj.a"],
+            },
+            {
+                description: "setTimeout(fn, 1)",
+                input: "setTimeout(fn, 1)",
+                isProgram: true,
+                variables: [],
+                properties: [],
+            },
+            {
+                description: "parseInt(a)",
+                input: "parseInt(a)",
+                isProgram: true,
+                variables: [],
+                properties: [],
+            },
+            {
+                description: "$('#x').hide()",
+                input: "$('#x').hide()",
+                isProgram: true,
+                variables: [],
+                properties: [],
+            },
+
+            // --- Built-ins ---
+            {
+                description: "Math.max(a,b)",
+                input: "Math.max(a,b)",
+                isProgram: true,
+                variables: [],
+                properties: [],
+            },
+            {
+                description: "console.log(a)",
+                input: "console.log(a)",
+                isProgram: true,
+                variables: [],
+                properties: [],
+            },
+            {
+                description: "window.foo = 1",
+                input: "window.foo = 1",
+                isProgram: true,
+                variables: [],
+                properties: [],
+            },
+            {
+                description:
+                    "RegExp.test(a) // defect 8: RegExp missing from builtInObjects",
+                input: "RegExp.test(a)",
+                isProgram: true,
+                variables: ["RegExp"], // defect 8
+                properties: [],
+            },
+            {
+                description:
+                    "globalThis.z = 1 // defect 8: globalThis missing from builtInObjects",
+                input: "globalThis.z = 1",
+                isProgram: true,
+                variables: ["globalThis"], // defect 8
+                properties: ["globalThis.z="], // defect 8
+            },
+            {
+                description: "this.foo = 1",
+                input: "this.foo = 1",
+                isProgram: true,
+                variables: [],
+                properties: [],
+            },
+            {
+                description: "arr.length",
+                input: "arr.length",
+                isProgram: false,
+                variables: ["arr"],
+                properties: ["arr.length"],
+            },
+            {
+                description: "State.variables.foo = 1",
+                input: "State.variables.foo = 1",
+                isProgram: true,
+                variables: ["State"],
+                properties: ["State.variables=", "State.variables.foo="],
+            },
+            {
+                description: "setup.x = 1",
+                input: "setup.x = 1",
+                isProgram: true,
+                variables: ["setup"],
+                properties: ["setup.x="],
+            },
+
+            // --- Broken input (loose parse) ---
+            {
+                description: "a = ",
+                input: "a = ",
+                isProgram: true,
+                variables: ["a"],
+                properties: [],
+                error: "Incomplete expression after the operator '='",
+            },
+            {
+                description:
+                    "obj. // defect 5: the loose-parse placeholder property reaches the index",
+                input: "obj.",
+                isProgram: false,
+                variables: ["obj"],
+                properties: ["obj.✖"], // defect 5
+                error: "Missing property or method name after '.'",
+            },
+            {
+                description:
+                    "a.b. // defect 5: the loose-parse placeholder property reaches the index",
+                input: "a.b.",
+                isProgram: false,
+                variables: ["a"],
+                properties: ["a.b", "a.b.✖"], // defect 5
+                error: "Missing property or method name after '.'",
+            },
+            {
+                description:
+                    "a ||= 1 // defect 7: ES2021 syntax fails under EcmaVersion 2020",
+                input: "a ||= 1",
+                isProgram: true,
+                variables: [], // defect 7
+                properties: [],
+                error: "Incomplete expression after the operator '||'", // defect 7
+            },
+            {
+                description:
+                    "n = 1_000 // defect 7: ES2021 numeric separator fails under EcmaVersion 2020",
+                input: "n = 1_000",
+                isProgram: true,
+                variables: ["n"],
+                properties: [],
+                error: "Missing space between a number and the following identifier", // defect 7
+            },
+            {
+                description:
+                    "class A { foo = 1 } // defect 7: ES2022 class field fails under EcmaVersion 2020",
+                input: "class A { foo = 1 }",
+                isProgram: true,
+                variables: ["A"],
+                properties: [],
+                error: "Opening '{' is missing a matching '}'", // defect 7
+            },
+            {
+                description: "export const a = 1",
+                input: "export const a = 1",
+                isProgram: true,
+                variables: ["a="],
+                properties: [],
+                error: "'import' and 'export' may appear only with 'sourceType: module'",
+            },
+        ];
+
+        for (const {
+            description,
+            input,
+            isProgram,
+            assignmentIsDefinition,
+            variables,
+            properties,
+            error,
+        } of testCases) {
+            it(`should tokenize: ${description}`, () => {
+                const state = buildParsingState({
+                    uri: "fake-uri",
+                    content: input,
+                    callbacks: new MockCallbacks(),
+                });
+                const storyState: StoryFormatParsingState = {
+                    passageTokens: {},
+                };
+
+                const result = uut.tokenizeJavaScript(
+                    isProgram,
+                    input,
+                    0,
+                    state.textDocument,
+                    storyState,
+                    assignmentIsDefinition,
+                );
+
+                expect(tokensToCompactStrings(result)).to.eql({
+                    variables,
+                    properties,
+                    error,
+                });
+            });
+        }
+    });
+
     describe("Diagnostics", () => {
         it("should error on an unterminated string", () => {
             const expression = " let v = '1234";
