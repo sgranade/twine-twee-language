@@ -578,7 +578,7 @@ describe("Manage Story Formats", () => {
                     Promise.resolve(new Response(undefined, { status: 404 })),
                 );
             mockFunction
-                .withArgs(sinon.match(new RegExp(uut.ChapbookMainPage)))
+                .withArgs(uut.ChapbookMainPage)
                 .returns(
                     Promise.resolve(
                         new Response(
