@@ -1227,13 +1227,15 @@ describe("JS Parser", () => {
         /**
          * Turn tokenized JS into compact lists of strings.
          *
-         * Variables are returned as "varname", or "varname=" if it's being
+         * Variables are returned as `varname`, or `varname=` if it's being
          * assigned to.
          *
-         * Properties are returned as "varname.p.q", or "varname.p.q=" if it's
+         * Properties are returned as `varname."p.q"`, or `varname."p.q"=` if it's
          * being assigned to.
          */
         function tokensToCompactStrings(result: uut.TokenizedJS) {
+            const name = (s: string) =>
+                /[.=]/.test(s) ? JSON.stringify(s) : s;
             return {
                 variables: result.variables.map(
                     (v) => v.contents + (v.defined ? "=" : ""),
@@ -1241,7 +1243,7 @@ describe("JS Parser", () => {
                 properties: result.properties.map(
                     (p) =>
                         (p.prefix !== undefined ? p.prefix + "." : "") +
-                        p.contents +
+                        name(p.contents) +
                         (p.defined ? "=" : ""),
                 ),
                 error: result.error?.message,
@@ -1291,6 +1293,20 @@ describe("JS Parser", () => {
                 isProgram: false,
                 variables: ["obj"],
                 properties: ["obj.a b"],
+            },
+            {
+                description: "obj['a.b'] // key w/a dot is quoted",
+                input: "obj['a.b']",
+                isProgram: false,
+                variables: ["obj"],
+                properties: ['obj."a.b"'],
+            },
+            {
+                description: "obj['k='] // key w/an equals sign is quoted",
+                input: "obj['k=']",
+                isProgram: false,
+                variables: ["obj"],
+                properties: ['obj."k="'],
             },
             {
                 description: "obj[i].name",
