@@ -456,6 +456,103 @@ describe("JS Parser", () => {
                 modifiers: [],
             });
         });
+
+        describe("Identifier Edge Cases", () => {
+            /**
+             * Tokenize `input` at offset 0 and return the semantic tokens as
+             * `text@at:type` strings, in position order.
+             */
+            function tokensFor(input: string, isProgram = true): string[] {
+                const state = buildParsingState({
+                    uri: "fake-uri",
+                    content: input,
+                    callbacks: new MockCallbacks(),
+                });
+                const storyState: StoryFormatParsingState = {
+                    passageTokens: {},
+                };
+
+                uut.tokenizeJavaScript(
+                    isProgram,
+                    input,
+                    0,
+                    state.textDocument,
+                    storyState,
+                );
+
+                const typeNames = Object.fromEntries(
+                    Object.entries(ETokenType).map(([k, v]) => [v, k]),
+                );
+                return Object.values(storyState.passageTokens).map(
+                    (t) => `${t.text}@${t.at}:${typeNames[t.type]}`,
+                );
+            }
+
+            it("should set a variable token for an arrow function's parameter", () => {
+                const result = tokensFor("(a) => a", false);
+
+                expect(result).to.eql(["a@1:variable", "a@7:variable"]);
+            });
+
+            it("should not set a variable token for a function expression's parameter", () => {
+                const result = tokensFor("f = function(a){ a }");
+
+                expect(result).to.eql([
+                    "f@0:variable",
+                    "=@2:operator",
+                    "a@17:variable",
+                ]);
+            });
+
+            it("should set a property token on a member of a function-local variable", () => {
+                const result = tokensFor("function f(o){ o.x }");
+
+                expect(result).to.eql(["o@15:variable", "x@17:property"]);
+            });
+
+            it("should set a function token for a constructor's callee and a variable token for its argument", () => {
+                const result = tokensFor("new Foo(bar)");
+
+                expect(result).to.eql(["Foo@4:function", "bar@8:variable"]);
+            });
+
+            it("should set a function token for a member-expression constructor's callee", () => {
+                const result = tokensFor("new obj.Foo(bar)");
+
+                expect(result).to.eql([
+                    "obj@4:variable",
+                    "Foo@8:function",
+                    "bar@12:variable",
+                ]);
+            });
+
+            it("should not set a function token for a computed, non-static callee", () => {
+                const result = tokensFor("obj[x](y)");
+
+                expect(result).to.eql([
+                    "obj@0:variable",
+                    "x@4:variable",
+                    "y@7:variable",
+                ]);
+            });
+
+            it("should set a function token for a computed string-literal callee", () => {
+                const result = tokensFor('obj["m"](x)');
+
+                expect(result).to.eql([
+                    "obj@0:variable",
+                    '"m"@4:string',
+                    "m@5:function",
+                    "x@9:variable",
+                ]);
+            });
+
+            it("should not set tokens for labels", () => {
+                const result = tokensFor("l: while(a){ continue l }");
+
+                expect(result).to.eql(["a@9:variable"]);
+            });
+        });
     });
 
     describe("Returned Variables", () => {
@@ -1462,12 +1559,11 @@ describe("JS Parser", () => {
                 properties: [],
             },
             {
-                description:
-                    "try{a()}catch(e){e.message} // defect 3: catch param leaks `e` into globals",
+                description: "try{a()}catch(e){e.message}",
                 input: "try{a()}catch(e){e.message}",
                 isProgram: true,
-                variables: ["e", "e"], // defect 3
-                properties: ["e.message"], // defect 3
+                variables: ["e"],
+                properties: ["e.message"],
             },
             {
                 description: "class A {} // defect 4: class name unbound",
@@ -1603,10 +1699,10 @@ describe("JS Parser", () => {
 
             // --- Calls ---
             {
-                description: "foo(bar) // defect 1: argument lost entirely",
+                description: "foo(bar)",
                 input: "foo(bar)",
                 isProgram: true,
-                variables: [], // defect 1
+                variables: ["bar"],
                 properties: [],
             },
             {
@@ -1618,45 +1714,66 @@ describe("JS Parser", () => {
                 properties: ["bar.baz"],
             },
             {
-                description: "a = foo(b) // defect 1: argument lost entirely",
+                description: "a = foo(b)",
                 input: "a = foo(b)",
                 isProgram: true,
-                variables: ["a"], // defect 1
+                variables: ["a", "b"],
                 properties: [],
             },
             {
                 description: "new Foo(bar)",
                 input: "new Foo(bar)",
                 isProgram: true,
-                variables: [],
+                variables: ["bar"],
+                properties: [],
+            },
+            {
+                description: "new a.B(x)",
+                input: "new a.B(x)",
+                isProgram: true,
+                variables: ["a", "x"],
+                properties: [],
+            },
+            {
+                description: 'obj["m"](x)',
+                input: 'obj["m"](x)',
+                isProgram: true,
+                variables: ["obj", "x"],
+                properties: [],
+            },
+            {
+                description: "obj[k](x)",
+                input: "obj[k](x)",
+                isProgram: true,
+                variables: ["obj", "k", "x"],
                 properties: [],
             },
             {
                 description: "obj.method(x)",
                 input: "obj.method(x)",
                 isProgram: true,
-                variables: ["obj"],
+                variables: ["obj", "x"],
                 properties: [],
             },
             {
                 description: "obj.a.method(x)",
                 input: "obj.a.method(x)",
                 isProgram: true,
-                variables: ["obj"],
+                variables: ["obj", "x"],
                 properties: ["obj.a"],
             },
             {
                 description: "setTimeout(fn, 1)",
                 input: "setTimeout(fn, 1)",
                 isProgram: true,
-                variables: [],
+                variables: ["fn"],
                 properties: [],
             },
             {
                 description: "parseInt(a)",
                 input: "parseInt(a)",
                 isProgram: true,
-                variables: [],
+                variables: ["a"],
                 properties: [],
             },
             {
@@ -1672,14 +1789,14 @@ describe("JS Parser", () => {
                 description: "Math.max(a,b)",
                 input: "Math.max(a,b)",
                 isProgram: true,
-                variables: [],
+                variables: ["a", "b"],
                 properties: [],
             },
             {
                 description: "console.log(a)",
                 input: "console.log(a)",
                 isProgram: true,
-                variables: [],
+                variables: ["a"],
                 properties: [],
             },
             {
@@ -1694,7 +1811,7 @@ describe("JS Parser", () => {
                     "RegExp.test(a) // defect 8: RegExp missing from builtInObjects",
                 input: "RegExp.test(a)",
                 isProgram: true,
-                variables: ["RegExp"], // defect 8
+                variables: ["RegExp", "a"], // defect 8
                 properties: [],
             },
             {
@@ -1744,21 +1861,19 @@ describe("JS Parser", () => {
                 error: "Incomplete expression after the operator '='",
             },
             {
-                description:
-                    "obj. // defect 5: the loose-parse placeholder property reaches the index",
+                description: "obj.",
                 input: "obj.",
                 isProgram: false,
                 variables: ["obj"],
-                properties: ["obj.✖"], // defect 5
+                properties: [],
                 error: "Missing property or method name after '.'",
             },
             {
-                description:
-                    "a.b. // defect 5: the loose-parse placeholder property reaches the index",
+                description: "a.b.",
                 input: "a.b.",
                 isProgram: false,
                 variables: ["a"],
-                properties: ["a.b", "a.b.✖"], // defect 5
+                properties: ["a.b"],
                 error: "Missing property or method name after '.'",
             },
             {
@@ -1795,6 +1910,22 @@ describe("JS Parser", () => {
                 variables: ["a="],
                 properties: [],
                 error: "'import' and 'export' may appear only with 'sourceType: module'",
+            },
+
+            // --- Labels ---
+            {
+                description: "l: for(;;){ break l }",
+                input: "l: for(;;){ break l }",
+                isProgram: true,
+                variables: [],
+                properties: [],
+            },
+            {
+                description: "l: while(a){ continue l }",
+                input: "l: while(a){ continue l }",
+                isProgram: true,
+                variables: ["a"],
+                properties: [],
             },
         ];
 

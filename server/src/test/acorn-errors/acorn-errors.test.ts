@@ -98,7 +98,7 @@ describe("Acorn Error Messages", () => {
             expectedEnd: 2,
         },
 
-        // --- Broken JavaScript harvested from existing story-format test fixtures ---
+        // --- Broken JavaScript from other story-format test fixtures ---
         {
             description:
                 "harvested from chapbook-parser.test.ts's [javascript] engine.extend " +

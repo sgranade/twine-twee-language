@@ -1,13 +1,12 @@
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import {
+    isEveryIdentifierAVariable,
     JSPropertyLabel,
     parseJSStrict,
     TokenizedJS,
     tokenizeJavaScript,
-    tokenizeParsedJS,
 } from "../../../js-parser";
-import { ETokenType } from "../../../semantic-tokens";
 import { createLocationFor } from "../../../parser";
 import { capturePreSemanticTokenFor, StoryFormatParsingState } from "../..";
 
@@ -192,25 +191,20 @@ export function isTwineScriptExpression(expression: string): boolean {
         const ast = parseJSStrict(desugared, false);
         // Make sure all variables are SugarCube variables, as barewords will look like
         // variables to the JS parser
-        const tokens = tokenizeParsedJS(expression, ast);
-        for (const token of Object.values(tokens)) {
-            if (token.type === ETokenType.variable) {
-                // Resugar the text (if needed) and test to see if it's an SC2 variable.
-                const { sugaredText } = getSugaredPositionAndNewText(
-                    token.at,
-                    positionMapping,
-                );
-                if (sugaredText === "$" || sugaredText === "_") {
-                    token.text = sugaredText + token.text.slice(1);
-                } else if (sugaredText !== undefined) {
-                    token.text = sugaredText;
-                }
-                if (!startIsVarRegexp.test(token.text)) {
-                    return false;
-                }
+        return isEveryIdentifierAVariable(ast, (name, at) => {
+            // Resugar text (if needed) & test to see if it's an SC2 variable
+            const { sugaredText } = getSugaredPositionAndNewText(
+                at,
+                positionMapping,
+            );
+            let text = name;
+            if (sugaredText === "$" || sugaredText === "_") {
+                text = sugaredText + name.slice(1);
+            } else if (sugaredText !== undefined) {
+                text = sugaredText;
             }
-        }
-        return true;
+            return startIsVarRegexp.test(text);
+        });
     } catch {
         return false;
     }
