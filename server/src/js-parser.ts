@@ -17,7 +17,7 @@ import { ETokenType, TokenModifier, TokenType } from "./semantic-tokens";
 /**
  * The ECMA version we're going to parse with.
  */
-export const EcmaVersion: acorn.ecmaVersion = 2020;
+export const EcmaVersion: acorn.ecmaVersion = "latest";
 
 /**
  * Conversion from Javascript typeof string to semantic token type.

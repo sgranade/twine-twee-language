@@ -1928,31 +1928,25 @@ describe("JS Parser", () => {
                 error: "Missing property or method name after '.'",
             },
             {
-                description:
-                    "a ||= 1 // defect 7: ES2021 syntax fails under EcmaVersion 2020",
+                description: "a ||= 1 // ES2021 or-equals syntax",
                 input: "a ||= 1",
                 isProgram: true,
-                variables: [], // defect 7
+                variables: ["a"],
                 properties: [],
-                error: "Incomplete expression after the operator '||'", // defect 7
             },
             {
-                description:
-                    "n = 1_000 // defect 7: ES2021 numeric separator fails under EcmaVersion 2020",
+                description: "n = 1_000 // ES2021 numeric separator",
                 input: "n = 1_000",
                 isProgram: true,
                 variables: ["n"],
                 properties: [],
-                error: "Missing space between a number and the following identifier", // defect 7
             },
             {
-                description:
-                    "class A { foo = 1 } // defect 7: ES2022 class field fails under EcmaVersion 2020",
+                description: "class A { foo = 1 } // ES2022 class field",
                 input: "class A { foo = 1 }",
                 isProgram: true,
                 variables: ["A="],
                 properties: [],
-                error: "Opening '{' is missing a matching '}'", // defect 7
             },
             {
                 description: "export const a = 1",
