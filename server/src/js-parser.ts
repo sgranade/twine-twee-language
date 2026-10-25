@@ -481,6 +481,58 @@ function annotateVariableScopes(
     assignmentIsDefinition: boolean,
 ) {
     const globalScope = createScope("global");
+    const references: { id: ScopedIdentifier; scope: Scope }[] = [];
+
+    /**
+     * Visit a function. Its parameters bind in one scope, while its body's
+     * declarations, including `var`s, bind in a child of that scope. That
+     * prevents a body `var` from being hoisted.
+     * : its parameters bind in one scope, and its body's
+     * declarations (including hoisted `var`s) in a child of that scope, so
+     * parameter defaults can't see body `var`s. A named function
+     * expression's name binds in a scope of its own outside both.
+     *
+     * @param node Function node to visit.
+     * @param scope Scope enclosing the function node.
+     * @param ancestors Function's ancestors, ending with `node` itself.
+     */
+    function visitFunction(
+        node:
+            | acorn.FunctionDeclaration
+            | acorn.AnonymousFunctionDeclaration
+            | acorn.FunctionExpression
+            | acorn.ArrowFunctionExpression,
+        scope: Scope,
+        ancestors: acorn.Node[],
+    ): void {
+        let outerScope = scope;
+        if (node.id) {
+            if (node.type === "FunctionDeclaration") {
+                bindDeclaredName(scope, node.id, "function");
+            } else {
+                outerScope = createScope("block", scope);
+                bindDeclaredName(outerScope, node.id, "function");
+            }
+        }
+
+        const paramScope = createScope("function", outerScope);
+        if (node.type !== "ArrowFunctionExpression") {
+            bindIdentifier(paramScope, "arguments", "param");
+        }
+        for (const param of node.params) {
+            collectPatternIdentifiers(param as acorn.AnyNode, (id) => {
+                bindIdentifier(paramScope, id.name, "param");
+            });
+        }
+
+        if (node.body.type === "BlockStatement") {
+            const bodyScope = createScope("function", paramScope);
+            for (const child of node.body.body)
+                visit(child, bodyScope, [...ancestors, node.body, child]);
+        } else {
+            visit(node.body, paramScope, [...ancestors, node.body]);
+        }
+    }
 
     /**
      * Visit expressions embedded in a binding pattern -- default values
@@ -545,27 +597,31 @@ function annotateVariableScopes(
                 return;
             }
 
-            case "FunctionDeclaration": {
-                if (node.id) bindDeclaredName(scope, node.id, "function");
-                const fnScope = createScope("function", scope);
-                for (const param of node.params) {
-                    collectPatternIdentifiers(param as acorn.AnyNode, (id) => {
-                        bindIdentifier(fnScope, id.name, "param");
-                    });
-                }
-                visit(node.body, fnScope, [...ancestors, node.body]);
+            case "FunctionDeclaration":
+            case "FunctionExpression":
+            case "ArrowFunctionExpression": {
+                visitFunction(node, scope, ancestors);
                 return;
             }
 
-            case "FunctionExpression":
-            case "ArrowFunctionExpression": {
-                const fnScope = createScope("function", scope);
-                for (const param of node.params) {
-                    collectPatternIdentifiers(param as acorn.AnyNode, (id) => {
-                        bindIdentifier(fnScope, id.name, "param");
-                    });
+            case "StaticBlock": {
+                // A static block is a function-like scope; even `var` stays inside
+                const blockScope = createScope("function", scope);
+                for (const child of node.body) {
+                    visit(child, blockScope, [...ancestors, child]);
                 }
-                visit(node.body, fnScope, [...ancestors, node.body]);
+                return;
+            }
+
+            case "SwitchStatement": {
+                // All `case` bodies share one block scope.
+                visit(node.discriminant, scope, [
+                    ...ancestors,
+                    node.discriminant,
+                ]);
+                const caseScope = createScope("block", scope);
+                for (const switchCase of node.cases)
+                    visit(switchCase, caseScope, [...ancestors, switchCase]);
                 return;
             }
 
@@ -652,10 +708,10 @@ function annotateVariableScopes(
                 const idNode = node as ScopedIdentifier;
                 if (classifyIdentifier(node, ancestors) !== "reference") break;
 
-                const resolved = findBindingScope(scope, node.name);
                 // The identifier is a reference...
+                // (which we'll resolve once every scope's bindings are done)
                 idNode._isDefinition = false;
-                idNode._scopeType = resolved?.type ?? "global";
+                references.push({ id: idNode, scope });
 
                 // ...unless it's the LHS of an assignment and we're forcing assignment to be definition
                 if (assignmentIsDefinition) {
@@ -688,6 +744,10 @@ function annotateVariableScopes(
     }
 
     visit(ast as acorn.AnyNode, globalScope, [ast as acorn.AnyNode]);
+
+    for (const { id, scope } of references) {
+        id._scopeType = findBindingScope(scope, id.name)?.type ?? "global";
+    }
 }
 
 /**
