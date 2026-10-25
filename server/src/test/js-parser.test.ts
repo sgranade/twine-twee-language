@@ -1529,19 +1529,24 @@ describe("JS Parser", () => {
                 properties: [],
             },
             {
-                description:
-                    "for (let i=0;i<n;i++){i} // defect 2: loop head leaks `i` into globals",
+                description: "for (let i=0;i<n;i++){i}",
                 input: "for (let i=0;i<n;i++){i}",
                 isProgram: true,
-                variables: ["i=", "i", "n", "i", "i"], // defect 2
+                variables: ["n"],
                 properties: [],
             },
             {
-                description:
-                    "for (var j in obj){j} // defect 2: loop head leaks `j` into globals",
+                description: "for (var j in obj){j}",
                 input: "for (var j in obj){j}",
                 isProgram: true,
-                variables: ["j=", "obj", "j"], // defect 2
+                variables: ["j=", "obj", "j"],
+                properties: [],
+            },
+            {
+                description: "for (const x of xs){x}",
+                input: "for (const x of xs){x}",
+                isProgram: true,
+                variables: ["xs"],
                 properties: [],
             },
             {
@@ -1562,14 +1567,60 @@ describe("JS Parser", () => {
                 description: "try{a()}catch(e){e.message}",
                 input: "try{a()}catch(e){e.message}",
                 isProgram: true,
-                variables: ["e"],
-                properties: ["e.message"],
+                variables: [],
+                properties: [],
             },
             {
-                description: "class A {} // defect 4: class name unbound",
+                description: "try{a()}catch({message}){message}",
+                input: "try{a()}catch({message}){message}",
+                isProgram: true,
+                variables: [],
+                properties: [],
+            },
+            {
+                description:
+                    "try{}catch({a = b}){a} // a catch param's default value is still a read",
+                input: "try{}catch({a = b}){a}",
+                isProgram: true,
+                variables: ["b"],
+                properties: [],
+            },
+            {
+                description:
+                    "try{}catch({[k]: v}){v} // a catch param's computed key is still a read",
+                input: "try{}catch({[k]: v}){v}",
+                isProgram: true,
+                variables: ["k"],
+                properties: [],
+            },
+            {
+                description:
+                    "try{}catch([a, b = a]){} // a catch param's default sees earlier params",
+                input: "try{}catch([a, b = a]){}",
+                isProgram: true,
+                variables: [],
+                properties: [],
+            },
+            {
+                description:
+                    "class A {} // class names, as a global declaration, counts as a definition",
                 input: "class A {}",
                 isProgram: true,
-                variables: ["A"], // defect 4
+                variables: ["A="],
+                properties: [],
+            },
+            {
+                description: "class A { foo(){} [bar](){} }",
+                input: "class A { foo(){} [bar](){} }",
+                isProgram: true,
+                variables: ["A=", "bar"],
+                properties: [],
+            },
+            {
+                description: "const B = class Named { foo(){ return Named } }",
+                input: "const B = class Named { foo(){ return Named } }",
+                isProgram: true,
+                variables: ["B="],
                 properties: [],
             },
             {
@@ -1899,7 +1950,7 @@ describe("JS Parser", () => {
                     "class A { foo = 1 } // defect 7: ES2022 class field fails under EcmaVersion 2020",
                 input: "class A { foo = 1 }",
                 isProgram: true,
-                variables: ["A"],
+                variables: ["A="],
                 properties: [],
                 error: "Opening '{' is missing a matching '}'", // defect 7
             },
