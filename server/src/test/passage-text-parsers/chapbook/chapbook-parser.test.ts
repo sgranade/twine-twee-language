@@ -85,6 +85,30 @@ describe("Chapbook Parser", () => {
         });
     });
 
+    it("should treat collision-prone browser global names as story variables", () => {
+        const header = ":: Passage\n";
+        const passage = "location: 'cave'\n--\n{location} {document.title}\n";
+        const callbacks = new MockCallbacks();
+        const state = buildParsingState({
+            uri: "fake-uri",
+            content: header + passage,
+            callbacks: callbacks,
+        });
+        state.storyFormat = {
+            format: "Chapbook",
+            formatVersion: "2.0.1",
+        };
+        const parser = uut.getChapbookParser(undefined);
+
+        parser?.parsePassageText(passage, header.length, state);
+        const result = callbacks.references.map((r) => [r.contents, r.kind]);
+
+        expect(result).to.eql([
+            ["location", OChapbookSymbolKind.VariableSet],
+            ["location", OChapbookSymbolKind.Variable],
+        ]);
+    });
+
     it("should not parse engine extension calls when only parsing the StoryData passage", () => {
         const header = ":: Passage\n";
         const passage =

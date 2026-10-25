@@ -31,6 +31,7 @@ import {
 import * as SC2Patterns from "./sc2/sc2-patterns";
 import {
     startIsVarRegexp,
+    sugarCubeHostGlobals,
     tokenizeTwineScriptExpression,
 } from "./sc2/sc2-twinescript";
 import {
@@ -1565,6 +1566,7 @@ export function parsePassageText(
 
     const sugarcubeState: SugarCubeParsingState = {
         passageTokens: {},
+        hostGlobals: sugarCubeHostGlobals,
         unclosedMacros: [],
         widgetMacroRanges: [],
         api: api,

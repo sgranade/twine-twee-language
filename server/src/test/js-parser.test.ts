@@ -5,6 +5,8 @@ import { Location, Range } from "vscode-languageserver";
 import { buildParsingState, MockCallbacks } from "./builders";
 import { ETokenType } from "../semantic-tokens";
 import { StoryFormatParsingState } from "../passage-text-parsers";
+import { browserGlobals } from "../passage-text-parsers/host-globals";
+import { sugarCubeHostGlobals } from "../passage-text-parsers/sugarcube/sc2/sc2-twinescript";
 import * as uut from "../js-parser";
 
 describe("JS Parser", () => {
@@ -1316,6 +1318,7 @@ describe("JS Parser", () => {
             input: string; // Input to `tokenizeJavaScript()`
             isProgram: boolean; // Whether the input is a full program (instead of a snippet)
             assignmentIsDefinition?: boolean; // Whether to treat assignment as a definition
+            hostGlobals?: ReadonlySet<string>; // Host globals (browser; libraries) that a story format would set
             variables: string[]; // Expected variables
             properties: string[]; // Expected property
             error?: string; // Expected error message, if any
@@ -1817,6 +1820,7 @@ describe("JS Parser", () => {
                 description: "setTimeout(fn, 1)",
                 input: "setTimeout(fn, 1)",
                 isProgram: true,
+                hostGlobals: browserGlobals,
                 variables: ["fn"],
                 properties: [],
             },
@@ -1828,9 +1832,11 @@ describe("JS Parser", () => {
                 properties: [],
             },
             {
-                description: "$('#x').hide()",
+                description:
+                    "$('#x').hide() // jQuery, which SugarCube's hostGlobals suppresses",
                 input: "$('#x').hide()",
                 isProgram: true,
+                hostGlobals: sugarCubeHostGlobals,
                 variables: [],
                 properties: [],
             },
@@ -1844,9 +1850,11 @@ describe("JS Parser", () => {
                 properties: [],
             },
             {
-                description: "console.log(a)",
+                description:
+                    "console.log(a) // `console`, which browserGlobals suppresses",
                 input: "console.log(a)",
                 isProgram: true,
+                hostGlobals: browserGlobals,
                 variables: ["a"],
                 properties: [],
             },
@@ -1854,24 +1862,79 @@ describe("JS Parser", () => {
                 description: "window.foo = 1",
                 input: "window.foo = 1",
                 isProgram: true,
+                hostGlobals: browserGlobals,
                 variables: [],
                 properties: [],
             },
             {
                 description:
-                    "RegExp.test(a) // defect 8: RegExp missing from builtInObjects",
-                input: "RegExp.test(a)",
+                    "window.foo = 1 // `window` is returned when there are no hostGlobals",
+                input: "window.foo = 1",
                 isProgram: true,
-                variables: ["RegExp", "a"], // defect 8
+                variables: ["window"],
+                properties: ["window.foo="],
+            },
+            {
+                description:
+                    "location.x = history // allowed by our Chapbook parser",
+                input: "location.x = history",
+                isProgram: true,
+                hostGlobals: browserGlobals,
+                variables: ["location", "history"],
+                properties: ["location.x="],
+            },
+            {
+                description:
+                    "location.x = history // SugarCube: no bare name is a story variable",
+                input: "location.x = history",
+                isProgram: true,
+                hostGlobals: sugarCubeHostGlobals,
+                variables: [],
                 properties: [],
             },
             {
                 description:
-                    "globalThis.z = 1 // defect 8: globalThis missing from builtInObjects",
+                    "jQuery.fx.off = a // SugarCube: doesn't see jQuery",
+                input: "jQuery.fx.off = a",
+                isProgram: true,
+                hostGlobals: sugarCubeHostGlobals,
+                variables: ["a"],
+                properties: [],
+            },
+            {
+                description: "new TypeError(m)",
+                input: "new TypeError(m)",
+                isProgram: true,
+                variables: ["m"],
+                properties: [],
+            },
+            {
+                description: "Uint8Array.from(a)",
+                input: "Uint8Array.from(a)",
+                isProgram: true,
+                variables: ["a"],
+                properties: [],
+            },
+            {
+                description: "[undefined, NaN, Infinity, x]",
+                input: "[undefined, NaN, Infinity, x]",
+                isProgram: false,
+                variables: ["x"],
+                properties: [],
+            },
+            {
+                description: "RegExp.test(a)",
+                input: "RegExp.test(a)",
+                isProgram: true,
+                variables: ["a"],
+                properties: [],
+            },
+            {
+                description: "globalThis.z = 1",
                 input: "globalThis.z = 1",
                 isProgram: true,
-                variables: ["globalThis"], // defect 8
-                properties: ["globalThis.z="], // defect 8
+                variables: [],
+                properties: [],
             },
             {
                 description: "this.foo = 1",
@@ -1979,6 +2042,7 @@ describe("JS Parser", () => {
             input,
             isProgram,
             assignmentIsDefinition,
+            hostGlobals,
             variables,
             properties,
             error,
@@ -1991,6 +2055,7 @@ describe("JS Parser", () => {
                 });
                 const storyState: StoryFormatParsingState = {
                     passageTokens: {},
+                    hostGlobals: hostGlobals,
                 };
 
                 const result = uut.tokenizeJavaScript(

@@ -235,6 +235,27 @@ describe("SugarCube Parser", () => {
             });
         });
 
+        it("should not treat browser or jQuery globals as variables in a script passage", () => {
+            const header = ":: Passage [script]\n";
+            const passage =
+                "\nlocation.reload(); $('#x').hide(); jQuery.fx.off = v;\n";
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            state.currentPassage = buildPassage({
+                label: "Passage",
+                isScript: true,
+            });
+            const parser = uut.getSugarCubeParser(undefined);
+
+            parser?.parsePassageText(passage, header.length, state);
+            const result = callbacks.references.map((r) => r.contents);
+
+            expect(result).to.eql(["v"]);
+        });
+
         it("should parse variables that include line continuations in a script passage", () => {
             const header = ":: Passage [script]\n";
             const passage =
