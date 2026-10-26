@@ -176,6 +176,11 @@ const DiagnosticMetadata: Record<DiagnosticCode, DiagnosticMetadata> = {
         message: "Unrecognized modifier",
         severity: DiagnosticSeverity.Warning,
     },
+    [DiagnosticCodes.ChapbookVariableShadowedByBrowser]: {
+        message:
+            "This variable's name is a browser global or Chapbook built-in, so JavaScript can't see it",
+        severity: DiagnosticSeverity.Warning,
+    },
     // SugarCube
     [DiagnosticCodes.SugarCubeDeprecatedSpecialPassage]: {
         message:
