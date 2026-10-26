@@ -14,7 +14,7 @@ import {
     StoryFormatParsingState,
     capturePreSemanticTokenFor,
 } from "./passage-text-parsers";
-import { calleeFlag, Label } from "./project-index";
+import { Callable, calleeFlag, Label } from "./project-index";
 import { ETokenType, TokenModifier, TokenType } from "./semantic-tokens";
 
 /**
@@ -607,10 +607,9 @@ function isGlobalObjectScope(
  * @param property Property to reference inspect, w/its full path in `contents`.
  * @returns True if the property matches a built-in property or called built-in method.
  */
-export function isBuiltinJSProperty(property: {
-    contents: string;
-    isCallee?: boolean;
-}): boolean {
+export function isBuiltinJSProperty(
+    property: Pick<Label, "contents"> & Callable,
+): boolean {
     const name = property.contents.split(".").pop() || "";
     return (
         builtInJSObjectInstanceProperties.has(name) ||

@@ -80,40 +80,9 @@ export const builtinVars: ReadonlySet<string> = new Set(
     [...builtInVarsAndProperties].map((x) => x.split(".", 1)[0]),
 );
 
-// Last-segment property names that exist on SugarCube objects, keyed by the
-// root of the property chain that can reach them. Keying by root keeps
-// author-chosen names like `$player.name` from being exempted. `this` is only
-// listed for its MacroContext members; Passage members (`id`, `name`, `tags`,
-// `text`) are reachable only from untraceable roots (call results), so they're omitted.
-export const builtinSugarCubePropertiesByRoot: ReadonlyMap<
-    string,
-    ReadonlySet<string>
-> = new Map([
-    [
-        "this",
-        new Set([
-            "args",
-            "full",
-            "raw",
-            "name",
-            "output",
-            "parent",
-            "parser",
-            "payload",
-            "self",
-        ]),
-    ],
-]);
-
-/**
- * Is a property a built-in SugarCube property reachable from its root?
- *
- * @param property Full dotted path, e.g. `this.args.full`.
- * @returns True if the property's last segment is a built-in member of its root.
- */
-export function isBuiltinSugarCubeProperty(property: string): boolean {
-    const segments = property.split(".");
-    return !!builtinSugarCubePropertiesByRoot
-        .get(segments[0])
-        ?.has(segments[segments.length - 1]);
-}
+// I'm skipping `MacroContext` (`this.name`, `this.args`) and `Passage` (`id`,
+// `name`, `tags`, `text`) members. The parser doesn't emit properties rooted in
+// `this` or a call result like `passage()`, so such a list would never match,
+// and exempting those names on any story variable would hide typoes in e.g.
+// `$player.name`. If I ever re-write the parser to trace those roots, I'll
+// need to add a root-keyed list.

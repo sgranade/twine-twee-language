@@ -181,30 +181,6 @@ describe("SugarCube Diagnostics", () => {
             expect(results).to.be.empty;
         });
 
-        it("should not warn on a property with no matching set property if it matches a SugarCube object's instance property", () => {
-            const doc = TextDocument.create(
-                "fake-uri",
-                "",
-                0,
-                "Let's try {this.parser}",
-            );
-            const index = new Index();
-            index.setReferences("fake-uri", [
-                {
-                    contents: "this.parser",
-                    locations: [
-                        Location.create("fake-uri", Range.create(1, 2, 3, 4)),
-                    ],
-                    kind: OSugarCubeSymbolKind.Property,
-                },
-            ]);
-            const parser = uut.getSugarCubeParser(undefined);
-
-            const results = parser?.generateDiagnostics(doc, index);
-
-            expect(results).to.be.empty;
-        });
-
         it("should warn on `$player.name` that is never set", () => {
             const doc = TextDocument.create("fake-uri", "", 0, "Let's try");
             const index = new Index();

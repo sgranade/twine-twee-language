@@ -11,11 +11,7 @@ import { ProjectIndex } from "../../project-index";
 import { referencesToDiagnostics } from "../../validator";
 import { allBuiltInMacros, allMacros } from "./macros";
 import { getSugarCubeDefinitions } from "./sugarcube-parser";
-import {
-    isBuiltinSugarCubeProperty,
-    builtinVars,
-    builtInVarsAndProperties,
-} from "./sugarcube-variables";
+import { builtinVars, builtInVarsAndProperties } from "./sugarcube-variables";
 import { OSugarCubeSymbolKind } from "./types";
 
 /**
@@ -74,8 +70,7 @@ function generateVariableAndPropertyDiagnostics(
     ) ?? []) {
         if (
             !propSetNames.has(propRef.contents) &&
-            !isBuiltinJSProperty(propRef) &&
-            !isBuiltinSugarCubeProperty(propRef.contents)
+            !isBuiltinJSProperty(propRef)
         ) {
             diagnostics.push(
                 ...referencesToDiagnostics(
