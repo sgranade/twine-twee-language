@@ -8,6 +8,9 @@
 
 /**
  * Browser globals an author's probably not going to pick as a story variable name.
+ *
+ * Chapbook also has `windowsGlobals`, a generated, exhaustive list of truthy names
+ * on `window` used oly to warn when a story variable that shares one is set.
  */
 export const browserGlobals: ReadonlySet<string> = new Set([
     "console",

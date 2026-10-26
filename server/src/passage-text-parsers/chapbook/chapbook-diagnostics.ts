@@ -15,12 +15,13 @@ import {
     validateFunctionAndFirstArgument,
     validateInsertContents,
 } from "./chapbook-parser";
-import { chapbookProperties } from "./chapbook-properties";
+import {
+    chapbookProperties,
+    chapbookPropertyRoots,
+} from "./chapbook-properties";
 import { OChapbookSymbolKind } from "./types";
 
-const builtinVars = [
-    ...new Set(chapbookProperties.map((x) => x.split(".", 1)[0])),
-];
+const builtinVars = [...chapbookPropertyRoots];
 
 /**
  * Generate diagnostics involving custom inserts.

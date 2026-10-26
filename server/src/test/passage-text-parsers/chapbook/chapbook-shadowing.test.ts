@@ -2,21 +2,26 @@ import "mocha";
 import { expect } from "chai";
 import { DiagnosticSeverity, Range } from "vscode-languageserver";
 
-import { DiagnosticCodes } from "@tt3/shared";
+import { DiagnosticCode, DiagnosticCodes } from "@tt3/shared";
 import { MockCallbacks, buildParsingState, buildPassage } from "../../builders";
 import { chapbookLookupRoots } from "../../../passage-text-parsers/chapbook/chapbook-shadowing";
 import { windowGlobals } from "../../../passage-text-parsers/chapbook/window-globals";
 
 import * as uut from "../../../passage-text-parsers/chapbook";
 
-function parseVars(varsSection: string): MockCallbacks {
+function parseVars(
+    varsSection: string,
+    body = "",
+    disabled?: Set<DiagnosticCode>,
+): MockCallbacks {
     const header = ":: Passage\n";
-    const passage = varsSection + "\n--\n";
+    const passage = varsSection + "\n--\n" + body;
     const callbacks = new MockCallbacks();
     const state = buildParsingState({
         content: header + passage,
         callbacks: callbacks,
     });
+    state.currentPassageDisabledDiagnostics = disabled;
     uut.getChapbookParser(undefined)?.parsePassageText(
         passage,
         header.length,
@@ -101,6 +106,40 @@ describe("Chapbook shadowed variables", () => {
             const callbacks = parseVars("location: 1\nlocation: 2");
 
             expect(callbacks.errors.length).to.equal(2);
+        });
+
+        for (const name of ["alert", "prompt", "confirm"]) {
+            it(`should warn on ${name}, which is indexed as a story variable when called`, () => {
+                const callbacks = parseVars(`${name}: 1`);
+
+                expect(callbacks.errors.length).to.equal(1);
+                expect(callbacks.errors[0].message).to.include(
+                    "browser global",
+                );
+            });
+        }
+
+        it("should warn on setting alert even though calling it is indexed as a read", () => {
+            const callbacks = parseVars(
+                "alert: 1",
+                "[JavaScript]\nalert(x);\n[continue]\n",
+            );
+
+            expect(callbacks.errors.length).to.equal(1);
+            expect(callbacks.errors[0].range).to.eql(Range.create(1, 0, 1, 5));
+            expect(
+                callbacks.references.filter((r) => r.contents === "alert"),
+            ).to.have.length(2);
+        });
+
+        it("should not warn when the diagnostic is disabled for the passage", () => {
+            const callbacks = parseVars(
+                "location: 'cave'",
+                "",
+                new Set([DiagnosticCodes.ChapbookVariableShadowedByBrowser]),
+            );
+
+            expect(callbacks.errors).to.be.empty;
         });
 
         for (const line of [

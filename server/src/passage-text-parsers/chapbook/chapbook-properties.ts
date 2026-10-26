@@ -111,3 +111,10 @@ export const chapbookProperties: readonly string[] = [
     "story.name",
     "trail",
 ];
+
+/**
+ * Root names of Chapbook's built-in variables (`browser`, `config`, ...).
+ */
+export const chapbookPropertyRoots: ReadonlySet<string> = new Set(
+    chapbookProperties.map((x) => x.split(".", 1)[0]),
+);
