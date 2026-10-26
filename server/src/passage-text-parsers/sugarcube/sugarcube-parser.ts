@@ -532,10 +532,10 @@ function parseMacroArgs(
                     }
                     // All references in a receiver are actually assignments
                     for (const v of tokens.variables) {
-                        v.defined = true;
+                        v.assigned = true;
                     }
                     for (const p of tokens.properties) {
-                        p.defined = true;
+                        p.assigned = true;
                     }
                     createVariableAndPropertyReferences(
                         tokens,

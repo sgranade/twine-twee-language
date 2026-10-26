@@ -33,9 +33,9 @@ const typeofToSemantic: Record<string, TokenType> = {
  */
 export interface JSVariableLabel extends Label {
     /**
-     * Whether the variable is being defined.
+     * Whether the variable is being assigned to.
      */
-    defined?: boolean;
+    assigned?: boolean;
 }
 
 /**
@@ -48,9 +48,9 @@ export interface JSPropertyLabel extends Label {
      */
     prefix?: string;
     /**
-     * Whether the property is being defined.
+     * Whether the property is being assigned to.
      */
-    defined?: boolean;
+    assigned?: boolean;
 }
 
 export namespace JSPropertyLabel {
@@ -64,7 +64,7 @@ export namespace JSPropertyLabel {
             (val as JSPropertyLabel).contents !== undefined &&
             (val as JSPropertyLabel).location !== undefined &&
             ((val as JSPropertyLabel).prefix !== undefined ||
-                (val as JSPropertyLabel).defined !== undefined)
+                (val as JSPropertyLabel).assigned !== undefined)
         );
     }
 }
@@ -231,7 +231,7 @@ interface Scope {
  * Add scope information to an Acorn identifier.
  */
 interface ScopedIdentifier extends acorn.Identifier {
-    _isDefinition?: boolean;
+    _isAssignment?: boolean;
     _scopeType?: "global" | "function" | "block";
 }
 
@@ -304,7 +304,7 @@ function bindDeclaredName(
     kind: Parameters<typeof bindIdentifier>[2],
 ): void {
     const boundScope = bindIdentifier(scope, id.name, kind);
-    (id as ScopedIdentifier)._isDefinition = true;
+    (id as ScopedIdentifier)._isAssignment = true;
     (id as ScopedIdentifier)._scopeType = boundScope.type;
 }
 
@@ -476,10 +476,7 @@ function classifyIdentifier(
  *
  * @param ast AST to annotate.
  */
-function annotateVariableScopes(
-    ast: acorn.Node,
-    assignmentIsDefinition: boolean,
-) {
+function annotateVariableScopes(ast: acorn.Node, isAssignmentContext: boolean) {
     const globalScope = createScope("global");
     const references: { id: ScopedIdentifier; scope: Scope }[] = [];
 
@@ -710,18 +707,18 @@ function annotateVariableScopes(
 
                 // The identifier is a reference...
                 // (which we'll resolve once every scope's bindings are done)
-                idNode._isDefinition = false;
+                idNode._isAssignment = false;
                 references.push({ id: idNode, scope });
 
-                // ...unless it's the LHS of an assignment and we're forcing assignment to be definition
-                if (assignmentIsDefinition) {
+                // ...unless it's the LHS of an assignment in an assignment context
+                if (isAssignmentContext) {
                     const parent = parentOf(ancestors);
                     if (
                         parent &&
                         parent.type === "AssignmentExpression" &&
                         parent.left === node
                     ) {
-                        idNode._isDefinition = true;
+                        idNode._isAssignment = true;
                     }
                 }
                 break;
@@ -843,13 +840,13 @@ function getStaticPropertyName(
 }
 
 /**
- * Determine if a member expression is defining stuff (i.e. is part of an assignment expression).
+ * Determine if a member expression is being assigned to.
  *
  * @param node Member expression being inspected.
  * @param ancestors The node's ancestors.
- * @returns True if the member expression is defining stuff.
+ * @returns True if the member expression is being assigned to.
  */
-function isMemberExpressionDefinition(
+function isMemberExpressionAssignment(
     node: acorn.MemberExpression,
     ancestors: acorn.Node[],
 ): boolean {
@@ -915,7 +912,7 @@ function captureObjectExpressionProperties(
         name: string,
         start: number,
         scope?: string,
-        defined?: boolean,
+        assigned?: boolean,
     ) => void,
 ) {
     const isGlobalObject = isGlobalObjectScope(parentScope, isGlobalName);
@@ -1206,7 +1203,7 @@ function computeSemanticTokens(
 interface RawVariableOccurrence {
     text: string;
     at: number;
-    defined: boolean;
+    assigned: boolean;
 }
 
 /**
@@ -1216,7 +1213,7 @@ interface RawPropertyOccurrence {
     text: string;
     at: number;
     scope?: string;
-    defined: boolean;
+    assigned: boolean;
 }
 
 /**
@@ -1251,7 +1248,7 @@ function extractSymbols(
         variableTokens[id.start] = {
             text: id.name,
             at: id.start,
-            defined: !!id._isDefinition,
+            assigned: !!id._isAssignment,
         };
     };
 
@@ -1260,7 +1257,7 @@ function extractSymbols(
         name: string | undefined,
         start: number,
         scope?: string,
-        defined = false,
+        assigned = false,
     ) => {
         if (!name) return;
         // Properties w/o a scope (e.g. globals) aren't tracked
@@ -1269,7 +1266,7 @@ function extractSymbols(
             text: name,
             at: start,
             scope,
-            defined,
+            assigned,
         };
     };
 
@@ -1292,7 +1289,7 @@ function extractSymbols(
                     break;
                 }
 
-                const defined = isMemberExpressionDefinition(node, ancestors);
+                const assigned = isMemberExpressionAssignment(node, ancestors);
                 const isGlobal = isGlobalName(chain.root.name);
 
                 // Add the root variable
@@ -1329,7 +1326,7 @@ function extractSymbols(
                         prop.name,
                         prop.start,
                         scope,
-                        defined && chain.root._scopeType === "global",
+                        assigned && chain.root._scopeType === "global",
                     );
                 });
                 break;
@@ -1571,7 +1568,9 @@ export function parseJS(
  * @param document Document containing the expression.
  * @param storyFormatState Story format parsing state that supplies the format's host globals
  * and collects semantic tokens.
- * @param assignmentIsDefinition If true, variable assignment will be treated as variable definition. (Needed for e.g. SugarCube passage link setters.)
+ * @param isAssignmentContext True if the code's purpose is to set state (an assignment context),
+ * so write-shaped syntax beyond declarations counts as an assignment. Otherwise they're reported
+ * as reads since, they're often a `==` typo or a side effect.
  * @returns Tokenized variables and properties and any parsing error.
  */
 export function tokenizeJavaScript(
@@ -1580,7 +1579,7 @@ export function tokenizeJavaScript(
     offset: number,
     document: TextDocument,
     storyFormatState: StoryFormatParsingState,
-    assignmentIsDefinition?: boolean,
+    isAssignmentContext?: boolean,
 ): TokenizedJS {
     const tokenized: TokenizedJS = {
         variables: [],
@@ -1590,7 +1589,7 @@ export function tokenizeJavaScript(
     const [ast, diagnostic] = parseJS(text, isProgram, offset);
     tokenized.error = diagnostic;
     if (ast !== undefined) {
-        annotateVariableScopes(ast, !!assignmentIsDefinition);
+        annotateVariableScopes(ast, !!isAssignmentContext);
         const isGlobalName = globalNamePredicate(storyFormatState.hostGlobals);
 
         // Collect all semantic tokens (which ignores token scope)
@@ -1615,7 +1614,7 @@ export function tokenizeJavaScript(
                     offset + variable.at,
                     document,
                 ),
-                defined: variable.defined,
+                assigned: variable.assigned,
             });
         }
         for (const property of properties) {
@@ -1627,7 +1626,7 @@ export function tokenizeJavaScript(
                     document,
                 ),
                 prefix: property.scope,
-                defined: property.defined,
+                assigned: property.assigned,
             });
         }
     }

@@ -118,7 +118,7 @@ export function getChapbookDefinitions(
 /**
  * Create symbol references for tokenized variables and properties, and log any tokenizing error.
  *
- * `isSet` overrides the individual label's set (defined) information.
+ * `isSet` overrides the individual label's assignment information.
  *
  * @param jsTokens Tuple with separate lists of variables and properties and potentially a parsing error.
  * @param state Parsing state.
@@ -134,7 +134,7 @@ function createVariableAndPropertyReferences(
             contents: v.contents,
             location: v.location,
             kind:
-                isSet || v.defined
+                isSet || v.assigned
                     ? OChapbookSymbolKind.VariableSet
                     : OChapbookSymbolKind.Variable,
         });
@@ -148,7 +148,7 @@ function createVariableAndPropertyReferences(
             contents: contents,
             location: p.location,
             kind:
-                isSet || p.defined
+                isSet || p.assigned
                     ? OChapbookSymbolKind.PropertySet
                     : OChapbookSymbolKind.Property,
         });
@@ -945,10 +945,10 @@ function findAndParseEngineStateSets(
                     chapbookState,
                 );
                 for (const v of tokens.variables) {
-                    v.defined = true;
+                    v.assigned = true;
                 }
                 for (const p of tokens.properties) {
-                    p.defined = true;
+                    p.assigned = true;
                 }
                 createVariableAndPropertyReferences(tokens, state);
             }

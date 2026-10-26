@@ -10,7 +10,7 @@ import { OSugarCubeSymbolKind } from "./types";
 /**
  * Create symbol references for tokenized variables and properties, and log any tokenizing error.
  *
- * `isSet` overrides the individual label's set (defined) information.
+ * `isSet` overrides the individual label's assignment information.
  *
  * @param jsTokens Tokenized JavaScript variables and properties, as well as any parsing error.
  * @param state Parsing state.
@@ -64,7 +64,7 @@ export function createVariableAndPropertyReferences(
                 contents: v.contents,
                 location: v.location,
                 kind:
-                    isSet || v.defined
+                    isSet || v.assigned
                         ? OSugarCubeSymbolKind.VariableSet
                         : OSugarCubeSymbolKind.Variable,
             });
@@ -91,7 +91,7 @@ export function createVariableAndPropertyReferences(
                 const ref = {
                     contents: (isTemporary ? "_" : "$") + contents.slice(16),
                     location: p.location,
-                    defined: p.defined,
+                    assigned: p.assigned,
                 };
                 const firstPeriodNdx = ref.contents.indexOf(".");
                 if (firstPeriodNdx === -1) {
@@ -120,7 +120,7 @@ export function createVariableAndPropertyReferences(
                 contents: contents,
                 location: p.location,
                 kind:
-                    isSet || p.defined
+                    isSet || p.assigned
                         ? OSugarCubeSymbolKind.PropertySet
                         : OSugarCubeSymbolKind.Property,
             });

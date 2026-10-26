@@ -151,10 +151,10 @@ export const forMacro: MacroInfo = {
                 }
                 // We're creating the index and value variables/properties
                 for (const v of jsTokens.variables) {
-                    v.defined = true;
+                    v.assigned = true;
                 }
                 for (const p of jsTokens.properties) {
-                    p.defined = true;
+                    p.assigned = true;
                 }
                 createVariableAndPropertyReferences(
                     jsTokens,
