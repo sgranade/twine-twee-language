@@ -266,14 +266,12 @@ const builtInJSMethodNames = new Set([
     "finally",
 ]);
 
-type ScopeType = "global" | "function" | "block";
-
 /**
  * Add scope information to an Acorn identifier.
  */
 interface ScopedIdentifier extends acorn.Identifier {
     _isAssignment?: boolean;
-    _scopeType?: ScopeType;
+    _isStoryVariable?: boolean;
 }
 
 /**
@@ -499,12 +497,6 @@ function annotateVariableScopes(ast: acorn.Node, isAssignmentContext: boolean) {
     });
     const isRootScope = (scope: eslintScope.Scope): boolean =>
         scope.type === "global" || scope.type === "module";
-    const scopeTypeOf = (scope: eslintScope.Scope): ScopeType =>
-        isRootScope(scope)
-            ? "global"
-            : scope.type === "function"
-              ? "function"
-              : "block";
 
     for (const scope of scopeManager.scopes) {
         for (const ref of scope.references) {
@@ -521,7 +513,7 @@ function annotateVariableScopes(ast: acorn.Node, isAssignmentContext: boolean) {
                         ? findOuterClassVariable(variable)
                         : variable;
             }
-            id._scopeType = variable ? scopeTypeOf(variable.scope) : "global";
+            id._isStoryVariable = !variable || isRootScope(variable.scope);
         }
     }
     // Root-level declarations are assignments, whether or not they have an
@@ -537,7 +529,7 @@ function annotateVariableScopes(ast: acorn.Node, isAssignmentContext: boolean) {
                 ) {
                     const id = def.name as unknown as ScopedIdentifier;
                     id._isAssignment = true;
-                    id._scopeType = "global";
+                    id._isStoryVariable = true;
                 }
             }
         }
@@ -1052,7 +1044,7 @@ function extractSymbols(
     // variable and not a global
     const captureVariable = (id: ScopedIdentifier) => {
         if (!isPotentialTrackedVariableName(id.name, isGlobalName)) return;
-        if (id._scopeType !== "global") return;
+        if (!id._isStoryVariable) return;
         variableTokens[id.start] = {
             text: id.name,
             at: id.start,
@@ -1095,7 +1087,7 @@ function extractSymbols(
                 if (!chain) break;
 
                 // If the root is locally bound (not a story variable), bail out
-                if (chain.root._scopeType !== "global") {
+                if (!chain.root._isStoryVariable) {
                     break;
                 }
 
@@ -1171,10 +1163,7 @@ function extractSymbols(
                         // Get the scope from the left side to prepend to the property scopes
                         const left = ancestor.left;
                         if (left.type === "Identifier") {
-                            if (
-                                (left as ScopedIdentifier)._scopeType ===
-                                "global"
-                            ) {
+                            if ((left as ScopedIdentifier)._isStoryVariable) {
                                 parentScope = left.name;
                                 captureObjectExpressionProperties(
                                     ancestor.right,
@@ -1190,7 +1179,7 @@ function extractSymbols(
                             if (
                                 chain &&
                                 !isDynamicChain(chain) &&
-                                chain.root._scopeType === "global"
+                                chain.root._isStoryVariable
                             ) {
                                 // If it's dynamic, then we don't save the properties
                                 parentScope = [
@@ -1217,7 +1206,7 @@ function extractSymbols(
                     ) {
                         const id = ancestor.id as ScopedIdentifier;
 
-                        if (id._scopeType === "global") {
+                        if (id._isStoryVariable) {
                             parentScope = id.name;
                             captureObjectExpressionProperties(
                                 ancestor.init,
