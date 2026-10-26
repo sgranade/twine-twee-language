@@ -509,7 +509,11 @@ describe("JS Parser", () => {
             it("should set a property token on a member of a function-local variable", () => {
                 const result = tokensFor("function f(o){ o.x }");
 
-                expect(result).to.eql(["o@15:variable", "x@17:property"]);
+                expect(result).to.eql([
+                    "f@9:variable",
+                    "o@15:variable",
+                    "x@17:property",
+                ]);
             });
 
             it("should set a function token for a constructor's callee and a variable token for its argument", () => {
@@ -1287,6 +1291,14 @@ describe("JS Parser", () => {
                     assigned: true,
                 },
                 {
+                    contents: "f",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(1, 25, 1, 26),
+                    ),
+                    assigned: true,
+                },
+                {
                     contents: "g",
                     location: Location.create(
                         "fake-uri",
@@ -1529,7 +1541,7 @@ describe("JS Parser", () => {
                 description: "function f(){ var o = {a:1} }",
                 input: "function f(){ var o = {a:1} }",
                 isProgram: true,
-                variables: [],
+                variables: ["f="],
                 properties: [],
             },
             {
@@ -1656,7 +1668,7 @@ describe("JS Parser", () => {
                     "function f(){ if (x) { function g(){} } return g } // a function declared in a block binds only in that block (no sloppy-mode Annex B hoisting)",
                 input: "function f(){ if (x) { function g(){} } return g }",
                 isProgram: true,
-                variables: ["x", "g"],
+                variables: ["f=", "x", "g"],
                 properties: [],
             },
             {
@@ -1664,7 +1676,7 @@ describe("JS Parser", () => {
                     "function f(){ return arguments } // `arguments` is bound implicitly in a function",
                 input: "function f(){ return arguments }",
                 isProgram: true,
-                variables: [],
+                variables: ["f="],
                 properties: [],
             },
             {
@@ -1672,7 +1684,7 @@ describe("JS Parser", () => {
                     "function f(){ return () => arguments } // an arrow sees its enclosing function's `arguments`",
                 input: "function f(){ return () => arguments }",
                 isProgram: true,
-                variables: [],
+                variables: ["f="],
                 properties: [],
             },
             {
@@ -1728,7 +1740,7 @@ describe("JS Parser", () => {
                     "function f(a = b){ var b } // params don't see body `var`s",
                 input: "function f(a = b){ var b }",
                 isProgram: true,
-                variables: ["b"],
+                variables: ["f=", "b"],
                 properties: [],
             },
             {
@@ -2136,7 +2148,7 @@ describe("JS Parser", () => {
                 description: "function f(a = b){}",
                 input: "function f(a = b){}",
                 isProgram: true,
-                variables: ["b"],
+                variables: ["f=", "b"],
                 properties: [],
             },
             {
@@ -2171,7 +2183,7 @@ describe("JS Parser", () => {
                 description: "function f(a, b = a){}",
                 input: "function f(a, b = a){}",
                 isProgram: true,
-                variables: [],
+                variables: ["f="],
                 properties: [],
             },
             {
@@ -2187,7 +2199,7 @@ describe("JS Parser", () => {
                     "function f(){ var v; eval('x'); return v } // a direct eval doesn't turn locals into story variables",
                 input: "function f(){ var v; eval('x'); return v }",
                 isProgram: true,
-                variables: [],
+                variables: ["f="],
                 properties: [],
             },
             {
@@ -2206,6 +2218,174 @@ describe("JS Parser", () => {
                 isProgram: true,
                 isAssignmentContext: true,
                 variables: ["a=", "b"],
+                properties: [],
+            },
+
+            // --- Functions ---
+            {
+                description: "function f(){}",
+                input: "function f(){}",
+                isProgram: true,
+                variables: ["f="],
+                properties: [],
+            },
+            {
+                description: "function f(){} with isAssignmentContext",
+                input: "function f(){}",
+                isProgram: true,
+                isAssignmentContext: true,
+                variables: ["f="],
+                properties: [],
+            },
+            {
+                description: "function f(){ function g(){} }",
+                input: "function f(){ function g(){} }",
+                isProgram: true,
+                variables: ["f="],
+                properties: [],
+            },
+            {
+                description:
+                    "function f(){ function g(){} } with isAssignmentContext",
+                input: "function f(){ function g(){} }",
+                isProgram: true,
+                isAssignmentContext: true,
+                variables: ["f="],
+                properties: [],
+            },
+            {
+                description: "[a = 1] = c",
+                input: "[a = 1] = c",
+                isProgram: true,
+                variables: ["a", "c"],
+                properties: [],
+            },
+            {
+                description: "[a = 1] = c with isAssignmentContext",
+                input: "[a = 1] = c",
+                isProgram: true,
+                isAssignmentContext: true,
+                variables: ["a=", "c"],
+                properties: [],
+            },
+            {
+                description: "[a = b] = c",
+                input: "[a = b] = c",
+                isProgram: true,
+                variables: ["a", "b", "c"],
+                properties: [],
+            },
+            {
+                description: "[a = b] = c with isAssignmentContext",
+                input: "[a = b] = c",
+                isProgram: true,
+                isAssignmentContext: true,
+                variables: ["a=", "b", "c"],
+                properties: [],
+            },
+            {
+                description: "({a = 1} = c)",
+                input: "({a = 1} = c)",
+                isProgram: true,
+                variables: ["a", "c"],
+                properties: [],
+            },
+            {
+                description: "({a = 1} = c) with isAssignmentContext",
+                input: "({a = 1} = c)",
+                isProgram: true,
+                isAssignmentContext: true,
+                variables: ["a=", "c"],
+                properties: [],
+            },
+            {
+                description: "[...a] = c",
+                input: "[...a] = c",
+                isProgram: true,
+                variables: ["a", "c"],
+                properties: [],
+            },
+            {
+                description: "[...a] = c with isAssignmentContext",
+                input: "[...a] = c",
+                isProgram: true,
+                isAssignmentContext: true,
+                variables: ["a=", "c"],
+                properties: [],
+            },
+            {
+                description: "({...a} = c)",
+                input: "({...a} = c)",
+                isProgram: true,
+                variables: ["a", "c"],
+                properties: [],
+            },
+            {
+                description: "({...a} = c) with isAssignmentContext",
+                input: "({...a} = c)",
+                isProgram: true,
+                isAssignmentContext: true,
+                variables: ["a=", "c"],
+                properties: [],
+            },
+            {
+                description: "--a",
+                input: "--a",
+                isProgram: true,
+                variables: ["a"],
+                properties: [],
+            },
+            {
+                description: "--a with isAssignmentContext",
+                input: "--a",
+                isProgram: true,
+                isAssignmentContext: true,
+                variables: ["a="],
+                properties: [],
+            },
+            {
+                description: "a--",
+                input: "a--",
+                isProgram: true,
+                variables: ["a"],
+                properties: [],
+            },
+            {
+                description: "a-- with isAssignmentContext",
+                input: "a--",
+                isProgram: true,
+                isAssignmentContext: true,
+                variables: ["a="],
+                properties: [],
+            },
+            {
+                description: "for (a in b) {}",
+                input: "for (a in b) {}",
+                isProgram: true,
+                variables: ["a", "b"],
+                properties: [],
+            },
+            {
+                description: "for (a in b) {} with isAssignmentContext",
+                input: "for (a in b) {}",
+                isProgram: true,
+                isAssignmentContext: true,
+                variables: ["a=", "b"],
+                properties: [],
+            },
+            {
+                description: "for ([a, b] of c) {}",
+                input: "for ([a, b] of c) {}",
+                isProgram: true,
+                variables: ["a", "b", "c"],
+                properties: [],
+            },
+            {
+                description: "for ([a, b] of c) {} with isAssignmentContext",
+                input: "for ([a, b] of c) {}",
+                isProgram: true,
+                isAssignmentContext: true,
+                variables: ["a=", "b=", "c"],
                 properties: [],
             },
 

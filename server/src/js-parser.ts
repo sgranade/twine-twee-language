@@ -709,6 +709,13 @@ function isExcludedIdentifier(
 ): boolean {
     if (isCallee(node, parent)) return true;
     if (parent?.type === "Property" && parent.shorthand) return true;
+    // A top-level function declaration's name is a write, so let it through
+    if (
+        parent?.type === "FunctionDeclaration" &&
+        parent.id === node &&
+        role === "declaration"
+    )
+        return false;
     return isFunctionOwnBinding(role, parent);
 }
 
