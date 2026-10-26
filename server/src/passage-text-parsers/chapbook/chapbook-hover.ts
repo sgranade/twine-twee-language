@@ -3,9 +3,12 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { EmbeddedDocument } from "../../embedded-languages";
 import { ProjectIndex } from "../../project-index";
-import { ChapbookParserAPI } from ".";
 import { getChapbookDefinitions } from "./chapbook-parser";
-import { ChapbookFunctionInfo, OChapbookSymbolKind } from "./types";
+import {
+    ChapbookParserAPI,
+    ChapbookFunctionInfo,
+    OChapbookSymbolKind,
+} from "./types";
 
 function generateDescription(
     item: ChapbookFunctionInfo | undefined,

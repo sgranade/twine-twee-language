@@ -8,12 +8,15 @@ import {
     tokenizeJavaScript,
 } from "../../../js-parser";
 import { createLocationFor } from "../../../parser";
-import { capturePreSemanticTokenFor, StoryFormatParsingState } from "../..";
 import {
     browserGlobals,
     collisionProneBrowserGlobals,
     jQueryGlobals,
 } from "../../host-globals";
+import {
+    capturePreSemanticTokenFor,
+    StoryFormatParsingState,
+} from "../../types";
 
 /**
  * SugarCube's story-format built-in functions, which a called identifier

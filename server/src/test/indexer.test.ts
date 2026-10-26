@@ -9,7 +9,8 @@ import {
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { DecorationType, DiagnosticCodes } from "@tt3/shared";
-import { ParseLevel, ParsingState } from "../parser";
+import { ParseLevel } from "../parser-types";
+import { ParsingState } from "../passage-text-parsers/types";
 import { Index } from "../project-index";
 
 import { buildPassage } from "./builders";

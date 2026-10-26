@@ -2,9 +2,9 @@ import { Diagnostic } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { DiagnosticCodes } from "@tt3/shared";
+import { referencesToDiagnostics } from "../../diagnostics";
 import { isBuiltinJSProperty } from "../../js-parser";
 import { ProjectIndex } from "../../project-index";
-import { referencesToDiagnostics } from "../../validator";
 import {
     findEndOfPartialInsert,
     findEndOfPartialModifier,

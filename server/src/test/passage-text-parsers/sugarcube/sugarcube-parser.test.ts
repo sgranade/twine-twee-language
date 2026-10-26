@@ -4,8 +4,10 @@ import { DiagnosticSeverity, Location, Range } from "vscode-languageserver";
 
 import { TwineSymbolKind } from "../../../project-index";
 import { ETokenModifier, ETokenType } from "../../../semantic-tokens";
-import { MacroLocationInfo } from "../../../passage-text-parsers/sugarcube/sugarcube-parser";
-import { OSugarCubeSymbolKind } from "../../../passage-text-parsers/sugarcube/types";
+import {
+    MacroLocationInfo,
+    OSugarCubeSymbolKind,
+} from "../../../passage-text-parsers/sugarcube/types";
 import { MockCallbacks, buildParsingState, buildPassage } from "../../builders";
 import {
     buildMacroInfo,

@@ -3,7 +3,7 @@ import { expect } from "chai";
 
 import { Range, Location } from "vscode-languageserver";
 
-import { Label } from "../project-index";
+import { Label } from "../types";
 
 import * as uut from "../diagnostics";
 

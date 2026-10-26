@@ -12,6 +12,7 @@ import {
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { diagnosticCodeSet, DisableDiagnosticTag } from "@tt3/shared";
+import type { StoryFormatParser } from "../passage-text-parsers/types";
 import { Index } from "../project-index";
 import { buildPassage, buildTag } from "./builders";
 import * as ptpModule from "../passage-text-parsers";
@@ -793,7 +794,7 @@ describe("Completions", () => {
                     return {
                         id: "FakeFormat",
                         generateCompletions: () => completionList,
-                    } as unknown as ptpModule.StoryFormatParser;
+                    } as unknown as StoryFormatParser;
                 },
             };
 
@@ -852,7 +853,7 @@ describe("Completions", () => {
                             }
                             return completionList;
                         },
-                    } as unknown as ptpModule.StoryFormatParser;
+                    } as unknown as StoryFormatParser;
                 },
             };
 
@@ -950,7 +951,7 @@ describe("Completions", () => {
                     return {
                         id: "FakeFormat",
                         generateCompletions: () => completionList,
-                    } as unknown as ptpModule.StoryFormatParser;
+                    } as unknown as StoryFormatParser;
                 },
             };
 

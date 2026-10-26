@@ -1,5 +1,4 @@
-import { ArgumentRequirement, ValueType } from "../types";
-import { InsertInfo } from "./types";
+import { ArgumentRequirement, InsertInfo, ValueType } from "../types";
 
 export const ambientSound: InsertInfo = {
     name: "ambient sound",

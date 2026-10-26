@@ -5,10 +5,12 @@ import {
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { DiagnosticCodes } from "@tt3/shared";
-import { createDiagnosticFromRange } from "../../diagnostics";
+import {
+    createDiagnosticFromRange,
+    referencesToDiagnostics,
+} from "../../diagnostics";
 import { isBuiltinJSProperty } from "../../js-parser";
 import { ProjectIndex } from "../../project-index";
-import { referencesToDiagnostics } from "../../validator";
 import { allBuiltInMacros, allMacros } from "./macros";
 import { getSugarCubeDefinitions } from "./sugarcube-parser";
 import { builtinVars, builtInVarsAndProperties } from "./sugarcube-variables";

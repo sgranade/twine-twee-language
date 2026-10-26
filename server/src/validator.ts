@@ -4,32 +4,12 @@ import {
 } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
-import { DiagnosticCode, DiagnosticCodes } from "@tt3/shared";
+import { DiagnosticCodes } from "@tt3/shared";
 import { createDiagnosticFromRange } from "./diagnostics";
 import { doValidation } from "./embedded-languages";
 import { getStoryFormatParser } from "./passage-text-parsers";
-import { ProjectIndex, References, TwineSymbolKind } from "./project-index";
+import { ProjectIndex, TwineSymbolKind } from "./project-index";
 import { comparePositions, containingRange } from "./utilities";
-
-/**
- * Create diagnostics from references.
- *
- * @param index Project index.
- * @param refs References.
- * @param code Diagnostic code to apply.
- * @param message Optional diagnostic message.
- * @returns Diagnostics.
- */
-export function referencesToDiagnostics(
-    index: ProjectIndex,
-    refs: References,
-    code: DiagnosticCode,
-    message?: string,
-): Diagnostic[] {
-    return refs.locations
-        .filter((loc) => !index.diagnosticIsDisabled(loc.uri, code, loc.range))
-        .map((loc) => createDiagnosticFromRange(code, loc.range, message));
-}
 
 /**
  * Validate a document's passages.

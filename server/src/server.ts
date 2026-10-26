@@ -43,7 +43,7 @@ import { getDefinitionAt } from "./definition";
 import { createDiagnosticFromRange } from "./diagnostics";
 import { generateHover } from "./hover";
 import { updateProjectIndex } from "./indexer";
-import { ParseLevel } from "./parser";
+import { ParseLevel } from "./parser-types";
 import { Index } from "./project-index";
 import { getReferencesToSymbolAt } from "./references";
 import { generateRenames, prepareRename } from "./renames";

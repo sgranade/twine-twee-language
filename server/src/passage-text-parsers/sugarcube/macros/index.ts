@@ -1,4 +1,4 @@
-import { EnumRecord } from "../sc2/t3lt-parameters";
+import { EnumRecord } from "../types";
 import {
     audioMacro,
     cacheaudioMacro,

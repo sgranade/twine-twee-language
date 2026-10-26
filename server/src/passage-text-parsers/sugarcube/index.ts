@@ -1,17 +1,13 @@
 import { SC2MacroInfo } from "@tt3/shared";
-import { StoryFormatParser } from "..";
+import { StoryFormatParser } from "../types";
 import { allMacros, allMacroEnums } from "./macros";
+import type { SugarCubeParserAPI } from "./types";
 import { generateCompletions } from "./sugarcube-completions";
 import { generateDiagnostics } from "./sugarcube-diagnostics";
 import { generateHover } from "./sugarcube-hover";
 import { getReferencesToSymbolAt } from "./sugarcube-references";
 import { generateRenames } from "./sugarcube-renames";
 import { parsePassageText } from "./sugarcube-parser";
-
-export interface SugarCubeParserAPI {
-    allMacros: typeof allMacros;
-    allMacroEnums: typeof allMacroEnums;
-}
 
 const defaultSugarCubeParserAPI: SugarCubeParserAPI = {
     allMacros,

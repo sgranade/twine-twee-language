@@ -4,17 +4,13 @@
  */
 
 import { DiagnosticCodes } from "@tt3/shared";
-import {
-    logDiagnosticFor,
-    parsePassageReference,
-    ParsingState,
-} from "../../../parser";
+import { logDiagnosticFor, parsePassageReference } from "../../../parser";
 import { ETokenType } from "../../../semantic-tokens";
-import { skipSpaces } from "../../../utilities";
-import { capturePreSemanticTokenFor } from "../..";
 import { Token } from "../../../types";
-import { SugarCubeParsingState } from "../sugarcube-parser";
+import { skipSpaces } from "../../../utilities";
+import { ParsingState, capturePreSemanticTokenFor } from "../../types";
 import { createVariableAndPropertyReferences } from "../sugarcube-utils";
+import { SugarCubeParsingState } from "../types";
 import {
     isTwineScriptExpression,
     tokenizeTwineScriptExpression,

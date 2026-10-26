@@ -9,10 +9,10 @@ import { createDiagnosticFor } from "../../../diagnostics";
 import { TokenizedJS } from "../../../js-parser";
 import { logDiagnosticFor, logRawDiagnostic } from "../../../parser";
 import { skipSpaces } from "../../../utilities";
-import { MacroLocationInfo } from "../sugarcube-parser";
 import { createVariableAndPropertyReferences } from "../sugarcube-utils";
 import { forMacroIsRange, forMacroRangeFormat } from "../sc2/sc2-patterns";
 import { tokenizeTwineScriptExpression } from "../sc2/sc2-twinescript";
+import { MacroLocationInfo } from "../types";
 import { MacroInfo, parseArgsAsTwineScriptExpression } from "./types";
 
 export const ifMacro: MacroInfo = {

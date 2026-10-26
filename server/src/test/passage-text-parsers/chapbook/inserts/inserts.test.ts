@@ -5,10 +5,12 @@ import { DiagnosticSeverity, Location, Range } from "vscode-languageserver";
 import { TwineSymbolKind } from "../../../../project-index";
 import { ETokenType } from "../../../../semantic-tokens";
 import { Token } from "../../../../types";
-import { ChapbookParserAPI } from "../../../../passage-text-parsers/chapbook";
-import { ChapbookParsingState } from "../../../../passage-text-parsers/chapbook/chapbook-parser";
 import { all as allInserts } from "../../../../passage-text-parsers/chapbook/inserts";
 import { all as allModifiers } from "../../../../passage-text-parsers/chapbook/modifiers";
+import {
+    ChapbookParserAPI,
+    ChapbookParsingState,
+} from "../../../../passage-text-parsers/chapbook/types";
 import { MockCallbacks, buildParsingState } from "../../../builders";
 import { buildInsertTokens } from "./insert-builders";
 

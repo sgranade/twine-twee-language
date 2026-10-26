@@ -1,5 +1,4 @@
-import { ArgumentRequirement } from "../types";
-import { InsertInfo } from "./types";
+import { ArgumentRequirement, InsertInfo } from "../types";
 
 export const embedImage: InsertInfo = {
     name: "embed image",

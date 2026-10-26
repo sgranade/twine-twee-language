@@ -1,12 +1,12 @@
 import { DiagnosticCodes } from "@tt3/shared";
 import { createDiagnosticFromRange } from "../../diagnostics";
 import { TokenizedJS } from "../../js-parser";
-import { logDiagnostic, logRawDiagnostic, ParsingState } from "../../parser";
+import { logDiagnostic, logRawDiagnostic } from "../../parser";
 import { calleeFlag } from "../../project-index";
 import { positionInRange } from "../../utilities";
-import { SugarCubeParsingState } from "./sugarcube-parser";
+import { ParsingState } from "../types";
 import { builtinVars, builtInVarsAndProperties } from "./sugarcube-variables";
-import { OSugarCubeSymbolKind } from "./types";
+import { OSugarCubeSymbolKind, SugarCubeParsingState } from "./types";
 
 function isInScriptMacro(sugarcubeState: SugarCubeParsingState): boolean {
     return sugarcubeState.unclosedMacros.some((p) => p.name === "script");

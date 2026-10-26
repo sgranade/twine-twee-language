@@ -1,5 +1,4 @@
-import { InsertInfo } from "./types";
-import { ArgumentRequirement } from "../types";
+import { ArgumentRequirement, InsertInfo } from "../types";
 
 export const restartLink: InsertInfo = {
     name: "restart link",

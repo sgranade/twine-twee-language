@@ -1,5 +1,4 @@
-import { ModifierKind } from "../chapbook-parser";
-import { ModifierInfo } from "./types";
+import { ModifierInfo, ModifierKind } from "../types";
 
 export const note: ModifierInfo = {
     name: "note",

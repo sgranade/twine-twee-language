@@ -6,7 +6,7 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 import { DecorationType, DiagnosticCodes } from "@tt3/shared";
 import { improveAcornErrorMessage } from "../../acorn-errors";
 import type { AcornSyntaxError } from "../../acorn-errors";
-import { createDiagnosticFor, TwineDiagnostic } from "../../diagnostics";
+import { createDiagnosticFor } from "../../diagnostics";
 import { EmbeddedDocument } from "../../embedded-languages";
 import {
     parseJSStrict,
@@ -14,8 +14,6 @@ import {
     tokenizeJavaScript,
 } from "../../js-parser";
 import {
-    ParseLevel,
-    ParsingState,
     createLocationFor,
     createSymbolFor,
     findAndParseHtml,
@@ -26,31 +24,35 @@ import {
     logSemanticTokenFor,
     parsePassageReference,
 } from "../../parser";
+import { ParseLevel } from "../../parser-types";
 import { calleeFlag, ProjectIndex } from "../../project-index";
 import { ETokenType, ETokenModifier } from "../../semantic-tokens";
-import { Token } from "../../types";
+import { Token, TwineDiagnostic } from "../../types";
 import {
     extractToMatchingDelimiter,
     hasOwnProperty,
     skipSpaces,
     versionCompare,
 } from "../../utilities";
-import { StoryFormatParsingState, capturePreSemanticTokenFor } from "..";
 import { browserGlobals } from "../host-globals";
-import { ChapbookParserAPI } from ".";
+import { ParsingState, capturePreSemanticTokenFor } from "../types";
 import {
     findShadowedVariable,
     shadowedVariableMessage,
 } from "./chapbook-shadowing";
-import { InsertTokens, ModifierTokens } from "./inserts";
 import {
     ArgumentRequirement,
     ChapbookFunctionInfo,
+    ChapbookParserAPI,
+    ChapbookParsingState,
     ChapbookSymbol,
     ChapbookSymbolKind,
     FirstArgument,
+    InsertTokens,
     InsertProperty,
     InsertPropertyRecord,
+    ModifierKind,
+    ModifierTokens,
     OChapbookSymbolKind,
     ValueType,
 } from "./types";
@@ -61,29 +63,6 @@ const modifierRegex = /^([ \t]*)\[([^[].+[^\]])\](\s*?)(?:\r?\n|$)/gm;
 const varsLineExtractionRegex = /^([ \t]*)(.*)$/gm;
 const varsLineVarOnlyExtractionRegex =
     /^(\s*)([A-Za-z$_][A-Za-z0-9$_.]*)?.*$/gmu;
-
-/**
- * Type of Chapbook modifier.
- */
-export enum ModifierKind {
-    None,
-    Javascript,
-    Css,
-    Note,
-    Continue,
-    Other,
-}
-
-/**
- * Chapbook-specific parsing state information.
- */
-export interface ChapbookParsingState extends StoryFormatParsingState {
-    /**
-     * Type of modifier affecting a text block.
-     */
-    modifierKind: ModifierKind;
-    api: ChapbookParserAPI;
-}
 
 const varInsertRegex = /^({\s*)(\S+)\s*}$/;
 

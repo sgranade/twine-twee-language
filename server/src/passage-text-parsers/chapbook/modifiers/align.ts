@@ -1,4 +1,4 @@
-import { ModifierInfo } from "./types";
+import { ModifierInfo } from "../types";
 
 export const align: ModifierInfo = {
     name: "align",

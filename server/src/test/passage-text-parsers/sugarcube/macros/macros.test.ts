@@ -13,9 +13,11 @@ import {
 } from "../../../builders";
 import { buildMacroInfo } from "./macro-builders";
 
-import { SugarCubeParserAPI } from "../../../../passage-text-parsers/sugarcube";
-import { MacroLocationInfo } from "../../../../passage-text-parsers/sugarcube/sugarcube-parser";
-import { OSugarCubeSymbolKind } from "../../../../passage-text-parsers/sugarcube/types";
+import {
+    MacroLocationInfo,
+    OSugarCubeSymbolKind,
+    SugarCubeParserAPI,
+} from "../../../../passage-text-parsers/sugarcube/types";
 
 import * as uut from "../../../../passage-text-parsers/sugarcube/macros";
 

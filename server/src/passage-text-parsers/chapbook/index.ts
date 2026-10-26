@@ -1,4 +1,4 @@
-import { StoryFormatParser } from "..";
+import { StoryFormatParser } from "../types";
 import { parsePassageText } from "./chapbook-parser";
 import { generateCompletions } from "./chapbook-completions";
 import { getDefinitionAt } from "./chapbook-definitions";
@@ -7,11 +7,7 @@ import { generateHover } from "./chapbook-hover";
 import { getReferencesToSymbolAt } from "./chapbook-references";
 import { all as allInserts } from "./inserts";
 import { all as allModifiers } from "./modifiers";
-
-export interface ChapbookParserAPI {
-    allInserts: typeof allInserts;
-    allModifiers: typeof allModifiers;
-}
+import { ChapbookParserAPI } from "./types";
 
 const defaultChapbookParserAPI: ChapbookParserAPI = {
     allInserts,

@@ -1,5 +1,7 @@
-import { ModifierInfo } from "../../../../passage-text-parsers/chapbook/modifiers";
-import { ArgumentRequirement } from "../../../../passage-text-parsers/chapbook/types";
+import {
+    ArgumentRequirement,
+    ModifierInfo,
+} from "../../../../passage-text-parsers/chapbook/types";
 
 export function buildModifierInfo({
     name = "Mock Modifier",

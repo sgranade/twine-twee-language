@@ -1,4 +1,4 @@
-import { ModifierInfo } from "./types";
+import { ModifierInfo } from "../types";
 
 export const append: ModifierInfo = {
     name: "append",

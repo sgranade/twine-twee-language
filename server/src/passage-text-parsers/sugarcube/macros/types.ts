@@ -1,8 +1,8 @@
-import { ParsingState } from "../../../parser";
-import { MacroLocationInfo, SugarCubeParsingState } from "../sugarcube-parser";
+import { ParsingState } from "../../types";
 import { createVariableAndPropertyReferences } from "../sugarcube-utils";
 import { tokenizeTwineScriptExpression } from "../sc2/sc2-twinescript";
 import { Parameters } from "../sc2/t3lt-parameters";
+import { MacroLocationInfo, SugarCubeParsingState } from "../types";
 
 /**
  * Macros that are parents of another macro.

@@ -1,7 +1,6 @@
 import { DiagnosticCodes } from "@tt3/shared";
 import { logDiagnosticFor } from "../../../parser";
-import { ArgumentRequirement, ValueType } from "../types";
-import { InsertInfo } from "./types";
+import { ArgumentRequirement, InsertInfo, ValueType } from "../types";
 
 export const embedPassage: InsertInfo = {
     name: "embed passage",
