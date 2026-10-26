@@ -12,7 +12,7 @@ export const runMacro: MacroInfo = {
             argsIndex,
             state,
             sugarcubeState,
-            true,
+            { isSetterContext: true },
         ),
 };
 

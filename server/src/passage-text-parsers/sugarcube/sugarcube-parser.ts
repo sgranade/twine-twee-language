@@ -163,7 +163,7 @@ function parseAsJavaScript(
             textIndex,
             state.textDocument,
             sugarcubeState,
-            true,
+            { isAssignmentContext: true },
         ),
         state,
         sugarcubeState,

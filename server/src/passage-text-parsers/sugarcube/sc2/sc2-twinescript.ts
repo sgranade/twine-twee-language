@@ -272,9 +272,10 @@ export function isTwineScriptExpression(expression: string): boolean {
  * @param offset Offset into the document where the expression occurs.
  * @param state Parsing state.
  * @param storyFormatState Passage state object that will collect tokens.
- * @param isSetterContext True if the expression comes from a state-setting context (`<<set>>`,
+ * @param options Tokenizing options.
+ * @param options.isSetterContext True if the expression comes from a state-setting context (`<<set>>`,
  * `<<run>>`, setter links, `data-setter`), so write-shaped syntax counts as assignment.
- * @param isProgram True to parse as a full JS program; false to parse as an expression.
+ * @param options.isProgram True to parse as a full JS program; false to parse as an expression.
  * @returns Tokenized variables and properties, and any parsing error.
  */
 export function tokenizeTwineScriptExpression(
@@ -282,8 +283,10 @@ export function tokenizeTwineScriptExpression(
     offset: number,
     textDocument: TextDocument,
     storyFormatState: StoryFormatParsingState,
-    isSetterContext: boolean = false,
-    isProgram: boolean = false,
+    {
+        isSetterContext = false,
+        isProgram = false,
+    }: { isSetterContext?: boolean; isProgram?: boolean } = {},
 ): TokenizedJS {
     const { desugared, positionMapping } = desugar(expression);
 
@@ -310,7 +313,7 @@ export function tokenizeTwineScriptExpression(
         0, // offset of 0 since the desugared expression starts at the start of the doc
         desugaredDocument,
         desugaredStoryFormatState,
-        isSetterContext,
+        { isAssignmentContext: isSetterContext },
     );
 
     // Adjust variable and property locations and (if needed) text

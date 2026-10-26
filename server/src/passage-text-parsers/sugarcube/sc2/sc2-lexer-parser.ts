@@ -132,7 +132,7 @@ export function parseSugarCubeTwineLink(
                     markupData.setter.at + textIndex,
                     state.textDocument,
                     sugarcubeState,
-                    true, // Link setters define variables on assignment
+                    { isSetterContext: true }, // Link setters define variables on assignment
                 ),
                 state,
                 sugarcubeState,

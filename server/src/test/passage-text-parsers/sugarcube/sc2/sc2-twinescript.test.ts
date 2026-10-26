@@ -370,7 +370,7 @@ describe("SugarCube TwineScript", () => {
                 offset,
                 textDocument,
                 storyState,
-                true,
+                { isSetterContext: true },
             );
 
             expect(result.variables).to.eql([
@@ -404,7 +404,7 @@ describe("SugarCube TwineScript", () => {
                 offset,
                 textDocument,
                 storyState,
-                true,
+                { isSetterContext: true },
             );
 
             expect(result.properties).to.eql([
@@ -783,8 +783,7 @@ describe("SugarCube TwineScript", () => {
                 offset,
                 textDocument,
                 storyState,
-                false,
-                true,
+                { isProgram: true },
             ).error;
 
             // The span covers `$bb`, which sits after the `gt` -> `>`

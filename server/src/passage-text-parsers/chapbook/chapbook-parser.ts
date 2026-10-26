@@ -1605,7 +1605,7 @@ function parseScript(
             textIndex,
             state.textDocument,
             chapbookState,
-            true,
+            { isAssignmentContext: true },
         ),
         state,
     );

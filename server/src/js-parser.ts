@@ -1381,7 +1381,8 @@ export function parseJS(
  * @param document Document containing the expression.
  * @param storyFormatState Story format parsing state that supplies the format's host globals
  * and collects semantic tokens.
- * @param isAssignmentContext True if the code's purpose is to set state (an assignment context),
+ * @param options Tokenizing options.
+ * @param options.isAssignmentContext True if the code's purpose is to set state (an assignment context),
  * so write-shaped syntax beyond declarations counts as an assignment. Otherwise they're reported
  * as reads since, they're often a `==` typo or a side effect.
  * @returns Tokenized variables and properties and any parsing error.
@@ -1392,7 +1393,7 @@ export function tokenizeJavaScript(
     offset: number,
     document: TextDocument,
     storyFormatState: StoryFormatParsingState,
-    isAssignmentContext?: boolean,
+    { isAssignmentContext = false }: { isAssignmentContext?: boolean } = {},
 ): TokenizedJS {
     const tokenized: TokenizedJS = {
         variables: [],
@@ -1421,7 +1422,7 @@ export function tokenizeJavaScript(
         const { variables, properties } = extractSymbols(
             ast,
             isGlobalName,
-            !!isAssignmentContext,
+            isAssignmentContext,
         );
         for (const variable of variables) {
             tokenized.variables.push({

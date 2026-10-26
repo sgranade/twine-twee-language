@@ -22,7 +22,7 @@ export const setMacro: MacroInfo = {
             argsIndex,
             state,
             sugarcubeState,
-            true,
+            { isSetterContext: true },
         ),
 };
 

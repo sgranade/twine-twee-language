@@ -138,7 +138,8 @@ export interface MacroInfo {
  * @param argsIndex Index of the unparsed arguments in the larger document (zero-based).
  * @param state Parsing state.
  * @param sugarcubeState SugarCube-specific parsing state.
- * @param isSetterContext True if the macro's purpose is to set state (e.g. `<<set>>`, `<<run>>`),
+ * @param options Parsing options.
+ * @param options.isSetterContext True if the macro's purpose is to set state (e.g. `<<set>>`, `<<run>>`),
  * so write-shaped syntax counts as assignment.
  * @returns True to indicate that parsing is complete, or false to let parsing continue.
  */
@@ -147,7 +148,7 @@ export function parseArgsAsTwineScriptExpression(
     argsIndex: number,
     state: ParsingState,
     sugarcubeState: SugarCubeParsingState,
-    isSetterContext: boolean = false,
+    options: { isSetterContext?: boolean } = {},
 ): boolean {
     if (args !== undefined) {
         createVariableAndPropertyReferences(
@@ -156,7 +157,7 @@ export function parseArgsAsTwineScriptExpression(
                 argsIndex,
                 state.textDocument,
                 sugarcubeState,
-                isSetterContext,
+                options,
             ),
             state,
             sugarcubeState,

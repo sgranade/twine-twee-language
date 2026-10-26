@@ -294,6 +294,30 @@ describe("Chapbook Parser", () => {
                 kind: OChapbookSymbolKind.PropertySet,
             });
         });
+
+        it("should capture bare and property assignments as writes in script passages", () => {
+            const header = ":: Passage [script]\n";
+            const passage = "\n a = 1; b.c = 2\n";
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            state.currentPassage = buildPassage({ isScript: true });
+            const parser = uut.getChapbookParser(undefined);
+
+            parser?.parsePassageText(passage, header.length, state);
+            const result = callbacks.references.map((r) => [
+                r.contents,
+                r.kind,
+            ]);
+
+            expect(result).to.eql([
+                ["a", OChapbookSymbolKind.VariableSet],
+                ["b", OChapbookSymbolKind.Variable],
+                ["b.c", OChapbookSymbolKind.PropertySet],
+            ]);
+        });
     });
 
     describe("vars section", () => {
