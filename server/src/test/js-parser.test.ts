@@ -2671,6 +2671,66 @@ describe("JS Parser", () => {
         }
     });
 
+    describe("Write parity between identifiers and members", () => {
+        // Identifiers are classified by eslint-scope and members by our own
+        // check (`isWriteTarget`), so they must agree on every position.
+        const templates = [
+            "X = c",
+            "X += c",
+            "X++",
+            "--X",
+            "[X] = c",
+            "[[X]] = c",
+            "({k: X} = c)",
+            "[X = 1] = c",
+            "({k: X = 1} = c)",
+            "[...X] = c",
+            "({...X} = c)",
+            "for (X of y) {}",
+            "for (X in y) {}",
+            "for ([X] of y) {}",
+        ];
+
+        function isWritten(input: string, flag: boolean, member: boolean) {
+            const state = buildParsingState({
+                uri: "fake-uri",
+                content: input,
+                callbacks: new MockCallbacks(),
+            });
+            const result = uut.tokenizeJavaScript(
+                true,
+                input,
+                0,
+                state.textDocument,
+                { passageTokens: {} },
+                flag,
+            );
+            return member
+                ? result.properties.find((p) => p.contents === "x")?.assigned
+                : result.variables.find((v) => v.contents === "t")?.assigned;
+        }
+
+        for (const template of templates) {
+            for (const flag of [false, true]) {
+                it(`should treat ${template} the same for an identifier and a member${flag ? ", isAssignmentContext" : ""}`, () => {
+                    const identifier = isWritten(
+                        template.replace("X", "t"),
+                        flag,
+                        false,
+                    );
+                    const member = isWritten(
+                        template.replace("X", "o.x"),
+                        flag,
+                        true,
+                    );
+
+                    expect(identifier).to.equal(flag);
+                    expect(member).to.equal(flag);
+                });
+            }
+        }
+    });
+
     describe("Diagnostics", () => {
         it("should error on an unterminated string", () => {
             const expression = " let v = '1234";
