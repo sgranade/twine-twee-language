@@ -24,11 +24,10 @@ export type AcornSyntaxError = ErrorWithParserState & {
 };
 
 /**
- * Acorn messages that say only that something went wrong w/o    saying what.
+ * Acorn messages that say only that something went wrong w/o saying what.
  */
 function isGenericMessage(message: string): boolean {
     return (
-        message.startsWith("Unexpected token") ||
         message.startsWith("Unexpected character") ||
         message.startsWith("Unexpected keyword") ||
         message.includes("Unexpected token")
