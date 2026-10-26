@@ -15,6 +15,7 @@
         "acorn": "^8.11.3",
         "acorn-loose": "^8.4.0",
         "acorn-walk": "^8.3.2",
+        "eslint-scope": "^9.1.2",
         "uuid": "^13.0.0",
         "vscode-css-languageservice": "^6.2.14",
         "vscode-html-languageservice": "^5.2.0",
@@ -24,5 +25,8 @@
         "yaml": "^2.6.0"
     },
     "scripts": {},
-    "type": "module"
+    "type": "module",
+    "devDependencies": {
+        "@types/estree": "^1.0.9"
+    }
 }

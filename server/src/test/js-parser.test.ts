@@ -1322,6 +1322,7 @@ describe("JS Parser", () => {
             variables: string[]; // Expected variables
             properties: string[]; // Expected property
             error?: string; // Expected error message, if any
+            ignoreError?: boolean; // A test case that's only checking the symbols and doesn't care about the error
         }
 
         /**
@@ -1727,7 +1728,7 @@ describe("JS Parser", () => {
                     "function f(a = b){ var b } // params don't see body `var`s",
                 input: "function f(a = b){ var b }",
                 isProgram: true,
-                variables: [],
+                variables: ["b"],
                 properties: [],
             },
             {
@@ -1792,12 +1793,11 @@ describe("JS Parser", () => {
                 properties: [],
             },
             {
-                description:
-                    "a++, isAssignmentContext // defect 9: ++ never counts as a write",
+                description: "a++, isAssignmentContext",
                 input: "a++",
                 isProgram: true,
                 isAssignmentContext: true,
-                variables: ["a"], // defect 9
+                variables: ["a="],
                 properties: [],
             },
             {
@@ -1809,11 +1809,11 @@ describe("JS Parser", () => {
             },
             {
                 description:
-                    "[a,b] = c, isAssignmentContext // defect 9: destructuring never counts as a write",
+                    "[a,b] = c, isAssignmentContext // destructuring counts as a write",
                 input: "[a,b] = c",
                 isProgram: true,
                 isAssignmentContext: true,
-                variables: ["a", "b", "c"], // defect 9
+                variables: ["a=", "b=", "c"],
                 properties: [],
             },
             {
@@ -1825,11 +1825,11 @@ describe("JS Parser", () => {
             },
             {
                 description:
-                    "({a} = c), isAssignmentContext // defect 9: destructuring never counts as a write",
+                    "({a} = c), isAssignmentContext // destructuring counts as a write",
                 input: "({a} = c)",
                 isProgram: true,
                 isAssignmentContext: true,
-                variables: ["a", "c"], // defect 9
+                variables: ["a=", "c"],
                 properties: [],
             },
             {
@@ -2131,6 +2131,111 @@ describe("JS Parser", () => {
                 properties: [],
                 error: "'import' and 'export' may appear only with 'sourceType: module'",
             },
+            // --- Default-value scoping ---
+            {
+                description: "function f(a = b){}",
+                input: "function f(a = b){}",
+                isProgram: true,
+                variables: ["b"],
+                properties: [],
+            },
+            {
+                description: "const {a = b} = c",
+                input: "const {a = b} = c",
+                isProgram: true,
+                variables: ["a=", "b", "c"],
+                properties: [],
+            },
+            {
+                description: "const [a = b] = c",
+                input: "const [a = b] = c",
+                isProgram: true,
+                variables: ["a=", "b", "c"],
+                properties: [],
+            },
+            {
+                description: "f = (a = b) => a",
+                input: "f = (a = b) => a",
+                isProgram: true,
+                variables: ["f", "b"],
+                properties: [],
+            },
+            {
+                description: "const {[k]: v} = o",
+                input: "const {[k]: v} = o",
+                isProgram: true,
+                variables: ["k", "v=", "o"],
+                properties: [],
+            },
+            {
+                description: "function f(a, b = a){}",
+                input: "function f(a, b = a){}",
+                isProgram: true,
+                variables: [],
+                properties: [],
+            },
+            {
+                description:
+                    "class A { static s = A } // the class's inner self-binding resolves to the outer name",
+                input: "class A { static s = A }",
+                isProgram: true,
+                variables: ["A=", "A"],
+                properties: [],
+            },
+            {
+                description:
+                    "function f(){ var v; eval('x'); return v } // a direct eval doesn't turn locals into story variables",
+                input: "function f(){ var v; eval('x'); return v }",
+                isProgram: true,
+                variables: [],
+                properties: [],
+            },
+            {
+                description: "import x from 'y'; x // module syntax is scoped",
+                input: "import x from 'y'; x",
+                isProgram: true,
+                variables: ["x"],
+                properties: [],
+                error: "'import' and 'export' may appear only with 'sourceType: module'",
+            },
+
+            // --- Writes in an assignment context ---
+            {
+                description: "for (a of b) with isAssignmentContext",
+                input: "for (a of b) {}",
+                isProgram: true,
+                isAssignmentContext: true,
+                variables: ["a=", "b"],
+                properties: [],
+            },
+
+            // --- Half-typed input never throws ---
+            ...(
+                [
+                    ["obj.", ["obj"], []],
+                    ["foo(", [], []],
+                    ["let = ", ["let"], []],
+                    ["for (let i of", [], []],
+                    ["class {", [], []],
+                    ["$x.y.", ["$x"], ["$x.y"]],
+                    ["{ a: }", [], []],
+                    ["function (", [], []],
+                    ["obj?.", ["obj"], []],
+                    ["`${a ", ["a"], []],
+                    ["new ", [], []],
+                    ["if (", [], []],
+                    ["x = {a:", ["x"], ["x.a="]],
+                    ["try{}catch(", [], []],
+                    ["import x from", [], []],
+                ] as [string, string[], string[]][]
+            ).map(([input, variables, properties]): TestCase => ({
+                description: `half-typed ${JSON.stringify(input)} doesn't throw`,
+                input,
+                isProgram: false,
+                variables,
+                properties,
+                ignoreError: true,
+            })),
 
             // --- Labels ---
             {
@@ -2158,6 +2263,7 @@ describe("JS Parser", () => {
             variables,
             properties,
             error,
+            ignoreError,
         } of testCases) {
             it(`should tokenize: ${description}`, () => {
                 const state = buildParsingState({
@@ -2179,11 +2285,9 @@ describe("JS Parser", () => {
                     isAssignmentContext,
                 );
 
-                expect(tokensToCompactStrings(result)).to.eql({
-                    variables,
-                    properties,
-                    error,
-                });
+                const actual = tokensToCompactStrings(result);
+                if (ignoreError) actual.error = undefined;
+                expect(actual).to.eql({ variables, properties, error });
             });
         }
     });

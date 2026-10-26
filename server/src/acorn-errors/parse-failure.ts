@@ -1,6 +1,6 @@
 import * as acorn from "acorn";
 
-import { EcmaVersion } from "../ecma-version";
+import { ParseEcmaVersion } from "../ecma-version";
 import type { ErrorWithParserState, ParserState } from "./parser-state";
 
 /**
@@ -88,7 +88,9 @@ function tokenize(text: string): acorn.Token[] {
     const tokens: acorn.Token[] = [];
 
     try {
-        const tokenizer = acorn.tokenizer(text, { ecmaVersion: EcmaVersion });
+        const tokenizer = acorn.tokenizer(text, {
+            ecmaVersion: ParseEcmaVersion,
+        });
         // In theory we could tokenize until `eof` or an error, but just in
         // case Acorn ever changes how it works internally, let's make sure
         // we eventually end by setting a ceiling of the number of characters

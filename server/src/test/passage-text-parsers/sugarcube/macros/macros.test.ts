@@ -273,7 +273,7 @@ describe("SugarCube Macros", () => {
                             "fake-uri",
                             Range.create(2, 8, 2, 10),
                         ),
-                        kind: OSugarCubeSymbolKind.Variable,
+                        kind: OSugarCubeSymbolKind.VariableSet,
                     },
                 ]);
             });
