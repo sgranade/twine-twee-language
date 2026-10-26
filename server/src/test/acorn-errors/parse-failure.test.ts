@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import "mocha";
 
-import { EcmaVersion } from "../../ecma-version";
+import { ParseEcmaVersion } from "../../ecma-version";
 import { ParseFailure } from "../../acorn-errors/parse-failure";
 import { ParserWithState } from "../../acorn-errors/parser-state";
 import type { ErrorWithParserState } from "../../acorn-errors/parser-state";
@@ -14,7 +14,7 @@ import type { ErrorWithParserState } from "../../acorn-errors/parser-state";
 function failureFor(input: string): ParseFailure {
     try {
         ParserWithState.parse(input, {
-            ecmaVersion: EcmaVersion,
+            ecmaVersion: ParseEcmaVersion,
             sourceType: "script",
         });
     } catch (err) {

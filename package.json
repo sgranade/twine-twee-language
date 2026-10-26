@@ -282,7 +282,7 @@
         "build-schema": "tsx scripts/build-schema.ts",
         "build-window-globals": "tsx scripts/build-window-globals.ts",
         "esbuild": "node esbuild.mjs",
-        "check-types": "tsc -b --noEmit",
+        "check-types": "tsc -b --noEmit && tsc -p tsconfig.test.json --noEmit",
         "watch": "npm-run-all2 -p watch:*",
         "watch:esbuild": "npm run prebuild && node esbuild.mjs --watch",
         "watch:tsc": "tsc -b --noEmit --watch",

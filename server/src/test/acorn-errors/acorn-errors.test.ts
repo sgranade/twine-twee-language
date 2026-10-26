@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import "mocha";
 
-import { EcmaVersion } from "../../ecma-version";
+import { ParseEcmaVersion } from "../../ecma-version";
 import { ParserWithState } from "../../acorn-errors/parser-state";
 
 import * as uut from "../../acorn-errors";
@@ -24,7 +24,7 @@ describe("Acorn Error Messages", () => {
      */
     function parseAndCaptureError(input: string): uut.AcornSyntaxError {
         ParserWithState.parse(input, {
-            ecmaVersion: EcmaVersion,
+            ecmaVersion: ParseEcmaVersion,
             sourceType: "script",
         });
         throw new Error(`expected "${input}" to fail to parse, but it parsed`);
