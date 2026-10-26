@@ -6,6 +6,7 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { improveAcornErrorMessage } from "./acorn-errors";
 import { ParserWithState } from "./acorn-errors/parser-state";
+import { EcmaVersion } from "./ecma-version";
 import { createLocationFor } from "./parser";
 import {
     StoryFormatParsingState,
@@ -13,11 +14,6 @@ import {
 } from "./passage-text-parsers";
 import { Label } from "./project-index";
 import { ETokenType, TokenModifier, TokenType } from "./semantic-tokens";
-
-/**
- * The ECMA version we're going to parse with.
- */
-export const EcmaVersion: acorn.ecmaVersion = "latest";
 
 /**
  * Conversion from Javascript typeof string to semantic token type.

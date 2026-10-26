@@ -1,6 +1,6 @@
 import * as acorn from "acorn";
 
-import { EcmaVersion } from "../js-parser";
+import { EcmaVersion } from "../ecma-version";
 import type { ErrorWithParserState, ParserState } from "./parser-state";
 
 /**
@@ -99,8 +99,9 @@ function tokenize(text: string): acorn.Token[] {
             if (token.type === acorn.tokTypes.eof) break;
             tokens.push(token);
         }
-    } catch {
-        // We'll ignore the lexical fault
+    } catch (e) {
+        // We'll ignore the lexical fault (if indeed it is such)
+        if (!(e instanceof SyntaxError)) throw e;
     }
 
     return tokens;

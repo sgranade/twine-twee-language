@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import "mocha";
 
-import { EcmaVersion } from "../../js-parser";
+import { EcmaVersion } from "../../ecma-version";
 import { ParseFailure } from "../../acorn-errors/parse-failure";
 import { ParserWithState } from "../../acorn-errors/parser-state";
 import type { ErrorWithParserState } from "../../acorn-errors/parser-state";
