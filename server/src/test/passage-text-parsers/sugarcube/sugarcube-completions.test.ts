@@ -165,9 +165,7 @@ describe("SugarCube Completions", () => {
                 allMacros: () => {
                     return { testy: macro };
                 },
-                allBuiltInMacros: () => {
-                    return {};
-                },
+                allMacroEnums: () => ({}),
             });
 
             const results = parser?.generateCompletions(
@@ -206,9 +204,7 @@ describe("SugarCube Completions", () => {
                 allMacros: () => {
                     return {};
                 },
-                allBuiltInMacros: () => {
-                    return {};
-                },
+                allMacroEnums: () => ({}),
             });
 
             const results = parser?.generateCompletions(
@@ -248,9 +244,7 @@ describe("SugarCube Completions", () => {
                 allMacros: () => {
                     return { testy: macro };
                 },
-                allBuiltInMacros: () => {
-                    return {};
-                },
+                allMacroEnums: () => ({}),
             });
 
             const results = parser?.generateCompletions(
@@ -281,9 +275,7 @@ describe("SugarCube Completions", () => {
                 allMacros: () => {
                     return { testy: macro };
                 },
-                allBuiltInMacros: () => {
-                    return {};
-                },
+                allMacroEnums: () => ({}),
             });
 
             const results = parser?.generateCompletions(
@@ -314,9 +306,7 @@ describe("SugarCube Completions", () => {
                 allMacros: () => {
                     return { testy: macro };
                 },
-                allBuiltInMacros: () => {
-                    return {};
-                },
+                allMacroEnums: () => ({}),
             });
 
             const results = parser?.generateCompletions(
@@ -353,9 +343,7 @@ describe("SugarCube Completions", () => {
                 allMacros: () => {
                     return { testy: macro };
                 },
-                allBuiltInMacros: () => {
-                    return {};
-                },
+                allMacroEnums: () => ({}),
             });
 
             const results = parser?.generateCompletions(
@@ -392,9 +380,7 @@ describe("SugarCube Completions", () => {
                 allMacros: () => {
                     return { testy: macro };
                 },
-                allBuiltInMacros: () => {
-                    return {};
-                },
+                allMacroEnums: () => ({}),
             });
 
             const results = parser?.generateCompletions(
@@ -431,9 +417,7 @@ describe("SugarCube Completions", () => {
                 allMacros: () => {
                     return { testy: macro };
                 },
-                allBuiltInMacros: () => {
-                    return {};
-                },
+                allMacroEnums: () => ({}),
             });
 
             const results = parser?.generateCompletions(
@@ -467,9 +451,7 @@ describe("SugarCube Completions", () => {
                 allMacros: () => {
                     return { testy: macro };
                 },
-                allBuiltInMacros: () => {
-                    return {};
-                },
+                allMacroEnums: () => ({}),
             });
 
             const results = parser?.generateCompletions(
@@ -503,9 +485,7 @@ describe("SugarCube Completions", () => {
                 allMacros: () => {
                     return { testy: macro };
                 },
-                allBuiltInMacros: () => {
-                    return {};
-                },
+                allMacroEnums: () => ({}),
             });
 
             const results = parser?.generateCompletions(
@@ -535,9 +515,7 @@ describe("SugarCube Completions", () => {
                 allMacros: () => {
                     return { testy: macro };
                 },
-                allBuiltInMacros: () => {
-                    return {};
-                },
+                allMacroEnums: () => ({}),
             });
 
             const results = parser?.generateCompletions(

@@ -2,15 +2,21 @@ import "mocha";
 import { expect } from "chai";
 import { DiagnosticSeverity, Location, Range } from "vscode-languageserver";
 
+import { TwineSymbolKind } from "../../../../project-index";
 import { ETokenType } from "../../../../semantic-tokens";
-import { MockCallbacks, buildParsingState } from "../../../builders";
-import { ChapbookParsingState } from "../../../../passage-text-parsers/chapbook/chapbook-parser";
-import { buildInsertTokens } from "./insert-builders";
 import { Token } from "../../../../types";
+import { ChapbookParserAPI } from "../../../../passage-text-parsers/chapbook";
+import { ChapbookParsingState } from "../../../../passage-text-parsers/chapbook/chapbook-parser";
+import { all as allInserts } from "../../../../passage-text-parsers/chapbook/inserts";
+import { all as allModifiers } from "../../../../passage-text-parsers/chapbook/modifiers";
+import { MockCallbacks, buildParsingState } from "../../../builders";
+import { buildInsertTokens } from "./insert-builders";
+
 import * as uutEmbedPassage from "../../../../passage-text-parsers/chapbook/inserts/embed-passage";
 import * as uutLink from "../../../../passage-text-parsers/chapbook/inserts/link";
 import * as uutRevealLink from "../../../../passage-text-parsers/chapbook/inserts/reveal-link";
-import { TwineSymbolKind } from "../../../../project-index";
+
+const api: ChapbookParserAPI = { allInserts, allModifiers };
 
 describe("Chapbook Inserts", () => {
     describe("Embed Passage", () => {
@@ -23,6 +29,7 @@ describe("Chapbook Inserts", () => {
             const chapbookState: ChapbookParsingState = {
                 passageTokens: {},
                 modifierKind: 0,
+                api,
             };
             const args = buildInsertTokens({
                 firstArgument: "Passage Ref",
@@ -49,6 +56,7 @@ describe("Chapbook Inserts", () => {
             const chapbookState: ChapbookParsingState = {
                 passageTokens: {},
                 modifierKind: 0,
+                api,
             };
             const args = buildInsertTokens({
                 firstArgument: "passageRef",
@@ -71,6 +79,7 @@ describe("Chapbook Inserts", () => {
             const chapbookState: ChapbookParsingState = {
                 passageTokens: {},
                 modifierKind: 0,
+                api,
             };
             const args = buildInsertTokens({
                 firstArgument: '"Passage Ref"',
@@ -99,6 +108,7 @@ describe("Chapbook Inserts", () => {
             const chapbookState: ChapbookParsingState = {
                 passageTokens: {},
                 modifierKind: 0,
+                api,
             };
             const args = buildInsertTokens({
                 firstArgument: '"Passage Ref"',
@@ -130,6 +140,7 @@ describe("Chapbook Inserts", () => {
             const chapbookState: ChapbookParsingState = {
                 passageTokens: {},
                 modifierKind: 0,
+                api,
             };
             const args = buildInsertTokens({
                 name: "reveal link",
@@ -156,6 +167,7 @@ describe("Chapbook Inserts", () => {
             const chapbookState: ChapbookParsingState = {
                 passageTokens: {},
                 modifierKind: 0,
+                api,
             };
             const args = buildInsertTokens({});
             args.props = {
