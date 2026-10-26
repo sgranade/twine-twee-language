@@ -884,6 +884,39 @@ describe("Project Index", () => {
             });
         });
 
+        it("should return references from both callee and non-callee entries for the same name", () => {
+            const propertyReferences = [
+                {
+                    contents: "$arr.push",
+                    locations: [
+                        Location.create("fake-uri", Range.create(1, 2, 1, 6)),
+                    ],
+                    kind: 99,
+                },
+                {
+                    contents: "$arr.push",
+                    locations: [
+                        Location.create("fake-uri", Range.create(3, 4, 3, 8)),
+                    ],
+                    kind: 99,
+                    isCallee: true,
+                },
+            ];
+            const index = new uut.Index();
+            index.setReferences("fake-uri", propertyReferences);
+
+            const result = index.getReferencesToSymbolAt(
+                "fake-uri",
+                Position.create(3, 5),
+                false,
+            );
+
+            expect(result?.locations).to.have.deep.members([
+                Location.create("fake-uri", Range.create(1, 2, 1, 6)),
+                Location.create("fake-uri", Range.create(3, 4, 3, 8)),
+            ]);
+        });
+
         it("should return references for a position located at a reference to it, including the definition", () => {
             const passages = [
                 buildPassage({

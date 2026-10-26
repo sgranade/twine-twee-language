@@ -2,7 +2,7 @@ import { Diagnostic } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { DiagnosticCodes } from "@tt3/shared";
-import { isBuiltinJSObjectInstanceProperty } from "../../js-parser";
+import { isBuiltinJSProperty } from "../../js-parser";
 import { ProjectIndex } from "../../project-index";
 import { referencesToDiagnostics } from "../../validator";
 import {
@@ -344,7 +344,7 @@ export function generateDiagnostics(
     ) ?? []) {
         if (
             !propSetNames.has(propRef.contents) &&
-            !isBuiltinJSObjectInstanceProperty(propRef.contents)
+            !isBuiltinJSProperty(propRef)
         ) {
             diagnostics.push(
                 ...referencesToDiagnostics(

@@ -233,6 +233,7 @@ describe("Chapbook Parser", () => {
                         Range.create(1, 13, 1, 16),
                     ),
                     kind: OChapbookSymbolKind.Property,
+                    isCallee: true,
                 },
             ]);
         });

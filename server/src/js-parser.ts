@@ -14,7 +14,7 @@ import {
     StoryFormatParsingState,
     capturePreSemanticTokenFor,
 } from "./passage-text-parsers";
-import { Label } from "./project-index";
+import { calleeFlag, Label } from "./project-index";
 import { ETokenType, TokenModifier, TokenType } from "./semantic-tokens";
 
 /**
@@ -186,38 +186,84 @@ const ecmaScriptGlobals: ReadonlySet<string> = new Set([
     "eval",
 ]);
 
-// This is hacky, but we're going to ignore root properties whose names
-// match static properties of built-in objects' instances.
+// This is hacky, but we're going to ignore properties at any depth whose last
+// segment matches a property of built-in objects' instances. Names an author
+// is likely to choose (`name`, `message`, `size`, ...) are deliberately absent.
 // Taken from https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects
 const builtInJSObjectInstanceProperties = new Set([
     "prototype", // Object
     "arguments", // Function
     "caller", // Function
     "length", // Function, String, Array
-    "name", // Function, Error
-    "description", // Symbol
-    "cause", // Error
-    "message", // Error
     "dotAll", // RegExp
-    "flags", // RegExp
-    "global", // RegExp
     "hasIndices", // RegExp
     "ignoreCase", // RegExp
     "multiline", // RegExp
-    "source", // RegExp
     "sticky", // RegExp
     "unicode", // RegExp
     "unicodeSets", // RegExp
     "lastIndex", // RegExp
-    "size", // Map
     "byteLength", // ArrayBuffer, SharedArrayBuffer, DataView
     "detached", // ArrayBuffer
     "maxByteLength", // ArrayBuffer, SharedArrayBuffer
     "resizable", // ArrayBuffer
     "growable", // SharedArrayBuffer
-    "buffer", // DataView
     "byteOffset", // DataView
     "disposed", // DisposableStack, AsyncDisposableStack
+    "constructor", // Object
+]);
+
+// Built-in method names. These are only exempt when the property is called
+// (`$arr.push(x)`), so a plain read like `$player.keys` still warns.
+const builtInJSMethodNames = new Set([
+    "push",
+    "pop",
+    "shift",
+    "unshift",
+    "slice",
+    "splice",
+    "concat",
+    "join",
+    "indexOf",
+    "lastIndexOf",
+    "includes",
+    "find",
+    "findIndex",
+    "filter",
+    "map",
+    "reduce",
+    "forEach",
+    "some",
+    "every",
+    "sort",
+    "reverse",
+    "flat",
+    "trim",
+    "toUpperCase",
+    "toLowerCase",
+    "replace",
+    "split",
+    "startsWith",
+    "endsWith",
+    "padStart",
+    "padEnd",
+    "repeat",
+    "charAt",
+    "toString",
+    "valueOf",
+    "hasOwnProperty",
+    "get",
+    "set",
+    "has",
+    "add",
+    "delete",
+    "clear",
+    "keys",
+    "values",
+    "entries",
+    "then",
+    "catch",
+    "finally",
 ]);
 
 type ScopeType = "global" | "function" | "block";
@@ -552,14 +598,23 @@ function isGlobalObjectScope(
 }
 
 /**
- * Does a property correspond to a built-in JS object's instance property?
+ * Does a property reference correspond to a built-in JS object's instance property?
  *
- * @param property Property to inspect, including full path (e.g. `var.prop1.prop2` for `prop2`).
- * @returns True if the property matches a built-in JS object's instance property.
+ * The property name is the last segment of its full path (`prop2` in
+ * `var.prop1.prop2`). Instance properties are exempt anywhere; method names
+ * are exempt only when the property is called.
+ *
+ * @param property Property to reference inspect, w/its full path in `contents`.
+ * @returns True if the property matches a built-in property or called built-in method.
  */
-export function isBuiltinJSObjectInstanceProperty(property: string): boolean {
-    return builtInJSObjectInstanceProperties.has(
-        property.split(".").pop() || "",
+export function isBuiltinJSProperty(property: {
+    contents: string;
+    isCallee?: boolean;
+}): boolean {
+    const name = property.contents.split(".").pop() || "";
+    return (
+        builtInJSObjectInstanceProperties.has(name) ||
+        (!!property.isCallee && builtInJSMethodNames.has(name))
     );
 }
 
@@ -1401,7 +1456,7 @@ export function tokenizeJavaScript(
                 ),
                 prefix: property.scope,
                 assigned: property.assigned,
-                ...(property.isCallee ? { isCallee: true } : {}),
+                ...calleeFlag(property),
             });
         }
     }

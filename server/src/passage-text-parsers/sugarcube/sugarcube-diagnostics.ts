@@ -6,13 +6,13 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { DiagnosticCodes } from "@tt3/shared";
 import { createDiagnosticFromRange } from "../../diagnostics";
-import { isBuiltinJSObjectInstanceProperty } from "../../js-parser";
+import { isBuiltinJSProperty } from "../../js-parser";
 import { ProjectIndex } from "../../project-index";
 import { referencesToDiagnostics } from "../../validator";
 import { allBuiltInMacros, allMacros } from "./macros";
 import { getSugarCubeDefinitions } from "./sugarcube-parser";
 import {
-    builtinSugarCubeProperties,
+    isBuiltinSugarCubeProperty,
     builtinVars,
     builtInVarsAndProperties,
 } from "./sugarcube-variables";
@@ -74,10 +74,8 @@ function generateVariableAndPropertyDiagnostics(
     ) ?? []) {
         if (
             !propSetNames.has(propRef.contents) &&
-            !isBuiltinJSObjectInstanceProperty(propRef.contents) &&
-            !builtinSugarCubeProperties.has(
-                propRef.contents.slice(propRef.contents.indexOf(".") + 1),
-            )
+            !isBuiltinJSProperty(propRef) &&
+            !isBuiltinSugarCubeProperty(propRef.contents)
         ) {
             diagnostics.push(
                 ...referencesToDiagnostics(

@@ -12,6 +12,7 @@ import { EmbeddedDocument } from "./embedded-languages";
 import { ParseLevel, ParserCallbacks, parse } from "./parser";
 import { getStoryFormatParser } from "./passage-text-parsers";
 import {
+    calleeFlag,
     Passage,
     ProjectIndex,
     ProjSymbol,
@@ -134,14 +135,16 @@ export function updateProjectIndex(
         getParser,
     );
 
-    // Collate the array of individual references by kind and name
+    // Collate the array of individual references by kind, name, and callee-ness,
+    // so diagnostics can exempt call sites w/o exempting plain reads
     const referencesMap: Record<string, References> = {};
     for (const symbol of indexingState.references) {
-        const key = `${symbol.kind},${symbol.contents}`;
+        const key = `${symbol.kind},${symbol.contents},${!!symbol.isCallee}`;
         const ref = referencesMap[key] || {
             contents: symbol.contents,
             locations: [],
             kind: symbol.kind,
+            ...calleeFlag(symbol),
         };
         ref.locations.push(symbol.location);
         referencesMap[key] = ref;

@@ -80,21 +80,40 @@ export const builtinVars: ReadonlySet<string> = new Set(
     [...builtInVarsAndProperties].map((x) => x.split(".", 1)[0]),
 );
 
-// Properties that exist on existing SugarCube objects, like Passage.
-// In diagnostics, we're going to ignore these properties (which, yes,
-// hacky, but probably the best we can do with this static analysis).
-export const builtinSugarCubeProperties: ReadonlySet<string> = new Set([
-    "args", // MacroContext
-    "args.full", // MacroContext
-    "args.raw", // MacroContext
-    "name", // MacroContext
-    "output", // MacroContext
-    "parent", // MacroContext
-    "parser", // MacroContext
-    "payload", // MacroContext
-    "self", // MacroContext
-    "id", // Passage
-    "name", // Passage
-    "tags", // Passage
-    "text", // Passage
+// Last-segment property names that exist on SugarCube objects, keyed by the
+// root of the property chain that can reach them. Keying by root keeps
+// author-chosen names like `$player.name` from being exempted. `this` is only
+// listed for its MacroContext members; Passage members (`id`, `name`, `tags`,
+// `text`) are reachable only from untraceable roots (call results), so they're omitted.
+export const builtinSugarCubePropertiesByRoot: ReadonlyMap<
+    string,
+    ReadonlySet<string>
+> = new Map([
+    [
+        "this",
+        new Set([
+            "args",
+            "full",
+            "raw",
+            "name",
+            "output",
+            "parent",
+            "parser",
+            "payload",
+            "self",
+        ]),
+    ],
 ]);
+
+/**
+ * Is a property a built-in SugarCube property reachable from its root?
+ *
+ * @param property Full dotted path, e.g. `this.args.full`.
+ * @returns True if the property's last segment is a built-in member of its root.
+ */
+export function isBuiltinSugarCubeProperty(property: string): boolean {
+    const segments = property.split(".");
+    return !!builtinSugarCubePropertiesByRoot
+        .get(segments[0])
+        ?.has(segments[segments.length - 1]);
+}

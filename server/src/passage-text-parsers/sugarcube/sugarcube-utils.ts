@@ -2,6 +2,7 @@ import { DiagnosticCodes } from "@tt3/shared";
 import { createDiagnosticFromRange } from "../../diagnostics";
 import { TokenizedJS } from "../../js-parser";
 import { logDiagnostic, logRawDiagnostic, ParsingState } from "../../parser";
+import { calleeFlag } from "../../project-index";
 import { positionInRange } from "../../utilities";
 import { SugarCubeParsingState } from "./sugarcube-parser";
 import { builtinVars, builtInVarsAndProperties } from "./sugarcube-variables";
@@ -93,6 +94,7 @@ export function createVariableAndPropertyReferences(
                     contents: (isTemporary ? "_" : "$") + contents.slice(16),
                     location: p.location,
                     assigned: p.assigned,
+                    ...calleeFlag(p),
                 };
                 const firstPeriodNdx = ref.contents.indexOf(".");
                 if (firstPeriodNdx === -1) {
@@ -132,6 +134,7 @@ export function createVariableAndPropertyReferences(
                     isSet || p.assigned
                         ? OSugarCubeSymbolKind.PropertySet
                         : OSugarCubeSymbolKind.Property,
+                ...calleeFlag(p),
             });
     }
     if (jsTokens.error) {
