@@ -1156,7 +1156,7 @@ describe("JS Parser", () => {
             ]);
         });
 
-        it("should locate quoted and numeric object-literal keys at their names", () => {
+        it("should locate a quoted object-literal key at its names", () => {
             const expression = "obj = {'k': 1, 22: 2}";
             const state = buildParsingState({
                 uri: "fake-uri",
@@ -1178,10 +1178,7 @@ describe("JS Parser", () => {
                     p.location.range.start.character,
                     p.location.range.end.character,
                 ]),
-            ).to.eql([
-                ["k", 8, 9],
-                ["22", 15, 17],
-            ]);
+            ).to.eql([["k", 8, 9]]);
         });
 
         it("should not return a read/write variable assignment as a created variable", () => {
@@ -1469,24 +1466,68 @@ describe("JS Parser", () => {
             },
             {
                 description: "obj['a b']",
-                input: "obj['a b']",
+                input: "obj['a b'] // a key that isn't an identifier is dynamic",
                 isProgram: false,
                 variables: ["obj"],
-                properties: ["obj.a b"],
+                properties: [],
             },
             {
-                description: "obj['a.b'] // key w/a dot is quoted",
+                description: "obj['a.b'] // dotted key would collide w/obj.a.b",
                 input: "obj['a.b']",
                 isProgram: false,
                 variables: ["obj"],
-                properties: ['obj."a.b"'],
+                properties: [],
             },
             {
-                description: "obj['k='] // key w/an equals sign is quoted",
+                description: "obj['a.b'].c // nothing after a dynamic key",
+                input: "obj['a.b'].c",
+                isProgram: false,
+                variables: ["obj"],
+                properties: [],
+            },
+            {
+                description: "obj['k=']",
                 input: "obj['k=']",
                 isProgram: false,
                 variables: ["obj"],
-                properties: ['obj."k="'],
+                properties: [],
+            },
+            {
+                description: "obj['1']",
+                input: "obj['1']",
+                isProgram: false,
+                variables: ["obj"],
+                properties: [],
+            },
+            {
+                description:
+                    "obj['\\u0061'] // an escaped key doesn't match its source text",
+                input: "obj['\\u0061']",
+                isProgram: false,
+                variables: ["obj"],
+                properties: [],
+            },
+            {
+                description:
+                    "obj['class'] // reserved words are valid property names",
+                input: "obj['class']",
+                isProgram: false,
+                variables: ["obj"],
+                properties: ["obj.class"],
+            },
+            {
+                description: "obj['café']",
+                input: "obj['café']",
+                isProgram: false,
+                variables: ["obj"],
+                properties: ["obj.café"],
+            },
+            {
+                description: "obj['$a_1']",
+                input: "obj['$a_1']",
+                isProgram: false,
+                variables: ["obj"],
+                properties: ["obj.$a_1"],
             },
             {
                 description: "obj[i].name",
@@ -1594,11 +1635,32 @@ describe("JS Parser", () => {
                 properties: ["obj.k"],
             },
             {
-                description: "obj = {1: 'x'}",
+                description: "obj = {1: 'x'} // numeric keys aren't indexed",
                 input: "obj = {1: 'x'}",
                 isProgram: true,
                 variables: ["obj"],
-                properties: ["obj.1"],
+                properties: [],
+            },
+            {
+                description: "obj = {0x10: 1, 1.0: 2}",
+                input: "obj = {0x10: 1, 1.0: 2}",
+                isProgram: true,
+                variables: ["obj"],
+                properties: [],
+            },
+            {
+                description: "obj = {'1': 1, 'a.b': 2, 'my key': 3}",
+                input: "obj = {'1': 1, 'a.b': 2, 'my key': 3}",
+                isProgram: true,
+                variables: ["obj"],
+                properties: [],
+            },
+            {
+                description: "obj = {'café': 1}",
+                input: "obj = {'café': 1}",
+                isProgram: true,
+                variables: ["obj"],
+                properties: ["obj.café"],
             },
             {
                 description: "x = {[k]: 1}",
