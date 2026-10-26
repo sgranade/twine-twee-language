@@ -16,13 +16,43 @@ import {
 } from "../../host-globals";
 
 /**
- * Host globals that won't be SugarCube story variables.
+ * SugarCube's story-format built-in functions, which a called identifier
+ * would otherwise index as a story variable.
+ */
+const sugarCubeBuiltInFunctions: ReadonlySet<string> = new Set([
+    "clone",
+    "either",
+    "forget",
+    "hasVisited",
+    "importScripts",
+    "importStyles",
+    "lastVisited",
+    "memorize",
+    "passage",
+    "previous",
+    "random",
+    "randomFloat",
+    "recall",
+    "setPageElement",
+    "tags",
+    "temporary",
+    "time",
+    "triggerEvent",
+    "turns",
+    "variables",
+    "visited",
+    "visitedTags",
+]);
+
+/**
+ * Globals that are never SugarCube story variables.
  *
  * Since story and temp variables are sigiled with `$` and `_`, respectively,
  * no bare host name will collide with them, unlike in Chapbook. A bare `$`
  * that survives desugaring is going to be jQuery.
  */
-export const sugarCubeHostGlobals: ReadonlySet<string> = new Set([
+export const sugarCubeExcludedGlobals: ReadonlySet<string> = new Set([
+    ...sugarCubeBuiltInFunctions,
     ...browserGlobals,
     ...collisionProneBrowserGlobals,
     ...jQueryGlobals,
@@ -225,7 +255,7 @@ export function isTwineScriptExpression(expression: string): boolean {
                 }
                 return startIsVarRegexp.test(text);
             },
-            sugarCubeHostGlobals,
+            sugarCubeExcludedGlobals,
         );
     } catch {
         return false;

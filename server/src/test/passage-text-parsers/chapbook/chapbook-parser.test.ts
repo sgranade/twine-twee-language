@@ -226,6 +226,14 @@ describe("Chapbook Parser", () => {
                     ),
                     kind: OChapbookSymbolKind.Property,
                 },
+                {
+                    contents: "engine.state.set",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(1, 13, 1, 16),
+                    ),
+                    kind: OChapbookSymbolKind.Property,
+                },
             ]);
         });
 

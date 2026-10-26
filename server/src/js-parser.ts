@@ -49,6 +49,10 @@ export interface JSPropertyLabel extends Label {
      * Whether the property is being assigned to.
      */
     assigned?: boolean;
+    /**
+     * Whether the property is the callee of a call or `new` (e.g. `push` in `arr.push(x)`)
+     */
+    isCallee?: boolean;
 }
 
 export namespace JSPropertyLabel {
@@ -575,15 +579,27 @@ function getStaticPropertyName(
         return property.name !== MISSING_IDENTIFIER ? property.name : undefined;
     }
 
-    if (
-        computed &&
-        property.type === "Literal" &&
-        typeof property.value === "string"
-    ) {
-        return property.value;
+    // A computed key can only be a string literal here; a non-computed literal
+    // key (`{'k': 1}`, `{1: 'x'}`) can be a string or a number.
+    if (property.type === "Literal") {
+        if (typeof property.value === "string") return property.value;
+        if (!computed && typeof property.value === "number")
+            return property.raw ?? String(property.value); // The source text, so the range matches
     }
 
     return undefined;
+}
+
+/**
+ * Get the start of a property key's name, skipping the opening quote of a string literal.
+ *
+ * @param key The property's key node.
+ * @returns Start of the name in the text.
+ */
+function getPropertyNameStart(key: acorn.AnyNode): number {
+    return key.type === "Literal" && typeof key.value === "string"
+        ? key.start + 1
+        : key.start;
 }
 
 /**
@@ -606,12 +622,7 @@ function captureMemberChain(
                 current.property,
                 current.computed,
             );
-            const start =
-                current.computed &&
-                current.property.type === "Literal" &&
-                typeof current.property.value === "string"
-                    ? current.property.start + 1
-                    : current.property.start;
+            const start = getPropertyNameStart(current.property);
 
             props.unshift({ name: propName, start });
             current = current.object; // Head up the chain in the expression
@@ -647,6 +658,7 @@ function captureObjectExpressionProperties(
         start: number,
         scope?: string,
         assigned?: boolean,
+        isCallee?: boolean,
     ) => void,
 ) {
     const isGlobalObject = isGlobalObjectScope(parentScope, isGlobalName);
@@ -664,7 +676,7 @@ function captureObjectExpressionProperties(
         // their properties aren't tracked
         capturePropertyCallback(
             propName,
-            prop.key.start,
+            getPropertyNameStart(prop.key),
             isGlobalObject ? undefined : parentScope,
             assigned,
         );
@@ -726,8 +738,7 @@ function isFunctionOwnBinding(
 }
 
 /**
- * Is an identifier excluded from highlighting and extraction because of its
- * immediate parent: a call/`new` callee, a shorthand property's value, or a
+ * Is an identifier excluded from highlighting and extraction because it's a
  * function's own name or parameter?
  *
  * @param role The identifier's classified role.
@@ -740,9 +751,7 @@ function isExcludedIdentifier(
     parent: acorn.AnyNode | undefined,
     node: acorn.AnyNode,
 ): boolean {
-    if (isCallee(node, parent)) return true;
-    if (parent?.type === "Property" && parent.shorthand) return true;
-    // A top-level function declaration's name is a write, so let it through
+    // A top-level function declaration's name is a write, so don't exclude it
     if (
         parent?.type === "FunctionDeclaration" &&
         parent.id === node &&
@@ -925,7 +934,7 @@ function computeSemanticTokens(
                 // Unlike extraction, highlighting doesn't need to walk up the
                 // ancestors to find a scope prefix: every property key gets its
                 // own token regardless of nesting.
-                captureProperty(propName, node.key.start);
+                captureProperty(propName, getPropertyNameStart(node.key));
                 break;
             }
 
@@ -956,6 +965,7 @@ interface RawPropertyOccurrence {
     at: number;
     scope?: string;
     assigned: boolean;
+    isCallee: boolean;
 }
 
 /**
@@ -1002,6 +1012,7 @@ function extractSymbols(
         start: number,
         scope?: string,
         assigned = false,
+        isCallee = false,
     ) => {
         if (!name) return;
         // Properties w/o a scope (e.g. globals) aren't tracked
@@ -1011,6 +1022,7 @@ function extractSymbols(
             at: start,
             scope,
             assigned,
+            isCallee,
         };
     };
 
@@ -1043,6 +1055,11 @@ function extractSymbols(
                 // Add the root variable
                 captureVariable(chain.root);
 
+                // If this member expression is iteslf a call or a `new` callee
+                // (e.g. `obj.method` in `obj.method(x)`), its last segment is
+                // a method-call property
+                const lastIsCallee = isCallee(node, parentOf(ancestors));
+
                 // Track dynamic properties incrementally
                 let dynamicEncountered = false;
 
@@ -1050,12 +1067,6 @@ function extractSymbols(
                     if (prop.name === undefined) {
                         dynamicEncountered = true;
                         return; // Skip capturing dynamic property itself
-                    }
-                    if (
-                        isCallee(node, parentOf(ancestors)) &&
-                        i === chain.properties.length - 1
-                    ) {
-                        return; // Skip the callee's own name
                     }
 
                     // Scope is valid only until the first dynamic property
@@ -1069,12 +1080,14 @@ function extractSymbols(
                               ].join(".")
                             : undefined;
 
-                    // Only the final segment is written; the rest are reads
+                    // Only the final segment is written or called; the rest are reads
+                    const isFinalSegment = i === chain.properties.length - 1;
                     captureProperty(
                         prop.name,
                         prop.start,
                         scope,
-                        written && i === chain.properties.length - 1,
+                        written && isFinalSegment,
+                        lastIsCallee && isFinalSegment,
                     );
                 });
                 break;
@@ -1166,10 +1179,10 @@ function extractSymbols(
                 }
 
                 // Capture the property. Note we blank out the scope for built-in
-                // objects so they don't get tracked as occurrences.
+                // objects so they don't get tracked as occurrences
                 captureProperty(
                     propName,
-                    node.key.start,
+                    getPropertyNameStart(node.key),
                     isGlobalObjectScope(parentScope || "", isGlobalName)
                         ? undefined
                         : parentScope || undefined,
@@ -1190,9 +1203,9 @@ function extractSymbols(
  * Check whether every identifier that is a potential tracked variable for
  * story formats is a variable based on a caller-supplied predicate.
  *
- * Unlike `isCandidateVariable`, this doesn't follow extraction's temporary
- * exclusions: a shorthand property's value (`a` in `{a}`) is a read, so it's
- * checked. It's for callers like `isTwineScriptExpression` that only need a
+ * Unlike `isCandidateVariable`, this skips callees.
+ *
+ * This function is for callers like `isTwineScriptExpression` that only need a
  * yes/no answer about the identifiers themselves, not their scope.
  *
  * @param ast Parsed AST to walk.
@@ -1388,6 +1401,7 @@ export function tokenizeJavaScript(
                 ),
                 prefix: property.scope,
                 assigned: property.assigned,
+                ...(property.isCallee ? { isCallee: true } : {}),
             });
         }
     }

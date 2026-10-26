@@ -196,7 +196,8 @@ export interface StoryFormatParsingState {
     passageTokens: Record<number, PreSemanticToken>;
     /**
      * Host globals (e.g. from the browser and any libraries like JQuery)
-     * that aren't counted as story variables for this format.
+     * that aren't counted as story variables for this format, plus any
+     * story-format built-ins the format wants excluded.
      */
     hostGlobals?: ReadonlySet<string>;
 }
