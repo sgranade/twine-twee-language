@@ -6,7 +6,14 @@ export const runMacro: MacroInfo = {
     description:
         "Runs given expression.\n\n*Functionally identical to `<<set>>`. Intended to be mnemonically better for uses where the expression is arbitrary code, rather than variables to set—i.e., `<<run>>` to run code, `<<set>>` to set variables.*",
     since: "2.0.0",
-    parseArgs: parseArgsAsTwineScriptExpression,
+    parseArgs: (args, argsIndex, state, sugarcubeState) =>
+        parseArgsAsTwineScriptExpression(
+            args,
+            argsIndex,
+            state,
+            sugarcubeState,
+            true,
+        ),
 };
 
 export const scriptMacro: MacroInfo = {

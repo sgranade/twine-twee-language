@@ -1415,8 +1415,31 @@ describe("Chapbook Parser", () => {
                                 "fake-uri",
                                 Range.create(4, 2, 4, 8),
                             ),
-                            kind: OChapbookSymbolKind.Variable,
+                            kind: OChapbookSymbolKind.VariableSet,
                         },
+                    ]);
+                });
+
+                it("should capture bare and property assignments as writes in a javascript modifier", () => {
+                    const header = ":: Passage\n";
+                    const passage =
+                        "Stuff\n\n[javascript]\n  a = 1; b.c = 2;\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    const result = callbacks.references
+                        .slice(1)
+                        .map((r) => [r.contents, r.kind]);
+
+                    expect(result).to.eql([
+                        ["a", OChapbookSymbolKind.VariableSet],
+                        ["b", OChapbookSymbolKind.Variable],
+                        ["b.c", OChapbookSymbolKind.PropertySet],
                     ]);
                 });
 
@@ -2260,6 +2283,33 @@ describe("Chapbook Parser", () => {
                         ),
                         kind: OChapbookSymbolKind.CustomInsert,
                     });
+                });
+
+                it("should capture an assignment in an insert's first arg as a property read, not a write", () => {
+                    const header = ":: Passage\n";
+                    const passage = "Insert: {mock insert: a.b = 1}";
+                    const callbacks = new MockCallbacks();
+                    const insert = buildInsertInfo({
+                        match: /^mock insert/,
+                    });
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined, {
+                        allModifiers: () => [],
+                        allInserts: () => [insert],
+                    });
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    const result = callbacks.references
+                        .filter((r) => r.contents.startsWith("a"))
+                        .map((r) => [r.contents, r.kind]);
+
+                    expect(result).to.eql([
+                        ["a", OChapbookSymbolKind.Variable],
+                        ["a.b", OChapbookSymbolKind.Property],
+                    ]);
                 });
 
                 it("should capture a variable reference in an insert's first arg", () => {

@@ -770,6 +770,7 @@ describe("JS Parser", () => {
                 offset,
                 state.textDocument,
                 storyState,
+                true,
             ).properties;
 
             expect(result).to.eql([
@@ -780,7 +781,7 @@ describe("JS Parser", () => {
                         Range.create(1, 7, 1, 16),
                     ),
                     prefix: "var1",
-                    assigned: true,
+                    assigned: false,
                 },
                 {
                     contents: "rootprop2",
@@ -832,6 +833,7 @@ describe("JS Parser", () => {
                 offset,
                 state.textDocument,
                 storyState,
+                true,
             ).properties;
 
             expect(result).to.eql([
@@ -842,7 +844,7 @@ describe("JS Parser", () => {
                         Range.create(1, 8, 1, 17),
                     ),
                     prefix: "var1",
-                    assigned: true,
+                    assigned: false,
                 },
                 {
                     contents: "rootprop2",
@@ -904,7 +906,7 @@ describe("JS Parser", () => {
                         Range.create(1, 7, 1, 16),
                     ),
                     prefix: "var1",
-                    assigned: true,
+                    assigned: false,
                 },
             ]);
         });
@@ -1279,6 +1281,7 @@ describe("JS Parser", () => {
                 offset,
                 state.textDocument,
                 storyState,
+                true,
             );
 
             expect(result.variables).to.eql([
@@ -1370,6 +1373,14 @@ describe("JS Parser", () => {
                 input: "a.b = 1",
                 isProgram: true,
                 variables: ["a"],
+                properties: ["a.b"],
+            },
+            {
+                description: "a.b = 1, isAssignmentContext",
+                input: "a.b = 1",
+                isProgram: true,
+                isAssignmentContext: true,
+                variables: ["a"],
                 properties: ["a.b="],
             },
             {
@@ -1377,7 +1388,15 @@ describe("JS Parser", () => {
                 input: "obj.a.b.c = 1",
                 isProgram: true,
                 variables: ["obj"],
-                properties: ["obj.a=", "obj.a.b=", "obj.a.b.c="],
+                properties: ["obj.a", "obj.a.b", "obj.a.b.c"],
+            },
+            {
+                description: "obj.a.b.c = 1, isAssignmentContext",
+                input: "obj.a.b.c = 1",
+                isProgram: true,
+                isAssignmentContext: true,
+                variables: ["obj"],
+                properties: ["obj.a", "obj.a.b", "obj.a.b.c="],
             },
             {
                 description: "obj?.a?.b",
@@ -1456,12 +1475,28 @@ describe("JS Parser", () => {
                 input: "obj = {a: {b: 1}}",
                 isProgram: true,
                 variables: ["obj"],
+                properties: ["obj.a", "obj.a.b"],
+            },
+            {
+                description: "obj = {a: {b: 1}}, isAssignmentContext",
+                input: "obj = {a: {b: 1}}",
+                isProgram: true,
+                isAssignmentContext: true,
+                variables: ["obj="],
                 properties: ["obj.a=", "obj.a.b="],
             },
             {
                 description: "obj.x = {a: 1}",
                 input: "obj.x = {a: 1}",
                 isProgram: true,
+                variables: ["obj"],
+                properties: ["obj.x", "obj.x.a"],
+            },
+            {
+                description: "obj.x = {a: 1}, isAssignmentContext",
+                input: "obj.x = {a: 1}",
+                isProgram: true,
+                isAssignmentContext: true,
                 variables: ["obj"],
                 properties: ["obj.x=", "obj.x.a="],
             },
@@ -1477,6 +1512,14 @@ describe("JS Parser", () => {
                 input: "obj = {a}",
                 isProgram: true,
                 variables: ["obj"], // defect 10
+                properties: ["obj.a"],
+            },
+            {
+                description: "obj = {a}, isAssignmentContext",
+                input: "obj = {a}",
+                isProgram: true,
+                isAssignmentContext: true,
+                variables: ["obj="], // defect 10
                 properties: ["obj.a="],
             },
             {
@@ -1484,6 +1527,14 @@ describe("JS Parser", () => {
                 input: "obj = {a: b}",
                 isProgram: true,
                 variables: ["obj", "b"],
+                properties: ["obj.a"],
+            },
+            {
+                description: "obj = {a: b}, isAssignmentContext",
+                input: "obj = {a: b}",
+                isProgram: true,
+                isAssignmentContext: true,
+                variables: ["obj=", "b"],
                 properties: ["obj.a="],
             },
             {
@@ -1512,6 +1563,14 @@ describe("JS Parser", () => {
                 input: "obj = {get a(){return 1}}",
                 isProgram: true,
                 variables: ["obj"],
+                properties: ["obj.a"],
+            },
+            {
+                description: "obj = {get a(){return 1}}, isAssignmentContext",
+                input: "obj = {get a(){return 1}}",
+                isProgram: true,
+                isAssignmentContext: true,
+                variables: ["obj="],
                 properties: ["obj.a="],
             },
 
@@ -1849,7 +1908,7 @@ describe("JS Parser", () => {
                 input: "a.b += 1",
                 isProgram: true,
                 variables: ["a"],
-                properties: ["a.b="],
+                properties: ["a.b"],
             },
             {
                 description: "a.b += 1, isAssignmentContext",
@@ -1995,6 +2054,7 @@ describe("JS Parser", () => {
                     "window.foo = 1 // `window` is returned when there are no hostGlobals",
                 input: "window.foo = 1",
                 isProgram: true,
+                isAssignmentContext: true,
                 variables: ["window"],
                 properties: ["window.foo="],
             },
@@ -2003,6 +2063,7 @@ describe("JS Parser", () => {
                     "location.x = history // allowed by our Chapbook parser",
                 input: "location.x = history",
                 isProgram: true,
+                isAssignmentContext: true,
                 hostGlobals: browserGlobals,
                 variables: ["location", "history"],
                 properties: ["location.x="],
@@ -2079,14 +2140,152 @@ describe("JS Parser", () => {
                 input: "State.variables.foo = 1",
                 isProgram: true,
                 variables: ["State"],
-                properties: ["State.variables=", "State.variables.foo="],
+                properties: ["State.variables", "State.variables.foo"],
+            },
+            {
+                description: "State.variables.foo = 1, isAssignmentContext",
+                input: "State.variables.foo = 1",
+                isProgram: true,
+                isAssignmentContext: true,
+                variables: ["State"],
+                properties: ["State.variables", "State.variables.foo="],
             },
             {
                 description: "setup.x = 1",
                 input: "setup.x = 1",
                 isProgram: true,
                 variables: ["setup"],
+                properties: ["setup.x"],
+            },
+            {
+                description: "setup.x = 1, isAssignmentContext",
+                input: "setup.x = 1",
+                isProgram: true,
+                isAssignmentContext: true,
+                variables: ["setup"],
                 properties: ["setup.x="],
+            },
+
+            // --- Member targets, with and without isAssignmentContext ---
+            {
+                description: "[o.x] = c",
+                input: "[o.x] = c",
+                isProgram: true,
+                variables: ["o", "c"],
+                properties: ["o.x"],
+            },
+            {
+                description: "[o.x] = c, isAssignmentContext",
+                input: "[o.x] = c",
+                isProgram: true,
+                isAssignmentContext: true,
+                variables: ["o", "c"],
+                properties: ["o.x="],
+            },
+            {
+                description: "({k: o.x} = c)",
+                input: "({k: o.x} = c)",
+                isProgram: true,
+                variables: ["o", "c"],
+                properties: ["o.x"],
+            },
+            {
+                description: "({k: o.x} = c), isAssignmentContext",
+                input: "({k: o.x} = c)",
+                isProgram: true,
+                isAssignmentContext: true,
+                variables: ["o", "c"],
+                properties: ["o.x="],
+            },
+            {
+                description: "[o.x = 1] = c",
+                input: "[o.x = 1] = c",
+                isProgram: true,
+                variables: ["o", "c"],
+                properties: ["o.x"],
+            },
+            {
+                description: "[o.x = 1] = c, isAssignmentContext",
+                input: "[o.x = 1] = c",
+                isProgram: true,
+                isAssignmentContext: true,
+                variables: ["o", "c"],
+                properties: ["o.x="],
+            },
+            {
+                description: "[...o.x] = c",
+                input: "[...o.x] = c",
+                isProgram: true,
+                variables: ["o", "c"],
+                properties: ["o.x"],
+            },
+            {
+                description: "[...o.x] = c, isAssignmentContext",
+                input: "[...o.x] = c",
+                isProgram: true,
+                isAssignmentContext: true,
+                variables: ["o", "c"],
+                properties: ["o.x="],
+            },
+            {
+                description: "o.x++",
+                input: "o.x++",
+                isProgram: true,
+                variables: ["o"],
+                properties: ["o.x"],
+            },
+            {
+                description: "o.x++, isAssignmentContext",
+                input: "o.x++",
+                isProgram: true,
+                isAssignmentContext: true,
+                variables: ["o"],
+                properties: ["o.x="],
+            },
+            {
+                description: "for (o.x of y) {}",
+                input: "for (o.x of y) {}",
+                isProgram: true,
+                variables: ["o", "y"],
+                properties: ["o.x"],
+            },
+            {
+                description: "for (o.x of y) {}, isAssignmentContext",
+                input: "for (o.x of y) {}",
+                isProgram: true,
+                isAssignmentContext: true,
+                variables: ["o", "y"],
+                properties: ["o.x="],
+            },
+            {
+                description: "for (o.x in y) {}",
+                input: "for (o.x in y) {}",
+                isProgram: true,
+                variables: ["o", "y"],
+                properties: ["o.x"],
+            },
+            {
+                description: "for (o.x in y) {}, isAssignmentContext",
+                input: "for (o.x in y) {}",
+                isProgram: true,
+                isAssignmentContext: true,
+                variables: ["o", "y"],
+                properties: ["o.x="],
+            },
+            {
+                description: "[o[i].x] = c",
+                input: "[o[i].x] = c",
+                isProgram: true,
+                variables: ["o", "i", "c"],
+                properties: [],
+            },
+            {
+                description: "[o[i].x] = c, isAssignmentContext",
+                input: "[o[i].x] = c",
+                isProgram: true,
+                isAssignmentContext: true,
+                variables: ["o", "i", "c"],
+                properties: [],
             },
 
             // --- Broken input (loose parse) ---
@@ -2404,7 +2603,7 @@ describe("JS Parser", () => {
                     ["`${a ", ["a"], []],
                     ["new ", [], []],
                     ["if (", [], []],
-                    ["x = {a:", ["x"], ["x.a="]],
+                    ["x = {a:", ["x"], ["x.a"]],
                     ["try{}catch(", [], []],
                     ["import x from", [], []],
                 ] as [string, string[], string[]][]

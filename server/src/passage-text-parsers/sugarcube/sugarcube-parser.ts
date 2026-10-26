@@ -163,6 +163,7 @@ function parseAsJavaScript(
             textIndex,
             state.textDocument,
             sugarcubeState,
+            true,
         ),
         state,
         sugarcubeState,

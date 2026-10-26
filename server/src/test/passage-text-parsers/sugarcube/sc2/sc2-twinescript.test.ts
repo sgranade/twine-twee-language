@@ -404,6 +404,7 @@ describe("SugarCube TwineScript", () => {
                 offset,
                 textDocument,
                 storyState,
+                true,
             );
 
             expect(result.properties).to.eql([
@@ -414,7 +415,7 @@ describe("SugarCube TwineScript", () => {
                         Range.create(1, 8, 1, 17),
                     ),
                     prefix: "$varbl",
-                    assigned: true,
+                    assigned: false,
                 },
                 {
                     contents: "rootprop2",

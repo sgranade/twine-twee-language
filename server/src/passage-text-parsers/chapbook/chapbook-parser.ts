@@ -1566,6 +1566,7 @@ function parseScript(
             textIndex,
             state.textDocument,
             chapbookState,
+            true,
         ),
         state,
     );
