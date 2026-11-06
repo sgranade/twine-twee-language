@@ -6,7 +6,7 @@ Changes to the extension.
 
 Three big changes:
 
-- Story build configuration is now handled a `tt3.config.json` file instead of in extension settings.
+- Story build configuration is now handled by a `tt3.config.json` file instead of in extension settings.
 - Diagnostics have been extensively re-worked.
     - The extension now reports JavaScript errors.
     - It flags variables that (it thinks) have never been defined.
@@ -25,6 +25,7 @@ Three big changes:
 - Passage tags now auto-complete.
 - Variables and properties that haven't been defined now create a warning across both story format code (Chapbook/SugarCube) and JavaScript sections.
 - Now auto-completes object properties from expressions like `var['prop'] = { prop1: 2 }`.
+- When building a story, duplicated passages are replaced by the final defined version of those passages and a warning raised.
 - SugarCube: Variables and properties in script passages and `<<script>>` macros are now properly indexed, including `State.variables.var` and `state.temporary.temp` variables.
 - SugarCube: Special variables `_args` and `_contents` now produce warnings if used outside of `<<widget>>` macros.
 - SugarCube: Macros inside link setters (such as `[[passage][<<set $var to 1>>]]`) now generate a warning about them not being evaluated.

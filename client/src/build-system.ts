@@ -18,7 +18,7 @@ import { FileType, WorkspaceProvider } from "./workspace-provider";
 import {
     addFileToStory,
     canAddFileToStory,
-    validateStory,
+    validateAndCleanStory,
 } from "./build/story-loader";
 import { compileStory } from "./build/story-output";
 import { TweeParseError } from "./build/twee-parser";
@@ -529,7 +529,7 @@ export async function build(
             addFileToStory(story, UriUtils.basename(currentFileUri), contents);
         }
 
-        validateStory(story);
+        const warningMessage = validateAndCleanStory(story);
 
         // Get the story format if it hasn't already been gotten or if the newly-parsed
         // story has a different story format than what's cached. (That should never happen,
@@ -652,6 +652,10 @@ export async function build(
                 `Build failed: Problems copying included files\n${includeErrors.join("\n")}`,
             );
         } else {
+            // Show any warnings
+            if (warningMessage !== undefined) {
+                vscode.window.showWarningMessage(warningMessage);
+            }
             // Tell everyone our build was successful
             signalContextEvent("buildSuccessful", outUris.story);
         }
