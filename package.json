@@ -310,7 +310,7 @@
         "tsx": "^4.23.1",
         "typescript": "^6.0.2",
         "typescript-eslint": "^8.0.0-alpha.10",
-        "zod": "^4.4.3"
+        "zod": "^4.6.7"
     },
     "allowScripts": {
         "esbuild@0.28.2": true,
