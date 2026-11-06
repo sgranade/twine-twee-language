@@ -258,32 +258,13 @@ function parseStoryDataPassage(
 }
 
 /**
- * Parse passage text.
+ * Parse text from a Twee 3 document into story passages.
  *
- * @param passage Information about the passage.
- * @param textIndex Index in the document where the passage text begins (zero-based).
- * @param state Parsing state.
- */
-function parsePassageText(
-    story: Story,
-    passage: Passage,
-    textIndex: number,
-): void {
-    if (passage.name === "StoryTitle") {
-        parseStoryTitlePassage(story, passage.text);
-    } else if (passage.name === "StoryData") {
-        parseStoryDataPassage(story, passage.text, textIndex);
-    }
-}
-
-/**
- * Parse text from a Twee 3 document.
- *
- * @param state Parsing state.
- * @returns List of parsed passages.
+ * @param story Twine story.
+ * @param text: Text to parse.
  * @throws TweeParseError on parsing error.
  */
-export function parseTwee3(story: Story, text: string): void {
+export function parseTwee3(story: Story, text: string) {
     const passageHeaderMatches = [...text.matchAll(/^::([^:].*?|)$/gm)];
     const passages: Passage[] = new Array(passageHeaderMatches.length);
 
@@ -297,11 +278,17 @@ export function parseTwee3(story: Story, text: string): void {
                 ? passageHeaderMatches[ndx + 1].index
                 : undefined,
         );
-        parsePassageText(story, passage, m.index + m[0].length);
+
+        // Handle special passages that affect the Twine story
+        if (passage.name === "StoryTitle") {
+            parseStoryTitlePassage(story, passage.text);
+        } else if (passage.name === "StoryData") {
+            parseStoryDataPassage(story, passage.text, m.index + m[0].length);
+        }
+
         passage.text = passage.text.trim();
         passages[ndx] = passage;
     }
 
     story.passages.push(...passages);
-    return undefined;
 }
