@@ -325,6 +325,18 @@ export interface ProjectIndex {
      * @param uri URI of document to remove.
      */
     removeDocument(uri: string): void;
+
+    /**
+     * Rename a document in the project index.
+     *
+     * If the document doesn't exist in the index, nothing happens.
+     *
+     * If the document is renamed to an already-existing document,
+     * then the already-existing document's information is overwritten.
+     * @param oldUri Original URI of the renamed document.
+     * @param newUri New URI of the renamed document.
+     */
+    removeDocument(oldUri: string, newUri: string): void;
 }
 
 type RepositoryPerKind<T> = Record<number, T[]>;
@@ -689,13 +701,58 @@ export class Index implements ProjectIndex {
         delete this._decorationRanges[uri];
         delete this._parseErrors[uri];
         delete this._disabledDiagnosticRanges[uri];
+        delete this._cachedPassageNames[uri];
+        delete this._cachedPassageTags[uri];
         if (uri === this._storyTitleUri) {
             this._storyTitle = undefined;
         }
         if (uri === this._storyDataUri) {
             this._storyData = undefined;
         }
-        delete this._cachedPassageNames[uri];
-        delete this._cachedPassageTags[uri];
+    }
+
+    renameDocument(oldUri: string, newUri: string): void {
+        if (oldUri in this._passages) {
+            this._passages[newUri] = this._passages[oldUri];
+        }
+        if (oldUri in this._definitions) {
+            this._definitions[newUri] = this._definitions[oldUri];
+        }
+        if (oldUri in this._references) {
+            this._references[newUri] = this._references[oldUri];
+        }
+        if (oldUri in this._embeddedDocuments) {
+            this._embeddedDocuments[newUri] = this._embeddedDocuments[oldUri];
+        }
+        if (oldUri in this._semanticTokens) {
+            this._semanticTokens[newUri] = this._semanticTokens[oldUri];
+        }
+        if (oldUri in this._foldingRanges) {
+            this._foldingRanges[newUri] = this._foldingRanges[oldUri];
+        }
+        if (oldUri in this._decorationRanges) {
+            this._decorationRanges[newUri] = this._decorationRanges[oldUri];
+        }
+        if (oldUri in this._parseErrors) {
+            this._parseErrors[newUri] = this._parseErrors[oldUri];
+        }
+        if (oldUri in this._disabledDiagnosticRanges) {
+            this._disabledDiagnosticRanges[newUri] =
+                this._disabledDiagnosticRanges[oldUri];
+        }
+        if (oldUri in this._cachedPassageNames) {
+            this._cachedPassageNames[newUri] = this._cachedPassageNames[oldUri];
+        }
+        if (oldUri in this._cachedPassageTags) {
+            this._cachedPassageTags[newUri] = this._cachedPassageTags[oldUri];
+        }
+        if (oldUri === this._storyTitleUri) {
+            this._storyTitleUri = newUri;
+        }
+        if (oldUri === this._storyDataUri) {
+            this._storyDataUri = newUri;
+        }
+
+        this.removeDocument(oldUri);
     }
 }

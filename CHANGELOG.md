@@ -43,6 +43,7 @@ Three big changes:
 
 - When running a game in VS Code, error modals are now shown in VS Code instead of being silently swallowed.
 - Deconflicted language scope names with T3LT. (issue #10)
+- Renaming or deleting files now properly updates all diagnostics.
 - SugarCube: Improved syntax highlighting of twee links.
 - SugarCube: Fixed parsing of special variables in `<<script>>` macros.
 - SugarCube: No longer incorrectly indexes apparent variables in non-data HTML attributes.
