@@ -44,23 +44,45 @@ function generateVariableAndPropertyCompletions(
               );
     for (const uri of index.getIndexedUris()) {
         if (context !== undefined) {
-            // Get all properties whose contents match the full context
-            completions.push(
-                ...(index
-                    .getReferences(uri, OSugarCubeSymbolKind.Property)
-                    ?.filter((ref) => ref.contents.startsWith(context))
-                    .map(
-                        (ref) => ref.contents.split(".").pop() ?? ref.contents,
-                    ) ?? []),
-            );
+            // Get all properties whose contents match the full context, whether set or not
+            const seen: Set<string> = new Set();
+
+            for (const kind of [
+                OSugarCubeSymbolKind.PropertySet,
+                OSugarCubeSymbolKind.Property,
+            ]) {
+                const refs = index.getReferences(uri, kind) ?? [];
+
+                for (const ref of refs) {
+                    if (ref.contents.startsWith(context)) {
+                        const completion =
+                            ref.contents.split(".").pop() ?? ref.contents;
+                        if (!seen.has(completion)) {
+                            seen.add(completion);
+                            completions.push(completion);
+                        }
+                    }
+                }
+            }
         } else {
-            // Get all variables that start with the same sigil ($ or _)
-            completions.push(
-                ...(index
-                    .getReferences(uri, OSugarCubeSymbolKind.Variable)
-                    ?.filter((x) => x.contents.startsWith(text[0]))
-                    .map((x) => x.contents) ?? []),
-            );
+            // Get all variables (set or not) that start with the same sigil ($ or _)
+            const seen: Set<string> = new Set();
+
+            for (const kind of [
+                OSugarCubeSymbolKind.VariableSet,
+                OSugarCubeSymbolKind.Variable,
+            ]) {
+                const refs = index.getReferences(uri, kind) ?? [];
+
+                for (const ref of refs) {
+                    if (ref.contents.startsWith(text[0])) {
+                        if (!seen.has(ref.contents)) {
+                            seen.add(ref.contents);
+                            completions.push(ref.contents);
+                        }
+                    }
+                }
+            }
         }
     }
     if (range !== undefined) {

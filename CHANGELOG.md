@@ -46,6 +46,7 @@ Three big changes:
 - Renaming or deleting files now properly updates all diagnostics.
 - SugarCube: Improved syntax highlighting of twee links.
 - SugarCube: Fixed parsing of special variables in `<<script>>` macros.
+- SugarCube: Now includes variables and properties only assigned to in e.g. `<<set>>` macros in completions.
 - SugarCube: No longer incorrectly indexes apparent variables in non-data HTML attributes.
 - SugarCube: Now correctly places the end of diagnostic squiggles on TwineScript expressions.
 
