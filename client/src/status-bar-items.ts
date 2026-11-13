@@ -42,7 +42,7 @@ export function createStatusBarItems(context: vscode.ExtensionContext) {
     runStatusBarItem.text = "$(debug-start) Run Twine Game";
     runStatusBarItem.tooltip = "Run project's game";
     runStatusBarItem.command = CustomCommands.RunGame;
-    runStatusBarItem.show();
+    runStatusBarItem.hide();
     statusBarItems[StatusBarItemIDs.Run] = runStatusBarItem;
 
     addListener("buildSuccessful", () => {

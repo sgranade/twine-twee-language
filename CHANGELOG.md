@@ -38,6 +38,7 @@ Three big changes:
 ### Changed
 
 - The extension now offers to set up the workspace's directories when the extension starts instead of waiting until a `.twee` file is opened.
+- The "Run Twine game" button doesn't appear until after a game is built.
 
 ### Fixed
 
