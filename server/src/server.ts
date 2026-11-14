@@ -2,9 +2,13 @@ import {
     CodeAction,
     CompletionList,
     Connection,
+    createConnection,
     DefinitionParams,
     Definition,
     DidChangeConfigurationNotification,
+    DidCreateFilesNotification,
+    DidDeleteFilesNotification,
+    DidRenameFilesNotification,
     DocumentSymbol,
     DocumentSymbolParams,
     FileChangeType,
@@ -16,16 +20,15 @@ import {
     InitializeResult,
     Location,
     ProposedFeatures,
+    Range,
     ReferenceParams,
     RenameParams,
+    ResponseError,
     TextDocumentPositionParams,
     TextDocuments,
     TextDocumentSyncKind,
     WorkspaceEdit,
-    createConnection,
     PrepareRenameParams,
-    Range,
-    ResponseError,
 } from "vscode-languageserver/node";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
@@ -75,6 +78,16 @@ let hasDiagnosticRelatedInformationCapability = false;
 let hasPrepareProviderCapability = false;
 
 /**
+ * Is a file a Twee file?
+ *
+ * @param uri URI to test.
+ * @returns True if the file URI corresponds to a Twee file.
+ */
+function isTweeFile(uri: string) {
+    return /.tw(ee)?/.test(uri);
+}
+
+/**
  * Handle potentially long-running tasks that shouldn't run concurrently.
  */
 namespace Heartbeat {
@@ -84,6 +97,7 @@ namespace Heartbeat {
     let heartbeatId: ReturnType<typeof setInterval> | undefined;
     let running = false;
 
+    let requestedFileIndexes: Set<string> = new Set(); // Files to index
     let workspaceIndexRequested = false; // Whether a full project indexing has been requested
     let sugarcubeMacroIndexRequested = false; // Whether we're to index custom SugarCube macro files
 
@@ -99,6 +113,14 @@ namespace Heartbeat {
      */
     export function stop() {
         clearInterval(heartbeatId);
+    }
+
+    /**
+     * Add a new Twee file to index.
+     * @param uri URI of the file to index.
+     */
+    export function indexFile(uri: string): void {
+        requestedFileIndexes.add(uri);
     }
 
     /**
@@ -123,7 +145,18 @@ namespace Heartbeat {
             running = true;
             // Only do one of the following things during a single heartbeat
             if (workspaceIndexRequested) {
+                requestedFileIndexes.clear(); // since we're indexing everything
                 await indexAllTweeFiles();
+            } else if (requestedFileIndexes.size > 0) {
+                for (const uri of requestedFileIndexes) {
+                    const doc = await getDoc(uri);
+                    if (doc !== undefined) {
+                        await parseTextDocument(doc, ParseLevel.Full, true);
+                        await validateTextDocument(doc);
+                        sendDecorationRanges(doc.uri);
+                    }
+                }
+                requestedFileIndexes.clear();
             } else if (sugarcubeMacroIndexRequested) {
                 await indexT3LTMacroFiles();
             }
@@ -331,6 +364,41 @@ connection.onInitialize((params: InitializeParams) => {
                 legend: semanticTokensLegend,
                 full: true,
             },
+            // We're interested in file stuff involving Twee files
+            workspace: {
+                fileOperations: {
+                    didCreate: {
+                        filters: [
+                            {
+                                scheme: "file",
+                                pattern: {
+                                    glob: "**/*.{tw,twee}",
+                                },
+                            },
+                        ],
+                    },
+                    didDelete: {
+                        filters: [
+                            {
+                                scheme: "file",
+                                pattern: {
+                                    glob: "**/*.{tw,twee}",
+                                },
+                            },
+                        ],
+                    },
+                    didRename: {
+                        filters: [
+                            {
+                                scheme: "file",
+                                pattern: {
+                                    glob: "**/*.{tw,twee}",
+                                },
+                            },
+                        ],
+                    },
+                },
+            },
         },
     };
     if (hasPrepareProviderCapability) {
@@ -426,10 +494,7 @@ documents.onDidChangeContent(async (change) => {
 
 connection.onDidChangeWatchedFiles((_change) => {
     for (const change of _change.changes ?? []) {
-        if (
-            change.type === FileChangeType.Deleted &&
-            /.tw(ee)?$/.test(change.uri)
-        ) {
+        if (change.type === FileChangeType.Deleted && isTweeFile(change.uri)) {
             projectIndex.removeDocument(change.uri);
         } else if (/\.twee-config\.(json|ya?ml)$/.test(change.uri)) {
             parseT3LTMacroFile(change.uri);
@@ -475,6 +540,37 @@ connection.onNotification(CustomMessages.RequestReindex, () => {
 
 connection.onNotification(CustomMessages.RequestDecorationRanges, (uri) => {
     sendDecorationRanges(uri);
+});
+
+connection.onNotification(DidCreateFilesNotification.type, async (params) => {
+    for (const file of params.files) {
+        if (isTweeFile(file.uri)) {
+            Heartbeat.indexFile(file.uri);
+        }
+    }
+    await processAllOpenDocuments();
+});
+
+connection.onNotification(DidDeleteFilesNotification.type, async (params) => {
+    for (const file of params.files) {
+        if (isTweeFile(file.uri)) {
+            projectIndex.removeDocument(file.uri);
+        }
+    }
+    await processAllOpenDocuments();
+});
+
+connection.onNotification(DidRenameFilesNotification.type, async (params) => {
+    for (const file of params.files) {
+        if (isTweeFile(file.oldUri)) {
+            if (isTweeFile(file.newUri)) {
+                projectIndex.renameDocument(file.oldUri, file.newUri);
+            } else {
+                projectIndex.removeDocument(file.oldUri);
+            }
+        }
+    }
+    await processAllOpenDocuments();
 });
 
 connection.onPrepareRename((params: PrepareRenameParams): Range | undefined => {

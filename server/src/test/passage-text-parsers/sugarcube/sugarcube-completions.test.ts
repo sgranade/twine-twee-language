@@ -26,12 +26,22 @@ describe("SugarCube Completions", () => {
                     locations: [
                         Location.create("fake-uri", Range.create(1, 2, 3, 4)),
                     ],
-                    kind: OSugarCubeSymbolKind.Variable,
+                    kind: OSugarCubeSymbolKind.VariableSet,
                 },
                 {
                     contents: "_var2",
                     locations: [
                         Location.create("fake-uri", Range.create(5, 6, 7, 8)),
+                    ],
+                    kind: OSugarCubeSymbolKind.Variable,
+                },
+                {
+                    contents: "$var3",
+                    locations: [
+                        Location.create(
+                            "fake-uri",
+                            Range.create(9, 10, 11, 12),
+                        ),
                     ],
                     kind: OSugarCubeSymbolKind.Variable,
                 },
@@ -45,8 +55,9 @@ describe("SugarCube Completions", () => {
                 index,
             );
 
-            expect(results?.items.length).to.equal(1);
+            expect(results?.items.length).to.equal(2);
             expect(results?.items[0]?.label).to.eql("$var1");
+            expect(results?.items[1]?.label).to.eql("$var3");
             expect(results?.itemDefaults?.editRange).to.eql(
                 Range.create(1, 7, 1, 9),
             );
@@ -74,6 +85,16 @@ describe("SugarCube Completions", () => {
                     locations: [
                         Location.create("fake-uri", Range.create(5, 6, 7, 8)),
                     ],
+                    kind: OSugarCubeSymbolKind.VariableSet,
+                },
+                {
+                    contents: "_var3",
+                    locations: [
+                        Location.create(
+                            "fake-uri",
+                            Range.create(9, 10, 11, 12),
+                        ),
+                    ],
                     kind: OSugarCubeSymbolKind.Variable,
                 },
             ]);
@@ -86,8 +107,9 @@ describe("SugarCube Completions", () => {
                 index,
             );
 
-            expect(results?.items.length).to.equal(1);
+            expect(results?.items.length).to.equal(2);
             expect(results?.items[0]?.label).to.eql("_var2");
+            expect(results?.items[1]?.label).to.eql("_var3");
         });
 
         it("should suggest properties that follow a variable", () => {
@@ -132,7 +154,7 @@ describe("SugarCube Completions", () => {
                             Range.create(13, 14, 15, 16),
                         ),
                     ],
-                    kind: OSugarCubeSymbolKind.Property,
+                    kind: OSugarCubeSymbolKind.PropertySet,
                 },
             ]);
             const parser = uut.getSugarCubeParser(undefined);
@@ -145,8 +167,8 @@ describe("SugarCube Completions", () => {
             );
 
             expect(results?.items.length).to.equal(2);
-            expect(results?.items[0]?.label).to.eql("otherprop");
-            expect(results?.items[1]?.label).to.eql("anotherprop");
+            expect(results?.items[0]?.label).to.eql("anotherprop");
+            expect(results?.items[1]?.label).to.eql("otherprop");
         });
     });
 
@@ -165,7 +187,9 @@ describe("SugarCube Completions", () => {
                 allMacros: () => {
                     return { testy: macro };
                 },
-                allMacroEnums: () => ({}),
+                allMacroEnums: () => {
+                    return {};
+                },
             });
 
             const results = parser?.generateCompletions(
@@ -204,7 +228,9 @@ describe("SugarCube Completions", () => {
                 allMacros: () => {
                     return {};
                 },
-                allMacroEnums: () => ({}),
+                allMacroEnums: () => {
+                    return {};
+                },
             });
 
             const results = parser?.generateCompletions(
@@ -244,7 +270,9 @@ describe("SugarCube Completions", () => {
                 allMacros: () => {
                     return { testy: macro };
                 },
-                allMacroEnums: () => ({}),
+                allMacroEnums: () => {
+                    return {};
+                },
             });
 
             const results = parser?.generateCompletions(
@@ -275,7 +303,9 @@ describe("SugarCube Completions", () => {
                 allMacros: () => {
                     return { testy: macro };
                 },
-                allMacroEnums: () => ({}),
+                allMacroEnums: () => {
+                    return {};
+                },
             });
 
             const results = parser?.generateCompletions(
@@ -306,7 +336,9 @@ describe("SugarCube Completions", () => {
                 allMacros: () => {
                     return { testy: macro };
                 },
-                allMacroEnums: () => ({}),
+                allMacroEnums: () => {
+                    return {};
+                },
             });
 
             const results = parser?.generateCompletions(
@@ -343,7 +375,9 @@ describe("SugarCube Completions", () => {
                 allMacros: () => {
                     return { testy: macro };
                 },
-                allMacroEnums: () => ({}),
+                allMacroEnums: () => {
+                    return {};
+                },
             });
 
             const results = parser?.generateCompletions(
@@ -380,7 +414,9 @@ describe("SugarCube Completions", () => {
                 allMacros: () => {
                     return { testy: macro };
                 },
-                allMacroEnums: () => ({}),
+                allMacroEnums: () => {
+                    return {};
+                },
             });
 
             const results = parser?.generateCompletions(
@@ -417,7 +453,9 @@ describe("SugarCube Completions", () => {
                 allMacros: () => {
                     return { testy: macro };
                 },
-                allMacroEnums: () => ({}),
+                allMacroEnums: () => {
+                    return {};
+                },
             });
 
             const results = parser?.generateCompletions(
@@ -451,7 +489,9 @@ describe("SugarCube Completions", () => {
                 allMacros: () => {
                     return { testy: macro };
                 },
-                allMacroEnums: () => ({}),
+                allMacroEnums: () => {
+                    return {};
+                },
             });
 
             const results = parser?.generateCompletions(
@@ -485,7 +525,9 @@ describe("SugarCube Completions", () => {
                 allMacros: () => {
                     return { testy: macro };
                 },
-                allMacroEnums: () => ({}),
+                allMacroEnums: () => {
+                    return {};
+                },
             });
 
             const results = parser?.generateCompletions(
@@ -515,7 +557,9 @@ describe("SugarCube Completions", () => {
                 allMacros: () => {
                     return { testy: macro };
                 },
-                allMacroEnums: () => ({}),
+                allMacroEnums: () => {
+                    return {};
+                },
             });
 
             const results = parser?.generateCompletions(

@@ -58,6 +58,60 @@ let projectSetupHandled = false;
 const workspaceProvider = new VSCodeWorkspaceProvider();
 
 /**
+ * Is a source file included based on the project's configuration?
+ *
+ * @param uri URI to check.
+ * @returns True if the file is an included source file.
+ */
+function isIncludedSourceFile(uri: VSCodeURI): boolean {
+    let found = false;
+    const placeholderDocument: vscode.TextDocument = {
+        uri: uri,
+        fileName: "placeholder",
+        isUntitled: false,
+        languageId: "placeholder",
+        encoding: "utf8",
+        version: 0,
+        isDirty: false,
+        isClosed: false,
+        save: async () => true,
+        eol: vscode.EndOfLine.LF,
+        lineCount: 0,
+        getText: () => "",
+        lineAt: () => {
+            throw new Error("Not implemented");
+        },
+        offsetAt: () => 0,
+        positionAt: () => new vscode.Position(0, 0),
+        getWordRangeAtPosition: () => undefined,
+        validateRange: (range: vscode.Range) => range,
+        validatePosition: (position: vscode.Position) => position,
+    };
+
+    // Step one: does the file's URI match a story source file glob?
+    for (const glob of currentConfig.build.storySourceFiles) {
+        if (
+            vscode.languages.match({ pattern: glob }, placeholderDocument) > 0
+        ) {
+            found = true;
+            break;
+        }
+    }
+    if (!found) return false;
+
+    // Step two: does it match an ignores file glob?
+    for (const glob of currentConfig.build.ignores ?? []) {
+        if (
+            vscode.languages.match({ pattern: glob }, placeholderDocument) > 0
+        ) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+/**
  * Register the extension's custom commands.
  *
  * @param context Context to manage the commands.
@@ -593,6 +647,67 @@ export function startClient(context: vscode.ExtensionContext) {
     );
     notifications.addNotificationHandler(CustomMessages.IndexingComplete, () =>
         signalContextEvent("indexingEnds"),
+    );
+
+    // Let the server know about file creations, deletions, and renames
+    context.subscriptions.push(
+        vscode.workspace.onDidCreateFiles((event) => {
+            vscode.languages.match;
+            client?.sendNotification("workspace/didCreateFiles", {
+                files: event.files.filter(isIncludedSourceFile).map((uri) => ({
+                    uri: uri.toString(),
+                })),
+            });
+        }),
+
+        vscode.workspace.onDidDeleteFiles((event) => {
+            client?.sendNotification("workspace/didDeleteFiles", {
+                files: event.files.filter(isIncludedSourceFile).map((uri) => ({
+                    uri: uri.toString(),
+                })),
+            });
+        }),
+
+        vscode.workspace.onDidRenameFiles((event) => {
+            // Renames can have one of four states:
+            // - Changing an included file name to another included one: a rename
+            // - Changing an included file name to a non-included one: a delete
+            // - Changing a non-included file name to an included one: a create
+            // - Changing a non-included file name to another non-included one: ignore
+            const renamedFiles: { oldUri: string; newUri: string }[] = [];
+            const deletedFiles: { uri: string }[] = [];
+            const createdFiles: { uri: string }[] = [];
+
+            for (const file of event.files) {
+                if (isIncludedSourceFile(file.oldUri)) {
+                    if (isIncludedSourceFile(file.newUri)) {
+                        renamedFiles.push({
+                            oldUri: file.oldUri.toString(),
+                            newUri: file.newUri.toString(),
+                        });
+                    } else {
+                        deletedFiles.push({ uri: file.oldUri.toString() });
+                    }
+                } else if (isIncludedSourceFile(file.newUri)) {
+                    createdFiles.push({ uri: file.newUri.toString() });
+                }
+            }
+            if (renamedFiles.length > 0) {
+                client?.sendNotification("workspace/didRenameFiles", {
+                    files: renamedFiles,
+                });
+            }
+            if (deletedFiles.length > 0) {
+                client?.sendNotification("workspace/didDeleteFiles", {
+                    files: deletedFiles,
+                });
+            }
+            if (createdFiles.length > 0) {
+                client?.sendNotification("workspace/didCreateFiles", {
+                    files: createdFiles,
+                });
+            }
+        }),
     );
 
     // If our configuration file changes, update configuration

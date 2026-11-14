@@ -49,6 +49,7 @@ describe("Twee Story File Loader", () => {
             });
         }
     });
+
     describe("Individual file loading", () => {
         it("should load a twee file", () => {
             const story: Story = { passages: [] };
@@ -598,9 +599,174 @@ describe("Twee Story File Loader", () => {
                 },
             };
 
-            uut.validateStory(story);
+            uut.validateAndCleanStory(story);
 
             expect(story.name).to.eql("");
+        });
+
+        it("should warn on a duplicate passage", () => {
+            const story: Story = {
+                name: "My Cool-Ass Story",
+                passages: [
+                    {
+                        name: "Start",
+                        isScript: false,
+                        isStylesheet: false,
+                        text: "",
+                    },
+                    {
+                        name: "P1",
+                        isScript: false,
+                        isStylesheet: false,
+                        text: "",
+                    },
+                    {
+                        name: "P2",
+                        isScript: false,
+                        isStylesheet: false,
+                        text: "",
+                    },
+                    {
+                        name: "P1",
+                        isScript: false,
+                        isStylesheet: false,
+                        text: "",
+                    },
+                ],
+                storyData: {
+                    ifid: "62891577-8D8E-496F-B46C-9FF0194C0EAC",
+                },
+            };
+
+            const result = uut.validateAndCleanStory(story);
+
+            expect(result).to.eql(
+                "Passage P1 was duplicated. Only the last one was kept.",
+            );
+        });
+
+        it("should warn on multiple duplicate passages", () => {
+            const story: Story = {
+                name: "My Cool-Ass Story",
+                passages: [
+                    {
+                        name: "Start",
+                        isScript: false,
+                        isStylesheet: false,
+                        text: "",
+                    },
+                    {
+                        name: "P1",
+                        isScript: false,
+                        isStylesheet: false,
+                        text: "",
+                    },
+                    {
+                        name: "P2",
+                        isScript: false,
+                        isStylesheet: false,
+                        text: "",
+                    },
+                    {
+                        name: "P1",
+                        isScript: false,
+                        isStylesheet: false,
+                        text: "",
+                    },
+                    {
+                        name: "P1",
+                        isScript: false,
+                        isStylesheet: false,
+                        text: "",
+                    },
+                    {
+                        name: "P2",
+                        isScript: false,
+                        isStylesheet: false,
+                        text: "",
+                    },
+                ],
+                storyData: {
+                    ifid: "62891577-8D8E-496F-B46C-9FF0194C0EAC",
+                },
+            };
+
+            const result = uut.validateAndCleanStory(story);
+
+            expect(result).to.eql(
+                "Passages were duplicated, and only the last one was kept: P1 (2 times), P2",
+            );
+        });
+
+        it("should remove duplicate passages, keeping only the final version", () => {
+            const story: Story = {
+                name: "My Cool-Ass Story",
+                passages: [
+                    {
+                        name: "Start",
+                        isScript: false,
+                        isStylesheet: false,
+                        text: "",
+                    },
+                    {
+                        name: "P1",
+                        isScript: false,
+                        isStylesheet: false,
+                        text: "first",
+                    },
+                    {
+                        name: "P2",
+                        isScript: false,
+                        isStylesheet: false,
+                        text: "second",
+                    },
+                    {
+                        name: "P1",
+                        isScript: false,
+                        isStylesheet: false,
+                        text: "third",
+                    },
+                    {
+                        name: "P1",
+                        isScript: false,
+                        isStylesheet: false,
+                        text: "fourth",
+                    },
+                    {
+                        name: "P2",
+                        isScript: false,
+                        isStylesheet: false,
+                        text: "fifth",
+                    },
+                ],
+                storyData: {
+                    ifid: "62891577-8D8E-496F-B46C-9FF0194C0EAC",
+                },
+            };
+
+            uut.validateAndCleanStory(story);
+            const result = story.passages;
+
+            expect(result).to.eql([
+                {
+                    name: "Start",
+                    isScript: false,
+                    isStylesheet: false,
+                    text: "",
+                },
+                {
+                    name: "P1",
+                    isScript: false,
+                    isStylesheet: false,
+                    text: "fourth",
+                },
+                {
+                    name: "P2",
+                    isScript: false,
+                    isStylesheet: false,
+                    text: "fifth",
+                },
+            ]);
         });
 
         it("should throw an error if there is no story data", () => {
@@ -609,14 +775,14 @@ describe("Twee Story File Loader", () => {
                 passages: [],
             };
 
-            let result: Error;
+            let result: Error | undefined;
             try {
-                uut.validateStory(story);
+                uut.validateAndCleanStory(story);
             } catch (e) {
-                result = e;
+                result = e as Error;
             }
 
-            expect(result.message).to.eql("Story has no story data");
+            expect(result?.message).to.eql("Story has no story data");
         });
 
         it("should throw an error if the IFID format is wrong", () => {
@@ -628,14 +794,14 @@ describe("Twee Story File Loader", () => {
                 },
             };
 
-            let result: Error;
+            let result: Error | undefined;
             try {
-                uut.validateStory(story);
+                uut.validateAndCleanStory(story);
             } catch (e) {
-                result = e;
+                result = e as Error;
             }
 
-            expect(result.message).to.eql(
+            expect(result?.message).to.eql(
                 "Story has a badly-formatted IFID value: nope!",
             );
         });
@@ -656,9 +822,9 @@ describe("Twee Story File Loader", () => {
                 },
             };
 
-            uut.validateStory(story);
+            uut.validateAndCleanStory(story);
 
-            expect(story.storyData.start).to.eql("Start");
+            expect(story.storyData?.start).to.eql("Start");
         });
 
         it("should throw an error if the start passage doesn't exist", () => {
@@ -677,14 +843,14 @@ describe("Twee Story File Loader", () => {
                 },
             };
 
-            let result: Error;
+            let result: Error | undefined;
             try {
-                uut.validateStory(story);
+                uut.validateAndCleanStory(story);
             } catch (e) {
-                result = e;
+                result = e as Error;
             }
 
-            expect(result.message).to.eql("Starting passage Start not found");
+            expect(result?.message).to.eql("Starting passage Start not found");
         });
     });
 });

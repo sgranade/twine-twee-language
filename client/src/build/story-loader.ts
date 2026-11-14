@@ -274,12 +274,17 @@ export function addFileToStory(
 }
 
 /**
- * Validate a story has everything it needs after loading.
+ * Validate a story has everything it needs after loading and clean it up.
+ *
+ * Returns a validation warning message (if any); throws on validation error.
  *
  * @param story Story to be validated.
+ * @returns A warning message, if any.
  * @throws Error if the story doesn't validate properly.
  */
-export function validateStory(story: Story) {
+export function validateAndCleanStory(story: Story): string | undefined {
+    let warning: string | undefined;
+
     if (story.name === undefined) {
         story.name = "";
     }
@@ -298,10 +303,50 @@ export function validateStory(story: Story) {
             `Story has a badly-formatted IFID value: ${story.storyData.ifid}`,
         );
     }
+
+    // Check for duplicate passages
+    const deduplicatedPassages: Passage[] = [];
+    const passageIndices: Map<string, number> = new Map();
+    const duplicatePassageCount: Map<string, number> = new Map();
+    for (const p of story.passages) {
+        const ndx = passageIndices.get(p.name);
+        if (ndx === undefined) {
+            passageIndices.set(p.name, deduplicatedPassages.length);
+            deduplicatedPassages.push(p);
+        } else {
+            deduplicatedPassages[ndx] = p;
+            duplicatePassageCount.set(
+                p.name,
+                (duplicatePassageCount.get(p.name) ?? 0) + 1,
+            );
+        }
+    }
+    if (duplicatePassageCount.size > 0) {
+        story.passages = deduplicatedPassages;
+        if (duplicatePassageCount.size === 1) {
+            // When there's only one duplicate passage, use a plainer message
+            const [name, count] = [...duplicatePassageCount.entries()][0];
+            warning = `Passage ${name} was duplicated`;
+            if (count > 1) {
+                warning += ` ${count} times`;
+            }
+            warning += ". Only the last one was kept.";
+        } else {
+            warning =
+                "Passages were duplicated, and only the last one was kept: " +
+                [...duplicatePassageCount.entries()]
+                    .map(
+                        ([name, count]) =>
+                            `${name}${count > 1 ? " (" + count + " times)" : ""}`,
+                    )
+                    .join(", ");
+        }
+    }
+
     // Final check: see if the start passage exists
     for (const p of story.passages) {
         if (p.name === story.storyData.start) {
-            return;
+            return warning;
         }
     }
     throw new Error(`Starting passage ${story.storyData.start} not found`);
