@@ -5,7 +5,8 @@
 import * as YAML from "yaml";
 
 import { hasOwnProperty } from "../../../utilities";
-import { EnumRecord, parseMacroParameters } from "../sc2/t3lt-parameters";
+import { parseMacroParameters } from "../sc2/t3lt-parameters";
+import { EnumRecord } from "../types";
 import { MacroInfo, MacroParent } from "./types";
 
 export interface MacrosAndEnums {

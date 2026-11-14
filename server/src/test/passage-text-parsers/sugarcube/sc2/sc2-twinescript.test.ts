@@ -3,7 +3,7 @@ import { expect } from "chai";
 import { Location, Range } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
-import { StoryFormatParsingState } from "../../../../passage-text-parsers";
+import { StoryFormatParsingState } from "../../../../passage-text-parsers/types";
 import { ETokenType } from "../../../../semantic-tokens";
 import * as uut from "../../../../passage-text-parsers/sugarcube/sc2/sc2-twinescript";
 
@@ -215,6 +215,64 @@ describe("SugarCube TwineScript", () => {
 
             expect(result).to.be.true;
         });
+
+        it("should return false for a bare word passed to a function", () => {
+            // No arrange
+
+            const result = uut.isTwineScriptExpression("random(bareWord)");
+
+            expect(result).to.be.false;
+        });
+
+        it("should return false for a bare word passed to a constructor", () => {
+            // No arrange
+
+            const result = uut.isTwineScriptExpression("new Date(bareWord)");
+
+            expect(result).to.be.false;
+        });
+
+        it("should return true for a SugarCube variable passed to a constructor", () => {
+            // No arrange
+
+            const result = uut.isTwineScriptExpression("new Date($when)");
+
+            expect(result).to.be.true;
+        });
+
+        it("should return true for a story-format function called with SugarCube variables", () => {
+            // No arrange
+
+            const result = uut.isTwineScriptExpression('either("A", $b)');
+
+            expect(result).to.be.true;
+        });
+
+        it("should return true for a story-format function call in a comparison", () => {
+            // No arrange
+
+            const result = uut.isTwineScriptExpression(
+                'visited("X") > 1 ? "A" : "B"',
+            );
+
+            expect(result).to.be.true;
+        });
+
+        it("should return false for a bare word as a shorthand property", () => {
+            // No arrange
+
+            const result = uut.isTwineScriptExpression("{a}");
+
+            expect(result).to.be.false;
+        });
+
+        it("should return true for a SugarCube variable as a shorthand property", () => {
+            // No arrange
+
+            const result = uut.isTwineScriptExpression("{$a}");
+
+            expect(result).to.be.true;
+        });
     });
 
     describe("tokenize TwineScript", () => {
@@ -288,7 +346,7 @@ describe("SugarCube TwineScript", () => {
                         "fake-uri",
                         Range.create(1, 0, 1, 6),
                     ),
-                    defined: false,
+                    assigned: false,
                 },
             ]);
             expect(result.properties).to.be.empty;
@@ -312,7 +370,7 @@ describe("SugarCube TwineScript", () => {
                 offset,
                 textDocument,
                 storyState,
-                true,
+                { isSetterContext: true },
             );
 
             expect(result.variables).to.eql([
@@ -322,7 +380,7 @@ describe("SugarCube TwineScript", () => {
                         "fake-uri",
                         Range.create(1, 0, 1, 6),
                     ),
-                    defined: true,
+                    assigned: true,
                 },
             ]);
             expect(result.properties).to.be.empty;
@@ -346,6 +404,7 @@ describe("SugarCube TwineScript", () => {
                 offset,
                 textDocument,
                 storyState,
+                { isSetterContext: true },
             );
 
             expect(result.properties).to.eql([
@@ -356,7 +415,7 @@ describe("SugarCube TwineScript", () => {
                         Range.create(1, 8, 1, 17),
                     ),
                     prefix: "$varbl",
-                    defined: true,
+                    assigned: false,
                 },
                 {
                     contents: "rootprop2",
@@ -365,7 +424,7 @@ describe("SugarCube TwineScript", () => {
                         Range.create(1, 20, 1, 29),
                     ),
                     prefix: "$varbl.rootprop1",
-                    defined: true,
+                    assigned: true,
                 },
             ]);
         });
@@ -724,8 +783,7 @@ describe("SugarCube TwineScript", () => {
                 offset,
                 textDocument,
                 storyState,
-                false,
-                true,
+                { isProgram: true },
             ).error;
 
             // The span covers `$bb`, which sits after the `gt` -> `>`

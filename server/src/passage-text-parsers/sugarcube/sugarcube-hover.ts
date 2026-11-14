@@ -3,8 +3,7 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { EmbeddedDocument } from "../../embedded-languages";
 import { ProjectIndex } from "../../project-index";
-import { SugarCubeParserAPI } from ".";
-import { OSugarCubeSymbolKind } from "./types";
+import { OSugarCubeSymbolKind, SugarCubeParserAPI } from "./types";
 import { parseEnums } from "./sc2/t3lt-parameters";
 
 export function generateHover(

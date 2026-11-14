@@ -1,5 +1,4 @@
-import { ArgumentRequirement } from "../types";
-import { ModifierInfo } from "./types";
+import { ArgumentRequirement, ModifierInfo } from "../types";
 
 export const after: ModifierInfo = {
     name: "after",

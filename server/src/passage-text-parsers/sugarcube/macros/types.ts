@@ -1,8 +1,8 @@
-import { ParsingState } from "../../../parser";
-import { MacroLocationInfo, SugarCubeParsingState } from "../sugarcube-parser";
+import { ParsingState } from "../../types";
 import { createVariableAndPropertyReferences } from "../sugarcube-utils";
 import { tokenizeTwineScriptExpression } from "../sc2/sc2-twinescript";
 import { Parameters } from "../sc2/t3lt-parameters";
+import { MacroLocationInfo, SugarCubeParsingState } from "../types";
 
 /**
  * Macros that are parents of another macro.
@@ -138,7 +138,9 @@ export interface MacroInfo {
  * @param argsIndex Index of the unparsed arguments in the larger document (zero-based).
  * @param state Parsing state.
  * @param sugarcubeState SugarCube-specific parsing state.
- * @param assignmentIsDefinition If true, variable assignment will be treated as variable definition. (Needed for e.g. SugarCube passage link setters.)
+ * @param options Parsing options.
+ * @param options.isSetterContext True if the macro's purpose is to set state (e.g. `<<set>>`, `<<run>>`),
+ * so write-shaped syntax counts as assignment.
  * @returns True to indicate that parsing is complete, or false to let parsing continue.
  */
 export function parseArgsAsTwineScriptExpression(
@@ -146,7 +148,7 @@ export function parseArgsAsTwineScriptExpression(
     argsIndex: number,
     state: ParsingState,
     sugarcubeState: SugarCubeParsingState,
-    assignmentIsDefinition: boolean = false,
+    options: { isSetterContext?: boolean } = {},
 ): boolean {
     if (args !== undefined) {
         createVariableAndPropertyReferences(
@@ -155,7 +157,7 @@ export function parseArgsAsTwineScriptExpression(
                 argsIndex,
                 state.textDocument,
                 sugarcubeState,
-                assignmentIsDefinition,
+                options,
             ),
             state,
             sugarcubeState,

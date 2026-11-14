@@ -4,8 +4,10 @@ import { DiagnosticSeverity, Location, Range } from "vscode-languageserver";
 
 import { TwineSymbolKind } from "../../../project-index";
 import { ETokenModifier, ETokenType } from "../../../semantic-tokens";
-import { MacroLocationInfo } from "../../../passage-text-parsers/sugarcube/sugarcube-parser";
-import { OSugarCubeSymbolKind } from "../../../passage-text-parsers/sugarcube/types";
+import {
+    MacroLocationInfo,
+    OSugarCubeSymbolKind,
+} from "../../../passage-text-parsers/sugarcube/types";
 import { MockCallbacks, buildParsingState, buildPassage } from "../../builders";
 import {
     buildMacroInfo,
@@ -235,6 +237,74 @@ describe("SugarCube Parser", () => {
             });
         });
 
+        it("should not treat browser or jQuery globals as variables in a script passage", () => {
+            const header = ":: Passage [script]\n";
+            const passage =
+                "\nlocation.reload(); $('#x').hide(); jQuery.fx.off = v;\n";
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            state.currentPassage = buildPassage({
+                label: "Passage",
+                isScript: true,
+            });
+            const parser = uut.getSugarCubeParser(undefined);
+
+            parser?.parsePassageText(passage, header.length, state);
+            const result = callbacks.references.map((r) => r.contents);
+
+            expect(result).to.eql(["v"]);
+        });
+
+        it("should not treat SugarCube's built-in functions as variables in a script passage", () => {
+            const header = ":: Passage [script]\n";
+            const builtInFunctions = [
+                "clone",
+                "either",
+                "forget",
+                "hasVisited",
+                "importScripts",
+                "importStyles",
+                "lastVisited",
+                "memorize",
+                "passage",
+                "previous",
+                "random",
+                "randomFloat",
+                "recall",
+                "setPageElement",
+                "tags",
+                "temporary",
+                "time",
+                "triggerEvent",
+                "turns",
+                "variables",
+                "visited",
+                "visitedTags",
+            ];
+            const passage =
+                "\n" +
+                builtInFunctions.map((f) => `${f}();`).join(" ") +
+                " v;\n";
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            state.currentPassage = buildPassage({
+                label: "Passage",
+                isScript: true,
+            });
+            const parser = uut.getSugarCubeParser(undefined);
+
+            parser?.parsePassageText(passage, header.length, state);
+            const result = callbacks.references.map((r) => r.contents);
+
+            expect(result).to.eql(["v"]);
+        });
+
         it("should parse variables that include line continuations in a script passage", () => {
             const header = ":: Passage [script]\n";
             const passage =
@@ -257,7 +327,7 @@ describe("SugarCube Parser", () => {
             expect(result[0]).to.eql({
                 contents: "var1",
                 location: Location.create("fake-uri", Range.create(2, 1, 2, 5)),
-                kind: OSugarCubeSymbolKind.Variable,
+                kind: OSugarCubeSymbolKind.VariableSet,
             });
             expect(result[1]).to.eql({
                 contents: "var1.first",
@@ -334,6 +404,75 @@ describe("SugarCube Parser", () => {
             ]);
         });
 
+        it("should capture bare and property assignments as writes in a script passage", () => {
+            const header = ":: Passage [script]\n";
+            const passage = "\n a = 1; b.c = 2\n";
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            state.currentPassage = buildPassage({
+                label: "Passage",
+                isScript: true,
+            });
+            const parser = uut.getSugarCubeParser(undefined);
+
+            parser?.parsePassageText(passage, header.length, state);
+            const result = callbacks.references.map((r) => [
+                r.contents,
+                r.kind,
+            ]);
+
+            expect(result).to.eql([
+                ["a", OSugarCubeSymbolKind.VariableSet],
+                ["b", OSugarCubeSymbolKind.Variable],
+                ["b.c", OSugarCubeSymbolKind.PropertySet],
+            ]);
+        });
+
+        it("should capture a property write in a <<run>> macro", () => {
+            const header = ":: Passage\n";
+            const passage = "<<run $a.b = 1>>";
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            const parser = uut.getSugarCubeParser(undefined);
+
+            parser?.parsePassageText(passage, header.length, state);
+            const result = callbacks.references
+                .filter((r) => r.contents.startsWith("$a"))
+                .map((r) => [r.contents, r.kind]);
+
+            expect(result).to.eql([
+                ["$a", OSugarCubeSymbolKind.Variable],
+                ["$a.b", OSugarCubeSymbolKind.PropertySet],
+            ]);
+        });
+
+        it("should capture an assignment in a <<print>> macro as a property read", () => {
+            const header = ":: Passage\n";
+            const passage = "<<print $a.b = 1>>";
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            const parser = uut.getSugarCubeParser(undefined);
+
+            parser?.parsePassageText(passage, header.length, state);
+            const result = callbacks.references
+                .filter((r) => r.contents.startsWith("$a"))
+                .map((r) => [r.contents, r.kind]);
+
+            expect(result).to.eql([
+                ["$a", OSugarCubeSymbolKind.Variable],
+                ["$a.b", OSugarCubeSymbolKind.Property],
+            ]);
+        });
+
         it("should capture State.temporary variables in a script passage", () => {
             const header = ":: Passage [script]\n";
             const passage = "\n State.temporary.var.prop = 1\n";
@@ -358,7 +497,7 @@ describe("SugarCube Parser", () => {
                     "fake-uri",
                     Range.create(2, 17, 2, 20),
                 ),
-                kind: OSugarCubeSymbolKind.VariableSet,
+                kind: OSugarCubeSymbolKind.Variable,
             });
             expect(result[1]).to.eql({
                 contents: "_var.prop",
@@ -394,7 +533,7 @@ describe("SugarCube Parser", () => {
                     "fake-uri",
                     Range.create(2, 17, 2, 20),
                 ),
-                kind: OSugarCubeSymbolKind.VariableSet,
+                kind: OSugarCubeSymbolKind.Variable,
             });
             expect(result[1]).to.eql({
                 contents: "$var.prop",
@@ -2358,6 +2497,15 @@ describe("SugarCube Parser", () => {
                         ),
                         kind: OSugarCubeSymbolKind.Variable,
                     },
+                    {
+                        contents: "$items.includes",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(2, 11, 2, 19),
+                        ),
+                        kind: OSugarCubeSymbolKind.Property,
+                        isCallee: true,
+                    },
                 ]);
             });
 
@@ -2403,7 +2551,16 @@ describe("SugarCube Parser", () => {
                             "fake-uri",
                             Range.create(3, 2, 3, 6),
                         ),
-                        kind: OSugarCubeSymbolKind.Variable,
+                        kind: OSugarCubeSymbolKind.VariableSet,
+                    },
+                    {
+                        contents: "$items.includes",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(2, 11, 2, 19),
+                        ),
+                        kind: OSugarCubeSymbolKind.Property,
+                        isCallee: true,
                     },
                 ]);
             });
@@ -2594,6 +2751,13 @@ describe("SugarCube Parser", () => {
                         char: 62,
                         length: 5,
                         tokenType: ETokenType.variable,
+                        tokenModifiers: [],
+                    },
+                    {
+                        line: 1,
+                        char: 71,
+                        length: 3,
+                        tokenType: ETokenType.property,
                         tokenModifiers: [],
                     },
                     {

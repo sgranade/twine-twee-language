@@ -11,13 +11,12 @@ import { Index } from "../../../project-index";
 import {
     ChapbookSymbol,
     OChapbookSymbolKind,
+    InsertInfo,
 } from "../../../passage-text-parsers/chapbook/types";
 import {
     ArgumentRequirement,
     ValueType,
 } from "../../../passage-text-parsers/chapbook/types";
-import * as insertsModule from "../../../passage-text-parsers/chapbook/inserts";
-import * as modifiersModule from "../../../passage-text-parsers/chapbook/modifiers";
 
 import * as uut from "../../../passage-text-parsers/chapbook";
 
@@ -780,7 +779,7 @@ describe("Chapbook Completions", () => {
                     scope: Range.create(0, 0, 2, 0),
                 }),
             ]);
-            const insert: insertsModule.InsertInfo = {
+            const insert: InsertInfo = {
                 name: "test insert",
                 syntax: "test insert",
                 description: "desc",
@@ -1042,7 +1041,7 @@ describe("Chapbook Completions", () => {
                     scope: Range.create(0, 0, 2, 0),
                 }),
             ]);
-            const insert: insertsModule.InsertInfo = {
+            const insert: InsertInfo = {
                 name: "test insert",
                 syntax: "test insert",
                 description: "desc",
@@ -1083,7 +1082,7 @@ describe("Chapbook Completions", () => {
                     scope: Range.create(0, 0, 2, 0),
                 }),
             ]);
-            const insert: insertsModule.InsertInfo = {
+            const insert: InsertInfo = {
                 name: "test insert",
                 syntax: "test insert",
                 description: "desc",
@@ -1124,7 +1123,7 @@ describe("Chapbook Completions", () => {
                     scope: Range.create(0, 0, 2, 0),
                 }),
             ]);
-            const insert: insertsModule.InsertInfo = {
+            const insert: InsertInfo = {
                 name: "test insert",
                 syntax: "test insert",
                 description: "desc",
@@ -1206,7 +1205,7 @@ describe("Chapbook Completions", () => {
                     scope: Range.create(0, 0, 2, 0),
                 }),
             ]);
-            const insert: insertsModule.InsertInfo = {
+            const insert: InsertInfo = {
                 name: "test insert",
                 syntax: "test insert",
                 description: "desc",
@@ -1299,7 +1298,7 @@ describe("Chapbook Completions", () => {
                     scope: Range.create(0, 0, 2, 0),
                 }),
             ]);
-            const insert: insertsModule.InsertInfo = {
+            const insert: InsertInfo = {
                 name: "test insert",
                 syntax: "test insert",
                 description: "desc",

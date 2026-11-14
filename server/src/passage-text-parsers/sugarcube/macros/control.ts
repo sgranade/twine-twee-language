@@ -9,10 +9,10 @@ import { createDiagnosticFor } from "../../../diagnostics";
 import { TokenizedJS } from "../../../js-parser";
 import { logDiagnosticFor, logRawDiagnostic } from "../../../parser";
 import { skipSpaces } from "../../../utilities";
-import { MacroLocationInfo } from "../sugarcube-parser";
 import { createVariableAndPropertyReferences } from "../sugarcube-utils";
 import { forMacroIsRange, forMacroRangeFormat } from "../sc2/sc2-patterns";
 import { tokenizeTwineScriptExpression } from "../sc2/sc2-twinescript";
+import { MacroLocationInfo } from "../types";
 import { MacroInfo, parseArgsAsTwineScriptExpression } from "./types";
 
 export const ifMacro: MacroInfo = {
@@ -151,10 +151,10 @@ export const forMacro: MacroInfo = {
                 }
                 // We're creating the index and value variables/properties
                 for (const v of jsTokens.variables) {
-                    v.defined = true;
+                    v.assigned = true;
                 }
                 for (const p of jsTokens.properties) {
-                    p.defined = true;
+                    p.assigned = true;
                 }
                 createVariableAndPropertyReferences(
                     jsTokens,
@@ -204,8 +204,7 @@ export const forMacro: MacroInfo = {
                     argsIndex,
                     state.textDocument,
                     sugarcubeState,
-                    true,
-                    true,
+                    { isSetterContext: true, isProgram: true },
                 ),
                 state,
                 sugarcubeState,

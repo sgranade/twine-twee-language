@@ -80,21 +80,9 @@ export const builtinVars: ReadonlySet<string> = new Set(
     [...builtInVarsAndProperties].map((x) => x.split(".", 1)[0]),
 );
 
-// Properties that exist on existing SugarCube objects, like Passage.
-// In diagnostics, we're going to ignore these properties (which, yes,
-// hacky, but probably the best we can do with this static analysis).
-export const builtinSugarCubeProperties: ReadonlySet<string> = new Set([
-    "args", // MacroContext
-    "args.full", // MacroContext
-    "args.raw", // MacroContext
-    "name", // MacroContext
-    "output", // MacroContext
-    "parent", // MacroContext
-    "parser", // MacroContext
-    "payload", // MacroContext
-    "self", // MacroContext
-    "id", // Passage
-    "name", // Passage
-    "tags", // Passage
-    "text", // Passage
-]);
+// I'm skipping `MacroContext` (`this.name`, `this.args`) and `Passage` (`id`,
+// `name`, `tags`, `text`) members. The parser doesn't emit properties rooted in
+// `this` or a call result like `passage()`, so such a list would never match,
+// and exempting those names on any story variable would hide typoes in e.g.
+// `$player.name`. If I ever re-write the parser to trace those roots, I'll
+// need to add a root-keyed list.

@@ -90,6 +90,7 @@
                         "type": "string",
                         "enum": [
                             "bad-argument",
+                            "chapbook-variable-shadowed-by-browser",
                             "deprecated-special-passage",
                             "deprecated-tag",
                             "either-data-passage-or-href",

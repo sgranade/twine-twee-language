@@ -13,10 +13,18 @@ import {
 } from "../../../builders";
 import { buildMacroInfo } from "./macro-builders";
 
-import { MacroLocationInfo } from "../../../../passage-text-parsers/sugarcube/sugarcube-parser";
-import { OSugarCubeSymbolKind } from "../../../../passage-text-parsers/sugarcube/types";
+import {
+    MacroLocationInfo,
+    OSugarCubeSymbolKind,
+    SugarCubeParserAPI,
+} from "../../../../passage-text-parsers/sugarcube/types";
 
 import * as uut from "../../../../passage-text-parsers/sugarcube/macros";
+
+const api: SugarCubeParserAPI = {
+    allMacros: uut.allMacros,
+    allMacroEnums: uut.allMacroEnums,
+};
 
 describe("SugarCube Macros", () => {
     describe("argument parsing", () => {
@@ -52,6 +60,7 @@ describe("SugarCube Macros", () => {
                     passageTokens: {},
                     unclosedMacros: [],
                     widgetMacroRanges: [],
+                    api,
                 };
                 const macro = uut.allMacros()["widget"];
 
@@ -87,6 +96,7 @@ describe("SugarCube Macros", () => {
                     passageTokens: {},
                     unclosedMacros: [],
                     widgetMacroRanges: [],
+                    api,
                 };
                 const macro = uut.allMacros()["widget"];
 
@@ -126,6 +136,7 @@ describe("SugarCube Macros", () => {
                     passageTokens: {},
                     unclosedMacros: [],
                     widgetMacroRanges: [],
+                    api,
                 };
                 const macro = uut.allMacros()["widget"];
 
@@ -158,6 +169,7 @@ describe("SugarCube Macros", () => {
                     passageTokens: {},
                     unclosedMacros: [],
                     widgetMacroRanges: [],
+                    api,
                 };
                 const macro = uut.allMacros()["if"];
                 const kids: MacroLocationInfo[] = [
@@ -197,6 +209,7 @@ describe("SugarCube Macros", () => {
                     passageTokens: {},
                     unclosedMacros: [],
                     widgetMacroRanges: [],
+                    api,
                 };
                 const macro = uut.allMacros()["for"];
 
@@ -239,6 +252,7 @@ describe("SugarCube Macros", () => {
                     passageTokens: {},
                     unclosedMacros: [],
                     widgetMacroRanges: [],
+                    api,
                 };
                 const macro = uut.allMacros()["for"];
 
@@ -273,7 +287,7 @@ describe("SugarCube Macros", () => {
                             "fake-uri",
                             Range.create(2, 8, 2, 10),
                         ),
-                        kind: OSugarCubeSymbolKind.Variable,
+                        kind: OSugarCubeSymbolKind.VariableSet,
                     },
                 ]);
             });
@@ -294,6 +308,7 @@ describe("SugarCube Macros", () => {
                     passageTokens: {},
                     unclosedMacros: [],
                     widgetMacroRanges: [],
+                    api,
                 };
                 const macro = uut.allMacros()["for"];
 
@@ -349,6 +364,7 @@ describe("SugarCube Macros", () => {
                     passageTokens: {},
                     unclosedMacros: [],
                     widgetMacroRanges: [],
+                    api,
                 };
                 const macro = uut.allMacros()["for"];
 
@@ -384,6 +400,7 @@ describe("SugarCube Macros", () => {
                     passageTokens: {},
                     unclosedMacros: [],
                     widgetMacroRanges: [],
+                    api,
                 };
                 const macro = uut.allMacros()["for"];
 
@@ -414,6 +431,7 @@ describe("SugarCube Macros", () => {
                     passageTokens: {},
                     unclosedMacros: [],
                     widgetMacroRanges: [],
+                    api,
                 };
                 const macro = uut.allMacros()["for"];
 

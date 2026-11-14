@@ -12,7 +12,6 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 import { EmbeddedDocument } from "../../embedded-languages";
 import { ProjectIndex } from "../../project-index";
 import { removeAndCountPadding } from "../../utilities";
-import { ChapbookParserAPI } from ".";
 import {
     divideChapbookPassage,
     findStartOfModifierOrInsert,
@@ -21,6 +20,7 @@ import {
 import {
     ArgumentRequirement,
     ChapbookFunctionInfo,
+    ChapbookParserAPI,
     ChapbookSymbol,
     InsertProperty,
     OChapbookSymbolKind,

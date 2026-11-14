@@ -2,9 +2,9 @@ import { Diagnostic } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { DiagnosticCodes } from "@tt3/shared";
-import { isBuiltinJSObjectInstanceProperty } from "../../js-parser";
+import { referencesToDiagnostics } from "../../diagnostics";
+import { isBuiltinJSProperty } from "../../js-parser";
 import { ProjectIndex } from "../../project-index";
-import { referencesToDiagnostics } from "../../validator";
 import {
     findEndOfPartialInsert,
     findEndOfPartialModifier,
@@ -15,125 +15,13 @@ import {
     validateFunctionAndFirstArgument,
     validateInsertContents,
 } from "./chapbook-parser";
+import {
+    chapbookProperties,
+    chapbookPropertyRoots,
+} from "./chapbook-properties";
 import { OChapbookSymbolKind } from "./types";
 
-/**
- * Built-in variable properties in Chapbook.
- */
-const chapbookProperties: readonly string[] = [
-    "browser.darkTheme",
-    "browser.darkSystemTheme",
-    "browser.height",
-    "browser.online",
-    "browser.width",
-    "config.backstage.trail.maxLength",
-    "config.body.transition.duration",
-    "config.body.transition.name",
-    "config.footer.center",
-    "config.footer.left",
-    "config.footer.right",
-    "config.footer.transition.duration",
-    "config.footer.transition.name",
-    "config.header.center",
-    "config.header.left",
-    "config.header.right",
-    "config.header.transition.duration",
-    "config.header.transition.name",
-    "config.logger.show.parse",
-    "config.logger.show.sound",
-    "config.logger.show.state",
-    "config.logger.show.story",
-    "config.logger.show.style",
-    "config.random.seed",
-    "config.state.autosave",
-    "config.style.backdrop",
-    "config.style.dark.backdrop",
-    "config.style.dark.page.color",
-    "config.style.dark.page.footer.border",
-    "config.style.dark.page.footer.borderColor",
-    "config.style.dark.page.footer.link.active.color",
-    "config.style.dark.page.fork.divider.color",
-    "config.style.dark.page.header.border",
-    "config.style.dark.page.header.borderColor",
-    "config.style.dark.page.header.link.active.color",
-    "config.style.dark.page.link.active.color",
-    "config.style.dark.page.link.color",
-    "config.style.dark.page.link.lineColor",
-    "config.style.fontScaling.addAtDoubleWidth",
-    "config.style.fontScaling.baseViewportWidth",
-    "config.style.fontScaling.enabled",
-    "config.style.page.color",
-    "config.style.page.font",
-    "config.style.page.footer.border",
-    "config.style.page.footer.borderColor",
-    "config.style.page.footer.font",
-    "config.style.page.footer.link.active.color",
-    "config.style.page.footer.link.active.font",
-    "config.style.page.footer.link.active.lineColor",
-    "config.style.page.footer.link.font",
-    "config.style.page.footer.link.lineColor",
-    "config.style.page.fork.divider.color",
-    "config.style.page.fork.divider.size",
-    "config.style.page.fork.divider.style",
-    "config.style.page.header.border",
-    "config.style.page.header.borderColor",
-    "config.style.page.header.font",
-    "config.style.page.header.link.active.color",
-    "config.style.page.header.link.active.font",
-    "config.style.page.header.link.active.lineColor",
-    "config.style.page.header.link.font",
-    "config.style.page.header.link.lineColor",
-    "config.style.page.link.active.color",
-    "config.style.page.link.color",
-    "config.style.page.link.font",
-    "config.style.page.link.lineColor",
-    "config.style.page.style.border",
-    "config.style.page.style.borderColor",
-    "config.style.page.theme.enableSwitching",
-    "config.style.page.theme.override",
-    "config.style.page.verticalAlign",
-    "config.testing",
-    "engine.state",
-    "engine.template",
-    "engine.template.inserts",
-    "engine.template.modifiers",
-    "engine.version",
-    "now.datestamp",
-    "now.day",
-    "now.hour",
-    "now.minute",
-    "now.month",
-    "now.monthName",
-    "now.second",
-    "now.timestamp",
-    "now.weekday",
-    "now.weekdayName",
-    "now.year",
-    "passage.from",
-    "passage.fromText",
-    "passage.name",
-    "passage.visits",
-    "random.fraction",
-    "random.d4",
-    "random.d5",
-    "random.d6",
-    "random.d8",
-    "random.d10",
-    "random.d12",
-    "random.d20",
-    "random.d25",
-    "random.d50",
-    "random.d100",
-    "sound.mute",
-    "sound.transitionDuration",
-    "sound.volume",
-    "story.name",
-    "trail",
-];
-
-const builtinVars = [
-    ...new Set(chapbookProperties.map((x) => x.split(".", 1)[0])),
-];
+const builtinVars = [...chapbookPropertyRoots];
 
 /**
  * Generate diagnostics involving custom inserts.
@@ -344,7 +232,7 @@ export function generateDiagnostics(
     ) ?? []) {
         if (
             !propSetNames.has(propRef.contents) &&
-            !isBuiltinJSObjectInstanceProperty(propRef.contents)
+            !isBuiltinJSProperty(propRef)
         ) {
             diagnostics.push(
                 ...referencesToDiagnostics(

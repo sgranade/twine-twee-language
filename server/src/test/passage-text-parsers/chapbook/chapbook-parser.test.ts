@@ -6,7 +6,7 @@ import { DecorationType } from "@tt3/shared";
 import { buildInsertInfo } from "./inserts/insert-builders";
 import { buildModifierInfo } from "./modifiers/modifier-builders";
 import { MockCallbacks, buildParsingState, buildPassage } from "../../builders";
-import { ParseLevel } from "../../../parser";
+import { ParseLevel } from "../../../parser-types";
 import { TwineSymbolKind } from "../../../project-index";
 import { ETokenModifier, ETokenType } from "../../../semantic-tokens";
 import {
@@ -15,9 +15,9 @@ import {
 } from "../../../passage-text-parsers/chapbook/types";
 import {
     ArgumentRequirement,
+    InsertTokens,
     ValueType,
 } from "../../../passage-text-parsers/chapbook/types";
-import * as insertsModule from "../../../passage-text-parsers/chapbook/inserts";
 
 import * as uut from "../../../passage-text-parsers/chapbook";
 
@@ -83,6 +83,30 @@ describe("Chapbook Parser", () => {
             location: Location.create("fake-uri", Range.create(1, 5, 1, 9)),
             kind: OChapbookSymbolKind.PropertySet,
         });
+    });
+
+    it("should treat collision-prone browser global names as story variables", () => {
+        const header = ":: Passage\n";
+        const passage = "location: 'cave'\n--\n{location} {document.title}\n";
+        const callbacks = new MockCallbacks();
+        const state = buildParsingState({
+            uri: "fake-uri",
+            content: header + passage,
+            callbacks: callbacks,
+        });
+        state.storyFormat = {
+            format: "Chapbook",
+            formatVersion: "2.0.1",
+        };
+        const parser = uut.getChapbookParser(undefined);
+
+        parser?.parsePassageText(passage, header.length, state);
+        const result = callbacks.references.map((r) => [r.contents, r.kind]);
+
+        expect(result).to.eql([
+            ["location", OChapbookSymbolKind.VariableSet],
+            ["location", OChapbookSymbolKind.Variable],
+        ]);
     });
 
     it("should not parse engine extension calls when only parsing the StoryData passage", () => {
@@ -202,6 +226,15 @@ describe("Chapbook Parser", () => {
                     ),
                     kind: OChapbookSymbolKind.Property,
                 },
+                {
+                    contents: "engine.state.set",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(1, 13, 1, 16),
+                    ),
+                    kind: OChapbookSymbolKind.Property,
+                    isCallee: true,
+                },
             ]);
         });
 
@@ -260,6 +293,30 @@ describe("Chapbook Parser", () => {
                 ),
                 kind: OChapbookSymbolKind.PropertySet,
             });
+        });
+
+        it("should capture bare and property assignments as writes in script passages", () => {
+            const header = ":: Passage [script]\n";
+            const passage = "\n a = 1; b.c = 2\n";
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            state.currentPassage = buildPassage({ isScript: true });
+            const parser = uut.getChapbookParser(undefined);
+
+            parser?.parsePassageText(passage, header.length, state);
+            const result = callbacks.references.map((r) => [
+                r.contents,
+                r.kind,
+            ]);
+
+            expect(result).to.eql([
+                ["a", OChapbookSymbolKind.VariableSet],
+                ["b", OChapbookSymbolKind.Variable],
+                ["b.c", OChapbookSymbolKind.PropertySet],
+            ]);
         });
     });
 
@@ -1391,8 +1448,31 @@ describe("Chapbook Parser", () => {
                                 "fake-uri",
                                 Range.create(4, 2, 4, 8),
                             ),
-                            kind: OChapbookSymbolKind.Variable,
+                            kind: OChapbookSymbolKind.VariableSet,
                         },
+                    ]);
+                });
+
+                it("should capture bare and property assignments as writes in a javascript modifier", () => {
+                    const header = ":: Passage\n";
+                    const passage =
+                        "Stuff\n\n[javascript]\n  a = 1; b.c = 2;\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined);
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    const result = callbacks.references
+                        .slice(1)
+                        .map((r) => [r.contents, r.kind]);
+
+                    expect(result).to.eql([
+                        ["a", OChapbookSymbolKind.VariableSet],
+                        ["b", OChapbookSymbolKind.Variable],
+                        ["b.c", OChapbookSymbolKind.PropertySet],
                     ]);
                 });
 
@@ -2238,6 +2318,33 @@ describe("Chapbook Parser", () => {
                     });
                 });
 
+                it("should capture an assignment in an insert's first arg as a property read, not a write", () => {
+                    const header = ":: Passage\n";
+                    const passage = "Insert: {mock insert: a.b = 1}";
+                    const callbacks = new MockCallbacks();
+                    const insert = buildInsertInfo({
+                        match: /^mock insert/,
+                    });
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    const parser = uut.getChapbookParser(undefined, {
+                        allModifiers: () => [],
+                        allInserts: () => [insert],
+                    });
+
+                    parser?.parsePassageText(passage, header.length, state);
+                    const result = callbacks.references
+                        .filter((r) => r.contents.startsWith("a"))
+                        .map((r) => [r.contents, r.kind]);
+
+                    expect(result).to.eql([
+                        ["a", OChapbookSymbolKind.Variable],
+                        ["a.b", OChapbookSymbolKind.Property],
+                    ]);
+                });
+
                 it("should capture a variable reference in an insert's first arg", () => {
                     const header = ":: Passage\n";
                     const passage = "Insert: {mock insert:  arg}";
@@ -2275,7 +2382,7 @@ describe("Chapbook Parser", () => {
                     const insert = buildInsertInfo({
                         match: /^mock insert/,
                     });
-                    const allTokens: insertsModule.InsertTokens[] = [];
+                    const allTokens: InsertTokens[] = [];
                     insert.parse = (tokens) => {
                         allTokens.push(tokens);
                     };
@@ -2306,7 +2413,7 @@ describe("Chapbook Parser", () => {
                     const insert = buildInsertInfo({
                         match: /^mock insert/,
                     });
-                    const allTokens: insertsModule.InsertTokens[] = [];
+                    const allTokens: InsertTokens[] = [];
                     insert.parse = (tokens) => {
                         allTokens.push(tokens);
                     };
@@ -2341,7 +2448,7 @@ describe("Chapbook Parser", () => {
                     const insert = buildInsertInfo({
                         match: /^mock insert/,
                     });
-                    const allTokens: insertsModule.InsertTokens[] = [];
+                    const allTokens: InsertTokens[] = [];
                     insert.parse = (tokens) => {
                         allTokens.push(tokens);
                     };
@@ -2371,7 +2478,7 @@ describe("Chapbook Parser", () => {
                     const insert = buildInsertInfo({
                         match: /^mock insert/,
                     });
-                    const allTokens: insertsModule.InsertTokens[] = [];
+                    const allTokens: InsertTokens[] = [];
                     insert.parse = (tokens) => {
                         allTokens.push(tokens);
                     };
@@ -2401,7 +2508,7 @@ describe("Chapbook Parser", () => {
                     const insert = buildInsertInfo({
                         match: /^mock insert/,
                     });
-                    const allTokens: insertsModule.InsertTokens[] = [];
+                    const allTokens: InsertTokens[] = [];
                     insert.parse = (tokens) => {
                         allTokens.push(tokens);
                     };
@@ -2811,7 +2918,7 @@ describe("Chapbook Parser", () => {
                     const insert = buildInsertInfo({
                         match: /^mock insert/,
                     });
-                    const allTokens: insertsModule.InsertTokens[] = [];
+                    const allTokens: InsertTokens[] = [];
                     insert.parse = (tokens) => {
                         allTokens.push(tokens);
                     };
@@ -2848,7 +2955,7 @@ describe("Chapbook Parser", () => {
                     const insert = buildInsertInfo({
                         match: /^mock insert/,
                     });
-                    const allTokens: insertsModule.InsertTokens[] = [];
+                    const allTokens: InsertTokens[] = [];
                     insert.parse = (tokens) => {
                         allTokens.push(tokens);
                     };

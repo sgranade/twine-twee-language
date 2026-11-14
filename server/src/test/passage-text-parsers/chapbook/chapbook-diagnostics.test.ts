@@ -136,6 +136,160 @@ describe("Chapbook Diagnostics", () => {
             expect(results).to.be.empty;
         });
 
+        it("should warn on `$player.name` that is never set", () => {
+            const doc = TextDocument.create("fake-uri", "", 0, "Let's try");
+            const index = new Index();
+            index.setReferences("fake-uri", [
+                {
+                    contents: "$player.name",
+                    locations: [
+                        Location.create("fake-uri", Range.create(1, 2, 3, 4)),
+                    ],
+                    kind: OChapbookSymbolKind.Property,
+                },
+            ]);
+            const parser = uut.getChapbookParser(undefined);
+
+            const results = parser?.generateDiagnostics(doc, index);
+
+            expect(results).to.have.lengthOf(1);
+        });
+
+        it("should warn on `$item.description` that is never set", () => {
+            const doc = TextDocument.create("fake-uri", "", 0, "Let's try");
+            const index = new Index();
+            index.setReferences("fake-uri", [
+                {
+                    contents: "$item.description",
+                    locations: [
+                        Location.create("fake-uri", Range.create(1, 2, 3, 4)),
+                    ],
+                    kind: OChapbookSymbolKind.Property,
+                },
+            ]);
+            const parser = uut.getChapbookParser(undefined);
+
+            const results = parser?.generateDiagnostics(doc, index);
+
+            expect(results).to.have.lengthOf(1);
+        });
+
+        it("should not warn on `$inventory.length` that is never set", () => {
+            const doc = TextDocument.create("fake-uri", "", 0, "Let's try");
+            const index = new Index();
+            index.setReferences("fake-uri", [
+                {
+                    contents: "$inventory.length",
+                    locations: [
+                        Location.create("fake-uri", Range.create(1, 2, 3, 4)),
+                    ],
+                    kind: OChapbookSymbolKind.Property,
+                },
+            ]);
+            const parser = uut.getChapbookParser(undefined);
+
+            const results = parser?.generateDiagnostics(doc, index);
+
+            expect(results).to.be.empty;
+        });
+
+        it("should not warn on `$player.stats.length` that is never set", () => {
+            const doc = TextDocument.create("fake-uri", "", 0, "Let's try");
+            const index = new Index();
+            index.setReferences("fake-uri", [
+                {
+                    contents: "$player.stats.length",
+                    locations: [
+                        Location.create("fake-uri", Range.create(1, 2, 3, 4)),
+                    ],
+                    kind: OChapbookSymbolKind.Property,
+                },
+            ]);
+            const parser = uut.getChapbookParser(undefined);
+
+            const results = parser?.generateDiagnostics(doc, index);
+
+            expect(results).to.be.empty;
+        });
+
+        it("should not warn on `$arr.push` when called that is never set", () => {
+            const doc = TextDocument.create("fake-uri", "", 0, "Let's try");
+            const index = new Index();
+            index.setReferences("fake-uri", [
+                {
+                    contents: "$arr.push",
+                    locations: [
+                        Location.create("fake-uri", Range.create(1, 2, 3, 4)),
+                    ],
+                    kind: OChapbookSymbolKind.Property,
+                    isCallee: true,
+                },
+            ]);
+            const parser = uut.getChapbookParser(undefined);
+
+            const results = parser?.generateDiagnostics(doc, index);
+
+            expect(results).to.be.empty;
+        });
+
+        it("should warn on `$quest.find` that is never set", () => {
+            const doc = TextDocument.create("fake-uri", "", 0, "Let's try");
+            const index = new Index();
+            index.setReferences("fake-uri", [
+                {
+                    contents: "$quest.find",
+                    locations: [
+                        Location.create("fake-uri", Range.create(1, 2, 3, 4)),
+                    ],
+                    kind: OChapbookSymbolKind.Property,
+                },
+            ]);
+            const parser = uut.getChapbookParser(undefined);
+
+            const results = parser?.generateDiagnostics(doc, index);
+
+            expect(results).to.have.lengthOf(1);
+        });
+
+        it("should warn on `$player.keys` that is never set", () => {
+            const doc = TextDocument.create("fake-uri", "", 0, "Let's try");
+            const index = new Index();
+            index.setReferences("fake-uri", [
+                {
+                    contents: "$player.keys",
+                    locations: [
+                        Location.create("fake-uri", Range.create(1, 2, 3, 4)),
+                    ],
+                    kind: OChapbookSymbolKind.Property,
+                },
+            ]);
+            const parser = uut.getChapbookParser(undefined);
+
+            const results = parser?.generateDiagnostics(doc, index);
+
+            expect(results).to.have.lengthOf(1);
+        });
+
+        it("should not warn on `$quest.find` when called that is never set", () => {
+            const doc = TextDocument.create("fake-uri", "", 0, "Let's try");
+            const index = new Index();
+            index.setReferences("fake-uri", [
+                {
+                    contents: "$quest.find",
+                    locations: [
+                        Location.create("fake-uri", Range.create(1, 2, 3, 4)),
+                    ],
+                    kind: OChapbookSymbolKind.Property,
+                    isCallee: true,
+                },
+            ]);
+            const parser = uut.getChapbookParser(undefined);
+
+            const results = parser?.generateDiagnostics(doc, index);
+
+            expect(results).to.be.empty;
+        });
+
         it("should not warn on a reference to a built-in lookup variable", () => {
             const doc = TextDocument.create(
                 "fake-uri",

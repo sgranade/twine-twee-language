@@ -1,8 +1,8 @@
-import { ArgumentRequirement } from "../../../../passage-text-parsers/chapbook/types";
 import {
+    ArgumentRequirement,
     InsertInfo,
     InsertTokens,
-} from "../../../../passage-text-parsers/chapbook/inserts";
+} from "../../../../passage-text-parsers/chapbook/types";
 
 export function buildInsertInfo({
     name = "Mock Insert",

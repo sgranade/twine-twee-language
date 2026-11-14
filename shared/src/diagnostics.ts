@@ -46,6 +46,7 @@ export const DiagnosticCodes = {
     ChapbookUnknownEngineTemplateFunction: "unknown-engine-template-function",
     ChapbookUnknownInsert: "unknown-insert",
     ChapbookUnknownModifier: "unknown-modifier",
+    ChapbookVariableShadowedByBrowser: "chapbook-variable-shadowed-by-browser",
     // SugarCube
     SugarCubeDeprecatedSpecialPassage: "deprecated-special-passage",
     SugarCubeDeprecatedTag: "deprecated-tag",

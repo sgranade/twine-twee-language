@@ -7,9 +7,9 @@ import {
     DisableDiagnosticTag,
     StoryFormat,
 } from "@tt3/shared";
-import { TwineDiagnostic } from "./diagnostics";
 import { EmbeddedDocument } from "./embedded-languages";
 import { SemanticToken } from "./semantic-tokens";
+import { Label, TwineDiagnostic } from "./types";
 import { positionInRange, rangeInRange } from "./utilities";
 
 /**
@@ -20,17 +20,30 @@ export interface Kind {
 }
 
 /**
- * A label, which has a name and a location.
+ * Tracks whether it's functioning as a callee or not.
  */
-export interface Label {
-    contents: string;
-    location: Location;
+export interface Callable {
+    /**
+     * For properties, whether the property is the callee of a call or `new`.
+     * On `References`, true only if every location is such a callee. The
+     * indexer keeps callee and non-callee occurrences of a name in separate
+     * `References`, so a document can have two entries with the same contents.
+     */
+    isCallee?: boolean;
+}
+
+/**
+ * Spread-ready `isCallee` flag that's absent unless true, keeping indexed
+ * shapes sparse.
+ */
+export function calleeFlag(source: Callable): Callable {
+    return source.isCallee ? { isCallee: true } : {};
 }
 
 /**
  * A label with a number that identifies the kind of label it is.
  */
-export interface ProjSymbol extends Label, Kind {}
+export interface ProjSymbol extends Label, Kind, Callable {}
 
 /**
  * Kind of a Twine symbol.
@@ -44,7 +57,7 @@ export enum TwineSymbolKind {
 /**
  * References, which have contents, locations, and an identifier for its kind.
  */
-export interface References extends Kind {
+export interface References extends Kind, Callable {
     contents: string;
     locations: Location[];
 }
@@ -606,11 +619,11 @@ export class Index implements ProjectIndex {
         for (const referencesPerKind of Object.values(this._references)) {
             const localReferences = referencesPerKind[references.kind];
             if (localReferences !== undefined) {
-                const ref = localReferences.find(
-                    (ref) => ref.contents === references.contents,
-                );
-                if (ref !== undefined) {
-                    references.locations.push(...ref.locations);
+                // A name can have both a callee and a non-callee entry
+                for (const ref of localReferences) {
+                    if (ref.contents === references.contents) {
+                        references.locations.push(...ref.locations);
+                    }
                 }
             }
         }

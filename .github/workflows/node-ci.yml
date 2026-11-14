@@ -35,3 +35,21 @@ jobs:
               run: npm run build --if-present
             - name: Test
               run: npm test
+
+    window-globals:
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v6
+            - name: Use Node.js
+              uses: actions/setup-node@v7
+              with:
+                  node-version: "24.x"
+                  cache: "npm"
+            - name: Install Packages
+              run: npm ci
+            - name: Install Browsers
+              run: npx playwright install --with-deps chromium firefox webkit
+            - name: Check Window Globals
+              run: npm run build-window-globals -- --check

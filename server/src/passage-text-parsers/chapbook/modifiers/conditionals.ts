@@ -1,5 +1,4 @@
-import { ArgumentRequirement, ValueType } from "../types";
-import { ModifierInfo } from "./types";
+import { ArgumentRequirement, ModifierInfo, ValueType } from "../types";
 
 export const ifConditionals: ModifierInfo = {
     name: "if/unless conditional",

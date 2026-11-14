@@ -6,7 +6,7 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 import { DecorationType, DiagnosticCodes } from "@tt3/shared";
 import { improveAcornErrorMessage } from "../../acorn-errors";
 import type { AcornSyntaxError } from "../../acorn-errors";
-import { createDiagnosticFor, TwineDiagnostic } from "../../diagnostics";
+import { createDiagnosticFor } from "../../diagnostics";
 import { EmbeddedDocument } from "../../embedded-languages";
 import {
     parseJSStrict,
@@ -14,8 +14,6 @@ import {
     tokenizeJavaScript,
 } from "../../js-parser";
 import {
-    ParseLevel,
-    ParsingState,
     createLocationFor,
     createSymbolFor,
     findAndParseHtml,
@@ -26,26 +24,35 @@ import {
     logSemanticTokenFor,
     parsePassageReference,
 } from "../../parser";
-import { ProjectIndex } from "../../project-index";
+import { ParseLevel } from "../../parser-types";
+import { calleeFlag, ProjectIndex } from "../../project-index";
 import { ETokenType, ETokenModifier } from "../../semantic-tokens";
-import { Token } from "../../types";
+import { Token, TwineDiagnostic } from "../../types";
 import {
     extractToMatchingDelimiter,
     hasOwnProperty,
     skipSpaces,
     versionCompare,
 } from "../../utilities";
-import { StoryFormatParsingState, capturePreSemanticTokenFor } from "..";
-import { ChapbookParserAPI } from ".";
-import { InsertTokens, ModifierTokens } from "./inserts";
+import { browserGlobals } from "../host-globals";
+import { ParsingState, capturePreSemanticTokenFor } from "../types";
+import {
+    findShadowedVariable,
+    shadowedVariableMessage,
+} from "./chapbook-shadowing";
 import {
     ArgumentRequirement,
     ChapbookFunctionInfo,
+    ChapbookParserAPI,
+    ChapbookParsingState,
     ChapbookSymbol,
     ChapbookSymbolKind,
     FirstArgument,
+    InsertTokens,
     InsertProperty,
     InsertPropertyRecord,
+    ModifierKind,
+    ModifierTokens,
     OChapbookSymbolKind,
     ValueType,
 } from "./types";
@@ -57,30 +64,15 @@ const varsLineExtractionRegex = /^([ \t]*)(.*)$/gm;
 const varsLineVarOnlyExtractionRegex =
     /^(\s*)([A-Za-z$_][A-Za-z0-9$_.]*)?.*$/gmu;
 
-/**
- * Type of Chapbook modifier.
- */
-export enum ModifierKind {
-    None,
-    Javascript,
-    Css,
-    Note,
-    Continue,
-    Other,
-}
-
-/**
- * Chapbook-specific parsing state information.
- */
-export interface ChapbookParsingState extends StoryFormatParsingState {
-    /**
-     * Type of modifier affecting a text block.
-     */
-    modifierKind: ModifierKind;
-    api: ChapbookParserAPI;
-}
-
 const varInsertRegex = /^({\s*)(\S+)\s*}$/;
+
+/**
+ * Host globals that won't be Chapbook story variables. (Since Chapbook
+ * variables are bare names, there are browser globals like `location`
+ * and `history` that are likely to collide w/names an author might
+ * pick.)
+ */
+const chapbookHostGlobals: ReadonlySet<string> = browserGlobals;
 
 /**
  * Get Chapbook-specific symbol definitions across all indexed documents.
@@ -109,7 +101,7 @@ export function getChapbookDefinitions(
 /**
  * Create symbol references for tokenized variables and properties, and log any tokenizing error.
  *
- * `isSet` overrides the individual label's set (defined) information.
+ * `isSet` overrides the individual label's assignment information.
  *
  * @param jsTokens Tuple with separate lists of variables and properties and potentially a parsing error.
  * @param state Parsing state.
@@ -125,7 +117,7 @@ function createVariableAndPropertyReferences(
             contents: v.contents,
             location: v.location,
             kind:
-                isSet || v.defined
+                isSet || v.assigned
                     ? OChapbookSymbolKind.VariableSet
                     : OChapbookSymbolKind.Variable,
         });
@@ -139,9 +131,10 @@ function createVariableAndPropertyReferences(
             contents: contents,
             location: p.location,
             kind:
-                isSet || p.defined
+                isSet || p.assigned
                     ? OChapbookSymbolKind.PropertySet
                     : OChapbookSymbolKind.Property,
+            ...calleeFlag(p),
         });
     }
     if (jsTokens.error) {
@@ -872,6 +865,32 @@ function parseEngineExtension(
 }
 
 /**
+ * Warn if a variable being set has a name that shadows it in JavaScript contexts.
+ *
+ * Only the first segment of a dotted name is checked and underlined.
+ *
+ * @param name Raw name of the variable being set.
+ * @param at Index of the name in the document (zero-based).
+ * @param state Parsing state.
+ */
+function logShadowedVariableDiagnostic(
+    name: string,
+    at: number,
+    state: ParsingState,
+): void {
+    const shadowed = findShadowedVariable(name);
+    if (shadowed !== undefined) {
+        logDiagnosticFor(
+            DiagnosticCodes.ChapbookVariableShadowedByBrowser,
+            shadowed.root,
+            at,
+            state,
+            shadowedVariableMessage(shadowed),
+        );
+    }
+}
+
+/**
  * Find and parse all calls to the Chapbook `engine.extend()` function.
  *
  * @param contents Contents to search for engine extensions.
@@ -927,6 +946,14 @@ function findAndParseEngineStateSets(
                 1,
             );
             if (varContents) {
+                // Only check for shadowed vars on a full aprse
+                if (state.parseLevel === ParseLevel.Full) {
+                    logShadowedVariableDiagnostic(
+                        varContents,
+                        ndx + contentsIndex,
+                        state,
+                    );
+                }
                 // Parse the value as a JavaScript expression, but make every var/property a definition
                 const tokens = tokenizeJavaScript(
                     false,
@@ -936,10 +963,10 @@ function findAndParseEngineStateSets(
                     chapbookState,
                 );
                 for (const v of tokens.variables) {
-                    v.defined = true;
+                    v.assigned = true;
                 }
                 for (const p of tokens.properties) {
-                    p.defined = true;
+                    p.assigned = true;
                 }
                 createVariableAndPropertyReferences(tokens, state);
             }
@@ -1557,6 +1584,7 @@ function parseScript(
             textIndex,
             state.textDocument,
             chapbookState,
+            { isAssignmentContext: true },
         ),
         state,
     );
@@ -2222,6 +2250,8 @@ function parseVarsSection(
             name = name.slice(0, spaceMatch.index);
         }
 
+        logShadowedVariableDiagnostic(name, sectionIndex + nameIndex, state);
+
         // Capture the variable name reference as being set by this vars section
         // and update the token for the name to show that it's being modified.
         createVariableAndPropertyReferences(
@@ -2320,6 +2350,7 @@ export function parsePassageText(
     const chapbookState: ChapbookParsingState = {
         modifierKind: ModifierKind.None,
         passageTokens: {},
+        hostGlobals: chapbookHostGlobals,
         api: api,
     };
 

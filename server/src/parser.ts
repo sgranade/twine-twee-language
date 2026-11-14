@@ -1,18 +1,12 @@
-import { Diagnostic, Location, Range } from "vscode-languageserver";
+import { Location, Range } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
-import {
-    DecorationRange,
-    DiagnosticCode,
-    DiagnosticCodes,
-    StoryFormat,
-} from "@tt3/shared";
+import { DiagnosticCode, DiagnosticCodes, StoryFormat } from "@tt3/shared";
 import {
     createDiagnostic,
     createDiagnosticFor,
     createDiagnosticFromRange,
     disabledDiagnosticsFromPassageTagLabels,
-    TwineDiagnostic,
 } from "./diagnostics";
 import {
     EmbeddedDocument,
@@ -21,107 +15,33 @@ import {
     storyDataJSONUri,
 } from "./embedded-languages";
 import {
-    Label,
+    closeMetaCharRegex,
+    metadataRegex,
+    openMetaCharRegex,
+    tagRegex,
+} from "./language";
+import { ParseLevel, ParserCallbacks } from "./parser-types";
+import {
+    ParsingState,
+    StoryFormatParser,
+    StoryFormatParsingState,
+    capturePreSemanticTokenFor,
+} from "./passage-text-parsers/types";
+import {
     Passage,
     PassageMetadata,
     ProjSymbol,
     StoryData,
     TwineSymbolKind,
 } from "./project-index";
-import {
-    closeMetaCharRegex,
-    metadataRegex,
-    openMetaCharRegex,
-    tagRegex,
-} from "./language";
-import {
-    StoryFormatParser,
-    StoryFormatParsingState,
-    capturePreSemanticTokenFor,
-    getStoryFormatParser,
-} from "./passage-text-parsers";
-import {
-    ETokenType,
-    SemanticToken,
-    TokenModifier,
-    TokenType,
-} from "./semantic-tokens";
-import { Token } from "./types";
+import { ETokenType, TokenModifier, TokenType } from "./semantic-tokens";
+import { Label, Token, TwineDiagnostic } from "./types";
 import {
     nextLineIndex,
     pairwise,
     removeAndCountPadding,
     skipSpaces,
 } from "./utilities";
-
-/**
- * At what level of detail to parse a Twee document.
- */
-export enum ParseLevel {
-    /**
-     * Just the StoryData passage (if it exists) -- used to find the story format quickly.
-     */
-    StoryData = 1,
-    /**
-     * StoryData and names of passages, but not the content of passages.
-     */
-    PassageNames,
-    /**
-     * Everything.
-     */
-    Full,
-}
-
-/**
- * Captures information about the current state of parsing
- */
-export interface ParsingState {
-    /**
-     * Document being validated.
-     */
-    textDocument: TextDocument;
-    /**
-     * Are we to parse passage contents?
-     */
-    parseLevel: ParseLevel;
-    /**
-     * What passage are we currently parsing the contents of?
-     */
-    currentPassage?: Passage;
-    /**
-     * What diagnostic codes are currently disabled for this passage?
-     */
-    currentPassageDisabledDiagnostics?: Set<DiagnosticCode>;
-    /**
-     * Story format (if known).
-     */
-    storyFormat?: StoryFormat;
-    /**
-     * The parser to parse passage contents (other than the StoryTitle and StoryData passages).
-     */
-    storyFormatParser: StoryFormatParser | undefined;
-    /**
-     * Callbacks for parsing events
-     */
-    callbacks: ParserCallbacks;
-}
-
-/**
- * Callbacks during parsing.
- */
-export interface ParserCallbacks {
-    onPassage(passage: Passage): void;
-    onSymbolDefinition(symbol: ProjSymbol): void;
-    onSymbolReference(symbol: ProjSymbol): void;
-    onStoryTitle(title: string, range: Range): void;
-    onStoryData(data: StoryData, range: Range): void;
-    onEmbeddedDocument(document: EmbeddedDocument): void;
-    onSemanticToken(token: SemanticToken): void;
-    onFoldingRange(range: Range): void;
-    onDecorationRange(range: DecorationRange): void;
-    onParseError(error: Diagnostic): void;
-    onDisabledDiagnosticRange(code: DiagnosticCode, range: Range): void;
-}
 
 //#region UtilityFunctions
 
@@ -1009,8 +929,10 @@ export function parse(
     textDocument: TextDocument,
     callbacks: ParserCallbacks,
     parseLevel: ParseLevel,
-    storyFormat?: StoryFormat,
-    getParser: typeof getStoryFormatParser = getStoryFormatParser,
+    storyFormat: StoryFormat | undefined,
+    getParser: (
+        format: StoryFormat | undefined,
+    ) => StoryFormatParser | undefined,
 ): void {
     const state: ParsingState = {
         textDocument: textDocument,

@@ -5,8 +5,8 @@
 
 import { Range } from "vscode-languageserver";
 
-import { ParsingState } from "../../../parser";
-import { SugarCubeParsingState } from "../sugarcube-parser";
+import { ParsingState } from "../../types";
+import { EnumRecord, SugarCubeParsingState } from "../types";
 import {
     ArgumentToken,
     MacroParse,
@@ -23,12 +23,6 @@ interface Evaluatable<T, B> {
     isEvaluated: boolean;
     value?: T;
 }
-
-/**
- * A record mapping macro enum names ("colors") to enumerated values separated by
- * pipes ('"red"|"green"|"blue"|"pink"').
- */
-export type EnumRecord = Record<string, string>;
 
 /**
  * Parse enums that will be replaced in macro definitions and parameters. See `macros.md` in T3LT.

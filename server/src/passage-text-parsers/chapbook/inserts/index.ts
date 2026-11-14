@@ -13,9 +13,7 @@ import { revealLink } from "./reveal-link";
 import { soundEffect } from "./sound-effect";
 import { textInput } from "./text-input";
 import { themeSwitcher } from "./theme-switcher";
-import { InsertInfo } from "./types";
-
-export * from "./types";
+import { InsertInfo } from "../types";
 
 const builtins: InsertInfo[] = [
     ambientSound,

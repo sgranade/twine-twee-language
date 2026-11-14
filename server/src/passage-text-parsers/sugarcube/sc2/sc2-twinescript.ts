@@ -1,15 +1,65 @@
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import {
+    isEveryIdentifierAVariable,
     JSPropertyLabel,
     parseJSStrict,
     TokenizedJS,
     tokenizeJavaScript,
-    tokenizeParsedJS,
 } from "../../../js-parser";
-import { ETokenType } from "../../../semantic-tokens";
 import { createLocationFor } from "../../../parser";
-import { capturePreSemanticTokenFor, StoryFormatParsingState } from "../..";
+import {
+    browserGlobals,
+    collisionProneBrowserGlobals,
+    jQueryGlobals,
+} from "../../host-globals";
+import {
+    capturePreSemanticTokenFor,
+    StoryFormatParsingState,
+} from "../../types";
+
+/**
+ * SugarCube's story-format built-in functions, which a called identifier
+ * would otherwise index as a story variable.
+ */
+const sugarCubeBuiltInFunctions: ReadonlySet<string> = new Set([
+    "clone",
+    "either",
+    "forget",
+    "hasVisited",
+    "importScripts",
+    "importStyles",
+    "lastVisited",
+    "memorize",
+    "passage",
+    "previous",
+    "random",
+    "randomFloat",
+    "recall",
+    "setPageElement",
+    "tags",
+    "temporary",
+    "time",
+    "triggerEvent",
+    "turns",
+    "variables",
+    "visited",
+    "visitedTags",
+]);
+
+/**
+ * Globals that are never SugarCube story variables.
+ *
+ * Since story and temp variables are sigiled with `$` and `_`, respectively,
+ * no bare host name will collide with them, unlike in Chapbook. A bare `$`
+ * that survives desugaring is going to be jQuery.
+ */
+export const sugarCubeExcludedGlobals: ReadonlySet<string> = new Set([
+    ...sugarCubeBuiltInFunctions,
+    ...browserGlobals,
+    ...collisionProneBrowserGlobals,
+    ...jQueryGlobals,
+]);
 
 /**
  * Whether a bit of text starts with a variable sigil ($, _) or
@@ -192,25 +242,24 @@ export function isTwineScriptExpression(expression: string): boolean {
         const ast = parseJSStrict(desugared, false);
         // Make sure all variables are SugarCube variables, as barewords will look like
         // variables to the JS parser
-        const tokens = tokenizeParsedJS(expression, ast);
-        for (const token of Object.values(tokens)) {
-            if (token.type === ETokenType.variable) {
-                // Resugar the text (if needed) and test to see if it's an SC2 variable.
+        return isEveryIdentifierAVariable(
+            ast,
+            (name, at) => {
+                // Resugar text (if needed) & test to see if it's an SC2 variable
                 const { sugaredText } = getSugaredPositionAndNewText(
-                    token.at,
+                    at,
                     positionMapping,
                 );
+                let text = name;
                 if (sugaredText === "$" || sugaredText === "_") {
-                    token.text = sugaredText + token.text.slice(1);
+                    text = sugaredText + name.slice(1);
                 } else if (sugaredText !== undefined) {
-                    token.text = sugaredText;
+                    text = sugaredText;
                 }
-                if (!startIsVarRegexp.test(token.text)) {
-                    return false;
-                }
-            }
-        }
-        return true;
+                return startIsVarRegexp.test(text);
+            },
+            sugarCubeExcludedGlobals,
+        );
     } catch {
         return false;
     }
@@ -226,8 +275,10 @@ export function isTwineScriptExpression(expression: string): boolean {
  * @param offset Offset into the document where the expression occurs.
  * @param state Parsing state.
  * @param storyFormatState Passage state object that will collect tokens.
- * @param assignmentIsDefinition If true, variable assignment will be treated as variable definition. (Needed for e.g. SugarCube passage link setters.)
- * @param isProgram True to parse as a full JS program; false to parse as an expression.
+ * @param options Tokenizing options.
+ * @param options.isSetterContext True if the expression comes from a state-setting context (`<<set>>`,
+ * `<<run>>`, setter links, `data-setter`), so write-shaped syntax counts as assignment.
+ * @param options.isProgram True to parse as a full JS program; false to parse as an expression.
  * @returns Tokenized variables and properties, and any parsing error.
  */
 export function tokenizeTwineScriptExpression(
@@ -235,8 +286,10 @@ export function tokenizeTwineScriptExpression(
     offset: number,
     textDocument: TextDocument,
     storyFormatState: StoryFormatParsingState,
-    assignmentIsDefinition: boolean = false,
-    isProgram: boolean = false,
+    {
+        isSetterContext = false,
+        isProgram = false,
+    }: { isSetterContext?: boolean; isProgram?: boolean } = {},
 ): TokenizedJS {
     const { desugared, positionMapping } = desugar(expression);
 
@@ -247,6 +300,7 @@ export function tokenizeTwineScriptExpression(
     // a temporary story format parsing state.
     const desugaredStoryFormatState: StoryFormatParsingState = {
         passageTokens: {},
+        hostGlobals: storyFormatState.hostGlobals,
     };
     // We'll also create a fake document that contains just the expression
     const desugaredDocument = TextDocument.create(
@@ -262,7 +316,7 @@ export function tokenizeTwineScriptExpression(
         0, // offset of 0 since the desugared expression starts at the start of the doc
         desugaredDocument,
         desugaredStoryFormatState,
-        assignmentIsDefinition,
+        { isAssignmentContext: isSetterContext },
     );
 
     // Adjust variable and property locations and (if needed) text

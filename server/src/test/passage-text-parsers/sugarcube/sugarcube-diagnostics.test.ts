@@ -181,21 +181,151 @@ describe("SugarCube Diagnostics", () => {
             expect(results).to.be.empty;
         });
 
-        it("should not warn on a property with no matching set property if it matches a SugarCube object's instance property", () => {
-            const doc = TextDocument.create(
-                "fake-uri",
-                "",
-                0,
-                "Let's try {any.parser}",
-            );
+        it("should warn on `$player.name` that is never set", () => {
+            const doc = TextDocument.create("fake-uri", "", 0, "Let's try");
             const index = new Index();
             index.setReferences("fake-uri", [
                 {
-                    contents: "any.parser",
+                    contents: "$player.name",
                     locations: [
                         Location.create("fake-uri", Range.create(1, 2, 3, 4)),
                     ],
                     kind: OSugarCubeSymbolKind.Property,
+                },
+            ]);
+            const parser = uut.getSugarCubeParser(undefined);
+
+            const results = parser?.generateDiagnostics(doc, index);
+
+            expect(results).to.have.lengthOf(1);
+        });
+
+        it("should warn on `$item.description` that is never set", () => {
+            const doc = TextDocument.create("fake-uri", "", 0, "Let's try");
+            const index = new Index();
+            index.setReferences("fake-uri", [
+                {
+                    contents: "$item.description",
+                    locations: [
+                        Location.create("fake-uri", Range.create(1, 2, 3, 4)),
+                    ],
+                    kind: OSugarCubeSymbolKind.Property,
+                },
+            ]);
+            const parser = uut.getSugarCubeParser(undefined);
+
+            const results = parser?.generateDiagnostics(doc, index);
+
+            expect(results).to.have.lengthOf(1);
+        });
+
+        it("should not warn on `$inventory.length` that is never set", () => {
+            const doc = TextDocument.create("fake-uri", "", 0, "Let's try");
+            const index = new Index();
+            index.setReferences("fake-uri", [
+                {
+                    contents: "$inventory.length",
+                    locations: [
+                        Location.create("fake-uri", Range.create(1, 2, 3, 4)),
+                    ],
+                    kind: OSugarCubeSymbolKind.Property,
+                },
+            ]);
+            const parser = uut.getSugarCubeParser(undefined);
+
+            const results = parser?.generateDiagnostics(doc, index);
+
+            expect(results).to.be.empty;
+        });
+
+        it("should not warn on `$player.stats.length` that is never set", () => {
+            const doc = TextDocument.create("fake-uri", "", 0, "Let's try");
+            const index = new Index();
+            index.setReferences("fake-uri", [
+                {
+                    contents: "$player.stats.length",
+                    locations: [
+                        Location.create("fake-uri", Range.create(1, 2, 3, 4)),
+                    ],
+                    kind: OSugarCubeSymbolKind.Property,
+                },
+            ]);
+            const parser = uut.getSugarCubeParser(undefined);
+
+            const results = parser?.generateDiagnostics(doc, index);
+
+            expect(results).to.be.empty;
+        });
+
+        it("should not warn on `$arr.push` when called that is never set", () => {
+            const doc = TextDocument.create("fake-uri", "", 0, "Let's try");
+            const index = new Index();
+            index.setReferences("fake-uri", [
+                {
+                    contents: "$arr.push",
+                    locations: [
+                        Location.create("fake-uri", Range.create(1, 2, 3, 4)),
+                    ],
+                    kind: OSugarCubeSymbolKind.Property,
+                    isCallee: true,
+                },
+            ]);
+            const parser = uut.getSugarCubeParser(undefined);
+
+            const results = parser?.generateDiagnostics(doc, index);
+
+            expect(results).to.be.empty;
+        });
+
+        it("should warn on `$quest.find` that is never set", () => {
+            const doc = TextDocument.create("fake-uri", "", 0, "Let's try");
+            const index = new Index();
+            index.setReferences("fake-uri", [
+                {
+                    contents: "$quest.find",
+                    locations: [
+                        Location.create("fake-uri", Range.create(1, 2, 3, 4)),
+                    ],
+                    kind: OSugarCubeSymbolKind.Property,
+                },
+            ]);
+            const parser = uut.getSugarCubeParser(undefined);
+
+            const results = parser?.generateDiagnostics(doc, index);
+
+            expect(results).to.have.lengthOf(1);
+        });
+
+        it("should warn on `$player.keys` that is never set", () => {
+            const doc = TextDocument.create("fake-uri", "", 0, "Let's try");
+            const index = new Index();
+            index.setReferences("fake-uri", [
+                {
+                    contents: "$player.keys",
+                    locations: [
+                        Location.create("fake-uri", Range.create(1, 2, 3, 4)),
+                    ],
+                    kind: OSugarCubeSymbolKind.Property,
+                },
+            ]);
+            const parser = uut.getSugarCubeParser(undefined);
+
+            const results = parser?.generateDiagnostics(doc, index);
+
+            expect(results).to.have.lengthOf(1);
+        });
+
+        it("should not warn on `$quest.find` when called that is never set", () => {
+            const doc = TextDocument.create("fake-uri", "", 0, "Let's try");
+            const index = new Index();
+            index.setReferences("fake-uri", [
+                {
+                    contents: "$quest.find",
+                    locations: [
+                        Location.create("fake-uri", Range.create(1, 2, 3, 4)),
+                    ],
+                    kind: OSugarCubeSymbolKind.Property,
+                    isCallee: true,
                 },
             ]);
             const parser = uut.getSugarCubeParser(undefined);

@@ -1,16 +1,21 @@
 import { DiagnosticCodes } from "@tt3/shared";
 import { createDiagnosticFromRange } from "../../diagnostics";
 import { TokenizedJS } from "../../js-parser";
-import { logDiagnostic, logRawDiagnostic, ParsingState } from "../../parser";
+import { logDiagnostic, logRawDiagnostic } from "../../parser";
+import { calleeFlag } from "../../project-index";
 import { positionInRange } from "../../utilities";
-import { SugarCubeParsingState } from "./sugarcube-parser";
+import { ParsingState } from "../types";
 import { builtinVars, builtInVarsAndProperties } from "./sugarcube-variables";
-import { OSugarCubeSymbolKind } from "./types";
+import { OSugarCubeSymbolKind, SugarCubeParsingState } from "./types";
+
+function isInScriptMacro(sugarcubeState: SugarCubeParsingState): boolean {
+    return sugarcubeState.unclosedMacros.some((p) => p.name === "script");
+}
 
 /**
  * Create symbol references for tokenized variables and properties, and log any tokenizing error.
  *
- * `isSet` overrides the individual label's set (defined) information.
+ * `isSet` overrides the individual label's assignment information.
  *
  * @param jsTokens Tokenized JavaScript variables and properties, as well as any parsing error.
  * @param state Parsing state.
@@ -52,10 +57,7 @@ export function createVariableAndPropertyReferences(
             }
         }
         // Don't capture the auto-generated variable `output` in a <<script>> macro
-        else if (
-            v.contents === "output" &&
-            sugarcubeState.unclosedMacros.find((p) => p.name === "script")
-        ) {
+        else if (v.contents === "output" && isInScriptMacro(sugarcubeState)) {
             // Do nothing!
         }
         // Don't save any references to SugarCube-specific variables
@@ -64,7 +66,7 @@ export function createVariableAndPropertyReferences(
                 contents: v.contents,
                 location: v.location,
                 kind:
-                    isSet || v.defined
+                    isSet || v.assigned
                         ? OSugarCubeSymbolKind.VariableSet
                         : OSugarCubeSymbolKind.Variable,
             });
@@ -91,7 +93,8 @@ export function createVariableAndPropertyReferences(
                 const ref = {
                     contents: (isTemporary ? "_" : "$") + contents.slice(16),
                     location: p.location,
-                    defined: p.defined,
+                    assigned: p.assigned,
+                    ...calleeFlag(p),
                 };
                 const firstPeriodNdx = ref.contents.indexOf(".");
                 if (firstPeriodNdx === -1) {
@@ -114,15 +117,24 @@ export function createVariableAndPropertyReferences(
             }
         }
 
+        // Don't capture properties of the auto-generated variable `output` in a <<script>> macro
+        if (
+            (contents === "output" || contents.startsWith("output.")) &&
+            isInScriptMacro(sugarcubeState)
+        ) {
+            continue;
+        }
+
         // Don't save any references to SugarCube-specific properties
         if (!builtInVarsAndProperties.has(contents))
             state.callbacks.onSymbolReference({
                 contents: contents,
                 location: p.location,
                 kind:
-                    isSet || p.defined
+                    isSet || p.assigned
                         ? OSugarCubeSymbolKind.PropertySet
                         : OSugarCubeSymbolKind.Property,
+                ...calleeFlag(p),
             });
     }
     if (jsTokens.error) {

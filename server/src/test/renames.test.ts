@@ -2,7 +2,7 @@ import { expect } from "chai";
 import "mocha";
 import { Location, Position, Range, TextEdit } from "vscode-languageserver";
 
-import { StoryFormatParser } from "../passage-text-parsers";
+import { StoryFormatParser } from "../passage-text-parsers/types";
 import { Index, TwineSymbolKind } from "../project-index";
 import { buildPassage } from "./builders";
 

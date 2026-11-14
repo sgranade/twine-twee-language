@@ -7,8 +7,8 @@ import {
 } from "vscode-languageserver";
 
 import { DisableDiagnosticTag, isDiagnosticCode } from "@tt3/shared";
-import { Label, Passage } from "./project-index";
-import { TwineDiagnostic } from "./diagnostics";
+import { Passage } from "./project-index";
+import { Label, TwineDiagnostic } from "./types";
 
 /**
  * Generate a position at the end of a label.
