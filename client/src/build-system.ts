@@ -5,6 +5,7 @@ import { StoryFormat } from "@tt3/shared";
 import { addTrailingAnnotation } from "./annotations";
 import { currentConfig } from "./config";
 import { Configuration, CustomWhenContext } from "./constants";
+import { getFilesFromSources, resolveIncludeEntry } from "./file-sets";
 import {
     cachedStoryFormat,
     downloadStoryFormat,
@@ -14,7 +15,7 @@ import {
     storyFormatSupportsDownloading,
     workspacePathToWriteStoryFormatTo,
 } from "./manage-storyformats";
-import { FileType, WorkspaceProvider } from "./workspace-provider";
+import { WorkspaceProvider } from "./workspace-provider";
 import {
     addFileToStory,
     canAddFileToStory,
@@ -24,110 +25,6 @@ import { compileStory } from "./build/story-output";
 import { TweeParseError } from "./build/twee-parser";
 import { Story } from "./build/types";
 import { signalContextEvent } from "./context";
-
-/**
- * Find files that match a source list of globs w/optional ignored patterns.
- * @param sources Files to find as a list of glob patterns.
- * @param ignores Files to be ignored, also as a list of glob patterns.
- * @param workspaceProvider Workspace provider.
- * @returns List of found files.
- */
-export async function getFilesFromSources(
-    sources: string[],
-    ignores: string[] | undefined,
-    workspaceProvider: WorkspaceProvider,
-): Promise<URI[]> {
-    sources = sources.map((source) => source.trim());
-    ignores = ignores?.map((ignore) => ignore.trim());
-
-    const joinedSources = !sources.some((p) => p.includes("{"))
-        ? "{" + sources.join(",") + "}"
-        : undefined;
-    // There's no ignores, just sources
-    if (ignores === undefined) {
-        if (joinedSources) {
-            // Simple case: no groups in sources, so we can concatenate them
-            return await workspaceProvider.findFiles(joinedSources, null);
-        } else {
-            // Moderate case: iterate over sources
-            const sourceURIs = (
-                await Promise.all(
-                    sources.map(async (source) => {
-                        return await workspaceProvider.findFiles(source, null);
-                    }),
-                )
-            ).flat();
-            return [...new Set(sourceURIs)];
-        }
-    }
-
-    const joinedIgnores = !ignores.some((p) => p.includes("{"))
-        ? "{" + ignores.join(",") + "}"
-        : undefined;
-    // There's ignores, and they can be concatentated
-    if (joinedIgnores) {
-        if (joinedSources) {
-            // Simple case: no groups in sources or ignores
-            return await workspaceProvider.findFiles(
-                joinedSources,
-                joinedIgnores,
-            );
-        } else {
-            // Moderate case: iterate over sources w/a single ignores
-            const sourceURIs = (
-                await Promise.all(
-                    sources.map(async (source) => {
-                        return await workspaceProvider.findFiles(
-                            source,
-                            joinedIgnores,
-                        );
-                    }),
-                )
-            ).flat();
-            return [...new Set(sourceURIs)];
-        }
-    }
-
-    // There's ignores, and we need to iterate over them
-    if (joinedSources) {
-        // Moderate case: iterate over ignores w/a single sources
-        const sourceURIs = (
-            await Promise.all(
-                ignores.map(async (ignore) => {
-                    return await workspaceProvider.findFiles(
-                        joinedSources,
-                        ignore,
-                    );
-                }),
-            )
-        ).flat();
-        return [...new Set(sourceURIs)];
-    } else {
-        // Complex case: iterate over sources and ignores
-        // (sigh, hello combinatoric explosion)
-        // TODO When we target es2024 (starting w/VS Code 1.123 2026-06-03), use Set operations
-        const sourceURIs: URI[] = [];
-        for (const source of sources) {
-            // For any given source, find the set intersection of files
-            // that are present in every iteration of `ignores`
-            let singleSourceList = await workspaceProvider.findFiles(
-                source,
-                ignores[0],
-            );
-            for (const ignore of ignores.slice(1)) {
-                const newSourceList = await workspaceProvider.findFiles(
-                    source,
-                    ignore,
-                );
-                singleSourceList = singleSourceList.filter((source) =>
-                    newSourceList.includes(source),
-                );
-            }
-            sourceURIs.push(...singleSourceList);
-        }
-        return [...new Set(sourceURIs)];
-    }
-}
 
 /**
  * Copy a file if it's changed.
@@ -565,28 +462,20 @@ export async function build(
         for (let includeSourcePath of currentConfig.build.includeSourcePaths ??
             []) {
             includeSourcePath = removeEndingSlash(includeSourcePath);
-            const includeSourceWorkspaceUri = UriUtils.joinPath(
-                workspaceProvider.rootWorkspaceUri() ?? URI.file("."),
-                removeEndingSlash(includeSourcePath),
-            );
             try {
-                const includeSourceWorkspacePath =
-                    includeSourceWorkspaceUri.toString(true);
-                const includeSourceStat = await workspaceProvider.fs.stat(
-                    includeSourceWorkspaceUri,
-                );
-                // Get all matching files, finding files recursively for directories
-                const includeFilesWorkspaceUris = await getFilesFromSources(
-                    [
-                        includeSourceStat.type === FileType.Directory
-                            ? includeSourcePath + "/**/*"
-                            : includeSourcePath,
-                    ],
+                const {
+                    isDirectory,
+                    sourceUri: includeSourceWorkspaceUri,
+                    files: includeFilesWorkspaceUris,
+                } = await resolveIncludeEntry(
+                    includeSourcePath,
                     currentConfig.build.ignores,
                     workspaceProvider,
                 );
+                const includeSourceWorkspacePath =
+                    includeSourceWorkspaceUri.toString(true);
                 let results: PromiseSettledResult<void>[];
-                if (includeSourceStat.type === FileType.Directory) {
+                if (isDirectory) {
                     // To replicate the structure of an included directory, we
                     // can't just copy the file to the build directory. Instead,
                     // we need to copy the file to the build directory *plus the

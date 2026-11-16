@@ -25,7 +25,6 @@ import {
     downloadLocalStoryFormatIfNeeded,
     buildProjectDirectoriesIfNeeded,
     getBuildAndStoryUris,
-    getFilesFromSources,
 } from "./build-system";
 import { DisableDiagnosticCodeActionProvider } from "./code-actions";
 import {
@@ -38,6 +37,7 @@ import {
 import { Configuration, CustomCommands } from "./constants";
 import { signalContextEvent } from "./context";
 import { setEditorDecorationRanges, updateDecoration } from "./decorations";
+import { resolveFileSets } from "./file-sets";
 import { reloadRunningGame, viewCompiledGame } from "./game-view";
 import {
     cachedStoryFormat,
@@ -751,15 +751,11 @@ export function startClient(context: vscode.ExtensionContext) {
 
     // Handle file requests
     client.onRequest(FindTweeFilesRequest, async () => {
-        // Get all source files that end in ".tw" or ".twee"
-        const files = (
-            await getFilesFromSources(
-                currentConfig.build.storySourceFiles,
-                currentConfig.build.ignores,
-                workspaceProvider,
-            )
-        ).filter((f) => f.path.endsWith(".tw") || f.path.endsWith(".twee"));
-        return files.map((f) => f.toString());
+        const { tweeFiles } = await resolveFileSets(
+            currentConfig,
+            workspaceProvider,
+        );
+        return tweeFiles.map((f) => f.toString());
     });
     client.onRequest(FindFilesRequest, async (glob: string) => {
         return (
