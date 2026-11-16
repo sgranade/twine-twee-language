@@ -125,6 +125,19 @@ describe("Workspace File Tracker", () => {
         expect(index.getIndexedUris()).to.eql(["file:///a.txt"]);
     });
 
+    it("should only treat files ending in .tw or .twee as Twee files", () => {
+        const { tracker, index } = build();
+        index.setPassages("file:///atwork.js", []);
+        index.setPassages("file:///B.TWEE", []);
+
+        tracker.handleWatchedFileChanges([
+            { uri: "file:///atwork.js", deleted: true }, // note the "tw" hiding in "atwork"
+            { uri: "file:///B.TWEE", deleted: true },
+        ]);
+
+        expect(index.getIndexedUris()).to.eql(["file:///atwork.js"]);
+    });
+
     it("should reparse a changed macro config file", () => {
         const { tracker, calls } = build();
 

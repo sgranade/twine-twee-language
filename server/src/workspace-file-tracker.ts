@@ -1,6 +1,6 @@
 import { TextDocument } from "vscode-languageserver-textdocument";
 
-import { StoryFormat } from "@tt3/shared";
+import { isTweeFile, StoryFormat } from "@tt3/shared";
 import { ParseLevel } from "./parser-types";
 import { Index } from "./project-index";
 
@@ -59,16 +59,6 @@ export interface WatchedFileChange {
 
 const interval = 200; // Interval between calling the run function, in ms
 const minTimeBetween = 50; // Minimum time to wait between runs, in ms
-
-/**
- * Is a file a Twee file?
- *
- * @param uri URI to test.
- * @returns True if the file URI corresponds to a Twee file.
- */
-export function isTweeFile(uri: string): boolean {
-    return /.tw(ee)?/.test(uri);
-}
 
 /**
  * Handles watched-file events and runs the indexing queue, which takes
