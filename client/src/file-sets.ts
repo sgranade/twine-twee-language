@@ -24,6 +24,10 @@ export interface FileSets {
     storyScriptFiles: URI[];
     /** `.js` files under `includeSourcePaths` */
     includedScripts: URI[];
+    /** `storySource` files */
+    storySourceFiles: URI[];
+    /** `includeSourcePaths` entries in config order */
+    includeEntries: (IncludeEntry | FailedIncludeEntry)[];
 }
 
 /**
@@ -32,7 +36,7 @@ export interface FileSets {
  * @param str String to remove slash from.
  * @returns String without any ending slash.
  */
-function removeEndingSlash(str: string): string {
+export function removeEndingSlash(str: string): string {
     return str.endsWith("/") ? str.slice(0, -1) : str;
 }
 
@@ -153,6 +157,14 @@ interface IncludeEntry {
 }
 
 /**
+ * An unresolved `includeSourcePaths` entry.
+ */
+export interface FailedIncludeEntry {
+    entry: string;
+    error: unknown;
+}
+
+/**
  * Resolve one `includeSourcePaths` entry.
  * @param entry Entry from `includeSourcePaths`.
  * @param ignores Glob patterns to ignore.
@@ -205,6 +217,10 @@ export function includeCopies(
         }));
     }
 
+    // To replicate the structure of an included directory, we
+    // can't just copy the file to the build directory. Instead,
+    // we need to copy the file to the build directory *plus the
+    // sub-directories beneath the includeSourcePath*.
     const includeSourceWorkspacePath = include.sourceUri.toString(true);
     return include.files.map((source) => {
         let fileRelativePath: string;
@@ -251,29 +267,32 @@ export async function resolveFileSets(
     );
     const storyScriptKeys = new Set(storyScriptFiles.map((f) => f.toString()));
 
-    const included = new Map<string, URI>();
+    const includeEntries: (IncludeEntry | FailedIncludeEntry)[] = [];
+    const includedScripts = new Map<string, URI>();
     for (const entry of config.build.includeSourcePaths ?? []) {
-        let include: IncludeEntry;
         try {
-            include = await resolveIncludeEntry(
+            const include = await resolveIncludeEntry(
                 entry,
                 config.build.ignores,
                 workspaceProvider,
             );
-        } catch {
-            continue; // Skip missing entries
-        }
-        for (const f of include.files) {
-            const key = f.toString();
-            if (isScriptFile(f.path) && !storyScriptKeys.has(key)) {
-                included.set(key, f);
+            includeEntries.push(include);
+            for (const f of include.files) {
+                const key = f.toString();
+                if (isScriptFile(f.path) && !storyScriptKeys.has(key)) {
+                    includedScripts.set(key, f);
+                }
             }
+        } catch (error) {
+            includeEntries.push({ entry: removeEndingSlash(entry), error });
         }
     }
 
     return {
         tweeFiles,
         storyScriptFiles,
-        includedScripts: [...included.values()],
+        includedScripts: [...includedScripts.values()],
+        storySourceFiles,
+        includeEntries,
     };
 }

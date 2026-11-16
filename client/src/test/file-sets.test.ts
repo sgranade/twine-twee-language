@@ -1,7 +1,9 @@
+import "mocha";
 import { expect } from "chai";
 import { URI } from "vscode-uri";
 
 import {
+    includeCopies,
     resolveFileSets,
     resolveIncludeEntry,
     FileSetConfig,
@@ -75,7 +77,7 @@ function config(build: Partial<FileSetConfig["build"]>): FileSetConfig {
     return { build: { storySourceFiles: ["src/**/*"], ...build } };
 }
 
-describe("File-set resolution", () => {
+describe("File-Set Resolution", () => {
     it("should split story source files into Twee files and story scripts", async () => {
         const result = await resolveFileSets(
             config({}),
@@ -156,29 +158,75 @@ describe("File-set resolution", () => {
         expect(result.includedScripts).to.eql([]);
     });
 
-    it("should list as included scripts the .js files the build copies", async () => {
+    it("should record include entries that can't be resolved", async () => {
         const workspace = fakeWorkspace(files, ["inc"]);
+        workspace.fs.stat = async () => {
+            throw new Error("not found");
+        };
+
+        const result = await resolveFileSets(
+            config({ includeSourcePaths: ["missing/"] }),
+            workspace,
+        );
+
+        expect(result.includeEntries).to.eql([
+            { entry: "missing", error: new Error("not found") },
+        ]);
+    });
+
+    it("should list as included scripts the .js files the build copies w/o story scripts", async () => {
+        const workspace = fakeWorkspace(files, ["inc", "src"]);
         const cfg = config({
-            includeSourcePaths: ["inc", "single.js"],
+            includeSourcePaths: ["inc/", "single.js", "src"],
             ignores: ["inc/sub/**"],
         });
 
-        const { includedScripts } = await resolveFileSets(cfg, workspace);
-        const result = [];
-        for (const entry of cfg.build.includeSourcePaths ?? []) {
-            result.push(
-                ...(
-                    await resolveIncludeEntry(
-                        entry,
-                        cfg.build.ignores,
-                        workspace,
-                    )
-                ).files,
-            );
-        }
+        const result = await resolveFileSets(cfg, workspace);
+        const copiedScripts = result.includeEntries
+            .flatMap((include) =>
+                "error" in include
+                    ? []
+                    : includeCopies(include, URI.parse("file:///proj/dist")),
+            )
+            .map((copy) => copy.source)
+            .filter((f) => f.path.endsWith(".js"));
 
-        expect(names(includedScripts)).to.eql(
-            names(result.filter((f) => f.path.endsWith(".js"))),
+        expect(names(result.includedScripts)).to.eql(
+            names(copiedScripts).filter(
+                (f) => !names(result.storyScriptFiles).includes(f),
+            ),
         );
+    });
+});
+
+describe("Include Copies", () => {
+    it("should copy a directory entry's files beneath their sub-directories", async () => {
+        const workspace = fakeWorkspace(files, ["inc"]);
+        const include = await resolveIncludeEntry("inc/", undefined, workspace);
+
+        const result = includeCopies(include, URI.parse("file:///proj/dist"));
+
+        expect(
+            result.map((c) => [c.source.path, c.destination.path]).sort(),
+        ).to.eql([
+            ["/proj/inc/style.css", "/proj/dist/style.css"],
+            ["/proj/inc/sub/y.js", "/proj/dist/sub/y.js"],
+            ["/proj/inc/x.js", "/proj/dist/x.js"],
+        ]);
+    });
+
+    it("should copy a file entry's file into the build directory", async () => {
+        const workspace = fakeWorkspace(["deep/one.js"]);
+        const include = await resolveIncludeEntry(
+            "deep/one.js",
+            undefined,
+            workspace,
+        );
+
+        const result = includeCopies(include, URI.parse("file:///proj/dist"));
+
+        expect(result.map((c) => c.destination.path)).to.eql([
+            "/proj/dist/one.js",
+        ]);
     });
 });

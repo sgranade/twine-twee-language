@@ -5,7 +5,7 @@ import { StoryFormat } from "@tt3/shared";
 import { addTrailingAnnotation } from "./annotations";
 import { currentConfig } from "./config";
 import { Configuration, CustomWhenContext } from "./constants";
-import { getFilesFromSources, resolveIncludeEntry } from "./file-sets";
+import { includeCopies, removeEndingSlash, resolveFileSets } from "./file-sets";
 import {
     cachedStoryFormat,
     downloadStoryFormat,
@@ -92,19 +92,6 @@ async function recordDirectoryExistence(
             throw e;
         }
     }
-}
-
-/**
- * Remove the ending slash from a string, if it exists.
- *
- * @param str String to remove slash from.
- * @returns String without any ending slash.
- */
-function removeEndingSlash(str: string): string {
-    if (str.endsWith("/")) {
-        return str.slice(0, -1);
-    }
-    return str;
 }
 
 interface BuildDirAndStoryUris {
@@ -401,14 +388,13 @@ export async function build(
             true,
         );
 
+        const fileSets = await resolveFileSets(
+            currentConfig,
+            workspaceProvider,
+        );
+
         // Get all files from the source directories
-        const allFiles = (
-            await getFilesFromSources(
-                currentConfig.build.storySourceFiles,
-                currentConfig.build.ignores,
-                workspaceProvider,
-            )
-        )
+        const allFiles = fileSets.storySourceFiles
             .filter((f) => canAddFileToStory(UriUtils.basename(f)))
             .sort(); // Sort to match Tweego order
         if (allFiles.length === 0) {
@@ -459,80 +445,25 @@ export async function build(
 
         // If there are any include files, copy those over as needed
         const includeErrors = [];
-        for (let includeSourcePath of currentConfig.build.includeSourcePaths ??
-            []) {
-            includeSourcePath = removeEndingSlash(includeSourcePath);
-            try {
-                const {
-                    isDirectory,
-                    sourceUri: includeSourceWorkspaceUri,
-                    files: includeFilesWorkspaceUris,
-                } = await resolveIncludeEntry(
-                    includeSourcePath,
-                    currentConfig.build.ignores,
-                    workspaceProvider,
-                );
-                const includeSourceWorkspacePath =
-                    includeSourceWorkspaceUri.toString(true);
-                let results: PromiseSettledResult<void>[];
-                if (isDirectory) {
-                    // To replicate the structure of an included directory, we
-                    // can't just copy the file to the build directory. Instead,
-                    // we need to copy the file to the build directory *plus the
-                    // sub-directories beneath the includeSourcePath*.
-                    results = await Promise.allSettled(
-                        includeFilesWorkspaceUris.map((fileWorkspaceUri) => {
-                            let fileRelativePath: string;
-                            const fileWorkspacePath =
-                                fileWorkspaceUri.toString(true);
-                            // First: is the raw include src path in the found file's path?
-                            const ndx = fileWorkspacePath.indexOf(
-                                includeSourceWorkspacePath,
-                            );
-                            if (ndx !== -1) {
-                                fileRelativePath = fileWorkspacePath.slice(
-                                    ndx + includeSourceWorkspacePath.length,
-                                );
-                            } else {
-                                // Fallback: Remove everything before the name of the
-                                // raw include directory, which can give odd results if
-                                // that directory's name shows up multiple times in
-                                // the URI (ex: `file://root/include/fonts/include/font.otf`)
-                                fileRelativePath = fileWorkspacePath
-                                    .split(includeSourcePath, 1)
-                                    .slice(-1)[0];
-                            }
-                            return copyIfChanged(
-                                fileWorkspaceUri,
-                                UriUtils.joinPath(
-                                    outUris.build,
-                                    fileRelativePath,
-                                ),
-                                workspaceProvider,
-                            );
-                        }),
-                    );
-                } else {
-                    results = await Promise.allSettled(
-                        includeFilesWorkspaceUris.map((fileUri) =>
-                            copyIfChanged(
-                                fileUri,
-                                UriUtils.joinPath(
-                                    outUris.build,
-                                    UriUtils.basename(fileUri),
-                                ),
-                                workspaceProvider,
-                            ),
-                        ),
-                    );
+        for (const include of fileSets.includeEntries) {
+            if ("error" in include) {
+                if (include.error instanceof Error)
+                    includeErrors.push(include.error.message);
+                continue;
+            }
+            const results = await Promise.allSettled(
+                includeCopies(include, outUris.build).map((copy) =>
+                    copyIfChanged(
+                        copy.source,
+                        copy.destination,
+                        workspaceProvider,
+                    ),
+                ),
+            );
+            for (const result of results) {
+                if (result.status === "rejected") {
+                    includeErrors.push(result.reason);
                 }
-                for (const result of results) {
-                    if (result.status === "rejected") {
-                        includeErrors.push(result.reason);
-                    }
-                }
-            } catch (err) {
-                if (err instanceof Error) includeErrors.push(err.message);
             }
         }
 
