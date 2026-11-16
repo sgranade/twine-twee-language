@@ -58,6 +58,7 @@ import {
     generateSymbols,
 } from "./structure";
 import { generateDiagnostics } from "./validator";
+import { WorkspaceFileTracker } from "./workspace-file-tracker";
 import { getSugarCubeMacroInfo } from "./passage-text-parsers/sugarcube";
 import {
     setCustomMacrosAndEnums,
@@ -77,239 +78,35 @@ let hasCompletionListItemDefaults = false;
 let hasDiagnosticRelatedInformationCapability = false;
 let hasPrepareProviderCapability = false;
 
-/**
- * Is a file a Twee file?
- *
- * @param uri URI to test.
- * @returns True if the file URI corresponds to a Twee file.
- */
-function isTweeFile(uri: string) {
-    return /.tw(ee)?/.test(uri);
-}
-
-/**
- * Handle potentially long-running tasks that shouldn't run concurrently.
- */
-namespace Heartbeat {
-    const interval = 200; // Interval between calling the heartbeat run function, in ms
-    const minTimeBetween = 50; // Minimum time to wait between heartbeat calls, in ms
-    let lastTime = -1; // Last time the heartbeat ran, in ms since epoch
-    let heartbeatId: ReturnType<typeof setInterval> | undefined;
-    let running = false;
-
-    let requestedFileIndexes: Set<string> = new Set(); // Files to index
-    let workspaceIndexRequested = false; // Whether a full project indexing has been requested
-    let sugarcubeMacroIndexRequested = false; // Whether we're to index custom SugarCube macro files
-
-    /**
-     * Start the heartbeat.
-     */
-    export function start() {
-        heartbeatId = setInterval(run, interval);
-    }
-
-    /**
-     * Stop the heartbeat.
-     */
-    export function stop() {
-        clearInterval(heartbeatId);
-    }
-
-    /**
-     * Add a new Twee file to index.
-     * @param uri URI of the file to index.
-     */
-    export function indexFile(uri: string): void {
-        requestedFileIndexes.add(uri);
-    }
-
-    /**
-     * Index the Twee 3 files in the workspace.
-     */
-    export function indexWorkspace(): void {
-        workspaceIndexRequested = true;
-    }
-
-    /**
-     * Index the SugarCube custom macro files in the workspace.
-     */
-    export function indexSugarCubeMacros() {
-        sugarcubeMacroIndexRequested = true;
-    }
-
-    async function run() {
-        if (running || Date.now() < lastTime + minTimeBetween) {
-            return;
-        }
-        try {
-            running = true;
-            // Only do one of the following things during a single heartbeat
-            if (workspaceIndexRequested) {
-                requestedFileIndexes.clear(); // since we're indexing everything
-                await indexAllTweeFiles();
-            } else if (requestedFileIndexes.size > 0) {
-                for (const uri of requestedFileIndexes) {
-                    const doc = await getDoc(uri);
-                    if (doc !== undefined) {
-                        await parseTextDocument(doc, ParseLevel.Full, true);
-                        await validateTextDocument(doc);
-                        sendDecorationRanges(doc.uri);
-                    }
-                }
-                requestedFileIndexes.clear();
-            } else if (sugarcubeMacroIndexRequested) {
-                await indexT3LTMacroFiles();
-            }
-        } finally {
-            lastTime = Date.now();
-            running = false;
-        }
-    }
-
-    /**
-     * Get a document, first from our document store, then (if that fails)
-     * by requesting it from the client.
-     *
-     * @param uri Uri to the document.
-     * @returns The document, or undefined if it's not available.
-     */
-    async function getDoc(uri: string): Promise<TextDocument | undefined> {
-        // If the doc is open and we're tracking it, use that verison, as otherwise
-        // we'll read an old version from disk
-        let doc = documents.get(uri);
-        if (doc === undefined) {
-            doc = await fetchFile(uri);
-        }
-        return doc;
-    }
-
-    /**
-     * Index all Twee files in an opened project, as reported by the client.
-     */
-    async function indexAllTweeFiles() {
-        await connection.sendNotification(CustomMessages.IndexingStarted);
-
-        // Remove all indexed files that aren't in our document store,
-        // as we've not opened them and aren't tracking them, and thus
-        // only fast-indexed them
-        for (const uri of projectIndex.getIndexedUris()) {
-            if (documents.get(uri) === undefined) {
-                projectIndex.removeDocument(uri);
-            }
-        }
-
-        try {
-            const tweeFileUris = new Set(
-                await connection.sendRequest(FindTweeFilesRequest),
-            );
-
-            // We'll loop through the files in stages: first to find a StoryData value,
-            // and then to validate.
-
-            // Right now we don't cache the file fetch results so as not to have to
-            // potentially hold every file in a project in memory.
-            const oldStoryFormat = projectIndex.getStoryData()?.storyFormat;
-            for (const uri of tweeFileUris) {
-                const doc = await getDoc(uri);
-                if (doc !== undefined) {
-                    updateProjectIndex(doc, ParseLevel.StoryData, projectIndex);
-                    // If we get a story format that's different than the old one,
-                    // we can stop looking
-                    const newStoryFormat =
-                        projectIndex.getStoryData()?.storyFormat;
-                    if (
-                        newStoryFormat?.format !== oldStoryFormat?.format ||
-                        newStoryFormat?.formatVersion !==
-                            oldStoryFormat?.formatVersion
-                    ) {
-                        break;
-                    }
-                }
-            }
-            const newStoryFormat = projectIndex.getStoryData()?.storyFormat;
-            if (
-                newStoryFormat !== undefined &&
-                (newStoryFormat?.format !== oldStoryFormat?.format ||
-                    newStoryFormat?.formatVersion !==
-                        oldStoryFormat?.formatVersion)
-            ) {
-                onStoryFormatChange(newStoryFormat);
-
-                // The story format change may set up other processing
-                // we need before we do a full indexing.
-                if (sugarcubeMacroIndexRequested) {
-                    await indexT3LTMacroFiles();
-                }
-            }
-
-            for (const uri of tweeFileUris) {
-                const doc = await getDoc(uri);
-                if (doc !== undefined) {
-                    await parseTextDocument(
-                        doc,
-                        ParseLevel.Full,
-                        false, // Don't re-index on story format change b/c we're in the middle of re-indexing
-                    );
-                }
-            }
-
-            for (const uri of tweeFileUris) {
-                const doc = await getDoc(uri);
-                if (doc !== undefined) {
-                    await validateTextDocument(doc);
-                }
-            }
-
-            // Re-process any open documents that we didn't handle above.
-            // This could happen if the open document doesn't have an expected extension
-            // (like a `.txt` file that the user has selected as being a Twine file).
-            const unprocessedOpenDocuments = documents
-                .all()
-                .filter((d) => !tweeFileUris.has(d.uri));
-            for (const doc of unprocessedOpenDocuments) {
-                await parseTextDocument(
-                    doc,
-                    ParseLevel.Full,
-                    false, // Don't re-index on story format change
-                );
-            }
-            for (const doc of unprocessedOpenDocuments) {
-                await validateTextDocument(doc);
-            }
-        } catch (err) {
-            connection.console.error(`Client couldn't find Twee files: ${err}`);
-        }
-
-        connection.sendNotification(CustomMessages.IndexingComplete);
-        workspaceIndexRequested = false;
-    }
-
-    /**
-     * Index all T3LT SC2 macro files in a workspace
-     */
-    async function indexT3LTMacroFiles() {
-        try {
-            const sc2MacroFileUris = await connection.sendRequest(
-                FindFilesRequest,
-                "**/*.twee-config.{json,yaml,yml}",
-            );
-            for (const uri of sc2MacroFileUris) {
-                await parseT3LTMacroFile(uri);
-            }
-
-            // Once we're done, we need to re-validate any open documents
-            await processAllOpenDocuments();
-
-            onSCMacroChanges();
-        } catch (err) {
-            connection.console.error(
-                `Client couldn't find SugarCube 2 macro files: ${err}`,
-            );
-        }
-
-        sugarcubeMacroIndexRequested = false;
-    }
-}
+const fileTracker = new WorkspaceFileTracker({
+    clock: {
+        now: () => Date.now(),
+        setInterval: (cb, ms) => setInterval(cb, ms),
+        clearInterval: (handle) =>
+            clearInterval(handle as ReturnType<typeof setInterval>),
+    },
+    index: projectIndex,
+    getOpenDocument: (uri) => documents.get(uri),
+    getAllOpenDocuments: () => documents.all(),
+    readFile: (uri) => fetchFile(uri),
+    findTweeFiles: () => connection.sendRequest(FindTweeFilesRequest),
+    findFiles: (glob) => connection.sendRequest(FindFilesRequest, glob),
+    indexStoryData: (doc) =>
+        updateProjectIndex(doc, ParseLevel.StoryData, projectIndex),
+    parseDocument: (doc, level, reindex) =>
+        parseTextDocument(doc, level, reindex),
+    validateDocument: (doc) => validateTextDocument(doc),
+    sendDecorationRanges: (uri) => sendDecorationRanges(uri),
+    onStoryFormatChange: (format) => onStoryFormatChange(format),
+    processAllOpenDocuments: () => processAllOpenDocuments(),
+    parseMacroFile: (uri) => parseT3LTMacroFile(uri),
+    onMacroChanges: () => onSCMacroChanges(),
+    indexingStarted: () =>
+        connection.sendNotification(CustomMessages.IndexingStarted),
+    indexingComplete: () =>
+        void connection.sendNotification(CustomMessages.IndexingComplete),
+    logError: (message) => connection.console.error(message),
+});
 
 connection.onInitialize((params: InitializeParams) => {
     const capabilities = params.capabilities;
@@ -416,11 +213,11 @@ connection.onInitialized(async () => {
         );
     }
 
-    // Set up the heartbeat
-    Heartbeat.start();
+    // Set up the file tracker
+    fileTracker.start();
 
     // Index all Twee files in the workspace
-    Heartbeat.indexWorkspace();
+    fileTracker.indexWorkspace();
 });
 
 // Diagnostics -- pull interface
@@ -493,14 +290,12 @@ documents.onDidChangeContent(async (change) => {
 // documents.onDidClose;
 
 connection.onDidChangeWatchedFiles((_change) => {
-    for (const change of _change.changes ?? []) {
-        if (change.type === FileChangeType.Deleted && isTweeFile(change.uri)) {
-            projectIndex.removeDocument(change.uri);
-        } else if (/\.twee-config\.(json|ya?ml)$/.test(change.uri)) {
-            parseT3LTMacroFile(change.uri);
-            onSCMacroChanges();
-        }
-    }
+    fileTracker.handleWatchedFileChanges(
+        (_change.changes ?? []).map((c) => ({
+            uri: c.uri,
+            deleted: c.type === FileChangeType.Deleted,
+        })),
+    );
 });
 
 documents.onDidOpen(async (change) => {
@@ -535,7 +330,7 @@ connection.onHover(
 );
 
 connection.onNotification(CustomMessages.RequestReindex, () => {
-    Heartbeat.indexWorkspace();
+    fileTracker.indexWorkspace();
 });
 
 connection.onNotification(CustomMessages.RequestDecorationRanges, (uri) => {
@@ -543,34 +338,15 @@ connection.onNotification(CustomMessages.RequestDecorationRanges, (uri) => {
 });
 
 connection.onNotification(DidCreateFilesNotification.type, async (params) => {
-    for (const file of params.files) {
-        if (isTweeFile(file.uri)) {
-            Heartbeat.indexFile(file.uri);
-        }
-    }
-    await processAllOpenDocuments();
+    await fileTracker.handleFilesCreated(params.files.map((f) => f.uri));
 });
 
 connection.onNotification(DidDeleteFilesNotification.type, async (params) => {
-    for (const file of params.files) {
-        if (isTweeFile(file.uri)) {
-            projectIndex.removeDocument(file.uri);
-        }
-    }
-    await processAllOpenDocuments();
+    await fileTracker.handleFilesDeleted(params.files.map((f) => f.uri));
 });
 
 connection.onNotification(DidRenameFilesNotification.type, async (params) => {
-    for (const file of params.files) {
-        if (isTweeFile(file.oldUri)) {
-            if (isTweeFile(file.newUri)) {
-                projectIndex.renameDocument(file.oldUri, file.newUri);
-            } else {
-                projectIndex.removeDocument(file.oldUri);
-            }
-        }
-    }
-    await processAllOpenDocuments();
+    await fileTracker.handleFilesRenamed(params.files);
 });
 
 connection.onPrepareRename((params: PrepareRenameParams): Range | undefined => {
@@ -604,7 +380,7 @@ connection.onRequest("textDocument/semanticTokens/full", (params) => {
 });
 
 connection.onShutdown(() => {
-    Heartbeat.stop();
+    fileTracker.stop();
 });
 
 /**
@@ -664,7 +440,7 @@ async function parseTextDocument(
     ) {
         onStoryFormatChange(newStoryFormat);
         if (reindexOnStoryFormatChange) {
-            Heartbeat.indexWorkspace();
+            fileTracker.indexWorkspace();
         }
     }
 
@@ -691,7 +467,7 @@ function onStoryFormatChange(format: StoryFormat) {
     connection.sendNotification(CustomMessages.UpdatedStoryFormat, format);
     // If the story format is SugarCube 2, we need to look for macro definition files
     if (format.format.toLowerCase() === "sugarcube") {
-        Heartbeat.indexSugarCubeMacros();
+        fileTracker.indexSugarCubeMacros();
     }
 }
 
