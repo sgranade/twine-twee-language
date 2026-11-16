@@ -61,6 +61,16 @@ const interval = 200; // Interval between calling the run function, in ms
 const minTimeBetween = 50; // Minimum time to wait between runs, in ms
 
 /**
+ * Do two story formats differ in format or version?
+ */
+function storyFormatsDiffer(
+    a: StoryFormat | undefined,
+    b: StoryFormat | undefined,
+): boolean {
+    return a?.format !== b?.format || a?.formatVersion !== b?.formatVersion;
+}
+
+/**
  * Handles watched-file events and runs the indexing queue, which takes
  * care of potentially long-running tasks that shouldn't run concurrently.
  */
@@ -248,11 +258,7 @@ export class WorkspaceFileTracker {
                     // we can stop looking
                     const newStoryFormat =
                         deps.index.getStoryData()?.storyFormat;
-                    if (
-                        newStoryFormat?.format !== oldStoryFormat?.format ||
-                        newStoryFormat?.formatVersion !==
-                            oldStoryFormat?.formatVersion
-                    ) {
+                    if (storyFormatsDiffer(newStoryFormat, oldStoryFormat)) {
                         break;
                     }
                 }
@@ -260,9 +266,7 @@ export class WorkspaceFileTracker {
             const newStoryFormat = deps.index.getStoryData()?.storyFormat;
             if (
                 newStoryFormat !== undefined &&
-                (newStoryFormat?.format !== oldStoryFormat?.format ||
-                    newStoryFormat?.formatVersion !==
-                        oldStoryFormat?.formatVersion)
+                storyFormatsDiffer(newStoryFormat, oldStoryFormat)
             ) {
                 deps.onStoryFormatChange(newStoryFormat);
 
