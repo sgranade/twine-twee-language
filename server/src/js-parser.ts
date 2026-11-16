@@ -14,7 +14,7 @@ import {
     StoryFormatParsingState,
     capturePreSemanticTokenFor,
 } from "./passage-text-parsers/types";
-import { Callable, calleeFlag } from "./project-index";
+import { Callable, calleeFlag, Sigiled } from "./project-index";
 import { ETokenType, TokenModifier, TokenType } from "./semantic-tokens";
 import { Label } from "./types";
 
@@ -30,7 +30,7 @@ const typeofToSemantic: Record<string, TokenType> = {
 /**
  * Label for a parsed javascript variable.
  */
-export interface JSVariableLabel extends Label {
+export interface JSVariableLabel extends Label, Sigiled {
     /**
      * Whether the variable is being assigned to.
      */

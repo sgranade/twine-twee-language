@@ -130,6 +130,7 @@ describe("SugarCube Renames", () => {
                     Location.create("other-uri", Range.create(7, 4, 7, 7)),
                 ],
                 kind: OSugarCubeSymbolKind.Variable,
+                sigilOutsideRange: true,
             },
         ];
         const index = new Index();
@@ -171,6 +172,7 @@ describe("SugarCube Renames", () => {
                     Location.create("other-uri", Range.create(7, 4, 7, 7)),
                 ],
                 kind: OSugarCubeSymbolKind.Variable,
+                sigilOutsideRange: true,
             },
         ];
         const index = new Index();
@@ -212,6 +214,7 @@ describe("SugarCube Renames", () => {
                     Location.create("other-uri", Range.create(7, 4, 7, 7)),
                 ],
                 kind: OSugarCubeSymbolKind.Variable,
+                sigilOutsideRange: true,
             },
         ];
         const index = new Index();

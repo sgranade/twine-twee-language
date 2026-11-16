@@ -498,6 +498,7 @@ describe("SugarCube Parser", () => {
                     Range.create(2, 17, 2, 20),
                 ),
                 kind: OSugarCubeSymbolKind.Variable,
+                sigilOutsideRange: true,
             });
             expect(result[1]).to.eql({
                 contents: "_var.prop",
@@ -534,6 +535,7 @@ describe("SugarCube Parser", () => {
                     Range.create(2, 17, 2, 20),
                 ),
                 kind: OSugarCubeSymbolKind.Variable,
+                sigilOutsideRange: true,
             });
             expect(result[1]).to.eql({
                 contents: "$var.prop",

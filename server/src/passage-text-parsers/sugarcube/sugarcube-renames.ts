@@ -1,4 +1,9 @@
-import { DocumentUri, Position, TextEdit } from "vscode-languageserver";
+import {
+    DocumentUri,
+    Location,
+    Position,
+    TextEdit,
+} from "vscode-languageserver";
 
 import { ProjectIndex } from "../../project-index";
 import { getReferencesToSymbolAt } from "./sugarcube-references";
@@ -25,7 +30,7 @@ export function generateRenames(
     // renaming `$foo` to `$bar` also changes `State.variables.foo` to
     // `State.variables.var`.
     let origContents: string | undefined;
-    let sigilAtRename;
+    let sigilAtRename: boolean;
     const ref = index.getReferenceAt(documentUri, position);
     if (ref !== undefined) {
         if (
@@ -33,15 +38,9 @@ export function generateRenames(
             ref.kind !== OSugarCubeSymbolKind.VariableSet
         ) {
             return null; // This isn't a variable, so we don't need to mess w/ it
-        } else {
-            origContents = ref.contents;
-            // The rename shouldn't include a sigil if its location isn't shorter than its contents
-            // (e.g. the actual text is part of `State.variables.` w/o a leading `$`)
-            sigilAtRename =
-                origContents.length ===
-                ref.location.range.end.character -
-                    ref.location.range.start.character;
         }
+        origContents = ref.contents;
+        sigilAtRename = !ref.sigilOutsideRange;
     } else {
         const def = index.getDefinitionAt(documentUri, position);
         if (
@@ -51,10 +50,7 @@ export function generateRenames(
             return null;
         }
         origContents = def.contents;
-        sigilAtRename =
-            origContents.length ===
-            def.location.range.end.character -
-                def.location.range.start.character;
+        sigilAtRename = !def.sigilOutsideRange;
     }
 
     // If the original contents don't start w/a sigil, we'll go ahead
@@ -75,14 +71,16 @@ export function generateRenames(
     const changes: { [uri: DocumentUri]: TextEdit[] } = {};
     const fullRename = sigilAtRename ? newName : origContents[0] + newName;
     const shortRename = sigilAtRename ? newName.slice(1) : newName;
+    const locationOmitsSigil = (location: Location): boolean =>
+        !!(
+            index.getReferenceAt(location.uri, location.range.start) ??
+            index.getDefinitionAt(location.uri, location.range.start)
+        )?.sigilOutsideRange;
 
     for (const location of locationsToChange) {
         const change = TextEdit.replace(
             location.range,
-            origContents.length ===
-                location.range.end.character - location.range.start.character
-                ? fullRename
-                : shortRename,
+            locationOmitsSigil(location) ? shortRename : fullRename,
         );
         if (!changes[location.uri]) {
             changes[location.uri] = [];

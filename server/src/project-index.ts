@@ -20,30 +20,46 @@ export interface Kind {
 }
 
 /**
- * Tracks whether it's functioning as a callee or not.
+ * Tracks whether a symbol or reference is functioning as a callee or not.
  */
 export interface Callable {
     /**
-     * For properties, whether the property is the callee of a call or `new`.
-     * On `References`, true only if every location is such a callee. The
-     * indexer keeps callee and non-callee occurrences of a name in separate
-     * `References`, so a document can have two entries with the same contents.
+     * For properties, whether they're the callee of a call or `new`.
+     * On `References`, true only if every location is such a callee.
      */
     isCallee?: boolean;
 }
 
 /**
- * Spread-ready `isCallee` flag that's absent unless true, keeping indexed
- * shapes sparse.
+ * Spread-ready `isCallee` flag that's absent unless true.
  */
 export function calleeFlag(source: Callable): Callable {
     return source.isCallee ? { isCallee: true } : {};
 }
 
 /**
- * A label with a number that identifies the kind of label it is.
+ * Tracks whether a symbol has a sigil (e.g. `$` or `_` for SugarCube)
+ * that sits outside its range.
  */
-export interface ProjSymbol extends Label, Kind, Callable {}
+export interface Sigiled {
+    /**
+     * True if the occurence's range doesn't inclulde its var's sigil;
+     * false if it includes it (or the var has no sigil).
+     */
+    sigilOutsideRange?: boolean;
+}
+
+/**
+ * Spread-ready `sigilOutsideRange` flag that's absent unless true.
+ */
+export function sigilFlag(source: Sigiled): Sigiled {
+    return source.sigilOutsideRange ? { sigilOutsideRange: true } : {};
+}
+
+/**
+ * A label with additional symbol information (kind, callable, sigiled).
+ */
+export interface ProjSymbol extends Label, Kind, Callable, Sigiled {}
 
 /**
  * Kind of a Twine symbol.
@@ -55,9 +71,9 @@ export enum TwineSymbolKind {
 }
 
 /**
- * References, which have contents, locations, and an identifier for its kind.
+ * References, which have contents, locations, and information about its contents.
  */
-export interface References extends Kind, Callable {
+export interface References extends Kind, Callable, Sigiled {
     contents: string;
     locations: Location[];
 }
@@ -541,6 +557,7 @@ export class Index implements ProjectIndex {
                         contents: ref.contents,
                         kind: ref.kind,
                         location: match,
+                        ...sigilFlag(ref),
                     };
                 }
             }
