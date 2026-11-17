@@ -14,7 +14,7 @@ import {
     StoryFormatParsingState,
     capturePreSemanticTokenFor,
 } from "./passage-text-parsers/types";
-import { Callable, calleeFlag, Sigiled } from "./project-index";
+import { Callable, calleeFlag, Sigiled, sigilFlag } from "./project-index";
 import { ETokenType, TokenModifier, TokenType } from "./semantic-tokens";
 import { Label } from "./types";
 
@@ -89,6 +89,30 @@ export interface JSDiagnostic {
 }
 
 /**
+ * A story-variable occurrence found by a format-specific script extractor.
+ */
+export interface ScriptVariableOccurrence {
+    /** The variable's name, including any sigil. */
+    text: string;
+    /** The text the occurrence's range covers if it differs from `text` (e.g. it excludes a sigil). */
+    rangeText?: string;
+    at: number;
+    assigned: boolean;
+    sigilOutsideRange?: boolean;
+}
+
+/**
+ * A story-property occurrence found by a format-specific script extractor.
+ */
+export interface ScriptPropertyOccurrence {
+    text: string;
+    at: number;
+    scope: string;
+    assigned: boolean;
+    isCallee: boolean;
+}
+
+/**
  * Results of tokenizing JavaScript
  */
 export interface TokenizedJS {
@@ -96,6 +120,18 @@ export interface TokenizedJS {
     properties: JSPropertyLabel[];
     error?: JSDiagnostic;
 }
+
+/**
+ * Format-specific extraction of story variables and properties from script code.
+ */
+export type ScriptSymbolExtractor = (context: {
+    ast: acorn.Node;
+    text: string;
+    scopeManager: eslintScope.ScopeManager;
+}) => {
+    variables: ScriptVariableOccurrence[];
+    properties: ScriptPropertyOccurrence[];
+};
 
 // `acorn-loose`'s marker for a missing identifier
 const MISSING_IDENTIFIER = "✖";
@@ -290,7 +326,7 @@ type IdentifierRole = "declaration" | "reference" | "neither";
  * @param ancestors Node's ancestors, including the node.
  * @returns The node's parent, or undefined if it has none.
  */
-function parentOf(ancestors: acorn.Node[]): acorn.AnyNode | undefined {
+export function parentOf(ancestors: acorn.Node[]): acorn.AnyNode | undefined {
     return ancestors[ancestors.length - 2] as acorn.AnyNode | undefined;
 }
 
@@ -377,7 +413,7 @@ function classifyIdentifier(
  * @param isAssignmentContext True if write-shaped syntax counts as an assignment
  * @returns True if the reference is a write.
  */
-function isWriteReference(
+export function isWriteReference(
     ref: eslintScope.Reference,
     isAssignmentContext: boolean,
 ): boolean {
@@ -396,7 +432,7 @@ function isWriteReference(
  * @param isAssignmentContext True if write-shaped syntax counts as an assignment.
  * @returns True if the member expression is in a write position.
  */
-function isWriteTarget(
+export function isWriteTarget(
     node: acorn.MemberExpression,
     ancestors: acorn.Node[],
     isAssignmentContext: boolean,
@@ -480,6 +516,21 @@ function findOuterClassVariable(
 }
 
 /**
+ * Run eslint-scope over a parsed program or expression.
+ *
+ * @param ast AST to analyze.
+ * @returns The scope manager.
+ */
+export function analyzeScopes(ast: acorn.Node): eslintScope.ScopeManager {
+    const program = toProgram(ast);
+    return eslintScope.analyze(program, {
+        ecmaVersion: ScopeEcmaVersion,
+        sourceType: hasModuleSyntax(program) ? "module" : "script",
+        optimistic: true,
+    });
+}
+
+/**
  * Annotate variable definitions or references along with their scope.
  *
  * A reference counts as being in the "global" scope (i.e. a story variable)
@@ -490,12 +541,7 @@ function findOuterClassVariable(
  * @param isAssignmentContext True if write-shaped syntax counts as an assignment.
  */
 function annotateVariableScopes(ast: acorn.Node, isAssignmentContext: boolean) {
-    const program = toProgram(ast);
-    const scopeManager = eslintScope.analyze(program, {
-        ecmaVersion: ScopeEcmaVersion,
-        sourceType: hasModuleSyntax(program) ? "module" : "script",
-        optimistic: true,
-    });
+    const scopeManager = analyzeScopes(ast);
     const isRootScope = (scope: eslintScope.Scope): boolean =>
         scope.type === "global" || scope.type === "module";
 
@@ -766,7 +812,7 @@ function captureObjectExpressionProperties(
  * @param parent The node's immediate parent node, if any.
  * @returns True if the node is a call or `new` callee.
  */
-function isCallee(
+export function isCallee(
     node: acorn.AnyNode,
     parent: acorn.AnyNode | undefined,
 ): boolean {
@@ -1010,11 +1056,7 @@ function computeSemanticTokens(
 /**
  * A variable occurrence found while extracting symbols, before it's turned into a `JSVariableLabel`.
  */
-interface RawVariableOccurrence {
-    text: string;
-    at: number;
-    assigned: boolean;
-}
+type RawVariableOccurrence = ScriptVariableOccurrence;
 
 /**
  * A property occurrence found while extracting symbols, before it's turned into a `JSPropertyLabel`.
@@ -1398,6 +1440,7 @@ export function parseJS(
  * @param options.isAssignmentContext True if the code's purpose is to set state (an assignment context),
  * so write-shaped syntax beyond declarations counts as an assignment. Otherwise they're reported
  * as reads since, they're often a `==` typo or a side effect.
+ * @param options.extractScriptSymbols Story-format-specific function that extracts symbols from scripts.
  * @returns Tokenized variables and properties and any parsing error.
  */
 export function tokenizeJavaScript(
@@ -1406,7 +1449,13 @@ export function tokenizeJavaScript(
     offset: number,
     document: TextDocument,
     storyFormatState: StoryFormatParsingState,
-    { isAssignmentContext = false }: { isAssignmentContext?: boolean } = {},
+    {
+        isAssignmentContext = false,
+        extractScriptSymbols,
+    }: {
+        isAssignmentContext?: boolean;
+        extractScriptSymbols?: ScriptSymbolExtractor;
+    } = {},
 ): TokenizedJS {
     const tokenized: TokenizedJS = {
         variables: [],
@@ -1432,20 +1481,23 @@ export function tokenizeJavaScript(
         }
 
         // Collect all scope-resolved variables and properties we care about
-        const { variables, properties } = extractSymbols(
-            ast,
-            isGlobalName,
-            isAssignmentContext,
-        );
+        const { variables, properties } = extractScriptSymbols
+            ? extractScriptSymbols({
+                  ast,
+                  text,
+                  scopeManager: analyzeScopes(ast),
+              })
+            : extractSymbols(ast, isGlobalName, isAssignmentContext);
         for (const variable of variables) {
             tokenized.variables.push({
                 contents: variable.text,
                 location: createLocationFor(
-                    variable.text,
+                    variable.rangeText ?? variable.text,
                     offset + variable.at,
                     document,
                 ),
                 assigned: variable.assigned,
+                ...sigilFlag(variable),
             });
         }
         for (const property of properties) {

@@ -18,6 +18,14 @@ import { ProjectIndex, ProjSymbol } from "../../project-index";
 import { ETokenModifier, ETokenType } from "../../semantic-tokens";
 import { eraseMatches, versionCompare } from "../../utilities";
 import { allMacros, MacroInfo, MacroParent } from "./macros";
+import { extractSugarCubeScriptSymbols } from "./sugarcube-script-symbols";
+import {
+    MacroLocationInfo,
+    OSugarCubeSymbolKind,
+    SugarCubeParserAPI,
+    SugarCubeParsingState,
+    SugarCubeSymbolKind,
+} from "./types";
 import { createVariableAndPropertyReferences } from "./sugarcube-utils";
 import {
     MacroParse,
@@ -38,13 +46,6 @@ import {
     macroArgumentTokenToT3LTArg,
     parseMacroParameters,
 } from "./sc2/t3lt-parameters";
-import {
-    MacroLocationInfo,
-    OSugarCubeSymbolKind,
-    SugarCubeParserAPI,
-    SugarCubeParsingState,
-    SugarCubeSymbolKind,
-} from "./types";
 
 /**
  * Parse all macro arguments.
@@ -130,7 +131,10 @@ function parseAsJavaScript(
             textIndex,
             state.textDocument,
             sugarcubeState,
-            { isAssignmentContext: true },
+            {
+                isAssignmentContext: true,
+                extractScriptSymbols: extractSugarCubeScriptSymbols,
+            },
         ),
         state,
         sugarcubeState,
