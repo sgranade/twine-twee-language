@@ -14,7 +14,7 @@ import {
     createSC2OpenContainerMacroPattern,
     CustomMessages,
     FindFilesRequest,
-    FindTweeFilesRequest,
+    FindProjectFilesRequest,
     ReadFileRequest,
     SC2MacroInfo,
     StoryFormat,
@@ -750,12 +750,14 @@ export function startClient(context: vscode.ExtensionContext) {
     );
 
     // Handle file requests
-    client.onRequest(FindTweeFilesRequest, async () => {
-        const { tweeFiles } = await resolveFileSets(
-            currentConfig,
-            workspaceProvider,
-        );
-        return tweeFiles.map((f) => f.toString());
+    client.onRequest(FindProjectFilesRequest, async () => {
+        const { tweeFiles, storyScriptFiles, includedScripts } =
+            await resolveFileSets(currentConfig, workspaceProvider);
+        return {
+            tweeFiles: tweeFiles.map((f) => f.toString()),
+            storyScriptFiles: storyScriptFiles.map((f) => f.toString()),
+            includedScripts: includedScripts.map((f) => f.toString()),
+        };
     });
     client.onRequest(FindFilesRequest, async (glob: string) => {
         return (

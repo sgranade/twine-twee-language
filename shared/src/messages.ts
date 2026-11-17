@@ -3,7 +3,6 @@ import { Range } from "vscode-languageserver-protocol";
 /**
  * Messages
  */
-
 export enum CustomMessages {
     RequestReindex = "twee3/requestReindex",
     IndexingStarted = "twee3/indexingStarted",

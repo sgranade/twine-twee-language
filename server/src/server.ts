@@ -37,7 +37,7 @@ import {
     DecorationRangeInfo,
     DiagnosticCodes,
     FindFilesRequest,
-    FindTweeFilesRequest,
+    FindProjectFilesRequest,
     ReadFileRequest,
     StoryFormat,
 } from "@tt3/shared";
@@ -45,7 +45,7 @@ import { generateCompletions } from "./completions";
 import { getDefinitionAt } from "./definition";
 import { createDiagnosticFromRange } from "./diagnostics";
 import { generateHover } from "./hover";
-import { updateProjectIndex } from "./indexer";
+import { updateProjectIndex, updateScriptFileIndex } from "./indexer";
 import { IndexingQueue } from "./indexing-queue";
 import { ParseLevel } from "./parser-types";
 import { Index } from "./project-index";
@@ -90,10 +90,12 @@ const indexingQueue = new IndexingQueue({
     getOpenDocument: (uri) => documents.get(uri),
     getAllOpenDocuments: () => documents.all(),
     readFile: (uri) => fetchFile(uri),
-    findTweeFiles: () => connection.sendRequest(FindTweeFilesRequest),
+    findProjectFiles: () => connection.sendRequest(FindProjectFilesRequest),
     findFiles: (glob) => connection.sendRequest(FindFilesRequest, glob),
     indexStoryData: (doc) =>
         updateProjectIndex(doc, ParseLevel.StoryData, projectIndex),
+    indexScriptFile: (doc, role) =>
+        updateScriptFileIndex(doc, role, ParseLevel.Full, projectIndex),
     parseDocument: (doc, level, reindex) =>
         parseTextDocument(doc, level, reindex),
     validateDocument: (doc) => validateTextDocument(doc),

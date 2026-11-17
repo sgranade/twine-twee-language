@@ -4,11 +4,12 @@ Changes to the extension.
 
 ## Unreleased
 
-Three big changes:
+Four big changes:
 
 - Story build configuration is now handled by a `tt3.config.json` file instead of in extension settings.
+- Story variables in `.js` files are now indexed.
 - Diagnostics have been extensively re-worked.
-    - The extension now reports JavaScript errors.
+    - The extension now reports JavaScript errors in Twee files.
     - It flags variables that (it thinks) have never been defined.
     - Every diagnostic has a Quick Action to let you disable it for a single passage or globally (through the config file).
 - Passage tag handling has been greatly improved.
@@ -18,7 +19,8 @@ Three big changes:
 ### Added
 
 - `tt3.config.json` to set story build configuration.
-- JavaScript diagnostics (warnings and errors) are now reported.
+- JavaScript files are now parsed and story variables indexed.
+- JavaScript diagnostics (warnings and errors) in Twee files are now reported.
 - Diagnostics can now be disabled in a passage by adding `tt3-disable` followed by comma-separated list of diagnostics to the passage's tags: `[tt3-disable <diagnostic-code-1>,<diagnostic-code-2>]`.
 - Added Quick Fix actions for disabling diagnostics for a passage or globally.
 - You can now search for and rename passage tags the same way you can passages and variables.
@@ -26,10 +28,10 @@ Three big changes:
 - Variables and properties that haven't been defined now create a warning across both story format code (Chapbook/SugarCube) and JavaScript sections.
 - Now auto-completes object properties from expressions like `var['prop'] = { prop1: 2 }`.
 - When building a story, duplicated passages are replaced by the final defined version of those passages and a warning raised.
-- SugarCube: Variables and properties in script passages and `<<script>>` macros are now properly indexed, including `State.variables.var` and `state.temporary.temp` variables.
+- SugarCube: Story variables and properties in script passages and `<<script>>` macros are now properly indexed, including `State.variables.var` and `state.temporary.temp` variables.
 - SugarCube: Special variables `_args` and `_contents` now produce warnings if used outside of `<<widget>>` macros.
 - SugarCube: Macros inside link setters (such as `[[passage][<<set $var to 1>>]]`) now generate a warning about them not being evaluated.
-- Chapbook: Added parsing variables and properties in script passages and `[JavaScript]` modifier blocks, including variables set in calls to `engine.state.set()`.
+- Chapbook: Story variables and properties in script passages and `[JavaScript]` modifier blocks are now properly indexed, including variables set in calls to `engine.state.set()`.
 
 ### Removed
 

@@ -987,3 +987,52 @@ export function parse(
 
     parseTwee3(state);
 }
+
+/**
+ * Parse a local `.js` file whose contents are in the story's scope.
+ *
+ * Nothing is parsed unless the parse level is the full one and the story
+ * format has a JavaScript parser.
+ *
+ * @param textDocument Script file to parse.
+ * @param callbacks Parser event callbacks.
+ * @param parseLevel What level of parsing to do.
+ * @param storyFormat Story format to use in parsing.
+ * @param getParser Function to get a story-format-specific parser.
+ */
+export function parseScriptFile(
+    textDocument: TextDocument,
+    callbacks: ParserCallbacks,
+    parseLevel: ParseLevel,
+    storyFormat: StoryFormat | undefined,
+    getParser: (
+        format: StoryFormat | undefined,
+    ) => StoryFormatParser | undefined,
+): void {
+    const parser = getParser(storyFormat);
+    if (parseLevel !== ParseLevel.Full || parser === undefined) return;
+
+    // Treate it as the body of a `script` passage that starts at offset 0
+    const text = textDocument.getText();
+    const end = textDocument.positionAt(text.length);
+    const state: ParsingState = {
+        textDocument,
+        parseLevel,
+        storyFormat,
+        storyFormatParser: parser,
+        callbacks,
+        currentPassage: {
+            name: {
+                contents: "script",
+                location: {
+                    uri: textDocument.uri,
+                    range: Range.create(0, 0, 0, 0),
+                },
+            },
+            scope: Range.create(0, 0, end.line, end.character),
+            isScript: true, // Gonna fake the funk!
+            isStylesheet: false,
+        },
+    };
+    parser.parsePassageText(text, 0, state);
+}

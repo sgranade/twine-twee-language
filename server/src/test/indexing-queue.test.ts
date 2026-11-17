@@ -24,9 +24,15 @@ function build(overrides: Partial<uut.IndexingQueueDeps> = {}) {
         getOpenDocument: () => undefined,
         getAllOpenDocuments: () => [],
         readFile: async (uri) => doc(uri),
-        findTweeFiles: async () => ["file:///a.tw", "file:///b.tw"],
+        findProjectFiles: async () => ({
+            tweeFiles: ["file:///a.tw", "file:///b.tw"],
+            storyScriptFiles: [],
+            includedScripts: [],
+        }),
         findFiles: async () => [],
         indexStoryData: (d) => void calls.push(`story:${d.uri}`),
+        indexScriptFile: (d, role) =>
+            void calls.push(`script:${role}:${d.uri}`),
         parseDocument: async (d, _level, reindex) =>
             void calls.push(`parse:${d.uri}:${reindex}`),
         validateDocument: async (d) => void calls.push(`validate:${d.uri}`),
@@ -63,6 +69,29 @@ describe("Indexing Queue", () => {
             "parse:file:///b.tw:false",
             "validate:file:///a.tw",
             "validate:file:///b.tw",
+            "complete",
+        ]);
+    });
+
+    it("should index script files after every Twee file and never validate them", async () => {
+        const { queue, calls } = build({
+            findProjectFiles: async () => ({
+                tweeFiles: ["file:///a.tw"],
+                storyScriptFiles: ["file:///s.js"],
+                includedScripts: ["file:///i.js"],
+            }),
+        });
+
+        queue.indexWorkspace();
+        await queue.run();
+
+        expect(calls).to.eql([
+            "started",
+            "story:file:///a.tw",
+            "parse:file:///a.tw:false",
+            "script:story-script:file:///s.js",
+            "script:included-script:file:///i.js",
+            "validate:file:///a.tw",
             "complete",
         ]);
     });

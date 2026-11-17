@@ -1,8 +1,8 @@
 import { TextDocument } from "vscode-languageserver-textdocument";
 
-import { StoryFormat } from "@tt3/shared";
+import { ProjectFiles, StoryFormat } from "@tt3/shared";
 import { ParseLevel } from "./parser-types";
-import { Index } from "./project-index";
+import { Index, ScriptFileRole } from "./project-index";
 
 /**
  * Timer functions used by the tracker.
@@ -24,12 +24,14 @@ export interface IndexingQueueDeps {
     getAllOpenDocuments(): TextDocument[];
     /** Read a file via the client. */
     readFile(uri: string, langId?: string): Promise<TextDocument | undefined>;
-    /** Ask the client for the project's Twee files. */
-    findTweeFiles(): Promise<string[]>;
+    /** Ask the client for the project's files (Twee, story script files, included script files). */
+    findProjectFiles(): Promise<ProjectFiles>;
     /** Ask the client for files matching a glob. */
     findFiles(glob: string): Promise<string[]>;
     /** Index a story-data-only pass over a document. */
     indexStoryData(document: TextDocument): void;
+    /** Index the story variables in a local `.js` file. */
+    indexScriptFile(document: TextDocument, role: ScriptFileRole): void;
     parseDocument(
         document: TextDocument,
         parseLevel: ParseLevel,
@@ -183,9 +185,12 @@ export class IndexingQueue {
         }
 
         try {
-            const tweeFileUris = new Set(await deps.findTweeFiles());
+            const projectFiles = await deps.findProjectFiles();
+            const tweeFileUris = new Set(projectFiles.tweeFiles);
+            const storyScriptUris = new Set(projectFiles.storyScriptFiles);
+            const includedScriptUris = new Set(projectFiles.includedScripts);
 
-            // We'll loop through the files in stages: first to find a StoryData value,
+            // We'll loop through the Twee files in stages: first to find a StoryData value,
             // and then to validate.
 
             // Right now we don't cache the file fetch results so as not to have to
@@ -229,6 +234,20 @@ export class IndexingQueue {
                 }
             }
 
+            // Index script files (which aren't validated) after parsing twee files
+            for (const [uris, role] of [
+                [storyScriptUris, "story-script"],
+                [includedScriptUris, "included-script"],
+            ] as const) {
+                for (const uri of uris) {
+                    const doc = await this.getDoc(uri);
+                    if (doc !== undefined) {
+                        deps.indexScriptFile(doc, role);
+                    }
+                }
+            }
+
+            // Now validate Twee files
             for (const uri of tweeFileUris) {
                 const doc = await this.getDoc(uri);
                 if (doc !== undefined) {
@@ -241,7 +260,12 @@ export class IndexingQueue {
             // (like a `.txt` file that the user has selected as being a Twine file).
             const unprocessedOpenDocuments = deps
                 .getAllOpenDocuments()
-                .filter((d) => !tweeFileUris.has(d.uri));
+                .filter(
+                    (d) =>
+                        !tweeFileUris.has(d.uri) &&
+                        !storyScriptUris.has(d.uri) &&
+                        !includedScriptUris.has(d.uri),
+                );
             for (const doc of unprocessedOpenDocuments) {
                 await deps.parseDocument(
                     doc,

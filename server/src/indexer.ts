@@ -9,7 +9,7 @@ import {
 } from "@tt3/shared";
 import { createDiagnosticFromRange } from "./diagnostics";
 import { EmbeddedDocument } from "./embedded-languages";
-import { parse } from "./parser";
+import { parse, parseScriptFile } from "./parser";
 import { ParseLevel, ParserCallbacks } from "./parser-types";
 import { getStoryFormatParser } from "./passage-text-parsers";
 import {
@@ -19,6 +19,7 @@ import {
     ProjectIndex,
     ProjSymbol,
     References,
+    ScriptFileRole,
     StoryData,
 } from "./project-index";
 import { SemanticToken } from "./semantic-tokens";
@@ -45,6 +46,27 @@ class IndexingState {
     constructor(textDocument: TextDocument) {
         this.textDocument = textDocument;
     }
+}
+
+/**
+ * Collate individual references by kind, name, and callee-ness, so diagnostics
+ * can exempt call sites w/o exempting plain reads.
+ */
+function collateReferences(symbols: ProjSymbol[]): References[] {
+    const referencesMap: Record<string, References> = {};
+    for (const symbol of symbols) {
+        const key = `${symbol.kind},${symbol.contents},${!!symbol.isCallee},${!!symbol.sigilOutsideRange}`;
+        const ref = referencesMap[key] || {
+            contents: symbol.contents,
+            locations: [],
+            kind: symbol.kind,
+            ...calleeFlag(symbol),
+            ...sigilFlag(symbol),
+        };
+        ref.locations.push(symbol.location);
+        referencesMap[key] = ref;
+    }
+    return Object.values(referencesMap);
 }
 
 /**
@@ -137,22 +159,7 @@ export function updateProjectIndex(
         getParser,
     );
 
-    // Collate the array of individual references by kind, name, callee-ness, and
-    // sigil-inclusion so diagnostics can exempt call sites w/o exempting plain reads
-    const referencesMap: Record<string, References> = {};
-    for (const symbol of indexingState.references) {
-        const key = `${symbol.kind},${symbol.contents},${!!symbol.isCallee},${!!symbol.sigilOutsideRange}`;
-        const ref = referencesMap[key] || {
-            contents: symbol.contents,
-            locations: [],
-            kind: symbol.kind,
-            ...calleeFlag(symbol),
-            ...sigilFlag(symbol),
-        };
-        ref.locations.push(symbol.location);
-        referencesMap[key] = ref;
-    }
-    const references = Object.values(referencesMap);
+    const references = collateReferences(indexingState.references);
 
     index.setPassages(uri, indexingState.passages);
     index.setDefinitions(uri, indexingState.definitions);
@@ -166,4 +173,59 @@ export function updateProjectIndex(
         uri,
         indexingState.disabledDiagnosticsRanges,
     );
+}
+
+// Stub no-op parser callbacks
+const noop = (): void => {};
+const noopCallbacks: ParserCallbacks = {
+    onPassage: noop,
+    onSymbolDefinition: noop,
+    onSymbolReference: noop,
+    onStoryTitle: noop,
+    onStoryData: noop,
+    onEmbeddedDocument: noop,
+    onSemanticToken: noop,
+    onFoldingRange: noop,
+    onDecorationRange: noop,
+    onParseError: noop,
+    onDisabledDiagnosticRange: noop,
+};
+
+/**
+ * Update a project index for a local `.js` file in that project.
+ *
+ * @param textDocument Script file to index.
+ * @param role Role the script file plays in the project.
+ * @param parseLevel Level of parsing to do.
+ * @param index Project index to update.
+ * @param getParser Function that gets a story-format-specific parser.
+ */
+export function updateScriptFileIndex(
+    textDocument: TextDocument,
+    role: ScriptFileRole,
+    parseLevel: ParseLevel,
+    index: ProjectIndex,
+    getParser: typeof getStoryFormatParser = getStoryFormatParser,
+): void {
+    const uri = textDocument.uri;
+    index.removeDocument(uri);
+    index.setScriptFileRole(uri, role);
+
+    const definitions: ProjSymbol[] = [];
+    const symbols: ProjSymbol[] = [];
+    parseScriptFile(
+        textDocument,
+        // We only capture symbol definitions and references
+        {
+            ...noopCallbacks,
+            onSymbolDefinition: (symbol) => definitions.push(symbol),
+            onSymbolReference: (symbol) => symbols.push(symbol),
+        },
+        parseLevel,
+        index.getStoryData()?.storyFormat,
+        getParser,
+    );
+
+    index.setDefinitions(uri, definitions);
+    index.setReferences(uri, collateReferences(symbols));
 }

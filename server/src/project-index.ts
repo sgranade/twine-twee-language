@@ -79,6 +79,15 @@ export interface References extends Kind, Callable, Sigiled {
 }
 
 /**
+ * The role a local `.js` file plays in the project.
+ *
+ * Story script files are concatenated into the Story JavaScript and so share
+ * scope with `script` passages. Included scripts are copied beside the
+ * built story and have their own scope.
+ */
+export type ScriptFileRole = "story-script" | "included-script";
+
+/**
  * Corresponds to the Twee 3 StoryData passage.
  */
 export interface StoryData {
@@ -184,6 +193,12 @@ export interface ProjectIndex {
         uri: string,
         disabledRanges: DiagnosticMap<Range[]>,
     ): void;
+    /**
+     * Set a `.js` file's project role.
+     * @param uri URI of the script file.
+     * @param role Role of the script file.
+     */
+    setScriptFileRole(uri: string, role: ScriptFileRole): void;
 
     /**
      * Get the project's story title, if known.
@@ -244,6 +259,12 @@ export interface ProjectIndex {
      * @returns All non-disabled diagnostics that were found during parsing.
      */
     getParseErrors(uri: string): readonly Diagnostic[];
+    /**
+     * Get a `.js` file's project role, if indexed.
+     * @param uri URI of the script file.
+     * @returns Role of the script file.
+     */
+    getScriptFileRole(uri: string): ScriptFileRole | undefined;
 
     /**
      * Find the definition of an indexed symbol by that symbol's name and kind.
@@ -388,6 +409,7 @@ export class Index implements ProjectIndex {
     private _parseErrors: Record<string, Diagnostic[]> = {};
     private _disabledDiagnosticRanges: Record<string, DiagnosticMap<Range[]>> =
         {};
+    private _scriptFileRoles: Record<string, ScriptFileRole> = {};
 
     // Cache of passage names, since they take time to generate
     private _cachedPassageNames: Record<string, string[]> = {};
@@ -449,6 +471,9 @@ export class Index implements ProjectIndex {
     ): void {
         this._disabledDiagnosticRanges[uri] = disabledRanges;
     }
+    setScriptFileRole(uri: string, role: ScriptFileRole): void {
+        this._scriptFileRoles[uri] = role;
+    }
     getStoryTitle(): string | undefined {
         return this._storyTitle;
     }
@@ -492,6 +517,9 @@ export class Index implements ProjectIndex {
     }
     getParseErrors(uri: string): readonly Diagnostic[] {
         return this._parseErrors[uri] ?? [];
+    }
+    getScriptFileRole(uri: string): ScriptFileRole | undefined {
+        return this._scriptFileRoles[uri];
     }
 
     getSymbolDefinitionByName(

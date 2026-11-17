@@ -9,10 +9,14 @@ import {
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { DecorationType, DiagnosticCodes } from "@tt3/shared";
+import { getDefinitionAt } from "../definition";
 import { ParseLevel } from "../parser-types";
+import { getReferencesToSymbolAt } from "../references";
 import { ParsingState } from "../passage-text-parsers/types";
+import { conditionalReferenceQualifier } from "../passage-text-parsers/chapbook/chapbook-references";
+import { OChapbookSymbolKind } from "../passage-text-parsers/chapbook/types";
+import { OSugarCubeSymbolKind } from "../passage-text-parsers/sugarcube/types";
 import { Index } from "../project-index";
-
 import { buildPassage } from "./builders";
 import * as uut from "../indexer";
 
@@ -466,6 +470,274 @@ describe("Indexer", () => {
             const result = index.getParseErrors("test-uri");
 
             expect(result.length).to.equal(0);
+        });
+    });
+
+    describe("Script File Indexing", () => {
+        function indexWithFormat(format: string, version: string): Index {
+            const index = new Index();
+            index.setStoryData(
+                {
+                    ifid: "x",
+                    storyFormat: { format, formatVersion: version },
+                },
+                "story-data-uri",
+            );
+            return index;
+        }
+        function names(index: Index, uri: string, kind: number): string[] {
+            return (index.getReferences(uri, kind) ?? []).map(
+                (r) => r.contents,
+            );
+        }
+
+        it("should index SugarCube State.variables writes at their real offsets without adding passages", () => {
+            const index = indexWithFormat("SugarCube", "2.36.1");
+            const doc = buildDocument({
+                uri: "file:///s.js",
+                content: "State.variables.gold = 1;",
+            });
+
+            uut.updateScriptFileIndex(
+                doc,
+                "story-script",
+                ParseLevel.Full,
+                index,
+            );
+            const sets = index.getReferences(
+                "file:///s.js",
+                OSugarCubeSymbolKind.VariableSet,
+            );
+
+            expect(sets?.map((r) => r.contents)).to.eql(["$gold"]);
+            expect(sets?.[0].locations[0].range).to.eql(
+                Range.create(0, 16, 0, 20),
+            );
+            expect(index.getPassages("file:///s.js") ?? []).to.be.empty;
+            expect(index.getScriptFileRole("file:///s.js")).to.equal(
+                "story-script",
+            );
+        });
+
+        it("should index Chapbook engine.state.set writes", () => {
+            const index = indexWithFormat("Chapbook", "2.3.0");
+            const doc = buildDocument({
+                uri: "file:///i.js",
+                content: "engine.state.set('gold', 1);",
+            });
+
+            uut.updateScriptFileIndex(
+                doc,
+                "included-script",
+                ParseLevel.Full,
+                index,
+            );
+
+            expect(
+                names(index, "file:///i.js", OChapbookSymbolKind.VariableSet),
+            ).to.eql(["gold"]);
+        });
+
+        it("should extract nothing when the story format is unknown", () => {
+            const index = new Index();
+            const doc = buildDocument({
+                uri: "file:///s.js",
+                content: "State.variables.gold = 1;",
+            });
+
+            uut.updateScriptFileIndex(
+                doc,
+                "story-script",
+                ParseLevel.Full,
+                index,
+            );
+
+            expect(
+                index.getReferences(
+                    "file:///s.js",
+                    OSugarCubeSymbolKind.VariableSet,
+                ),
+            ).to.be.undefined;
+        });
+
+        it("should do nothing below the full parse level", () => {
+            const index = indexWithFormat("SugarCube", "2.36.1");
+            const doc = buildDocument({
+                uri: "file:///s.js",
+                content: "State.variables.gold = 1;",
+            });
+
+            uut.updateScriptFileIndex(
+                doc,
+                "story-script",
+                ParseLevel.PassageNames,
+                index,
+            );
+
+            expect(
+                index.getReferences(
+                    "file:///s.js",
+                    OSugarCubeSymbolKind.VariableSet,
+                ),
+            ).to.be.undefined;
+        });
+
+        it("should not index a bare name declared in its own file", () => {
+            const index = indexWithFormat("Chapbook", "2.3.0");
+            const doc = buildDocument({
+                uri: "file:///inc.js",
+                content: "let gold = 1; gold; function f() { return other; }",
+            });
+
+            uut.updateScriptFileIndex(
+                doc,
+                "included-script",
+                ParseLevel.Full,
+                index,
+            );
+
+            expect(
+                names(
+                    index,
+                    "file:///inc.js",
+                    OChapbookSymbolKind.ConditionalReference,
+                ),
+            ).to.eql(["other"]);
+        });
+
+        it("should not let included scripts' root declarations (or declarations elsewhere) hide their bare names", () => {
+            const index = indexWithFormat("Chapbook", "2.3.0");
+            const set = buildDocument({
+                uri: "file:///set.js",
+                content: "engine.state.set('gold', 1);",
+            });
+            const declares = buildDocument({
+                uri: "file:///declares.js",
+                content: "var gold = 2;",
+            });
+            const included = buildDocument({
+                uri: "file:///inc.js",
+                content: "var gold = 3; var other = 1;",
+            });
+            const story = buildDocument({
+                uri: "file:///story.js",
+                content: "gold;",
+            });
+            const bareIncluded = buildDocument({
+                uri: "file:///bare.js",
+                content: "gold;",
+            });
+            uut.updateScriptFileIndex(
+                set,
+                "story-script",
+                ParseLevel.Full,
+                index,
+            );
+            uut.updateScriptFileIndex(
+                included,
+                "included-script",
+                ParseLevel.Full,
+                index,
+            );
+            uut.updateScriptFileIndex(
+                story,
+                "story-script",
+                ParseLevel.Full,
+                index,
+            );
+            uut.updateScriptFileIndex(
+                bareIncluded,
+                "included-script",
+                ParseLevel.Full,
+                index,
+            );
+
+            const qualifies = conditionalReferenceQualifier(index);
+            // The included script's own declaration doesn't count
+            expect(qualifies("gold", "file:///story.js")).to.be.true;
+
+            uut.updateScriptFileIndex(
+                declares,
+                "story-script",
+                ParseLevel.Full,
+                index,
+            );
+            const qualifiesNow = conditionalReferenceQualifier(index);
+            expect(qualifiesNow("gold", "file:///story.js")).to.be.false;
+            expect(qualifiesNow("gold", "file:///bare.js")).to.be.true;
+        });
+
+        describe("Indexing From a Twee File", () => {
+            function indexSugarCubeProject(): Index {
+                const index = new Index();
+                uut.updateProjectIndex(
+                    buildDocument({
+                        uri: "file:///story.tw",
+                        content:
+                            ':: StoryData\n{"ifid": "x", "format": "SugarCube", "format-version": "2.36.1"}\n\n:: Start\nYou have $gold coins.\n',
+                    }),
+                    ParseLevel.Full,
+                    index,
+                );
+                uut.updateScriptFileIndex(
+                    buildDocument({
+                        uri: "file:///s.js",
+                        content: "State.variables.gold = 1;",
+                    }),
+                    "story-script",
+                    ParseLevel.Full,
+                    index,
+                );
+                uut.updateScriptFileIndex(
+                    buildDocument({
+                        uri: "file:///i.js",
+                        content: "\nState.variables.gold = 2;",
+                    }),
+                    "included-script",
+                    ParseLevel.Full,
+                    index,
+                );
+                return index;
+            }
+
+            it("should find references in story script files and included scripts", () => {
+                const index = indexSugarCubeProject();
+
+                const result = getReferencesToSymbolAt(
+                    "file:///story.tw",
+                    Position.create(4, 11),
+                    index,
+                    true,
+                );
+
+                expect(result).to.have.deep.members([
+                    Location.create(
+                        "file:///story.tw",
+                        Range.create(4, 9, 4, 14),
+                    ),
+                    Location.create("file:///s.js", Range.create(0, 16, 0, 20)),
+                    Location.create("file:///i.js", Range.create(1, 16, 1, 20)),
+                ]);
+            });
+
+            // TODO story variables have no go-to-definition yet
+            it.skip("should go to a definition in a script file", () => {
+                const index = indexSugarCubeProject();
+                const story = buildDocument({
+                    uri: "file:///story.tw",
+                    content: "",
+                });
+
+                const result = getDefinitionAt(
+                    story,
+                    Position.create(4, 11),
+                    index,
+                );
+
+                expect(result).to.deep.include(
+                    Location.create("file:///s.js", Range.create(0, 16, 0, 20)),
+                );
+            });
         });
     });
 });
