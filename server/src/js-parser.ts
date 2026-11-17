@@ -15,6 +15,7 @@ import {
     capturePreSemanticTokenFor,
 } from "./passage-text-parsers/types";
 import { Callable, calleeFlag, Sigiled, sigilFlag } from "./project-index";
+import { MISSING_IDENTIFIER } from "./script-analysis";
 import { ETokenType, TokenModifier, TokenType } from "./semantic-tokens";
 import { Label } from "./types";
 
@@ -27,10 +28,29 @@ const typeofToSemantic: Record<string, TokenType> = {
     boolean: ETokenType.keyword,
 };
 
+// Note to me: we're tracking root-declared script variables and "conditional" bare names
+// for Chapbook. In it, a bare unbound name is a reference when the project defines that
+// variable elsewhere and it's not bound by a root-level declaration in any story script
+// file or script passage. That's a side-effect of how the story format mirrors state
+// variables.
+
+/**
+ * What a script-code variable occurrence is when it isn't an ordinary variable.
+ *
+ * - `conditional-reference`: a bare name that counts only when the project
+ * defines it elsewhere and no root-level declaration binds it.
+ * - `root-declaration`: a root-level declaration.
+ */
+export type ScriptOccurrenceRole = "conditional-reference" | "root-declaration";
+
 /**
  * Label for a parsed javascript variable.
  */
 export interface JSVariableLabel extends Label, Sigiled {
+    /**
+     * What the variable is if it isn't a story variable.
+     */
+    role?: ScriptOccurrenceRole;
     /**
      * Whether the variable is being assigned to.
      */
@@ -99,6 +119,7 @@ export interface ScriptVariableOccurrence {
     at: number;
     assigned: boolean;
     sigilOutsideRange?: boolean;
+    role?: ScriptOccurrenceRole;
 }
 
 /**
@@ -128,13 +149,11 @@ export type ScriptSymbolExtractor = (context: {
     ast: acorn.Node;
     text: string;
     scopeManager: eslintScope.ScopeManager;
+    isGlobalName: (name: string) => boolean;
 }) => {
     variables: ScriptVariableOccurrence[];
     properties: ScriptPropertyOccurrence[];
 };
-
-// `acorn-loose`'s marker for a missing identifier
-const MISSING_IDENTIFIER = "✖";
 
 /**
  * JavaScript global names.
@@ -1054,11 +1073,6 @@ function computeSemanticTokens(
 }
 
 /**
- * A variable occurrence found while extracting symbols, before it's turned into a `JSVariableLabel`.
- */
-type RawVariableOccurrence = ScriptVariableOccurrence;
-
-/**
  * A property occurrence found while extracting symbols, before it's turned into a `JSPropertyLabel`.
  */
 interface RawPropertyOccurrence {
@@ -1087,12 +1101,12 @@ function extractSymbols(
     isGlobalName: IsGlobalName,
     isAssignmentContext: boolean,
 ): {
-    variables: RawVariableOccurrence[];
+    variables: ScriptVariableOccurrence[];
     properties: RawPropertyOccurrence[];
 } {
     // Keyed by position so that, when converted to an array below, occurrences
     // come out in ascending source position order
-    const variableTokens: Record<number, RawVariableOccurrence> = {};
+    const variableTokens: Record<number, ScriptVariableOccurrence> = {};
     const propertyTokens: Record<number, RawPropertyOccurrence> = {};
 
     // Helper function to add a variable occurrence if it's an unbound (story)
@@ -1486,6 +1500,7 @@ export function tokenizeJavaScript(
                   ast,
                   text,
                   scopeManager: analyzeScopes(ast),
+                  isGlobalName,
               })
             : extractSymbols(ast, isGlobalName, isAssignmentContext);
         for (const variable of variables) {
@@ -1498,6 +1513,7 @@ export function tokenizeJavaScript(
                 ),
                 assigned: variable.assigned,
                 ...sigilFlag(variable),
+                ...(variable.role ? { role: variable.role } : {}),
             });
         }
         for (const property of properties) {

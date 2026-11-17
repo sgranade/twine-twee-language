@@ -168,7 +168,7 @@ describe("Chapbook Parser", () => {
 
         it("should parse engine state set calls in script passages", () => {
             const header = ":: Passage [script]\n";
-            const passage = "engine.state.set('v[\"p1\"].p2', 'value');\n";
+            const passage = "engine.state.set('v.p1.p2', 'value');\n";
             const callbacks = new MockCallbacks();
             const state = buildParsingState({
                 uri: "fake-uri",
@@ -198,7 +198,7 @@ describe("Chapbook Parser", () => {
                     contents: "v.p1",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(1, 21, 1, 23),
+                        Range.create(1, 20, 1, 22),
                     ),
                     kind: OChapbookSymbolKind.PropertySet,
                 },
@@ -206,34 +206,9 @@ describe("Chapbook Parser", () => {
                     contents: "v.p1.p2",
                     location: Location.create(
                         "fake-uri",
-                        Range.create(1, 26, 1, 28),
+                        Range.create(1, 23, 1, 25),
                     ),
                     kind: OChapbookSymbolKind.PropertySet,
-                },
-                {
-                    contents: "engine",
-                    location: Location.create(
-                        "fake-uri",
-                        Range.create(1, 0, 1, 6),
-                    ),
-                    kind: OChapbookSymbolKind.Variable,
-                },
-                {
-                    contents: "engine.state",
-                    location: Location.create(
-                        "fake-uri",
-                        Range.create(1, 7, 1, 12),
-                    ),
-                    kind: OChapbookSymbolKind.Property,
-                },
-                {
-                    contents: "engine.state.set",
-                    location: Location.create(
-                        "fake-uri",
-                        Range.create(1, 13, 1, 16),
-                    ),
-                    kind: OChapbookSymbolKind.Property,
-                    isCallee: true,
                 },
             ]);
         });
@@ -256,9 +231,61 @@ describe("Chapbook Parser", () => {
             expect(result).to.be.empty;
         });
 
+        it("should read engine state get calls and ignore non-literal or escaped keys", () => {
+            const header = ":: Passage [script]\n";
+            const passage =
+                "engine.state.get('a.b'); engine.state.get(k); engine.state.get('\\x66oo'); engine.state.get('a b');\n";
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                uri: "fake-uri",
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            state.currentPassage = buildPassage({ isScript: true });
+            const parser = uut.getChapbookParser(undefined);
+
+            parser?.parsePassageText(passage, header.length, state);
+            const result = callbacks.references.map((r) => [
+                r.contents,
+                r.kind,
+            ]);
+
+            expect(result).to.eql([
+                ["a", OChapbookSymbolKind.Variable],
+                ["k", OChapbookSymbolKind.ConditionalReference],
+                ["a.b", OChapbookSymbolKind.Property],
+            ]);
+        });
+
+        it("should treat setDefault as an assignment and follow an engine.state alias", () => {
+            const header = ":: Passage [script]\n";
+            const passage =
+                "const s = engine.state; s.setDefault('a', 1); s.get('b');\n";
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                uri: "fake-uri",
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            state.currentPassage = buildPassage({ isScript: true });
+            const parser = uut.getChapbookParser(undefined);
+
+            parser?.parsePassageText(passage, header.length, state);
+            const result = callbacks.references.map((r) => [
+                r.contents,
+                r.kind,
+            ]);
+
+            expect(result).to.eql([
+                ["s", OChapbookSymbolKind.RootDeclaration],
+                ["a", OChapbookSymbolKind.VariableSet],
+                ["b", OChapbookSymbolKind.Variable],
+            ]);
+        });
+
         it("should parse variables in script passages", () => {
             const header = ":: Passage [script]\n";
-            const passage = "\n var1['prop'] = { other: 1}\n--\n";
+            const passage = "\n engine.state.get('var1.prop');\n--\n";
             const callbacks = new MockCallbacks();
             const state = buildParsingState({
                 uri: "fake-uri",
@@ -271,31 +298,27 @@ describe("Chapbook Parser", () => {
             parser?.parsePassageText(passage, header.length, state);
             const result = callbacks.references;
 
-            expect(result.length).to.eql(3);
-            expect(result[0]).to.eql({
-                contents: "var1",
-                location: Location.create("fake-uri", Range.create(2, 1, 2, 5)),
-                kind: OChapbookSymbolKind.Variable,
-            });
-            expect(result[1]).to.eql({
-                contents: "var1.prop",
-                location: Location.create(
-                    "fake-uri",
-                    Range.create(2, 7, 2, 11),
-                ),
-                kind: OChapbookSymbolKind.PropertySet,
-            });
-            expect(result[2]).to.eql({
-                contents: "var1.prop.other",
-                location: Location.create(
-                    "fake-uri",
-                    Range.create(2, 18, 2, 23),
-                ),
-                kind: OChapbookSymbolKind.PropertySet,
-            });
+            expect(result).to.eql([
+                {
+                    contents: "var1",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(2, 19, 2, 23),
+                    ),
+                    kind: OChapbookSymbolKind.Variable,
+                },
+                {
+                    contents: "var1.prop",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(2, 24, 2, 28),
+                    ),
+                    kind: OChapbookSymbolKind.Property,
+                },
+            ]);
         });
 
-        it("should capture bare and property assignments as writes in script passages", () => {
+        it("should capture bare names in script passages as conditional references", () => {
             const header = ":: Passage [script]\n";
             const passage = "\n a = 1; b.c = 2\n";
             const callbacks = new MockCallbacks();
@@ -313,9 +336,60 @@ describe("Chapbook Parser", () => {
             ]);
 
             expect(result).to.eql([
-                ["a", OChapbookSymbolKind.VariableSet],
-                ["b", OChapbookSymbolKind.Variable],
-                ["b.c", OChapbookSymbolKind.PropertySet],
+                ["a", OChapbookSymbolKind.ConditionalReference],
+                ["b", OChapbookSymbolKind.ConditionalReference],
+            ]);
+        });
+
+        it("should record root-level declarations in script passages and no story variables for them", () => {
+            const header = ":: Passage [script]\n";
+            const passage =
+                "var gold = 1; function f(x) { let y; } class C {} gold; engine; go(); config;\n";
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            state.currentPassage = buildPassage({ isScript: true });
+            const parser = uut.getChapbookParser(undefined);
+
+            parser?.parsePassageText(passage, header.length, state);
+            const result = callbacks.references.map((r) => [
+                r.contents,
+                r.kind,
+            ]);
+
+            expect(result).to.eql([
+                ["gold", OChapbookSymbolKind.RootDeclaration],
+                ["f", OChapbookSymbolKind.RootDeclaration],
+                ["C", OChapbookSymbolKind.RootDeclaration],
+                ["config", OChapbookSymbolKind.Variable],
+            ]);
+        });
+
+        it("should not index escaped spellings of bare names", () => {
+            const header = ":: Passage [script]\n";
+            const passage = "g\\u006Fld; gold;\n";
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                uri: "fake-uri",
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            state.currentPassage = buildPassage({ isScript: true });
+            const parser = uut.getChapbookParser(undefined);
+
+            parser?.parsePassageText(passage, header.length, state);
+
+            expect(callbacks.references).to.eql([
+                {
+                    contents: "gold",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(1, 11, 1, 15),
+                    ),
+                    kind: OChapbookSymbolKind.ConditionalReference,
+                },
             ]);
         });
     });
@@ -1422,7 +1496,8 @@ describe("Chapbook Parser", () => {
 
                 it("should capture variables in a javascript modifier", () => {
                     const header = ":: Passage\n";
-                    const passage = "Stuff\n\n[javascript]\n  newVar = 1;\n";
+                    const passage =
+                        "Stuff\n\n[javascript]\n  engine.state.set('newVar', 1);\n";
                     const callbacks = new MockCallbacks();
                     const state = buildParsingState({
                         content: header + passage,
@@ -1446,14 +1521,14 @@ describe("Chapbook Parser", () => {
                             contents: "newVar",
                             location: Location.create(
                                 "fake-uri",
-                                Range.create(4, 2, 4, 8),
+                                Range.create(4, 20, 4, 26),
                             ),
                             kind: OChapbookSymbolKind.VariableSet,
                         },
                     ]);
                 });
 
-                it("should capture bare and property assignments as writes in a javascript modifier", () => {
+                it("should capture bare names in a javascript modifier as conditional references", () => {
                     const header = ":: Passage\n";
                     const passage =
                         "Stuff\n\n[javascript]\n  a = 1; b.c = 2;\n";
@@ -1470,9 +1545,8 @@ describe("Chapbook Parser", () => {
                         .map((r) => [r.contents, r.kind]);
 
                     expect(result).to.eql([
-                        ["a", OChapbookSymbolKind.VariableSet],
-                        ["b", OChapbookSymbolKind.Variable],
-                        ["b.c", OChapbookSymbolKind.PropertySet],
+                        ["a", OChapbookSymbolKind.ConditionalReference],
+                        ["b", OChapbookSymbolKind.ConditionalReference],
                     ]);
                 });
 

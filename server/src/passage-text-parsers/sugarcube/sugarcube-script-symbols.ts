@@ -1,6 +1,5 @@
 import * as acorn from "acorn";
 import * as acornWalk from "acorn-walk";
-import type * as eslintScope from "eslint-scope";
 
 import {
     isCallee,
@@ -10,24 +9,22 @@ import {
     ScriptSymbolExtractor,
     ScriptVariableOccurrence,
 } from "../../js-parser";
+import {
+    createScriptAnalysis,
+    isIdentifierName,
+    StaticName,
+} from "../../script-analysis";
 
 type Sigil = "$" | "_";
 
-const identifierRegexp = /^[A-Za-z_$][\w$]*$/;
-const getSetVarKeyRegexp = /^([$_])([A-Za-z_$][\w$]*)$/;
+function isSigil(text: string): text is Sigil {
+    return text === "$" || text === "_";
+}
 
 function sigilForRootName(name: string | undefined): Sigil | undefined {
     if (name === "variables") return "$";
     if (name === "temporary") return "_";
     return undefined;
-}
-
-/**
- * A statically-known name and where it sits in the source.
- */
-interface StaticName {
-    name: string;
-    start: number;
 }
 
 /**
@@ -40,60 +37,14 @@ export const extractSugarCubeScriptSymbols: ScriptSymbolExtractor = ({
 }) => {
     const variables: ScriptVariableOccurrence[] = [];
     const properties: ScriptPropertyOccurrence[] = [];
+    const { isUnbound, staticKeyName, memberName, aliasRoot } =
+        createScriptAnalysis(text, scopeManager);
 
     /*
      * To get to a story variable in JavaScript, you have to use `State.variables`,
      * `State.temporary`, `variables()`, `temporary()`, `SugarCube.State.*` (which
      * can include `window.`), or `State.getVar`/`setVar` w/a literal key.
      */
-    const references = new Map<acorn.Node, eslintScope.Reference>();
-    for (const scope of scopeManager.scopes) {
-        for (const ref of scope.references) {
-            references.set(ref.identifier as unknown as acorn.Node, ref);
-        }
-    }
-
-    const isUnbound = (id: acorn.Node): boolean => {
-        const ref = references.get(id);
-        return !!ref && !ref.resolved;
-    };
-
-    // A name is only static if its source spelling is the plain name, so
-    // we don't index escapes like '\x66oo'
-    const staticKeyName = (
-        key: acorn.Node,
-        computed: boolean,
-    ): StaticName | undefined => {
-        if (!computed && key.type === "Identifier") {
-            const name = (key as acorn.Identifier).name;
-            return text.slice(key.start, key.end) === name
-                ? { name, start: key.start }
-                : undefined;
-        }
-        if (key.type === "Literal") {
-            const value = (key as acorn.Literal).value;
-            if (typeof value === "string" && isPlainStringSource(key, value)) {
-                return { name: value, start: key.start + 1 };
-            }
-        }
-        if (
-            key.type === "TemplateLiteral" &&
-            (key as acorn.TemplateLiteral).expressions.length === 0
-        ) {
-            const value = (key as acorn.TemplateLiteral).quasis[0].value.cooked;
-            if (value != null && isPlainStringSource(key, value)) {
-                return { name: value, start: key.start + 1 };
-            }
-        }
-        return undefined;
-    };
-
-    const isPlainStringSource = (node: acorn.Node, value: string): boolean =>
-        text.slice(node.start + 1, node.end - 1) === value;
-
-    const memberName = (node: acorn.MemberExpression): StaticName | undefined =>
-        staticKeyName(node.property, node.computed);
-
     // `State`, `SugarCube.State`, or `window.SugarCube.State`
     const isStateObject = (node: acorn.Node): boolean => {
         if (node.type === "Identifier") {
@@ -125,8 +76,6 @@ export const extractSugarCubeScriptSymbols: ScriptSymbolExtractor = ({
         );
     };
 
-    const aliasSigils = new Map<eslintScope.Variable, Sigil | undefined>();
-
     // Sigil of the state root an expression is, if it is one
     const rootSigil = (node: acorn.Node): Sigil | undefined => {
         switch (node.type) {
@@ -146,41 +95,13 @@ export const extractSugarCubeScriptSymbols: ScriptSymbolExtractor = ({
                 return sigilForRootName((call.callee as acorn.Identifier).name);
             }
             case "Identifier":
-                return aliasSigil(node as acorn.Identifier);
+                return aliasRoot(node as acorn.Identifier, rootSigil);
         }
         return undefined;
     };
 
-    const aliasSigil = (id: acorn.Identifier): Sigil | undefined => {
-        const variable = references.get(id)?.resolved;
-        if (!variable) return undefined;
-        if (aliasSigils.has(variable)) return aliasSigils.get(variable);
-        // Guard against self-referential initializers
-        aliasSigils.set(variable, undefined);
-
-        let sigil: Sigil | undefined;
-        const writes = variable.references.filter((r) => r.isWrite());
-        if (
-            variable.defs.length === 1 &&
-            variable.defs[0].type === "Variable" &&
-            variable.defs[0].name.type === "Identifier" &&
-            writes.length === 1 &&
-            writes[0].init === true
-        ) {
-            const declarator = variable.defs[0].node as unknown as {
-                id: acorn.Node;
-                init?: acorn.Node | null;
-            };
-            if (declarator.id.type === "Identifier" && declarator.init) {
-                sigil = rootSigil(declarator.init);
-            }
-        }
-        aliasSigils.set(variable, sigil);
-        return sigil;
-    };
-
     const addVariable = (sigil: Sigil, name: StaticName, assigned: boolean) => {
-        if (!identifierRegexp.test(name.name)) return; // Don't add non-identifiers
+        if (!isIdentifierName(name.name)) return; // Don't add non-identifiers
         variables.push({
             text: sigil + name.name,
             rangeText: name.name,
@@ -254,11 +175,11 @@ export const extractSugarCubeScriptSymbols: ScriptSymbolExtractor = ({
                 if (!key) break;
                 const literal = staticKeyName(key, true);
                 if (!literal) break;
-                const match = getSetVarKeyRegexp.exec(literal.name);
-                if (!match) break;
+                const sigil = literal.name[0];
+                if (!isSigil(sigil)) break;
                 addVariable(
-                    match[1] as Sigil,
-                    { name: match[2], start: literal.start + 1 },
+                    sigil,
+                    { name: literal.name.slice(1), start: literal.start + 1 },
                     method.name === "setVar",
                 );
                 break;

@@ -193,6 +193,10 @@ export const OChapbookSymbolKind = {
     VariableSet: TwineSymbolKind._end + 6,
     Property: TwineSymbolKind._end + 7,
     PropertySet: TwineSymbolKind._end + 8,
+    // A bare name in script code that might be a reference
+    ConditionalReference: TwineSymbolKind._end + 9,
+    // A root-level declaration in a story script file or `script` passage
+    RootDeclaration: TwineSymbolKind._end + 10,
 };
 export type ChapbookSymbolKind =
     (typeof OChapbookSymbolKind)[keyof typeof OChapbookSymbolKind];

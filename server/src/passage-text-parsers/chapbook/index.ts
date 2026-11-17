@@ -4,7 +4,10 @@ import { generateCompletions } from "./chapbook-completions";
 import { getDefinitionAt } from "./chapbook-definitions";
 import { generateDiagnostics } from "./chapbook-diagnostics";
 import { generateHover } from "./chapbook-hover";
-import { getReferencesToSymbolAt } from "./chapbook-references";
+import {
+    getReferencesToSymbolAt,
+    isDisqualifiedConditionalAt,
+} from "./chapbook-references";
 import { all as allInserts } from "./inserts";
 import { all as allModifiers } from "./modifiers";
 import { ChapbookParserAPI } from "./types";
@@ -35,6 +38,9 @@ export function getChapbookParser(
             generateHover(document, position, deferred, index, api),
         getDefinitionAt: getDefinitionAt,
         getReferencesToSymbolAt: getReferencesToSymbolAt,
-        generateRenamesAt: () => null, // Unneeded -- the default logic works for us
+        generateRenamesAt: (uri, position, _newName, index) =>
+            isDisqualifiedConditionalAt(uri, position, index)
+                ? undefined // No renaming conditional references
+                : null, // The default logic works for us
     };
 }

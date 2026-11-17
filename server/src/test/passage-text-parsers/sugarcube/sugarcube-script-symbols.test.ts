@@ -89,9 +89,12 @@ describe("SugarCube Script Symbols", () => {
         ]);
     });
 
-    it("should index string-keyed access but not escaped spellings or non-identifiers", () => {
+    it("should index string-keyed access (including accented symbols) but not escaped spellings or non-identifiers", () => {
         expect(extract("State.variables['gold'];").vars).to.eql([
             ["$gold", "gold", false, true],
+        ]);
+        expect(extract("State.variables['café'];").vars).to.eql([
+            ["$café", "café", false, true],
         ]);
         expect(extract("State.variables['\\x66oo'];").vars).to.eql([]);
         expect(extract("State.variables['a b'];").vars).to.eql([]);
