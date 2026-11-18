@@ -32,6 +32,11 @@ export interface ParsingState {
      */
     parseLevel: ParseLevel;
     /**
+     * Is the text being parsed is an entire local `.js` file rather than
+     * a passage?
+     */
+    isWholeFile?: boolean;
+    /**
      * What passage are we currently parsing the contents of?
      */
     currentPassage?: Passage;

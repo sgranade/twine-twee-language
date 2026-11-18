@@ -1380,21 +1380,26 @@ export function isEveryIdentifierAVariable(
  *
  * @param text Text to parse as JavaScript.
  * @param isProgram Whether the text is a full program or just an expression.
+ * @param sourceType Whether to parse a program as a script or an ES module.
  * @returns Top-most node in the AST.
  */
-export function parseJSStrict(text: string, isProgram: boolean): acorn.Node {
+export function parseJSStrict(
+    text: string,
+    isProgram: boolean,
+    sourceType: "script" | "module" = "script",
+): acorn.Node {
     // n.b. we're using ParserWithState so's we get actual useful information
     // out of any thrown SyntaxError.
     if (isProgram) {
         return ParserWithState.parse(text, {
             ecmaVersion: ParseEcmaVersion,
-            sourceType: "script",
+            sourceType,
             ranges: true,
         });
     } else {
         return ParserWithState.parseExpressionAt(text, 0, {
             ecmaVersion: ParseEcmaVersion,
-            sourceType: "script",
+            sourceType,
             ranges: true,
         });
     }
@@ -1403,18 +1408,23 @@ export function parseJSStrict(text: string, isProgram: boolean): acorn.Node {
 /**
  * Parse a JavaScript program or expression.
  *
- * This performs strict parsing (first a full parse, then as an expression), then loose parsing,
- * and does not throw an exception.
+ * This performs strict parsing, then loose parsing, and does not throw an exception.
+ * A whole file that fails a strict script-mode parse is retried strictly as an
+ * ES module before falling back to the loose parse.
  *
  * @param text Text to parse as JavaScript.
  * @param isProgram Whether to parse it as a full JS program or a small expression
  * @param offset Offset into the containing document where the text occurs.
- * @returns Top-most node in the AST, or undefined if the parsing failed.
+ * @param options Parsing options.
+ * @param options.isWholeFile True if the text is an entire `.js` file.
+ * @returns Top-most node in the AST, or undefined if the parsing failed, and
+ * the strict parse's error if the loose parse was used.
  */
 export function parseJS(
     text: string,
     isProgram: boolean,
     offset = 0,
+    { isWholeFile = false }: { isWholeFile?: boolean } = {},
 ): [acorn.Node | undefined, JSDiagnostic | undefined] {
     // Don't do anything if no text is passed (as that would create an error)
     if (!text.trim()) return [undefined, undefined];
@@ -1425,6 +1435,13 @@ export function parseJS(
     } catch (err) {
         if (!(err instanceof SyntaxError)) {
             return [undefined, undefined];
+        }
+        if (isWholeFile && isProgram) {
+            try {
+                return [parseJSStrict(text, isProgram, "module"), undefined];
+            } catch {
+                // Report the script-mode error, then fall back to the loose parse
+            }
         }
         diagnostic = {
             ...improveAcornErrorMessage(
@@ -1470,6 +1487,7 @@ export function parseJS(
  * so write-shaped syntax beyond declarations counts as an assignment. Otherwise they're reported
  * as reads since, they're often a `==` typo or a side effect.
  * @param options.extractScriptSymbols Story-format-specific function that extracts symbols from scripts.
+ * @param options.isWholeFile True if the text is an entire `.js` file, which may be an ES module.
  * @returns Tokenized variables and properties and any parsing error.
  */
 export function tokenizeJavaScript(
@@ -1481,9 +1499,11 @@ export function tokenizeJavaScript(
     {
         isAssignmentContext = false,
         extractScriptSymbols,
+        isWholeFile = false,
     }: {
         isAssignmentContext?: boolean;
         extractScriptSymbols?: ScriptSymbolExtractor;
+        isWholeFile?: boolean;
     } = {},
 ): TokenizedJS {
     const tokenized: TokenizedJS = {
@@ -1491,7 +1511,7 @@ export function tokenizeJavaScript(
         properties: [],
     };
 
-    const [ast, diagnostic] = parseJS(text, isProgram, offset);
+    const [ast, diagnostic] = parseJS(text, isProgram, offset, { isWholeFile });
     tokenized.error = diagnostic;
     if (ast !== undefined) {
         annotateVariableScopes(ast, !!isAssignmentContext);

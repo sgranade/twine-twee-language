@@ -134,6 +134,7 @@ function parseAsJavaScript(
             {
                 isAssignmentContext: true,
                 extractScriptSymbols: extractSugarCubeScriptSymbols,
+                isWholeFile: state.isWholeFile,
             },
         ),
         state,

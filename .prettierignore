@@ -1,0 +1,2 @@
+# Skip test fixtures since we depend on their exact layout (minified vendor files, line:char positions)
+server/src/test/fixtures/

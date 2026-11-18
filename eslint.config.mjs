@@ -5,6 +5,7 @@ import globals from "globals";
 import { flatConfigs, createNodeResolver } from "eslint-plugin-import-x";
 
 export default defineConfig(
+    { ignores: ["server/src/test/fixtures/**"] },
     eslint.configs.recommended,
     {
         files: ["**/*.ts"],
