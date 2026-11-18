@@ -51,6 +51,7 @@ import { ParseLevel } from "./parser-types";
 import { Index } from "./project-index";
 import { getReferencesToSymbolAt } from "./references";
 import { generateRenames, prepareRename } from "./renames";
+import { ScriptFeatureRegistrar } from "./script-file-registration";
 import { semanticTokensLegend } from "./semantic-tokens";
 import {
     generateDecorationRanges,
@@ -79,6 +80,7 @@ let hasCompletionListItemDefaults = false;
 let hasDiagnosticRelatedInformationCapability = false;
 let hasPrepareProviderCapability = false;
 let hasDocumentChangesCapability = false;
+let scriptRegistrar: ScriptFeatureRegistrar | undefined;
 
 const indexingQueue = new IndexingQueue({
     clock: {
@@ -107,8 +109,10 @@ const indexingQueue = new IndexingQueue({
     onMacroChanges: () => onSCMacroChanges(),
     indexingStarted: () =>
         connection.sendNotification(CustomMessages.IndexingStarted),
-    indexingComplete: () =>
-        void connection.sendNotification(CustomMessages.IndexingComplete),
+    indexingComplete: () => {
+        void connection.sendNotification(CustomMessages.IndexingComplete);
+        void scriptRegistrar?.update(projectIndex.getScriptFileUris());
+    },
     logError: (message) => connection.console.error(message),
 });
 
@@ -118,6 +122,9 @@ const fileTracker = new WorkspaceFileTracker({
     processAllOpenDocuments: () => processAllOpenDocuments(),
     parseMacroFile: (uri) => parseT3LTMacroFile(uri),
     onMacroChanges: () => onSCMacroChanges(),
+    indexScriptFile: (doc, role) =>
+        updateScriptFileIndex(doc, role, ParseLevel.Full, projectIndex),
+    revalidateOpenTweeDocuments: () => revalidateOpenTweeDocuments(),
 });
 
 connection.onInitialize((params: InitializeParams) => {
@@ -131,6 +138,12 @@ connection.onInitialize((params: InitializeParams) => {
         capabilities.textDocument.publishDiagnostics &&
         capabilities.textDocument.publishDiagnostics.relatedInformation
     );
+    const canRegisterScriptFeatures = !!(
+        capabilities.textDocument?.references?.dynamicRegistration &&
+        capabilities.textDocument?.definition?.dynamicRegistration &&
+        capabilities.textDocument?.rename?.dynamicRegistration &&
+        capabilities.textDocument?.synchronization?.dynamicRegistration
+    );
     const itemDefaults =
         capabilities.textDocument?.completion?.completionList?.itemDefaults;
     if (itemDefaults) {
@@ -142,6 +155,13 @@ connection.onInitialize((params: InitializeParams) => {
         !!capabilities.textDocument?.rename?.prepareSupport;
     hasDocumentChangesCapability =
         !!capabilities.workspace?.workspaceEdit?.documentChanges;
+    if (canRegisterScriptFeatures) {
+        scriptRegistrar = new ScriptFeatureRegistrar({
+            client: connection.client,
+            prepareProvider: hasPrepareProviderCapability,
+            logError: (message) => connection.console.error(message),
+        });
+    }
 
     const result: InitializeResult = {
         capabilities: {
@@ -284,15 +304,23 @@ connection.onCompletion(
     },
 );
 
-connection.onDefinition((params: DefinitionParams): Definition | undefined => {
-    const document = documents.get(params.textDocument.uri);
-    if (document === undefined) {
-        return undefined;
-    }
-    return getDefinitionAt(document, params.position, projectIndex);
-});
+connection.onDefinition(
+    withFreshScripts((params: DefinitionParams): Definition | undefined => {
+        const document = documents.get(params.textDocument.uri);
+        if (document === undefined) {
+            return undefined;
+        }
+        return getDefinitionAt(document, params.position, projectIndex);
+    }),
+);
 
 documents.onDidChangeContent(async (change) => {
+    // If it's a script file, handle that
+    if (projectIndex.isScriptFile(change.document.uri)) {
+        fileTracker.handleScriptFileChanged(change.document);
+        return;
+    }
+
     // Parse w/re-indexing
     await parseTextDocument(change.document, ParseLevel.Full, true);
     // Validate
@@ -301,7 +329,12 @@ documents.onDidChangeContent(async (change) => {
     sendDecorationRanges(change.document.uri);
 });
 
-// documents.onDidClose;
+documents.onDidClose((change) => {
+    // Index the last contents of a script (e.g. a save-and-close inside the debounce)
+    if (projectIndex.isScriptFile(change.document.uri)) {
+        fileTracker.indexPendingScripts();
+    }
+});
 
 connection.onDidChangeWatchedFiles((_change) => {
     fileTracker.handleWatchedFileChanges(
@@ -313,6 +346,10 @@ connection.onDidChangeWatchedFiles((_change) => {
 });
 
 documents.onDidOpen(async (change) => {
+    // onDidChangeContent, which also fires on open, re-parses script files
+    // so we don't need to do anything with them here
+    if (projectIndex.isScriptFile(change.document.uri)) return;
+
     // Parse w/re-indexing
     await parseTextDocument(change.document, ParseLevel.Full, true);
     // Validate
@@ -363,38 +400,44 @@ connection.onNotification(DidRenameFilesNotification.type, async (params) => {
     await fileTracker.handleFilesRenamed(params.files);
 });
 
-connection.onPrepareRename((params: PrepareRenameParams): Range | undefined => {
-    return prepareRename(
-        params.textDocument.uri,
-        params.position,
-        projectIndex,
-    );
-});
-
-connection.onRenameRequest(
-    (params: RenameParams): WorkspaceEdit | ResponseError<void> | null => {
-        return generateRenames(
+connection.onPrepareRename(
+    withFreshScripts((params: PrepareRenameParams): Range | undefined => {
+        return prepareRename(
             params.textDocument.uri,
             params.position,
-            params.newName,
             projectIndex,
-            undefined,
-            {
-                documentChanges: hasDocumentChangesCapability,
-                versionOf: (uri) => documents.get(uri)?.version ?? null,
-            },
         );
-    },
+    }),
 );
 
-connection.onReferences((params: ReferenceParams): Location[] | undefined => {
-    return getReferencesToSymbolAt(
-        params.textDocument.uri,
-        params.position,
-        projectIndex,
-        params.context.includeDeclaration,
-    );
-});
+connection.onRenameRequest(
+    withFreshScripts(
+        (params: RenameParams): WorkspaceEdit | ResponseError<void> | null => {
+            return generateRenames(
+                params.textDocument.uri,
+                params.position,
+                params.newName,
+                projectIndex,
+                undefined,
+                {
+                    documentChanges: hasDocumentChangesCapability,
+                    versionOf: (uri) => documents.get(uri)?.version ?? null,
+                },
+            );
+        },
+    ),
+);
+
+connection.onReferences(
+    withFreshScripts((params: ReferenceParams): Location[] | undefined => {
+        return getReferencesToSymbolAt(
+            params.textDocument.uri,
+            params.position,
+            projectIndex,
+            params.context.includeDeclaration,
+        );
+    }),
+);
 
 connection.onRequest("textDocument/semanticTokens/full", (params) => {
     return generateSemanticTokens(params.textDocument.uri, projectIndex);
@@ -549,21 +592,51 @@ async function parseT3LTMacroFile(uri: string) {
 }
 
 /**
+ * Wrap a request handler so it first handles any pending `.js` script indexing.
+ * @param handler Handler to wrap.
+ * @returns Wrapped handler.
+ */
+function withFreshScripts<P, R>(handler: (params: P) => R): (params: P) => R {
+    return (params) => {
+        fileTracker.indexPendingScripts();
+        return handler(params);
+    };
+}
+
+/**
+ * Get every open Twee document.
+ */
+function openTweeDocuments(): TextDocument[] {
+    return documents.all().filter((doc) => !projectIndex.isScriptFile(doc.uri));
+}
+
+/**
  * Process all open documents that we're tracking.
  *
  * Used when there's a change (such as re-indexing or changing validation
  * options) that could affect parsing.
  */
 async function processAllOpenDocuments() {
-    // Loop through twice since validation can depend on the result of parsing all docs
-    for (const doc of documents.all()) {
+    // Parse everything before validating, since validation can depend on the result of parsing all docs
+    for (const doc of openTweeDocuments()) {
         await parseTextDocument(doc, ParseLevel.Full, true);
     }
-    for (const doc of documents.all()) {
+
+    await revalidateOpenTweeDocuments();
+
+    // Request that the client re-do diagnostics since we've re-processed
+    connection.languages.diagnostics.refresh();
+}
+
+/**
+ * Re-validate every open Twee document.
+ */
+async function revalidateOpenTweeDocuments() {
+    for (const doc of openTweeDocuments()) {
         await validateTextDocument(doc);
     }
 
-    // Request that the client re-do diagnostics since we've re-processed
+    // Ask the client to re-pull diagnostics
     connection.languages.diagnostics.refresh();
 }
 

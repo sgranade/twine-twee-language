@@ -1,7 +1,12 @@
 import "mocha";
 import { expect } from "chai";
+import * as sinon from "sinon";
+import { TextDocument } from "vscode-languageserver-textdocument";
 
+import { updateProjectIndex, updateScriptFileIndex } from "../indexer";
+import { ParseLevel } from "../parser-types";
 import { Index } from "../project-index";
+import { generateRenames } from "../renames";
 
 import * as uut from "../workspace-file-tracker";
 
@@ -15,6 +20,8 @@ function build(overrides: Partial<uut.WorkspaceFileTrackerDeps> = {}) {
         processAllOpenDocuments: async () => void calls.push("processAll"),
         parseMacroFile: async (uri) => void calls.push(`macro:${uri}`),
         onMacroChanges: () => void calls.push("macroChanges"),
+        indexScriptFile: (doc) => void calls.push(`script:${doc.uri}`),
+        revalidateOpenTweeDocuments: async () => void calls.push("revalidate"),
         ...overrides,
     };
     return {
@@ -85,5 +92,104 @@ describe("Workspace File Tracker", () => {
         ]);
 
         expect(index.getIndexedUris()).to.eql(["file:///c.tw"]);
+    });
+
+    describe("Open Script File Handling", () => {
+        const jsDoc = TextDocument.create("file:///a.js", "javascript", 1, "x");
+        let clock: sinon.SinonFakeTimers;
+
+        beforeEach(() => {
+            clock = sinon.useFakeTimers();
+        });
+
+        afterEach(() => {
+            clock.restore();
+        });
+
+        it("should coalesce a burst of script file edits into one re-parse after the debounce", () => {
+            const { tracker, calls, index } = build();
+            index.setScriptFileRole(jsDoc.uri, "story-script");
+
+            tracker.handleScriptFileChanged(jsDoc);
+            clock.tick(uut.scriptReparseDebounceMs - 1);
+            tracker.handleScriptFileChanged(jsDoc);
+            clock.tick(uut.scriptReparseDebounceMs - 1);
+            tracker.handleScriptFileChanged(jsDoc);
+            clock.tick(uut.scriptReparseDebounceMs - 1);
+            expect(calls).to.eql([]);
+            clock.tick(1);
+
+            expect(calls).to.eql(["script:file:///a.js", "revalidate"]);
+        });
+
+        it("should index pending script files synchronously", () => {
+            const { tracker, calls, index } = build();
+            index.setScriptFileRole(jsDoc.uri, "story-script");
+
+            tracker.handleScriptFileChanged(jsDoc);
+            tracker.indexPendingScripts();
+            clock.runAll();
+
+            expect(calls).to.eql(["script:file:///a.js", "revalidate"]);
+        });
+
+        it("should do nothing when indexing with nothing pending", () => {
+            const { tracker, calls } = build();
+
+            tracker.indexPendingScripts();
+
+            expect(calls).to.eql([]);
+        });
+
+        it("should rename using a buffer edited before the debounce fires", () => {
+            const index = new Index();
+            const { tracker } = build({
+                index,
+                indexScriptFile: (d, role) =>
+                    updateScriptFileIndex(d, role, ParseLevel.Full, index),
+            });
+            const tw = TextDocument.create(
+                "file:///story.tw",
+                "twee3",
+                1,
+                ':: StoryData\n{"ifid": "x", "format": "SugarCube", "format-version": "2.36.1"}\n\n' +
+                    ":: Start\n<<print $gold>>\n",
+            );
+            updateProjectIndex(tw, ParseLevel.Full, index);
+            updateScriptFileIndex(
+                TextDocument.create(
+                    jsDoc.uri,
+                    "javascript",
+                    1,
+                    "State.variables.gold = 1;\n",
+                ),
+                "story-script",
+                ParseLevel.Full,
+                index,
+            );
+
+            tracker.handleScriptFileChanged(
+                TextDocument.create(
+                    jsDoc.uri,
+                    "javascript",
+                    2,
+                    "State.variables.gold = 1;\nState.variables.gold += 2;\n",
+                ),
+            );
+            // What the server's request handlers do before answering
+            tracker.indexPendingScripts();
+            const edit = generateRenames(
+                tw.uri,
+                tw.positionAt(tw.getText().indexOf("gold")),
+                "silver",
+                index,
+            );
+
+            expect(
+                (edit as { changes: Record<string, unknown[]> }).changes[
+                    jsDoc.uri
+                ],
+            ).to.have.length(2);
+        });
     });
 });

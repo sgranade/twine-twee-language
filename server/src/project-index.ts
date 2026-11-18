@@ -390,6 +390,16 @@ export interface ProjectIndex {
     getIndexedUris(): readonly string[];
 
     /**
+     * Get all script file URIs in the index.
+     */
+    getScriptFileUris(): string[];
+
+    /**
+     * Is the URI an indexed script file?
+     */
+    isScriptFile(uri: string): boolean;
+
+    /**
      * Remove a document from the project index.
      * @param uri URI of document to remove.
      */
@@ -767,6 +777,14 @@ export class Index implements ProjectIndex {
             ...Object.keys(this._parseErrors),
         ]);
         return [...s];
+    }
+
+    getScriptFileUris(): string[] {
+        return Object.keys(this._scriptFileRoles);
+    }
+
+    isScriptFile(uri: string): boolean {
+        return this.getScriptFileRole(uri) !== undefined;
     }
 
     removeDocument(uri: string): void {
