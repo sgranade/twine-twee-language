@@ -5,7 +5,9 @@ import {
     DocumentUri,
     Hover,
     Location,
+    LSPErrorCodes,
     Position,
+    ResponseError,
     TextEdit,
 } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
@@ -14,6 +16,7 @@ import { DiagnosticCode, StoryFormat } from "@tt3/shared";
 import { EmbeddedDocument } from "../embedded-languages";
 import { ParseLevel, ParserCallbacks } from "../parser-types";
 import { Passage, ProjectIndex } from "../project-index";
+import { isIdentifierName } from "../script-analysis";
 import { TokenModifier, TokenType } from "../semantic-tokens";
 
 /**
@@ -156,6 +159,23 @@ export interface StoryFormatParser {
         includeDeclaration: boolean,
     ): Location[] | undefined | null;
     /**
+     * Can the symbol at a position be renamed?
+     *
+     * Story formats can define this to rule out symbols they index that
+     * aren't renamable, so another rename provider can handle the position.
+     * If it's not defined, every indexed symbol can be renamed.
+     *
+     * @param documentUri URI to the document with the symbol.
+     * @param position Symbol's position in the document.
+     * @param index Twine project index.
+     * @returns False if the symbol can't be renamed.
+     */
+    isRenamableAt?(
+        documentUri: string,
+        position: Position,
+        index: ProjectIndex,
+    ): boolean;
+    /**
      * Generate renames for a symbol as referenced by its position in a document.
      *
      * Story formats can define this if they need to handle how renames occur, such as
@@ -167,14 +187,47 @@ export interface StoryFormatParser {
      * @param position Reference's position in the document.
      * @param newName Reference's new name.
      * @param index Twine project index.
-     * @returns Edits to perform the rename, or undefined if the rename isn't possible.
+     * @returns Edits to perform the rename, undefined if there's nothing to rename, or an error if the rename would produce a wrong result.
      */
     generateRenamesAt(
         documentUri: string,
         position: Position,
         newName: string,
         index: ProjectIndex,
-    ): { [uri: DocumentUri]: TextEdit[] } | undefined | null;
+    ): { [uri: DocumentUri]: TextEdit[] } | RenameRefusal | undefined | null;
+}
+
+/**
+ * A rename that's refused because there's no correct result.
+ */
+export type RenameRefusal = ResponseError<void>;
+
+/**
+ * Refuse a rename.
+ *
+ * @param message Why the rename was refused (to be shown to the author).
+ */
+export function refuseRename(message: string): RenameRefusal {
+    return new ResponseError(LSPErrorCodes.RequestFailed, message);
+}
+
+/**
+ * Refuse renaming a story property to a name that isn't a JavaScript
+ * identifier.
+ *
+ * @param contents The property's full dotted path.
+ * @param newName New name for the property's last segment.
+ * @returns The refusal, or undefined if the new name is fine.
+ */
+export function refuseInvalidPropertyName(
+    contents: string,
+    newName: string,
+): RenameRefusal | undefined {
+    if (isIdentifierName(newName)) return undefined;
+    const oldName = contents.slice(contents.lastIndexOf(".") + 1);
+    return refuseRename(
+        `Can't rename \`${oldName}\` to \`${newName}\`: \`${newName}\` isn't a valid JavaScript identifier.`,
+    );
 }
 
 /**

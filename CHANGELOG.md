@@ -7,7 +7,7 @@ Changes to the extension.
 Four big changes:
 
 - Story build configuration is now handled by a `tt3.config.json` file instead of in extension settings.
-- Story variables in `.js` files are now indexed.
+- Story variables in `.js` files are now indexed and renamable.
 - Diagnostics have been extensively re-worked.
     - The extension now reports JavaScript errors in Twee files.
     - It flags variables that (it thinks) have never been defined.
@@ -19,7 +19,7 @@ Four big changes:
 ### Added
 
 - `tt3.config.json` to set story build configuration.
-- JavaScript files are now parsed and story variables indexed.
+- JavaScript files are now parsed and story variables within them indexed and renamable.
 - JavaScript diagnostics (warnings and errors) in Twee files are now reported.
 - Diagnostics can now be disabled in a passage by adding `tt3-disable` followed by comma-separated list of diagnostics to the passage's tags: `[tt3-disable <diagnostic-code-1>,<diagnostic-code-2>]`.
 - Added Quick Fix actions for disabling diagnostics for a passage or globally.

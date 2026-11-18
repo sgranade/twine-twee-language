@@ -15,6 +15,66 @@ export function isIdentifierName(text: string): boolean {
 }
 
 /**
+ * Reserved words that can't be a JavaScript binding or bare reference,
+ * including the ones reserved only in strict mode or in modules.
+ */
+const reservedWords: ReadonlySet<string> = new Set([
+    "await",
+    "break",
+    "case",
+    "catch",
+    "class",
+    "const",
+    "continue",
+    "debugger",
+    "default",
+    "delete",
+    "do",
+    "else",
+    "enum",
+    "export",
+    "extends",
+    "false",
+    "finally",
+    "for",
+    "function",
+    "if",
+    "implements",
+    "import",
+    "in",
+    "instanceof",
+    "interface",
+    "let",
+    "new",
+    "null",
+    "package",
+    "private",
+    "protected",
+    "public",
+    "return",
+    "static",
+    "super",
+    "switch",
+    "this",
+    "throw",
+    "true",
+    "try",
+    "typeof",
+    "var",
+    "void",
+    "while",
+    "with",
+    "yield",
+]);
+
+/**
+ * Is `text` a JavaScript reserved word and so can't be a bare name?
+ */
+export function isReservedWord(text: string): boolean {
+    return reservedWords.has(text);
+}
+
+/**
  * A statically-known name and where it sits in the source.
  */
 export interface StaticName {

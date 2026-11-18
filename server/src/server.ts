@@ -78,6 +78,7 @@ let hasConfigurationCapability = false;
 let hasCompletionListItemDefaults = false;
 let hasDiagnosticRelatedInformationCapability = false;
 let hasPrepareProviderCapability = false;
+let hasDocumentChangesCapability = false;
 
 const indexingQueue = new IndexingQueue({
     clock: {
@@ -139,6 +140,8 @@ connection.onInitialize((params: InitializeParams) => {
     }
     hasPrepareProviderCapability =
         !!capabilities.textDocument?.rename?.prepareSupport;
+    hasDocumentChangesCapability =
+        !!capabilities.workspace?.workspaceEdit?.documentChanges;
 
     const result: InitializeResult = {
         capabilities: {
@@ -368,14 +371,21 @@ connection.onPrepareRename((params: PrepareRenameParams): Range | undefined => {
     );
 });
 
-connection.onRenameRequest((params: RenameParams): WorkspaceEdit | null => {
-    return generateRenames(
-        params.textDocument.uri,
-        params.position,
-        params.newName,
-        projectIndex,
-    );
-});
+connection.onRenameRequest(
+    (params: RenameParams): WorkspaceEdit | ResponseError<void> | null => {
+        return generateRenames(
+            params.textDocument.uri,
+            params.position,
+            params.newName,
+            projectIndex,
+            undefined,
+            {
+                documentChanges: hasDocumentChangesCapability,
+                versionOf: (uri) => documents.get(uri)?.version ?? null,
+            },
+        );
+    },
+);
 
 connection.onReferences((params: ReferenceParams): Location[] | undefined => {
     return getReferencesToSymbolAt(

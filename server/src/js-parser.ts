@@ -14,7 +14,14 @@ import {
     StoryFormatParsingState,
     capturePreSemanticTokenFor,
 } from "./passage-text-parsers/types";
-import { Callable, calleeFlag, Sigiled, sigilFlag } from "./project-index";
+import {
+    Callable,
+    calleeFlag,
+    Shorthand,
+    shorthandFlag,
+    Sigiled,
+    sigilFlag,
+} from "./project-index";
 import { MISSING_IDENTIFIER } from "./script-analysis";
 import { ETokenType, TokenModifier, TokenType } from "./semantic-tokens";
 import { Label } from "./types";
@@ -46,7 +53,7 @@ export type ScriptOccurrenceRole = "conditional-reference" | "root-declaration";
 /**
  * Label for a parsed javascript variable.
  */
-export interface JSVariableLabel extends Label, Sigiled {
+export interface JSVariableLabel extends Label, Sigiled, Shorthand {
     /**
      * What the variable is if it isn't a story variable.
      */
@@ -119,6 +126,7 @@ export interface ScriptVariableOccurrence {
     at: number;
     assigned: boolean;
     sigilOutsideRange?: boolean;
+    shorthand?: boolean;
     role?: ScriptOccurrenceRole;
 }
 
@@ -624,6 +632,13 @@ type MemberSegment = { name: string | undefined; start: number };
  */
 function isDynamicChain(chain: MemberChain): boolean {
     return chain.properties.some((p) => p.name === undefined);
+}
+
+/**
+ * Is the name one of JavaScript's own globals?
+ */
+export function isEcmaScriptGlobal(name: string): boolean {
+    return ecmaScriptGlobals.has(name);
 }
 
 /**
@@ -1513,6 +1528,7 @@ export function tokenizeJavaScript(
                 ),
                 assigned: variable.assigned,
                 ...sigilFlag(variable),
+                ...shorthandFlag(variable),
                 ...(variable.role ? { role: variable.role } : {}),
             });
         }

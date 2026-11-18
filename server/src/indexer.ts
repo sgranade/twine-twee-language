@@ -14,6 +14,7 @@ import { ParseLevel, ParserCallbacks } from "./parser-types";
 import { getStoryFormatParser } from "./passage-text-parsers";
 import {
     calleeFlag,
+    shorthandFlag,
     sigilFlag,
     Passage,
     ProjectIndex,
@@ -49,19 +50,20 @@ class IndexingState {
 }
 
 /**
- * Collate individual references by kind, name, and callee-ness, so diagnostics
- * can exempt call sites w/o exempting plain reads.
+ * Collate individual references by kind, name, and per-occurrence flags so
+ * e.g. diagnostics can exempt call sites w/o exempting plain reads.
  */
 function collateReferences(symbols: ProjSymbol[]): References[] {
     const referencesMap: Record<string, References> = {};
     for (const symbol of symbols) {
-        const key = `${symbol.kind},${symbol.contents},${!!symbol.isCallee},${!!symbol.sigilOutsideRange}`;
+        const key = `${symbol.kind},${symbol.contents},${!!symbol.isCallee},${!!symbol.sigilOutsideRange},${!!symbol.shorthand}`;
         const ref = referencesMap[key] || {
             contents: symbol.contents,
             locations: [],
             kind: symbol.kind,
             ...calleeFlag(symbol),
             ...sigilFlag(symbol),
+            ...shorthandFlag(symbol),
         };
         ref.locations.push(symbol.location);
         referencesMap[key] = ref;
