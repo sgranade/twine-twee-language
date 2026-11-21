@@ -6,9 +6,6 @@ import {
     DefinitionParams,
     Definition,
     DidChangeConfigurationNotification,
-    DidCreateFilesNotification,
-    DidDeleteFilesNotification,
-    DidRenameFilesNotification,
     DocumentSymbol,
     DocumentSymbolParams,
     FileChangeType,
@@ -60,7 +57,10 @@ import {
     generateSymbols,
 } from "./structure";
 import { generateDiagnostics } from "./validator";
-import { WorkspaceFileTracker } from "./workspace-file-tracker";
+import {
+    WatchedFileChange,
+    WorkspaceFileTracker,
+} from "./workspace-file-tracker";
 import { getSugarCubeMacroInfo } from "./passage-text-parsers/sugarcube";
 import {
     setCustomMacrosAndEnums,
@@ -107,6 +107,8 @@ const indexingQueue = new IndexingQueue({
     processAllOpenDocuments: () => processAllOpenDocuments(),
     parseMacroFile: (uri) => parseT3LTMacroFile(uri),
     onMacroChanges: () => onSCMacroChanges(),
+    fileSetsResolved: (files) => fileTracker.setFileSets(files),
+    revalidateOpenTweeDocuments: () => revalidateOpenTweeDocuments(),
     indexingStarted: () =>
         connection.sendNotification(CustomMessages.IndexingStarted),
     indexingComplete: () => {
@@ -119,12 +121,14 @@ const indexingQueue = new IndexingQueue({
 const fileTracker = new WorkspaceFileTracker({
     index: projectIndex,
     queue: indexingQueue,
-    processAllOpenDocuments: () => processAllOpenDocuments(),
+    findProjectFiles: () => connection.sendRequest(FindProjectFilesRequest),
+    isOpen: (uri) => documents.get(uri) !== undefined,
     parseMacroFile: (uri) => parseT3LTMacroFile(uri),
     onMacroChanges: () => onSCMacroChanges(),
     indexScriptFile: (doc, role) =>
         updateScriptFileIndex(doc, role, ParseLevel.Full, projectIndex),
     revalidateOpenTweeDocuments: () => revalidateOpenTweeDocuments(),
+    logError: (message) => connection.console.error(message),
 });
 
 connection.onInitialize((params: InitializeParams) => {
@@ -194,41 +198,6 @@ connection.onInitialize((params: InitializeParams) => {
             semanticTokensProvider: {
                 legend: semanticTokensLegend,
                 full: true,
-            },
-            // We're interested in file stuff involving Twee files
-            workspace: {
-                fileOperations: {
-                    didCreate: {
-                        filters: [
-                            {
-                                scheme: "file",
-                                pattern: {
-                                    glob: "**/*.{tw,twee}",
-                                },
-                            },
-                        ],
-                    },
-                    didDelete: {
-                        filters: [
-                            {
-                                scheme: "file",
-                                pattern: {
-                                    glob: "**/*.{tw,twee}",
-                                },
-                            },
-                        ],
-                    },
-                    didRename: {
-                        filters: [
-                            {
-                                scheme: "file",
-                                pattern: {
-                                    glob: "**/*.{tw,twee}",
-                                },
-                            },
-                        ],
-                    },
-                },
             },
         },
     };
@@ -334,13 +303,26 @@ documents.onDidClose((change) => {
     if (projectIndex.isScriptFile(change.document.uri)) {
         fileTracker.indexPendingScripts();
     }
+    // Drop any unsaved edits by re-reading the file from disk
+    void fileTracker.handleDocumentClosed(change.document.uri);
 });
 
-connection.onDidChangeWatchedFiles((_change) => {
-    fileTracker.handleWatchedFileChanges(
-        (_change.changes ?? []).map((c) => ({
+function watchedChangeKind(type: FileChangeType): WatchedFileChange["kind"] {
+    switch (type) {
+        case FileChangeType.Created:
+            return "created";
+        case FileChangeType.Deleted:
+            return "deleted";
+        default:
+            return "changed";
+    }
+}
+
+connection.onDidChangeWatchedFiles(async (change) => {
+    await fileTracker.handleWatchedFileChanges(
+        (change.changes ?? []).map((c) => ({
             uri: c.uri,
-            deleted: c.type === FileChangeType.Deleted,
+            kind: watchedChangeKind(c.type),
         })),
     );
 });
@@ -386,18 +368,6 @@ connection.onNotification(CustomMessages.RequestReindex, () => {
 
 connection.onNotification(CustomMessages.RequestDecorationRanges, (uri) => {
     sendDecorationRanges(uri);
-});
-
-connection.onNotification(DidCreateFilesNotification.type, async (params) => {
-    await fileTracker.handleFilesCreated(params.files.map((f) => f.uri));
-});
-
-connection.onNotification(DidDeleteFilesNotification.type, async (params) => {
-    await fileTracker.handleFilesDeleted(params.files.map((f) => f.uri));
-});
-
-connection.onNotification(DidRenameFilesNotification.type, async (params) => {
-    await fileTracker.handleFilesRenamed(params.files);
 });
 
 connection.onPrepareRename(

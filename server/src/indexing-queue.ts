@@ -43,6 +43,9 @@ export interface IndexingQueueDeps {
     processAllOpenDocuments(): Promise<void>;
     parseMacroFile(uri: string): Promise<void>;
     onMacroChanges(): void;
+    /* Callback for resolved file sets from findProjectFiles() */
+    fileSetsResolved(files: ProjectFiles): void;
+    revalidateOpenTweeDocuments(): Promise<void>;
     indexingStarted(): Promise<void> | void;
     indexingComplete(): void;
     logError(message: string): void;
@@ -144,6 +147,7 @@ export class IndexingQueue {
                     }
                 }
                 this.requestedFileIndexes.clear();
+                await this.deps.revalidateOpenTweeDocuments();
             } else if (this.sugarcubeMacroIndexRequested) {
                 await this.indexT3LTMacroFiles();
             }
@@ -186,6 +190,7 @@ export class IndexingQueue {
 
         try {
             const projectFiles = await deps.findProjectFiles();
+            deps.fileSetsResolved(projectFiles); // Let folks know we're done
             const tweeFileUris = new Set(projectFiles.tweeFiles);
             const storyScriptUris = new Set(projectFiles.storyScriptFiles);
             const includedScriptUris = new Set(projectFiles.includedScripts);

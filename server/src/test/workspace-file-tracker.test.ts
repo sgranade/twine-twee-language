@@ -1,97 +1,459 @@
 import "mocha";
 import { expect } from "chai";
 import * as sinon from "sinon";
+import { Diagnostic } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
+import { DiagnosticCodes, ProjectFiles } from "@tt3/shared";
 import { updateProjectIndex, updateScriptFileIndex } from "../indexer";
+import { IndexingQueue } from "../indexing-queue";
 import { ParseLevel } from "../parser-types";
 import { Index } from "../project-index";
 import { generateRenames } from "../renames";
+import { generateDiagnostics } from "../validator";
 
 import * as uut from "../workspace-file-tracker";
 
-function build(overrides: Partial<uut.WorkspaceFileTrackerDeps> = {}) {
+const storyUri = "file:///story.tw";
+const otherUri = "file:///other.tw";
+
+function twee(uri: string, text: string) {
+    return TextDocument.create(uri, "twee3", 1, text);
+}
+
+function build(
+    overrides: Partial<uut.WorkspaceFileTrackerDeps> = {},
+    setsKnown = true,
+) {
     const calls: string[] = [];
     const queued: string[] = [];
     const index = new Index();
     const deps: uut.WorkspaceFileTrackerDeps = {
         index,
-        queue: { indexFile: (uri) => void queued.push(uri) },
-        processAllOpenDocuments: async () => void calls.push("processAll"),
+        queue: {
+            indexFile: (uri) => void queued.push(uri),
+            indexWorkspace: () => void calls.push("indexWorkspace"),
+        },
+        findProjectFiles: async () => ({
+            tweeFiles: [storyUri, otherUri, "file:///new.tw"],
+            storyScriptFiles: [],
+            includedScripts: [],
+        }),
+        isOpen: () => false,
         parseMacroFile: async (uri) => void calls.push(`macro:${uri}`),
         onMacroChanges: () => void calls.push("macroChanges"),
+        logError: (message) => void calls.push(`error:${message}`),
         indexScriptFile: (doc) => void calls.push(`script:${doc.uri}`),
         revalidateOpenTweeDocuments: async () => void calls.push("revalidate"),
         ...overrides,
     };
-    return {
-        tracker: new uut.WorkspaceFileTracker(deps),
-        calls,
-        queued,
+    const tracker = new uut.WorkspaceFileTracker(deps);
+    if (setsKnown) {
+        tracker.setFileSets({
+            tweeFiles: [storyUri, otherUri],
+            storyScriptFiles: [],
+            includedScripts: [],
+        });
+    }
+    return { tracker, calls, queued, index };
+}
+
+/**
+ * A tracker wired to a real indexing queue and index over a fake disk so's
+ * tests can assert what ends up in the index and in diagnostics.
+ */
+function harness(
+    disk: Record<string, string>,
+    {
+        open = {},
+        findProjectFiles,
+    }: {
+        open?: Record<string, string>;
+        findProjectFiles?: () => Promise<ProjectFiles>;
+    } = {},
+) {
+    const files = new Map(Object.entries(disk));
+    const openDocs = new Map(
+        Object.entries(open).map(([uri, text]) => [uri, twee(uri, text)]),
+    );
+    const index = new Index();
+    const diagnostics = new Map<string, Diagnostic[]>();
+    const counts = { resolves: 0, workspaceIndexes: 0 };
+    const errors: string[] = [];
+    let time = 0;
+    const resolve =
+        findProjectFiles ??
+        (async () => ({
+            tweeFiles: [...files.keys()].filter((uri) => uri.endsWith(".tw")),
+            storyScriptFiles: [],
+            includedScripts: [],
+        }));
+    const countedResolve = () => {
+        counts.resolves++;
+        return resolve();
+    };
+    const validate = async (doc: TextDocument) =>
+        void diagnostics.set(doc.uri, await generateDiagnostics(doc, index));
+    const revalidateOpenTweeDocuments = async () => {
+        for (const doc of openDocs.values()) await validate(doc);
+    };
+    const noop = () => {};
+    let tracker: uut.WorkspaceFileTracker;
+    const queue = new IndexingQueue({
+        clock: { now: () => time, setInterval: noop, clearInterval: noop },
         index,
+        getOpenDocument: (uri) => openDocs.get(uri),
+        getAllOpenDocuments: () => [...openDocs.values()],
+        readFile: async (uri) => {
+            const text = files.get(uri);
+            return text === undefined ? undefined : twee(uri, text);
+        },
+        findProjectFiles: countedResolve,
+        findFiles: async () => [],
+        indexStoryData: (doc) =>
+            updateProjectIndex(doc, ParseLevel.StoryData, index),
+        indexScriptFile: noop,
+        parseDocument: async (doc, level) =>
+            updateProjectIndex(doc, level, index),
+        validateDocument: validate,
+        sendDecorationRanges: noop,
+        onStoryFormatChange: noop,
+        processAllOpenDocuments: async () => {},
+        parseMacroFile: async () => {},
+        onMacroChanges: noop,
+        fileSetsResolved: (sets) => tracker.setFileSets(sets),
+        revalidateOpenTweeDocuments,
+        indexingStarted: () => void counts.workspaceIndexes++,
+        indexingComplete: noop,
+        logError: noop,
+    });
+    tracker = new uut.WorkspaceFileTracker({
+        index,
+        queue,
+        findProjectFiles: countedResolve,
+        isOpen: (uri) => openDocs.has(uri),
+        parseMacroFile: async () => {},
+        onMacroChanges: noop,
+        logError: (message) => void errors.push(message),
+        indexScriptFile: noop,
+        revalidateOpenTweeDocuments,
+    });
+    /** Run the queue until it has nothing left to do. */
+    const drain = async () => {
+        for (let i = 0; i < 5; i++) {
+            time += 1000;
+            await queue.run();
+        }
+    };
+    /** Index the workspace as the server does on startup, then reset the counts. */
+    const start = async () => {
+        queue.indexWorkspace();
+        await drain();
+        await revalidateOpenTweeDocuments();
+        counts.resolves = 0;
+        counts.workspaceIndexes = 0;
+    };
+    const missingPassages = (uri: string) =>
+        (diagnostics.get(uri) ?? []).filter(
+            (d) => d.code === DiagnosticCodes.MissingPassage,
+        ).length;
+    return {
+        tracker,
+        index,
+        files,
+        openDocs,
+        counts,
+        errors,
+        drain,
+        start,
+        missingPassages,
     };
 }
 
+const storyText =
+    ':: StoryData\n{"ifid": "x", "format": "SugarCube", "format-version": "2.36.1"}\n\n:: Start\n[[Next]]\n';
+const nextText = ":: Next\nHello\n";
+
 describe("Workspace File Tracker", () => {
-    it("should remove a deleted Twee file from the index but ignore other deletions", () => {
-        const { tracker, index } = build();
-        index.setPassages("file:///a.tw", []);
-        index.setPassages("file:///a.txt", []);
+    describe("Twee Files on Disk", () => {
+        let clock: sinon.SinonFakeTimers;
 
-        tracker.handleWatchedFileChanges([
-            { uri: "file:///a.tw", deleted: true },
-            { uri: "file:///a.txt", deleted: true },
-        ]);
+        beforeEach(() => {
+            clock = sinon.useFakeTimers();
+        });
 
-        expect(index.getIndexedUris()).to.eql(["file:///a.txt"]);
+        afterEach(() => {
+            clock.restore();
+        });
+
+        it("should re-index a closed Twee file changed on disk and update diagnostics", async () => {
+            const h = harness(
+                { [storyUri]: storyText, [otherUri]: nextText },
+                { open: { [storyUri]: storyText } },
+            );
+            await h.start();
+            expect(h.missingPassages(storyUri)).to.eql(0);
+
+            h.files.set(otherUri, ":: Elsewhere\n");
+            await h.tracker.handleWatchedFileChanges([
+                { uri: otherUri, kind: "changed" },
+            ]);
+            await h.drain();
+
+            expect(h.index.getPassageNames()).to.include("Elsewhere");
+            expect(h.index.getPassageNames()).not.to.include("Next");
+            expect(h.missingPassages(storyUri)).to.eql(1);
+        });
+
+        it("should keep the synced buffer when an open Twee file changes on disk", async () => {
+            const h = harness(
+                { [storyUri]: storyText, [otherUri]: nextText },
+                { open: { [otherUri]: nextText } },
+            );
+            await h.start();
+
+            h.files.set(otherUri, ":: Elsewhere\n");
+            await h.tracker.handleWatchedFileChanges([
+                { uri: otherUri, kind: "changed" },
+            ]);
+            await h.drain();
+
+            expect(h.index.getPassageNames()).to.include("Next");
+            expect(h.index.getPassageNames()).not.to.include("Elsewhere");
+        });
+
+        it("should ignore changes to files outside the resolved sets", async () => {
+            const h = harness({ [storyUri]: storyText });
+            await h.start();
+
+            await h.tracker.handleWatchedFileChanges([
+                { uri: "file:///stray.txt", kind: "changed" },
+                { uri: "file:///atwork.js", kind: "deleted" },
+            ]);
+            await h.drain();
+
+            expect(h.index.getIndexedUris()).to.eql([storyUri]);
+        });
+
+        it("should restore the on-disk contents when an edited buffer closes unsaved", async () => {
+            const h = harness(
+                { [storyUri]: storyText, [otherUri]: nextText },
+                { open: { [otherUri]: ":: Unsaved\n" } },
+            );
+            await h.start();
+            expect(h.index.getPassageNames()).to.include("Unsaved");
+
+            h.openDocs.delete(otherUri);
+            await h.tracker.handleDocumentClosed(otherUri);
+            await h.drain();
+
+            expect(h.index.getPassageNames()).to.include("Next");
+            expect(h.index.getPassageNames()).not.to.include("Unsaved");
+        });
+
+        it("should remove a deleted Twee file and revalidate open documents", async () => {
+            const h = harness(
+                { [storyUri]: storyText, [otherUri]: nextText },
+                { open: { [storyUri]: storyText } },
+            );
+            await h.start();
+
+            h.files.delete(otherUri);
+            await h.tracker.handleWatchedFileChanges([
+                { uri: otherUri, kind: "deleted" },
+            ]);
+            await h.drain();
+
+            expect(h.index.getIndexedUris()).to.eql([storyUri]);
+            expect(h.missingPassages(storyUri)).to.eql(1);
+            expect(h.counts.workspaceIndexes).to.eql(0);
+        });
+
+        it("should reindex the workspace once and clear the format when the StoryData file is deleted", async () => {
+            const h = harness({ [storyUri]: storyText, [otherUri]: nextText });
+            await h.start();
+            expect(h.index.getStoryData()).not.to.be.undefined;
+
+            h.files.delete(storyUri);
+            await h.tracker.handleWatchedFileChanges([
+                { uri: storyUri, kind: "deleted" },
+            ]);
+            await h.drain();
+
+            expect(h.counts.workspaceIndexes).to.eql(1);
+            expect(h.index.getStoryData()).to.be.undefined;
+        });
+
+        it("should rediscover StoryData when its file is renamed", async () => {
+            const movedUri = "file:///moved.tw";
+            const h = harness({ [storyUri]: storyText, [otherUri]: nextText });
+            await h.start();
+
+            h.files.delete(storyUri);
+            h.files.set(movedUri, storyText);
+            await h.tracker.handleWatchedFileChanges([
+                { uri: storyUri, kind: "deleted" },
+                { uri: movedUri, kind: "created" },
+            ]);
+            await clock.tickAsync(uut.fileSetResolveDebounceMs);
+            await h.drain();
+
+            expect(h.counts.workspaceIndexes).to.eql(1);
+            expect(h.index.getStoryDataUri()).to.eql(movedUri);
+            expect(h.index.getIndexedUris()).not.to.include(storyUri);
+        });
+
+        it("should treat a rename as a delete plus a create", async () => {
+            const renamedUri = "file:///renamed.tw";
+            const h = harness(
+                { [storyUri]: storyText, [otherUri]: nextText },
+                { open: { [storyUri]: storyText } },
+            );
+            await h.start();
+
+            h.files.delete(otherUri);
+            h.files.set(renamedUri, nextText);
+            await h.tracker.handleWatchedFileChanges([
+                { uri: otherUri, kind: "deleted" },
+                { uri: renamedUri, kind: "created" },
+            ]);
+            await clock.tickAsync(uut.fileSetResolveDebounceMs);
+            await h.drain();
+
+            expect(h.index.getIndexedUris()).to.have.members([
+                storyUri,
+                renamedUri,
+            ]);
+            expect(h.missingPassages(storyUri)).to.eql(0);
+        });
+
+        it("should combine a burst of creates into one re-resolve after the debounce", async () => {
+            const h = harness({ [storyUri]: storyText });
+            await h.start();
+
+            for (const name of ["a", "b", "c"]) {
+                const uri = `file:///${name}.tw`;
+                h.files.set(uri, `:: ${name}\n`);
+                await h.tracker.handleWatchedFileChanges([
+                    { uri, kind: "created" },
+                ]);
+                await clock.tickAsync(uut.fileSetResolveDebounceMs - 1);
+            }
+            expect(h.counts.resolves).to.eql(0);
+            await clock.tickAsync(1);
+            await h.drain();
+
+            expect(h.counts.resolves).to.eql(1);
+            expect(h.index.getPassageNames()).to.include.members([
+                "a",
+                "b",
+                "c",
+            ]);
+        });
+
+        it("should not index created files outside the resolved sets", async () => {
+            const h = harness({ [storyUri]: storyText });
+            await h.start();
+
+            h.files.set("file:///stray.txt", ":: Stray\n");
+            await h.tracker.handleWatchedFileChanges([
+                { uri: "file:///stray.txt", kind: "created" },
+            ]);
+            await clock.tickAsync(uut.fileSetResolveDebounceMs);
+            await h.drain();
+
+            expect(h.index.getIndexedUris()).to.eql([storyUri]);
+        });
+
+        it("should apply re-resolves in order so a slow one can't overwrite a newer one", async () => {
+            let gate: Promise<void> | undefined;
+            let files: Map<string, string> = new Map();
+            const h = harness(
+                { [storyUri]: storyText },
+                {
+                    findProjectFiles: async () => {
+                        const tweeFiles = [...files.keys()];
+                        await gate;
+                        return {
+                            tweeFiles,
+                            storyScriptFiles: [],
+                            includedScripts: [],
+                        };
+                    },
+                },
+            );
+            files = h.files;
+            await h.start();
+            let release: () => void = () => {};
+            gate = new Promise((resolve) => (release = resolve));
+
+            h.files.set("file:///a.tw", ":: A\n");
+            await h.tracker.handleWatchedFileChanges([
+                { uri: "file:///a.tw", kind: "created" },
+            ]);
+            await clock.tickAsync(uut.fileSetResolveDebounceMs);
+            gate = undefined;
+            h.files.set("file:///b.tw", ":: B\n");
+            await h.tracker.handleWatchedFileChanges([
+                { uri: "file:///b.tw", kind: "created" },
+            ]);
+            await clock.tickAsync(uut.fileSetResolveDebounceMs);
+            release();
+            await clock.tickAsync(0);
+            await h.drain();
+            h.files.set("file:///b.tw", ":: B2\n");
+            await h.tracker.handleWatchedFileChanges([
+                { uri: "file:///b.tw", kind: "changed" },
+            ]);
+            await h.drain();
+
+            expect(h.index.getPassageNames()).to.include.members(["A", "B2"]);
+        });
+
+        it("should resolve the file sets for events arriving before the first index", async () => {
+            const h = harness({ [storyUri]: storyText, [otherUri]: nextText });
+
+            await h.tracker.handleWatchedFileChanges([
+                { uri: otherUri, kind: "changed" },
+            ]);
+            await h.drain();
+
+            expect(h.counts.resolves).to.eql(1);
+            expect(h.index.getPassageNames()).to.include("Next");
+        });
+
+        it("should log and drop the event if resolving the file sets fails", async () => {
+            const h = harness(
+                { [storyUri]: storyText },
+                {
+                    findProjectFiles: async () => {
+                        throw new Error("boom");
+                    },
+                },
+            );
+
+            await h.tracker.handleWatchedFileChanges([
+                { uri: storyUri, kind: "changed" },
+            ]);
+            await h.drain();
+
+            expect(h.errors).to.have.length(1);
+            expect(h.counts.workspaceIndexes).to.eql(0);
+            expect(h.index.getIndexedUris()).to.eql([]);
+        });
     });
 
-    it("should only treat files ending in .tw or .twee as Twee files", () => {
-        const { tracker, index } = build();
-        index.setPassages("file:///atwork.js", []);
-        index.setPassages("file:///B.TWEE", []);
-
-        tracker.handleWatchedFileChanges([
-            { uri: "file:///atwork.js", deleted: true }, // note the "tw" hiding in "atwork"
-            { uri: "file:///B.TWEE", deleted: true },
-        ]);
-
-        expect(index.getIndexedUris()).to.eql(["file:///atwork.js"]);
-    });
-
-    it("should reparse a changed macro config file", () => {
+    it("should reparse a changed macro config file", async () => {
         const { tracker, calls } = build();
 
-        tracker.handleWatchedFileChanges([
-            { uri: "file:///x.twee-config.json", deleted: false },
+        await tracker.handleWatchedFileChanges([
+            { uri: "file:///x.twee-config.json", kind: "changed" },
         ]);
 
         expect(calls).to.eql([
             "macro:file:///x.twee-config.json",
             "macroChanges",
         ]);
-    });
-
-    it("should queue created Twee files and reprocess open documents", async () => {
-        const { tracker, calls, queued } = build();
-
-        await tracker.handleFilesCreated(["file:///n.tw", "file:///n.txt"]);
-
-        expect(queued).to.eql(["file:///n.tw"]);
-        expect(calls).to.eql(["processAll"]);
-    });
-
-    it("should rename and remove documents on rename", async () => {
-        const { tracker, index } = build();
-        index.setPassages("file:///a.tw", []);
-        index.setPassages("file:///b.tw", []);
-
-        await tracker.handleFilesRenamed([
-            { oldUri: "file:///a.tw", newUri: "file:///c.tw" },
-            { oldUri: "file:///b.tw", newUri: "file:///b.txt" },
-        ]);
-
-        expect(index.getIndexedUris()).to.eql(["file:///c.tw"]);
     });
 
     describe("Open Script File Handling", () => {

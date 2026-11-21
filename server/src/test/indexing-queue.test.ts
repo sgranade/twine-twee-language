@@ -41,6 +41,8 @@ function build(overrides: Partial<uut.IndexingQueueDeps> = {}) {
         processAllOpenDocuments: async () => void calls.push("processAll"),
         parseMacroFile: async (uri) => void calls.push(`macro:${uri}`),
         onMacroChanges: () => void calls.push("macroChanges"),
+        fileSetsResolved: () => {},
+        revalidateOpenTweeDocuments: async () => {},
         indexingStarted: () => void calls.push("started"),
         indexingComplete: () => void calls.push("complete"),
         logError: (m) => void calls.push(`error:${m}`),
@@ -106,6 +108,45 @@ describe("Indexing Queue", () => {
             "parse:file:///c.tw:true",
             "validate:file:///c.tw",
             "decor:file:///c.tw",
+        ]);
+    });
+
+    it("should report the resolved file sets when the workspace is indexed", async () => {
+        const resolved: unknown[] = [];
+        const { queue } = build({
+            fileSetsResolved: (files) => void resolved.push(files),
+        });
+
+        queue.indexWorkspace();
+        await queue.run();
+
+        expect(resolved).to.eql([
+            {
+                tweeFiles: ["file:///a.tw", "file:///b.tw"],
+                storyScriptFiles: [],
+                includedScripts: [],
+            },
+        ]);
+    });
+
+    it("should revalidate open Twee documents once after a batch of requested files", async () => {
+        const { queue, calls } = build({
+            revalidateOpenTweeDocuments: async () =>
+                void calls.push("revalidate"),
+        });
+
+        queue.indexFile("file:///c.tw");
+        queue.indexFile("file:///d.tw");
+        await queue.run();
+
+        expect(calls).to.eql([
+            "parse:file:///c.tw:true",
+            "validate:file:///c.tw",
+            "decor:file:///c.tw",
+            "parse:file:///d.tw:true",
+            "validate:file:///d.tw",
+            "decor:file:///d.tw",
+            "revalidate",
         ]);
     });
 
