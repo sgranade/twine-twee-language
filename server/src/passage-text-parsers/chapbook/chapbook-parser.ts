@@ -86,17 +86,11 @@ export function getChapbookDefinitions(
     kind: ChapbookSymbolKind,
     index: ProjectIndex,
 ): ChapbookSymbol[] {
-    const customSymbols: ChapbookSymbol[] = [];
-    for (const uri of index.getIndexedUris()) {
-        customSymbols.push(
-            ...(index
-                .getDefinitions(uri, kind)
-                ?.filter<ChapbookSymbol>((x): x is ChapbookSymbol =>
-                    ChapbookSymbol.is(x),
-                ) ?? []),
+    return index
+        .getProjectDefinitions(kind)
+        .filter<ChapbookSymbol>((x): x is ChapbookSymbol =>
+            ChapbookSymbol.is(x),
         );
-    }
-    return customSymbols;
 }
 
 /**

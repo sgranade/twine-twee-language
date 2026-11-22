@@ -18,12 +18,10 @@ export function getAssignmentLocations(
     assignmentKind: number,
     name: string,
 ): Location[] | undefined {
-    const locations: Location[] = [];
-    for (const uri of index.getIndexedUris()) {
-        for (const ref of index.getReferences(uri, assignmentKind) ?? []) {
-            if (ref.contents === name) locations.push(...ref.locations);
-        }
-    }
+    const locations = index
+        .getProjectReferences([assignmentKind])
+        .filter((ref) => ref.contents === name)
+        .flatMap((ref) => ref.locations);
     return locations.length > 0 ? locations : undefined;
 }
 
@@ -45,50 +43,6 @@ export interface NeverSetCheck {
     builtInProperties: Iterable<string>;
     /** Diagnostic message for a variable or property that's never set. */
     message: string;
-}
-
-/**
- * Collect the names of every assignment of a symbol kind in the project.
- *
- * @param index Project index.
- * @param assignmentKind Story format's symbol kind for an assignment.
- * @param builtIns Names the story format sets itself.
- * @returns Set of assigned names.
- */
-function getAssignedNames(
-    index: ProjectIndex,
-    assignmentKind: number,
-    builtIns: Iterable<string>,
-): Set<string> {
-    const names = new Set(builtIns);
-    for (const uri of index.getIndexedUris()) {
-        for (const ref of index.getReferences(uri, assignmentKind) ?? []) {
-            names.add(ref.contents);
-        }
-    }
-    return names;
-}
-
-/**
- * Collect the paths of every opaque assignment in the project.
- *
- * @param index Project index.
- * @param assignmentKinds Story format's symbol kinds for an assignment.
- * @returns Set of opaque paths.
- */
-function getOpaquePaths(
-    index: ProjectIndex,
-    assignmentKinds: number[],
-): Set<string> {
-    const paths = new Set<string>();
-    for (const uri of index.getIndexedUris()) {
-        for (const kind of assignmentKinds) {
-            for (const ref of index.getReferences(uri, kind) ?? []) {
-                if (ref.opaque) paths.add(ref.contents);
-            }
-        }
-    }
-    return paths;
 }
 
 /**
@@ -128,21 +82,21 @@ export function generateNeverAssignedToDiagnostics(
 ): Diagnostic[] {
     const diagnostics: Diagnostic[] = [];
 
-    const varSetNames = getAssignedNames(
-        index,
-        check.variableSetKind,
-        check.builtInVariables,
-    );
-    const propSetNames = getAssignedNames(
-        index,
-        check.propertySetKind,
-        check.builtInProperties,
-    );
-    const opaquePaths = getOpaquePaths(index, [
-        check.variableSetKind,
-        check.propertySetKind,
+    const varSets = index.getProjectReferences([check.variableSetKind]);
+    const propSets = index.getProjectReferences([check.propertySetKind]);
+    const varSetNames = new Set([
+        ...check.builtInVariables,
+        ...varSets.map((ref) => ref.contents),
     ]);
-
+    const propSetNames = new Set([
+        ...check.builtInProperties,
+        ...propSets.map((ref) => ref.contents),
+    ]);
+    const opaquePaths = new Set(
+        [...varSets, ...propSets]
+            .filter((ref) => ref.opaque)
+            .map((ref) => ref.contents),
+    );
     for (const varRef of index.getReferences(uri, check.variableKind) ?? []) {
         if (!varSetNames.has(varRef.contents)) {
             diagnostics.push(

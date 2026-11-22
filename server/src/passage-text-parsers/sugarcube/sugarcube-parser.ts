@@ -72,11 +72,7 @@ export function getSugarCubeDefinitions(
     kind: SugarCubeSymbolKind,
     index: ProjectIndex,
 ): ProjSymbol[] {
-    const symbols: ProjSymbol[] = [];
-    for (const uri of index.getIndexedUris()) {
-        symbols.push(...(index.getDefinitions(uri, kind) ?? []));
-    }
-    return symbols;
+    return index.getProjectDefinitions(kind);
 }
 
 /**

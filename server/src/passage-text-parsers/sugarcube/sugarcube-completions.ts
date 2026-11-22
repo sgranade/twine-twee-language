@@ -45,48 +45,28 @@ function generateVariableAndPropertyCompletions(
                   document.positionAt(textOffset + text.length - m[3].length),
                   document.positionAt(textOffset + text.length),
               );
-    for (const uri of index.getIndexedUris()) {
-        if (context !== undefined) {
-            // Get all properties whose contents match the full context, whether set or not
-            const seen: Set<string> = new Set();
-
-            for (const kind of [
-                OSugarCubeSymbolKind.PropertySet,
-                OSugarCubeSymbolKind.Property,
-            ]) {
-                const refs = index.getReferences(uri, kind) ?? [];
-
-                for (const ref of refs) {
-                    if (ref.contents.startsWith(context)) {
-                        const completion =
-                            ref.contents.split(".").pop() ?? ref.contents;
-                        if (!seen.has(completion)) {
-                            seen.add(completion);
-                            completions.push(completion);
-                        }
-                    }
-                }
-            }
-        } else {
-            // Get all variables (set or not) that start with the same sigil ($ or _)
-            const seen: Set<string> = new Set();
-
-            for (const kind of [
-                OSugarCubeSymbolKind.VariableSet,
-                OSugarCubeSymbolKind.Variable,
-            ]) {
-                const refs = index.getReferences(uri, kind) ?? [];
-
-                for (const ref of refs) {
-                    if (ref.contents.startsWith(text[0])) {
-                        if (!seen.has(ref.contents)) {
-                            seen.add(ref.contents);
-                            completions.push(ref.contents);
-                        }
-                    }
-                }
-            }
-        }
+    if (context !== undefined) {
+        // Get all properties whose contents match the full context, whether assigned to or not
+        completions.push(
+            ...index
+                .getProjectReferences([
+                    OSugarCubeSymbolKind.PropertySet,
+                    OSugarCubeSymbolKind.Property,
+                ])
+                .filter((ref) => ref.contents.startsWith(context))
+                .map((ref) => ref.contents.split(".").pop() ?? ref.contents),
+        );
+    } else {
+        // Get all variables (set or not) that start with the same sigil ($ or _)
+        completions.push(
+            ...index
+                .getProjectReferences([
+                    OSugarCubeSymbolKind.VariableSet,
+                    OSugarCubeSymbolKind.Variable,
+                ])
+                .filter((ref) => ref.contents.startsWith(text[0]))
+                .map((ref) => ref.contents),
+        );
     }
     if (range !== undefined) {
         return CompletionList.create(

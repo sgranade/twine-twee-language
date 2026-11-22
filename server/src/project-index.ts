@@ -289,6 +289,22 @@ export interface ProjectIndex {
      */
     getReferences(uri: string, kind: number): References[] | undefined;
     /**
+     * Get every definition of a kind across all indexed documents.
+     * @param kind Kind of symbol definitions to get.
+     */
+    getProjectDefinitions(kind: number): ProjSymbol[];
+    /**
+     * Get every reference of the given kinds across all indexed documents,
+     * grouped by document and then by kind.
+     * @param kinds Kinds of symbol references to get.
+     * @param inDocument Predicate to filter indexed documents by prior to
+     * finding references.
+     */
+    getProjectReferences(
+        kinds: readonly number[],
+        inDocument?: (uri: string) => boolean,
+    ): References[];
+    /**
      * Get a document's list of embedded documents.
      * @param uri Document URI.
      */
@@ -573,6 +589,21 @@ export class Index implements ProjectIndex {
             return referencesPerSymbolKind[kind];
         }
         return undefined;
+    }
+    getProjectDefinitions(kind: number): ProjSymbol[] {
+        return this.getIndexedUris().flatMap(
+            (uri) => this.getDefinitions(uri, kind) ?? [],
+        );
+    }
+    getProjectReferences(
+        kinds: readonly number[],
+        inDocument?: (uri: string) => boolean,
+    ): References[] {
+        return this.getIndexedUris()
+            .filter((uri) => inDocument?.(uri) ?? true)
+            .flatMap((uri) =>
+                kinds.flatMap((kind) => this.getReferences(uri, kind) ?? []),
+            );
     }
     getEmbeddedDocuments(uri: string): EmbeddedDocument[] {
         return this._embeddedDocuments[uri] ?? [];

@@ -40,18 +40,13 @@ function findVisibleDeclaration(
     index: ProjectIndex,
 ): Location | undefined {
     const ownScope = index.getScriptFileRole(uri) === "included-script";
-    const uris = ownScope
-        ? [uri]
-        : index
-              .getIndexedUris()
-              .filter((u) => index.getScriptFileRole(u) !== "included-script");
-    for (const u of uris) {
-        const declaration = index
-            .getReferences(u, OChapbookSymbolKind.RootDeclaration)
-            ?.find((ref) => ref.contents === name);
-        if (declaration !== undefined) return declaration.locations[0];
-    }
-    return undefined;
+    return index
+        .getProjectReferences([OChapbookSymbolKind.RootDeclaration], (u) =>
+            ownScope
+                ? u === uri
+                : index.getScriptFileRole(u) !== "included-script",
+        )
+        .find((ref) => ref.contents === name)?.locations[0];
 }
 
 /**

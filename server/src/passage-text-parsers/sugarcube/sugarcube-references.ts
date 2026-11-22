@@ -33,13 +33,11 @@ export function getReferencesToSymbolAt(
         return refs?.locations;
 
     const otherKind = linkedTypes[kind];
-    const locations: Location[] = refs.locations;
-    for (const uri of index.getIndexedUris()) {
-        for (const otherRef of index.getReferences(uri, otherKind) ?? []) {
-            if (otherRef.contents === refs.contents)
-                locations.push(...otherRef.locations);
-        }
-    }
-
-    return locations;
+    return [
+        ...refs.locations,
+        ...index
+            .getProjectReferences([otherKind])
+            .filter((otherRef) => otherRef.contents === refs.contents)
+            .flatMap((otherRef) => otherRef.locations),
+    ];
 }
