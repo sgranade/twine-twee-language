@@ -1,7 +1,7 @@
 import JSZip from "jszip";
 import { URI, Utils } from "vscode-uri";
 
-import { StoryFormat } from "@tt3/shared";
+import { StoryFormat, storyFormatsDiffer } from "@tt3/shared";
 import { currentConfig } from "./config";
 import { WorkspaceProvider } from "./workspace-provider";
 
@@ -20,6 +20,32 @@ export interface CachedStoryFormat {
 }
 
 export let cachedStoryFormat: CachedStoryFormat | undefined;
+
+/**
+ * Wrap a story format handler so it skips a format that matches the last
+ * one it was given.
+ *
+ * @param handler Handler to call for each new story format.
+ * @returns The wrapped handler.
+ */
+export function onlyNewStoryFormats(
+    handler: (format: StoryFormat) => Promise<void>,
+): (format: StoryFormat) => Promise<void> {
+    let last: StoryFormat | undefined;
+    return async (format) => {
+        if (!storyFormatsDiffer(format, last)) {
+            return;
+        }
+        last = format;
+        try {
+            await handler(format);
+        } catch (err) {
+            // Let the next notification for this format try again
+            if (last === format) last = undefined;
+            throw err;
+        }
+    };
+}
 
 /**
  * Cache a story format.

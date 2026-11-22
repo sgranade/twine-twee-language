@@ -38,6 +38,7 @@ import {
     ReadFileRequest,
     StatFileRequest,
     StoryFormat,
+    storyFormatsDiffer,
 } from "@tt3/shared";
 import { generateCompletions } from "./completions";
 import { getDefinitionAt } from "./definition";
@@ -51,6 +52,7 @@ import { getReferencesToSymbolAt } from "./references";
 import { generateRenames, prepareRename } from "./renames";
 import { ScriptFeatureRegistrar } from "./script-file-registration";
 import { semanticTokensLegend } from "./semantic-tokens";
+import { StoryFormatAnnouncer } from "./story-format-announcer";
 import {
     generateDecorationRanges,
     generateFoldingRanges,
@@ -83,6 +85,12 @@ let hasPrepareProviderCapability = false;
 let hasDocumentChangesCapability = false;
 let scriptRegistrar: ScriptFeatureRegistrar | undefined;
 
+const storyFormatAnnouncer = new StoryFormatAnnouncer({
+    getStoryFormat: () => projectIndex.getStoryData()?.storyFormat,
+    announce: (format) => onStoryFormatChange(format),
+    reindexWorkspace: () => indexingQueue.indexWorkspace(),
+});
+
 const indexingQueue: IndexingQueue = new IndexingQueue({
     index: projectIndex,
     getOpenDocument: (uri) => documents.get(uri),
@@ -98,7 +106,8 @@ const indexingQueue: IndexingQueue = new IndexingQueue({
         parseTextDocument(doc, level, reindex),
     validateDocument: (doc) => validateTextDocument(doc),
     sendDecorationRanges: (uri) => sendDecorationRanges(uri),
-    onStoryFormatChange: (format) => onStoryFormatChange(format),
+    // If re-indexing finds a changed story format, announce immediately
+    onStoryFormatChange: (format) => storyFormatAnnouncer.announceNow(format),
     processAllOpenDocuments: () => processAllOpenDocuments(),
     parseMacroFile: (uri) => parseT3LTMacroFile(uri),
     onMacroChanges: () => onSCMacroChanges(),
@@ -460,7 +469,7 @@ async function fetchFile(
  *
  * @param document Document to process.
  * @param parseLevel What level of parsing to do.
- * @param reindexOnStoryFormatChange If true and the story format changes, re-index all project files.
+ * @param reindexOnStoryFormatChange If true and the story format changes, re-index all project files after a debounce. If false, just announce a story format change.
  */
 async function parseTextDocument(
     document: TextDocument,
@@ -481,12 +490,12 @@ async function parseTextDocument(
     }
     if (
         newStoryFormat?.format &&
-        (newStoryFormat?.format !== storyFormat?.format ||
-            newStoryFormat?.formatVersion !== storyFormat?.formatVersion)
+        storyFormatsDiffer(newStoryFormat, storyFormat)
     ) {
-        onStoryFormatChange(newStoryFormat);
         if (reindexOnStoryFormatChange) {
-            indexingQueue.indexWorkspace();
+            storyFormatAnnouncer.formatEdited();
+        } else {
+            storyFormatAnnouncer.announceNow(newStoryFormat);
         }
     }
 

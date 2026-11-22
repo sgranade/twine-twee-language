@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { URI, Utils as UriUtils } from "vscode-uri";
 
-import { StoryFormat } from "@tt3/shared";
+import { StoryFormat, storyFormatsDiffer } from "@tt3/shared";
 import { addTrailingAnnotation } from "./annotations";
 import { currentConfig } from "./config";
 import { Configuration, CustomWhenContext } from "./constants";
@@ -419,10 +419,10 @@ export async function build(
         // but weirder things have occurred.)
         if (
             cachedStoryFormat === undefined ||
-            story.storyData?.storyFormat?.format !==
-                cachedStoryFormat.format.format ||
-            story.storyData?.storyFormat?.formatVersion !==
-                cachedStoryFormat.format.formatVersion
+            storyFormatsDiffer(
+                story.storyData?.storyFormat,
+                cachedStoryFormat.format,
+            )
         ) {
             const maybeStoryFormatData =
                 await readLocalStoryFormatOrAskToDownload(

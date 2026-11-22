@@ -47,6 +47,7 @@ import { reloadRunningGame, viewCompiledGame } from "./game-view";
 import {
     cachedStoryFormat,
     cacheStoryFormat,
+    onlyNewStoryFormats,
     storyFormatToLanguageID,
 } from "./manage-storyformats";
 import * as notifications from "./notifications";
@@ -357,16 +358,8 @@ async function writeConfigToFile(uri?: VSCodeURI) {
     }
 }
 
-async function onUpdatedStoryFormat(e: StoryFormat) {
-    // Let's bounce if the story format hasn't changed
-    const oldFormat = cachedStoryFormat?.format;
-    if (
-        e.format === oldFormat?.format &&
-        e.formatVersion === oldFormat?.formatVersion
-    ) {
-        return;
-    }
-
+// Only do all of this if the story format changes
+const onUpdatedStoryFormat = onlyNewStoryFormats(async (e: StoryFormat) => {
     if (await updateStoryFormatLanguage(e)) {
         // If the story format ID changed, get rid of any previous language configuration.
         if (currentStoryFormatLanguageConfiguration) {
@@ -384,7 +377,7 @@ async function onUpdatedStoryFormat(e: StoryFormat) {
     downloadLocalStoryFormatIfNeeded(e, false, workspaceProvider).then(() =>
         cacheStoryFormat(e, workspaceProvider),
     );
-}
+});
 
 async function onUpdatedSugarCube2MacroInfo(e: SC2MacroInfo[]) {
     // Create a bunch of onEnterRules to indent/outdent container macros and kids

@@ -10,11 +10,11 @@ Four big changes:
 - Story variables in `.js` files are now indexed and renamable.
 - Diagnostics have been extensively re-worked.
     - The extension now reports JavaScript errors in Twee files.
-    - It flags variables that (it thinks) have never been defined.
+    - It flags story variables that (it thinks) have never been defined.
     - Every diagnostic has a Quick Action to let you disable it for a single passage or globally (through the config file).
 - Passage tag handling has been greatly improved.
     - Tag auto-complete? Yes, please!
-    - Find every reference to a tag or rename a tag the same way you can a passage or variable.
+    - Find every reference to a tag or rename a tag the same way you can a passage or story variable.
 
 ### Added
 
@@ -23,15 +23,15 @@ Four big changes:
 - JavaScript diagnostics (warnings and errors) in Twee files are now reported.
 - Diagnostics can now be disabled in a passage by adding `tt3-disable` followed by comma-separated list of diagnostics to the passage's tags: `[tt3-disable <diagnostic-code-1>,<diagnostic-code-2>]`.
 - Added Quick Fix actions for disabling diagnostics for a passage or globally.
-- You can now search for and rename passage tags the same way you can passages and variables.
+- You can now search for and rename passage tags the same way you can passages and story variables.
 - Passage tags now auto-complete.
-- Variables and properties that haven't been defined now create a warning across both story format code (Chapbook/SugarCube) and JavaScript sections.
+- Story variables and properties that haven't been defined now create a warning across both story format code (Chapbook/SugarCube) and JavaScript sections.
 - Now auto-completes object properties from expressions like `var['prop'] = { prop1: 2 }`.
 - When building a story, duplicated passages are replaced by the final defined version of those passages and a warning raised.
 - SugarCube: Story variables and properties in script passages and `<<script>>` macros are now properly indexed, including `State.variables.var` and `state.temporary.temp` variables.
-- SugarCube: Special variables `_args` and `_contents` now produce warnings if used outside of `<<widget>>` macros.
+- SugarCube: Special story variables `_args` and `_contents` now produce warnings if used outside of `<<widget>>` macros.
 - SugarCube: Macros inside link setters (such as `[[passage][<<set $var to 1>>]]`) now generate a warning about them not being evaluated.
-- Chapbook: Story variables and properties in script passages and `[JavaScript]` modifier blocks are now properly indexed, including variables set in calls to `engine.state.set()`.
+- Chapbook: Story variables and properties in script passages and `[JavaScript]` modifier blocks are now properly indexed, including those set in calls to `engine.state.set()`.
 
 ### Removed
 
@@ -47,10 +47,12 @@ Four big changes:
 - When running a game in VS Code, error modals are now shown in VS Code instead of being silently swallowed.
 - Deconflicted language scope names with T3LT. (issue #10)
 - Renaming or deleting files now properly updates all diagnostics.
+- Typing a new story format or version in `StoryData` no longer triggers a download prompt and reindex for every intermediate value.
+- Changing only the capitalization of a story format's name (e.g. `Sugarcube` to `SugarCube`) no longer re-downloads or reindexes.
 - SugarCube: Improved syntax highlighting of twee links.
 - SugarCube: Fixed parsing of special variables in `<<script>>` macros.
-- SugarCube: Now includes variables and properties only assigned to in e.g. `<<set>>` macros in completions.
-- SugarCube: No longer incorrectly indexes apparent variables in non-data HTML attributes.
+- SugarCube: Now includes story variables and properties only assigned to in e.g. `<<set>>` macros in completions.
+- SugarCube: No longer incorrectly indexes apparent story variables in non-data HTML attributes.
 - SugarCube: Now correctly places the end of diagnostic squiggles on TwineScript expressions.
 
 ## [1.1.5] - 2026 04 12

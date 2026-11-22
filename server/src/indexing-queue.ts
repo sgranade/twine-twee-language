@@ -1,6 +1,6 @@
 import { TextDocument } from "vscode-languageserver-textdocument";
 
-import { ProjectFiles, StoryFormat } from "@tt3/shared";
+import { ProjectFiles, StoryFormat, storyFormatsDiffer } from "@tt3/shared";
 import { ParseLevel } from "./parser-types";
 import {
     Index,
@@ -47,16 +47,6 @@ export interface IndexingQueueDeps {
 
 const interval = 200; // Interval between calling the run function, in ms
 const minTimeBetween = 50; // Minimum time to wait between runs, in ms
-
-/**
- * Do two story formats differ in format or version?
- */
-function storyFormatsDiffer(
-    a: StoryFormat | undefined,
-    b: StoryFormat | undefined,
-): boolean {
-    return a?.format !== b?.format || a?.formatVersion !== b?.formatVersion;
-}
 
 /**
  * Runs potentially long-running indexing tasks that shouldn't run concurrently.
@@ -128,7 +118,7 @@ export class IndexingQueue {
                         await this.deps.parseDocument(
                             doc,
                             ParseLevel.Full,
-                            true,
+                            true, // Re-index on story format changes
                         );
                         await this.deps.validateDocument(doc);
                         this.deps.sendDecorationRanges(doc.uri);

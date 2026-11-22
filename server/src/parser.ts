@@ -969,13 +969,7 @@ export function parse(
                 contentStartIndex,
                 state,
             );
-            if (
-                storyData.storyFormat?.format !== storyFormat?.format ||
-                storyData.storyFormat?.formatVersion !==
-                    storyFormat?.formatVersion
-            ) {
-                storyFormat = storyData.storyFormat;
-            }
+            storyFormat = storyData.storyFormat;
         }
     }
     // In fact, if we're only to parse story data, we can return

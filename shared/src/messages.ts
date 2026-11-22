@@ -23,6 +23,21 @@ export interface StoryFormat {
 }
 
 /**
+ * Do two story formats differ?
+ *
+ * Format names are compared ignoring case; versions must match exactly.
+ */
+export function storyFormatsDiffer(
+    a: StoryFormat | undefined,
+    b: StoryFormat | undefined,
+): boolean {
+    return (
+        a?.format.toLowerCase() !== b?.format.toLowerCase() ||
+        a?.formatVersion !== b?.formatVersion
+    );
+}
+
+/**
  * Diagnostic codes sent via the diagnosticCodes message.
  */
 export interface DiagnosticCodeInfo {

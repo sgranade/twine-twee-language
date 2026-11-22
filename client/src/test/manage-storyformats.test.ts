@@ -97,6 +97,58 @@ describe("Manage Story Formats", () => {
         });
     });
 
+    describe("Only New Story Formats", () => {
+        it("should not handle a repeated format while the first is still being handled", async () => {
+            const handled: StoryFormat[] = [];
+            // Never resolves, like a download prompt the author hasn't answered
+            const handler = uut.onlyNewStoryFormats((format) => {
+                handled.push(format);
+                return new Promise<void>(() => {});
+            });
+
+            void handler({ format: "SugarCube", formatVersion: "2.36.1" });
+            void handler({ format: "SugarCube", formatVersion: "2.36.1" });
+
+            expect(handled).to.eql([
+                { format: "SugarCube", formatVersion: "2.36.1" },
+            ]);
+        });
+
+        it("should handle a format that differs from the last one", async () => {
+            const handled: StoryFormat[] = [];
+            const handler = uut.onlyNewStoryFormats(async (format) => {
+                handled.push(format);
+            });
+
+            await handler({ format: "SugarCube", formatVersion: "2.36.1" });
+            await handler({ format: "SugarCube", formatVersion: "2.37.0" });
+            await handler({ format: "SugarCube", formatVersion: "2.36.1" });
+
+            expect(handled).to.eql([
+                { format: "SugarCube", formatVersion: "2.36.1" },
+                { format: "SugarCube", formatVersion: "2.37.0" },
+                { format: "SugarCube", formatVersion: "2.36.1" },
+            ]);
+        });
+
+        it("should handle a repeated format again if handling it failed", async () => {
+            const handled: StoryFormat[] = [];
+            let fail = true;
+            const handler = uut.onlyNewStoryFormats(async (format) => {
+                handled.push(format);
+                if (fail) throw new Error("failed");
+            });
+
+            await handler({ format: "Chapbook", formatVersion: "2.2.0" }).catch(
+                () => {},
+            );
+            fail = false;
+            await handler({ format: "Chapbook", formatVersion: "2.2.0" });
+
+            expect(handled).to.have.length(2);
+        });
+    });
+
     describe("Story Format to Language ID", () => {
         it("should return the generic Twee language for unsupported story formats", () => {
             const storyFormat: StoryFormat = { format: "Unknown" };
