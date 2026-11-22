@@ -86,6 +86,13 @@ type Tt3Config = z.infer<typeof Tt3ConfigSchema>;
 export let currentConfig: Readonly<Tt3Config> = Tt3ConfigSchema.parse({});
 
 /**
+ * Reset the project's config to the defaults.
+ */
+export function resetConfig() {
+    currentConfig = Tt3ConfigSchema.parse({});
+}
+
+/**
  * Update the project's config wholesale.
  *
  * @param newConfig New configuration.

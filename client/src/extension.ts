@@ -33,8 +33,12 @@ import {
     currentConfig,
     SupportedStoryFileTypes,
     updateConfig,
-    updateConfigFromJson,
 } from "./config";
+import {
+    ConfigFileDeps,
+    loadConfigFile,
+    watchConfigFile,
+} from "./config-lifecycle";
 import { Configuration, CustomCommands } from "./constants";
 import { signalContextEvent } from "./context";
 import { setEditorDecorationRanges, updateDecoration } from "./decorations";
@@ -277,45 +281,30 @@ async function updateConfigFromLegacyConfig(): Promise<boolean> {
     return configChanged;
 }
 
-/**
- * Update the project's configuration from the configuration file.
- *
- * @param uri URI to the configuration file. If undefined, the default URI will be used
- * @returns True if the config file was found; false otherwise.
- */
-async function updateConfigFromFile(uri?: VSCodeURI): Promise<boolean> {
-    if (!uri) {
-        uri = UriUtils.joinPath(
+const configFileDeps: ConfigFileDeps = {
+    readConfigFile: async (): Promise<string | undefined> => {
+        const uri = UriUtils.joinPath(
             workspaceProvider.rootWorkspaceUri() ?? VSCodeURI.file("."),
             ConfigFilename,
         );
-    }
-
-    try {
-        const configContents = new TextDecoder().decode(
-            await workspaceProvider.fs.readFile(uri),
-        );
-        const configError = updateConfigFromJson(configContents);
-        if (configError) {
-            vscode.window.showErrorMessage(
-                `There are issues with ${ConfigFilename}:\n${configError}`,
+        try {
+            return new TextDecoder().decode(
+                await workspaceProvider.fs.readFile(uri),
             );
-        } else {
-            // TODO If disabled diagnostics have changed, let the server know
+        } catch (e) {
+            if (
+                e instanceof vscode.FileSystemError &&
+                e.code === "FileNotFound"
+            ) {
+                return undefined;
+            }
+            throw e;
         }
-    } catch (e) {
-        // If we didn't find the file, let the caller know
-        if (e instanceof vscode.FileSystemError && e.code === "FileNotFound") {
-            return false;
-        } else {
-            vscode.window.showErrorMessage(
-                `There are issues with ${ConfigFilename}:\n${(e as Error).message}`,
-            );
-        }
-    }
-
-    return true; // The file exists, at least
-}
+    },
+    showError: (message: string) => {
+        vscode.window.showErrorMessage(message);
+    },
+};
 
 /**
  * Write the current configuration to a file.
@@ -463,7 +452,7 @@ async function onUpdatedSugarCube2MacroInfo(e: SC2MacroInfo[]) {
  */
 async function setupProjectConfiguration() {
     // Step one: load from config file
-    await updateConfigFromFile();
+    await loadConfigFile(configFileDeps);
 
     // Step two: see if there's a legacy config
     const configUpdated = await updateConfigFromLegacyConfig();
@@ -607,13 +596,14 @@ export function startClient(context: vscode.ExtensionContext) {
             ConfigFilename,
         ),
     );
-    configWatcher.onDidChange(async (uri) => {
-        await updateConfigFromFile(uri);
+    const configReloader = watchConfigFile(configWatcher, {
+        ...configFileDeps,
         // Since the new configuration can change what files are part of the
-        // story, request a re-index
-        client?.sendNotification(CustomMessages.RequestReindex);
+        // story, request a re-index on change
+        requestReindex: () =>
+            client?.sendNotification(CustomMessages.RequestReindex),
     });
-    context.subscriptions.push(configWatcher);
+    context.subscriptions.push(configWatcher, configReloader);
 
     // Adjust document languages and decorations on editor change if needed
     context.subscriptions.push(
