@@ -1,5 +1,6 @@
 import "mocha";
 import { expect } from "chai";
+import * as sinon from "sinon";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { Index } from "../project-index";
@@ -12,18 +13,12 @@ function doc(uri: string): TextDocument {
 
 function build(overrides: Partial<uut.IndexingQueueDeps> = {}) {
     const calls: string[] = [];
-    let time = 1000;
     const index = new Index();
     const deps: uut.IndexingQueueDeps = {
-        clock: {
-            now: () => time,
-            setInterval: () => 1,
-            clearInterval: () => {},
-        },
         index,
         getOpenDocument: () => undefined,
         getAllOpenDocuments: () => [],
-        readFile: async (uri) => doc(uri),
+        readDocument: async (uri) => doc(uri),
         findProjectFiles: async () => ({
             tweeFiles: ["file:///a.tw", "file:///b.tw"],
             storyScriptFiles: [],
@@ -52,11 +47,20 @@ function build(overrides: Partial<uut.IndexingQueueDeps> = {}) {
         queue: new uut.IndexingQueue(deps),
         calls,
         index,
-        advance: (ms: number) => (time += ms),
     };
 }
 
 describe("Indexing Queue", () => {
+    let clock: sinon.SinonFakeTimers;
+
+    beforeEach(() => {
+        clock = sinon.useFakeTimers({ now: 1000 });
+    });
+
+    afterEach(() => {
+        clock.restore();
+    });
+
     it("should index every Twee file in stages when the workspace is requested", async () => {
         const { queue, calls } = build();
 
@@ -151,32 +155,17 @@ describe("Indexing Queue", () => {
     });
 
     it("should wait the minimum time between runs", async () => {
-        const { queue, calls, advance } = build();
+        const { queue, calls } = build();
 
         queue.indexFile("file:///c.tw");
         await queue.run();
         queue.indexFile("file:///d.tw");
         await queue.run();
         const afterFirst = calls.length;
-        advance(100);
+        clock.tick(100);
         await queue.run();
 
         expect(afterFirst).to.eql(3);
         expect(calls.length).to.eql(6);
-    });
-
-    it("should prefer an open document over reading the file", async () => {
-        const open = TextDocument.create("file:///c.tw", "twee3", 7, "open");
-        const { queue, calls } = build({
-            getOpenDocument: (uri) => (uri === open.uri ? open : undefined),
-            readFile: async () => {
-                throw new Error("should not read");
-            },
-        });
-
-        queue.indexFile(open.uri);
-        await queue.run();
-
-        expect(calls).to.include("parse:file:///c.tw:true");
     });
 });

@@ -531,12 +531,13 @@ export function startClient(context: vscode.ExtensionContext) {
         documentSelector: [{ scheme: "file", pattern: "**/*.{tw,twee}" }],
         synchronize: {
             // Notify the server about file changes to SugarCube 2 macro
-            // definition files and Twee files
+            // definition files, Twee files, and JavaScript files
             fileEvents: [
                 vscode.workspace.createFileSystemWatcher(
                     "**/*.twee-config.{json,yaml,yml}",
                 ),
                 vscode.workspace.createFileSystemWatcher("**/*.{tw,twee}"),
+                vscode.workspace.createFileSystemWatcher("**/*.js"),
             ],
         },
         middleware: {

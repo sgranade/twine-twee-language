@@ -5,6 +5,7 @@ import {
     DiagnosticCode,
     DiagnosticMap,
     DisableDiagnosticTag,
+    ProjectFiles,
     StoryFormat,
 } from "@tt3/shared";
 import { EmbeddedDocument } from "./embedded-languages";
@@ -105,6 +106,21 @@ export interface References extends Kind, Callable, Sigiled, Shorthand {
  * built story and have their own scope.
  */
 export type ScriptFileRole = "story-script" | "included-script";
+
+/**
+ * Map each resolved `.js` file to its role.
+ */
+export function projectFilesToScriptFileRoles(
+    files: ProjectFiles,
+): Map<string, ScriptFileRole> {
+    const roles = new Map<string, ScriptFileRole>();
+    for (const uri of files.storyScriptFiles) roles.set(uri, "story-script");
+    for (const uri of files.includedScripts) {
+        // If the file is in both sets, treat it as a story script file and not included
+        if (!roles.has(uri)) roles.set(uri, "included-script");
+    }
+    return roles;
+}
 
 /**
  * Corresponds to the Twee 3 StoryData passage.
@@ -388,6 +404,12 @@ export interface ProjectIndex {
      * Get all URIs in the index.
      */
     getIndexedUris(): readonly string[];
+
+    /**
+     * Whether the index holds any info from a document.
+     * @param uri URI of the document.
+     */
+    hasDocument(uri: string): boolean;
 
     /**
      * Get all script file URIs in the index.
@@ -779,6 +801,10 @@ export class Index implements ProjectIndex {
         return [...s];
     }
 
+    hasDocument(uri: string): boolean {
+        return this.isScriptFile(uri) || this.getIndexedUris().includes(uri);
+    }
+
     getScriptFileUris(): string[] {
         return Object.keys(this._scriptFileRoles);
     }
@@ -799,6 +825,7 @@ export class Index implements ProjectIndex {
         delete this._disabledDiagnosticRanges[uri];
         delete this._cachedPassageNames[uri];
         delete this._cachedPassageTags[uri];
+        delete this._scriptFileRoles[uri];
         if (uri === this._storyTitleUri) {
             this._storyTitle = undefined;
         }
@@ -841,6 +868,9 @@ export class Index implements ProjectIndex {
         }
         if (oldUri in this._cachedPassageTags) {
             this._cachedPassageTags[newUri] = this._cachedPassageTags[oldUri];
+        }
+        if (oldUri in this._scriptFileRoles) {
+            this._scriptFileRoles[newUri] = this._scriptFileRoles[oldUri];
         }
         if (oldUri === this._storyTitleUri) {
             this._storyTitleUri = newUri;

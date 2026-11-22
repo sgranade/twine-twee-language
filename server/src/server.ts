@@ -83,16 +83,10 @@ let hasDocumentChangesCapability = false;
 let scriptRegistrar: ScriptFeatureRegistrar | undefined;
 
 const indexingQueue = new IndexingQueue({
-    clock: {
-        now: () => Date.now(),
-        setInterval: (cb, ms) => setInterval(cb, ms),
-        clearInterval: (handle) =>
-            clearInterval(handle as ReturnType<typeof setInterval>),
-    },
     index: projectIndex,
     getOpenDocument: (uri) => documents.get(uri),
     getAllOpenDocuments: () => documents.all(),
-    readFile: (uri) => fetchFile(uri),
+    readDocument: (uri) => readDocument(uri),
     findProjectFiles: () => connection.sendRequest(FindProjectFilesRequest),
     findFiles: (glob) => connection.sendRequest(FindFilesRequest, glob),
     indexStoryData: (doc) =>
@@ -127,6 +121,8 @@ const fileTracker = new WorkspaceFileTracker({
     onMacroChanges: () => onSCMacroChanges(),
     indexScriptFile: (doc, role) =>
         updateScriptFileIndex(doc, role, ParseLevel.Full, projectIndex),
+    readDocument: async (uri) => documents.get(uri) ?? (await fetchFile(uri)),
+    scriptFilesChanged: (uris) => void scriptRegistrar?.update(uris),
     revalidateOpenTweeDocuments: () => revalidateOpenTweeDocuments(),
     logError: (message) => connection.console.error(message),
 });
@@ -286,7 +282,7 @@ connection.onDefinition(
 documents.onDidChangeContent(async (change) => {
     // If it's a script file, handle that
     if (projectIndex.isScriptFile(change.document.uri)) {
-        fileTracker.handleScriptFileChanged(change.document);
+        fileTracker.handleScriptFileChange(change.document);
         return;
     }
 
@@ -416,6 +412,17 @@ connection.onRequest("textDocument/semanticTokens/full", (params) => {
 connection.onShutdown(() => {
     indexingQueue.stop();
 });
+
+/**
+ * Get a document's contents.
+ *
+ * @param uri URI of the document.
+ * @returns The document, or undefined if it's not available.
+ */
+async function readDocument(uri: string): Promise<TextDocument | undefined> {
+    // Return the open buffer or, if it's not open, the file from the client
+    return documents.get(uri) ?? (await fetchFile(uri));
+}
 
 /**
  * Fetch a file from the client.
