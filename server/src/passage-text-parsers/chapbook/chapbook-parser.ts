@@ -25,7 +25,7 @@ import {
     parsePassageReference,
 } from "../../parser";
 import { ParseLevel } from "../../parser-types";
-import { calleeFlag, ProjectIndex } from "../../project-index";
+import { calleeFlag, opaqueFlag, ProjectIndex } from "../../project-index";
 import { ETokenType, ETokenModifier } from "../../semantic-tokens";
 import { Token, TwineDiagnostic } from "../../types";
 import {
@@ -128,6 +128,7 @@ function createVariableAndPropertyReferences(
             contents: v.contents,
             location: v.location,
             kind,
+            ...opaqueFlag(v),
         });
     }
     for (const p of jsTokens.properties) {
@@ -143,6 +144,7 @@ function createVariableAndPropertyReferences(
                     ? OChapbookSymbolKind.PropertySet
                     : OChapbookSymbolKind.Property,
             ...calleeFlag(p),
+            ...opaqueFlag(p),
         });
     }
     if (jsTokens.error) {

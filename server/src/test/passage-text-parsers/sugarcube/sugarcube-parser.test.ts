@@ -469,6 +469,42 @@ describe("SugarCube Parser", () => {
             ]);
         });
 
+        it("should capture a <<set>> of a call's result as an opaque assignment", () => {
+            const header = ":: Passage\n";
+            const passage = "<<set _r to fn()>>";
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            const parser = uut.getSugarCubeParser(undefined);
+
+            parser?.parsePassageText(passage, header.length, state);
+            const result = callbacks.references
+                .filter((r) => r.contents === "_r")
+                .map((r) => [r.kind, r.opaque]);
+
+            expect(result).to.eql([[OSugarCubeSymbolKind.VariableSet, true]]);
+        });
+
+        it("should not capture an assignment in a <<print>> macro as opaque", () => {
+            const header = ":: Passage\n";
+            const passage = "<<print $x = fn()>>";
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            const parser = uut.getSugarCubeParser(undefined);
+
+            parser?.parsePassageText(passage, header.length, state);
+            const result = callbacks.references
+                .filter((r) => r.contents === "$x")
+                .map((r) => [r.kind, r.opaque]);
+
+            expect(result).to.eql([[OSugarCubeSymbolKind.Variable, undefined]]);
+        });
+
         it("should capture State.temporary variables in a script passage", () => {
             const header = ":: Passage [script]\n";
             const passage = "\n State.temporary.var.prop = 1\n";

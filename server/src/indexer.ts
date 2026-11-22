@@ -14,6 +14,7 @@ import { ParseLevel, ParserCallbacks } from "./parser-types";
 import { getStoryFormatParser } from "./passage-text-parsers";
 import {
     calleeFlag,
+    opaqueFlag,
     shorthandFlag,
     sigilFlag,
     Passage,
@@ -56,7 +57,7 @@ class IndexingState {
 function collateReferences(symbols: ProjSymbol[]): References[] {
     const referencesMap: Record<string, References> = {};
     for (const symbol of symbols) {
-        const key = `${symbol.kind},${symbol.contents},${!!symbol.isCallee},${!!symbol.sigilOutsideRange},${!!symbol.shorthand}`;
+        const key = `${symbol.kind},${symbol.contents},${!!symbol.isCallee},${!!symbol.sigilOutsideRange},${!!symbol.shorthand},${!!symbol.opaque}`;
         const ref = referencesMap[key] || {
             contents: symbol.contents,
             locations: [],
@@ -64,6 +65,7 @@ function collateReferences(symbols: ProjSymbol[]): References[] {
             ...calleeFlag(symbol),
             ...sigilFlag(symbol),
             ...shorthandFlag(symbol),
+            ...opaqueFlag(symbol),
         };
         ref.locations.push(symbol.location);
         referencesMap[key] = ref;

@@ -2,7 +2,12 @@ import { DiagnosticCodes } from "@tt3/shared";
 import { createDiagnosticFromRange } from "../../diagnostics";
 import { TokenizedJS } from "../../js-parser";
 import { logDiagnostic, logRawDiagnostic } from "../../parser";
-import { calleeFlag, shorthandFlag, sigilFlag } from "../../project-index";
+import {
+    calleeFlag,
+    opaqueFlag,
+    shorthandFlag,
+    sigilFlag,
+} from "../../project-index";
 import { positionInRange } from "../../utilities";
 import { ParsingState } from "../types";
 import { builtinVars, builtInVarsAndProperties } from "./sugarcube-variables";
@@ -71,6 +76,7 @@ export function createVariableAndPropertyReferences(
                         : OSugarCubeSymbolKind.Variable,
                 ...sigilFlag(v),
                 ...shorthandFlag(v),
+                ...opaqueFlag(v),
             });
     }
     for (const p of jsTokens.properties) {
@@ -98,6 +104,7 @@ export function createVariableAndPropertyReferences(
                     assigned: p.assigned,
                     sigilOutsideRange: true,
                     ...calleeFlag(p),
+                    ...opaqueFlag(p),
                 };
                 const firstPeriodNdx = ref.contents.indexOf(".");
                 if (firstPeriodNdx === -1) {
@@ -138,6 +145,7 @@ export function createVariableAndPropertyReferences(
                         ? OSugarCubeSymbolKind.PropertySet
                         : OSugarCubeSymbolKind.Property,
                 ...calleeFlag(p),
+                ...opaqueFlag(p),
             });
     }
     if (jsTokens.error) {

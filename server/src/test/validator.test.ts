@@ -5,6 +5,8 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { DiagnosticCodes } from "@tt3/shared";
 import { EmbeddedDocument } from "../embedded-languages";
+import { updateProjectIndex } from "../indexer";
+import { ParseLevel } from "../parser-types";
 import { Index, TwineSymbolKind } from "../project-index";
 
 import * as uut from "../validator";
@@ -272,6 +274,65 @@ describe("Validator", () => {
             const result = await uut.generateDiagnostics(document, index);
 
             expect(result).to.be.empty;
+        });
+    });
+
+    describe("Opaque Assignments", () => {
+        const storyData =
+            ':: StoryData\n{"ifid": "x", "format": "SugarCube", "format-version": "2.36.1"}\n\n';
+
+        async function neverSetIn(setText: string, readText: string) {
+            const index = new Index();
+            const setDoc = TextDocument.create(
+                "file:///set.tw",
+                "twee3",
+                1,
+                storyData + `:: Setter\n${setText}\n`,
+            );
+            const readDoc = TextDocument.create(
+                "file:///read.tw",
+                "twee3",
+                1,
+                `:: Reader\n${readText}\n`,
+            );
+            updateProjectIndex(setDoc, ParseLevel.Full, index);
+            updateProjectIndex(readDoc, ParseLevel.Full, index);
+            return (await uut.generateDiagnostics(readDoc, index))
+                .filter((d) => d.code === DiagnosticCodes.VariableNeverSet)
+                .map((d) => readDoc.getText(d.range));
+        }
+
+        it("should not warn on a property of a call's result set in another file", async () => {
+            // No arrange
+
+            const result = await neverSetIn(
+                "<<set _r to javaScriptFunction()>>",
+                "<<if _r.isError>>x<</if>>",
+            );
+
+            expect(result).to.be.empty;
+        });
+
+        it("should warn on a property of a variable set to a known shape", async () => {
+            // No arrange
+
+            const result = await neverSetIn(
+                "<<set $x to 5>>",
+                "<<print $x.foo>>",
+            );
+
+            expect(result).to.eql(["foo"]);
+        });
+
+        it("should warn on a property of a variable only written in a <<print>>", async () => {
+            // No arrange
+
+            const result = await neverSetIn(
+                "<<set $x to 5>><<print $x = fn()>>",
+                "<<print $x.foo>>",
+            );
+
+            expect(result).to.eql(["foo"]);
         });
     });
 });

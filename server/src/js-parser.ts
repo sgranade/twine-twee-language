@@ -17,6 +17,8 @@ import {
 import {
     Callable,
     calleeFlag,
+    Opaque,
+    opaqueFlag,
     Shorthand,
     shorthandFlag,
     Sigiled,
@@ -53,7 +55,7 @@ export type ScriptOccurrenceRole = "conditional-reference" | "root-declaration";
 /**
  * Label for a parsed javascript variable.
  */
-export interface JSVariableLabel extends Label, Sigiled, Shorthand {
+export interface JSVariableLabel extends Label, Sigiled, Shorthand, Opaque {
     /**
      * What the variable is if it isn't a story variable.
      */
@@ -67,7 +69,7 @@ export interface JSVariableLabel extends Label, Sigiled, Shorthand {
 /**
  * Label for a parsed javascript property.
  */
-export interface JSPropertyLabel extends Label {
+export interface JSPropertyLabel extends Label, Opaque {
     /**
      * The property's prefix, if known. A reference for `subprop` from `var.prop.subprop` will
      * have a prefix of `var.prop`.
@@ -127,6 +129,7 @@ export interface ScriptVariableOccurrence {
     assigned: boolean;
     sigilOutsideRange?: boolean;
     shorthand?: boolean;
+    opaque?: boolean;
     role?: ScriptOccurrenceRole;
 }
 
@@ -139,6 +142,7 @@ export interface ScriptPropertyOccurrence {
     scope: string;
     assigned: boolean;
     isCallee: boolean;
+    opaque?: boolean;
 }
 
 /**
@@ -355,6 +359,57 @@ type IdentifierRole = "declaration" | "reference" | "neither";
  */
 export function parentOf(ancestors: acorn.Node[]): acorn.AnyNode | undefined {
     return ancestors[ancestors.length - 2] as acorn.AnyNode | undefined;
+}
+
+/**
+ * Could a value be an object of unknown shape?
+ *
+ * @param value Expression being assigned.
+ * @returns True if assigning the value is an opaque assignment.
+ */
+function isOpaqueValue(value: acorn.AnyNode): boolean {
+    if (value.type === "ChainExpression")
+        return isOpaqueValue(value.expression);
+    return value.type === "CallExpression";
+}
+
+/**
+ * Get the value a write target is assigned if the target takes on that
+ * value. (Compound assignments like `+=` don't, so they have none.)
+ *
+ * @param target Identifier or member expression being written.
+ * @param ancestors The target's ancestors, ending with the target itself.
+ * @returns The assigned value, or undefined if there isn't one.
+ */
+function assignedValue(
+    target: acorn.AnyNode,
+    ancestors: acorn.Node[],
+): acorn.AnyNode | undefined {
+    const parent = parentOf(ancestors);
+    if (parent?.type === "AssignmentExpression" && parent.left === target) {
+        return ["=", "||=", "&&=", "??="].includes(parent.operator)
+            ? parent.right
+            : undefined;
+    }
+    if (parent?.type === "VariableDeclarator" && parent.id === target) {
+        return parent.init ?? undefined;
+    }
+    return undefined;
+}
+
+/**
+ * Is a write target an opaque assignment?
+ *
+ * @param target Identifier or member expression being written.
+ * @param ancestors The target's ancestors, ending with the target itself.
+ * @returns True if the target is assigned a value of unknown shape.
+ */
+function isOpaqueAssignment(
+    target: acorn.AnyNode,
+    ancestors: acorn.Node[],
+): boolean {
+    const value = assignedValue(target, ancestors);
+    return value !== undefined && isOpaqueValue(value);
 }
 
 /**
@@ -1096,6 +1151,7 @@ interface RawPropertyOccurrence {
     scope?: string;
     assigned: boolean;
     isCallee: boolean;
+    opaque?: boolean;
 }
 
 /**
@@ -1126,13 +1182,14 @@ function extractSymbols(
 
     // Helper function to add a variable occurrence if it's an unbound (story)
     // variable and not a global
-    const captureVariable = (id: ScopedIdentifier) => {
+    const captureVariable = (id: ScopedIdentifier, opaque = false) => {
         if (!isPotentialTrackedVariableName(id.name, isGlobalName)) return;
         if (!id._isStoryVariable) return;
         variableTokens[id.start] = {
             text: id.name,
             at: id.start,
             assigned: !!id._isAssignment,
+            ...opaqueFlag({ opaque }),
         };
     };
 
@@ -1143,6 +1200,7 @@ function extractSymbols(
         scope?: string,
         assigned = false,
         isCallee = false,
+        opaque = false,
     ) => {
         if (!name) return;
         // Properties w/o a scope (e.g. globals) aren't tracked
@@ -1153,6 +1211,7 @@ function extractSymbols(
             scope,
             assigned,
             isCallee,
+            ...opaqueFlag({ opaque }),
         };
     };
 
@@ -1161,7 +1220,12 @@ function extractSymbols(
         switch (node.type) {
             case "Identifier": {
                 if (isCandidateVariable(node, ancestors, isGlobalName)) {
-                    captureVariable(node as ScopedIdentifier);
+                    const id = node as ScopedIdentifier;
+                    captureVariable(
+                        id,
+                        !!id._isAssignment &&
+                            isOpaqueAssignment(node, ancestors),
+                    );
                 }
                 break;
             }
@@ -1180,6 +1244,7 @@ function extractSymbols(
                     ancestors,
                     isAssignmentContext,
                 );
+                const opaque = written && isOpaqueAssignment(node, ancestors);
                 const isGlobal = isGlobalName(chain.root.name);
 
                 // Add the root variable
@@ -1218,6 +1283,7 @@ function extractSymbols(
                         scope,
                         written && isFinalSegment,
                         lastIsCallee && isFinalSegment,
+                        opaque && isFinalSegment,
                     );
                 });
                 break;
@@ -1549,6 +1615,7 @@ export function tokenizeJavaScript(
                 assigned: variable.assigned,
                 ...sigilFlag(variable),
                 ...shorthandFlag(variable),
+                ...opaqueFlag(variable),
                 ...(variable.role ? { role: variable.role } : {}),
             });
         }
@@ -1563,6 +1630,7 @@ export function tokenizeJavaScript(
                 prefix: property.scope,
                 assigned: property.assigned,
                 ...calleeFlag(property),
+                ...opaqueFlag(property),
             });
         }
     }

@@ -2964,6 +2964,60 @@ describe("JS Parser", () => {
         }
     });
 
+    describe("Opaque Assignments", () => {
+        function tokenize(input: string, isAssignmentContext: boolean) {
+            const state = buildParsingState({
+                uri: "fake-uri",
+                content: input,
+                callbacks: new MockCallbacks(),
+            });
+            return uut.tokenizeJavaScript(
+                true,
+                input,
+                0,
+                state.textDocument,
+                { passageTokens: {} },
+                { isAssignmentContext },
+            );
+        }
+
+        it("should mark a variable assigned a call's result as opaque", () => {
+            // No arrange
+
+            const result = tokenize("r = fn()", true);
+
+            expect(result.variables.find((v) => v.contents === "r")?.opaque).to
+                .be.true;
+        });
+
+        it("should mark a property path assigned a call's result as opaque", () => {
+            // No arrange
+
+            const result = tokenize("a.b = fn()", true);
+
+            expect(result.properties.find((p) => p.contents === "b")?.opaque).to
+                .be.true;
+        });
+
+        it("should not mark a write outside an assignment context as opaque", () => {
+            // No arrange
+
+            const result = tokenize("x = fn()", false);
+
+            expect(result.variables.find((v) => v.contents === "x")?.opaque).to
+                .be.undefined;
+        });
+
+        it("should not mark a variable assigned a known shape as opaque", () => {
+            // No arrange
+
+            const result = tokenize("x = 5", true);
+
+            expect(result.variables.find((v) => v.contents === "x")?.opaque).to
+                .be.undefined;
+        });
+    });
+
     describe("Diagnostics", () => {
         it("should error on an unterminated string", () => {
             const expression = " let v = '1234";

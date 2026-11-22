@@ -504,6 +504,41 @@ describe("Chapbook Diagnostics", () => {
 
                 expect(results).to.be.empty;
             });
+
+            it("should not warn on a property beneath an opaque variable", () => {
+                const doc = TextDocument.create("fake-uri", "", 0, "");
+                const index = new Index();
+                index.setReferences("fake-uri", [
+                    {
+                        contents: "r.isError",
+                        locations: [
+                            Location.create(
+                                "fake-uri",
+                                Range.create(1, 2, 3, 4),
+                            ),
+                        ],
+                        kind: OChapbookSymbolKind.Property,
+                    },
+                ]);
+                index.setReferences("other-uri", [
+                    {
+                        contents: "r",
+                        locations: [
+                            Location.create(
+                                "other-uri",
+                                Range.create(5, 6, 7, 8),
+                            ),
+                        ],
+                        kind: OChapbookSymbolKind.VariableSet,
+                        opaque: true,
+                    },
+                ]);
+                const parser = uut.getChapbookParser(undefined);
+
+                const results = parser?.generateDiagnostics(doc, index);
+
+                expect(results).to.be.empty;
+            });
         });
 
         describe("inserts and modifiers", () => {
