@@ -3,6 +3,7 @@ import { StoryFormatParser } from "../types";
 import { allMacros, allMacroEnums } from "./macros";
 import type { SugarCubeParserAPI } from "./types";
 import { generateCompletions } from "./sugarcube-completions";
+import { getDefinitionAt } from "./sugarcube-definitions";
 import { generateDiagnostics } from "./sugarcube-diagnostics";
 import { generateHover } from "./sugarcube-hover";
 import { getReferencesToSymbolAt } from "./sugarcube-references";
@@ -48,7 +49,7 @@ export function getSugarCubeParser(
         generateDiagnostics: generateDiagnostics,
         generateHover: (document, position, deferred, index) =>
             generateHover(document, position, deferred, index, api),
-        getDefinitionAt: () => undefined, // Unneeded -- the index will find all definitions
+        getDefinitionAt: getDefinitionAt,
         getReferencesToSymbolAt: getReferencesToSymbolAt,
         generateRenamesAt: generateRenames,
     };

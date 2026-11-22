@@ -3,13 +3,18 @@ import { Location, Position } from "vscode-languageserver";
 import { ProjectIndex } from "../../project-index";
 import { OChapbookSymbolKind } from "./types";
 
+/**
+ * Kinds whose references all refer to a story variable.
+ */
+export const variableKinds: readonly number[] = [
+    OChapbookSymbolKind.Variable,
+    OChapbookSymbolKind.VariableSet,
+    OChapbookSymbolKind.ConditionalReference,
+];
+
 // Kinds whose references all refer to the same thing
-const linkedKindGroups: number[][] = [
-    [
-        OChapbookSymbolKind.Variable,
-        OChapbookSymbolKind.VariableSet,
-        OChapbookSymbolKind.ConditionalReference,
-    ],
+const linkedKindGroups: (readonly number[])[] = [
+    variableKinds,
     [OChapbookSymbolKind.Property, OChapbookSymbolKind.PropertySet],
 ];
 
