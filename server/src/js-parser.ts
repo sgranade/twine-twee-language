@@ -376,6 +376,10 @@ function staticPathOf(node: acorn.AnyNode): string | undefined {
     if (!chain || isDynamicChain(chain)) return undefined;
     return [chain.root.name, ...chain.properties.map((p) => p.name)].join(".");
 }
+/**
+ * Gets the static path an expression stands for, if it has one.
+ */
+export type StaticPathOf = (node: acorn.AnyNode) => string | undefined;
 
 /**
  * Could a value be an object of unknown shape?
@@ -383,20 +387,24 @@ function staticPathOf(node: acorn.AnyNode): string | undefined {
  * @param value Expression being assigned.
  * @param selfPath Path being assigned (if static). A value (or branch) that
  * is the path itself contributes nothing: `x = x || {}` isn't opaque.
+ * @param pathOf Gets an expression's path to compare with `selfPath`.
  * @returns True if assigning the value is an opaque assignment.
  */
-function isOpaqueValue(value: acorn.AnyNode, selfPath?: string): boolean {
+export function isOpaqueValue(
+    value: acorn.AnyNode,
+    selfPath?: string,
+    pathOf: StaticPathOf = staticPathOf,
+): boolean {
+    if (selfPath !== undefined && pathOf(value) === selfPath) return false;
+    const isOpaque = (branch: acorn.AnyNode) =>
+        isOpaqueValue(branch, selfPath, pathOf);
     switch (value.type) {
         case "ChainExpression":
-            return isOpaqueValue(value.expression, selfPath);
+            return isOpaque(value.expression);
         case "Identifier":
             // Globals that stand for literal values
-            if (["undefined", "NaN", "Infinity"].includes(value.name)) {
-                return false;
-            }
-            return selfPath === undefined || value.name !== selfPath;
+            return !["undefined", "NaN", "Infinity"].includes(value.name);
         case "MemberExpression":
-            return selfPath === undefined || staticPathOf(value) !== selfPath;
         case "CallExpression":
         case "TaggedTemplateExpression":
         case "NewExpression":
@@ -405,27 +413,16 @@ function isOpaqueValue(value: acorn.AnyNode, selfPath?: string): boolean {
         case "YieldExpression":
             return true;
         case "ConditionalExpression":
-            return (
-                isOpaqueValue(value.consequent, selfPath) ||
-                isOpaqueValue(value.alternate, selfPath)
-            );
+            return isOpaque(value.consequent) || isOpaque(value.alternate);
         case "LogicalExpression":
-            return (
-                isOpaqueValue(value.left, selfPath) ||
-                isOpaqueValue(value.right, selfPath)
-            );
+            return isOpaque(value.left) || isOpaque(value.right);
         case "ObjectExpression":
             return value.properties.some((p) => p.type === "SpreadElement");
         case "AssignmentExpression":
             // `x = y = fn()` gives `x` the value of `fn()`
-            return (
-                value.operator === "=" && isOpaqueValue(value.right, selfPath)
-            );
+            return value.operator === "=" && isOpaque(value.right);
         case "SequenceExpression":
-            return isOpaqueValue(
-                value.expressions[value.expressions.length - 1],
-                selfPath,
-            );
+            return isOpaque(value.expressions[value.expressions.length - 1]);
         default:
             return false;
     }
@@ -503,15 +500,17 @@ function destructuredSource(
  *
  * @param target Identifier or member expression being written.
  * @param ancestors The target's ancestors, ending with the target itself.
+ * @param pathOf Gets an expression's path to recognize a self-reference
  * @returns True if the target is assigned a value of unknown shape.
  */
-function isOpaqueAssignment(
+export function isOpaqueAssignment(
     target: acorn.AnyNode,
     ancestors: acorn.Node[],
+    pathOf: StaticPathOf = staticPathOf,
 ): boolean {
     const value = assignedValue(target, ancestors);
     if (value !== undefined) {
-        return isOpaqueValue(value, staticPathOf(target));
+        return isOpaqueValue(value, pathOf(target), pathOf);
     }
     const source = destructuredSource(target, ancestors);
     return source !== undefined && isOpaqueValue(source);

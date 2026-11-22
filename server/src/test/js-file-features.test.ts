@@ -85,4 +85,25 @@ describe(".js File Story Variable References", () => {
 
         expect(await codes()).to.not.include("variable-never-set");
     });
+
+    describe("Opaque Assignments", () => {
+        async function neverSetCodes(js: string) {
+            const { index, tw } = build(js, "<<print $r.isError>>");
+            return (await generateDiagnostics(tw, index))
+                .map((d) => d.code)
+                .filter((c) => c === "variable-never-set");
+        }
+
+        it("should not warn in a .tw on a property of a value a .js set from a call", async () => {
+            expect(await neverSetCodes("State.variables.r = fn();\n")).to.eql(
+                [],
+            );
+        });
+
+        it("should still warn in a .tw on a property of a known-shape value a .js set", async () => {
+            expect(await neverSetCodes("State.variables.r = 5;\n")).to.eql([
+                "variable-never-set",
+            ]);
+        });
+    });
 });
