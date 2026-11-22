@@ -14,6 +14,10 @@ export const scriptReparseDebounceMs = 300;
 /** How long to wait after the last file creation/deletion event before doing something with it. */
 export const fileEventDebounceMs = 300;
 
+/** `.js` file size above which to skip parsing, indexing or registering. */
+const maxScriptFileMegs = 5; // For friendly printing
+export const maxScriptFileBytes = maxScriptFileMegs * 1024 * 1024;
+
 /**
  * Everything the tracker needs from the outside world.
  */
@@ -31,6 +35,11 @@ export interface WorkspaceFileTrackerDeps {
     readDocument(uri: string): Promise<TextDocument | undefined>;
     scriptFilesChanged(uris: string[]): void;
     revalidateOpenTweeDocuments(): Promise<void>;
+    /** Get a file's on-disk metadata. */
+    stat(uri: string): Promise<{ size: number }>;
+    log(message: string): void;
+    /** Show the author a warning notification. */
+    showWarning(message: string): void;
 }
 
 /**
@@ -69,6 +78,11 @@ export class WorkspaceFileTracker {
     private pendingPostDeleteWork = noPendingPostDeleteWork();
     private fileEventTimer: ReturnType<typeof setTimeout> | undefined;
     private resolveChain: Promise<unknown> = Promise.resolve();
+    /** Cache of oversized `.js` files from the previous resolve */
+    private oversizedScripts = new Set<string>();
+    /** Oversized files already reported in the output channel */
+    private loggedOversized = new Set<string>();
+    private warnedOversized = false;
 
     constructor(private readonly deps: WorkspaceFileTrackerDeps) {}
 
@@ -141,10 +155,11 @@ export class WorkspaceFileTracker {
         if (!(await this.ensureFileSets())) return;
 
         // Reindex scripts first since they affect Twine files
+        const scripts = await this.withoutSizeChanges(
+            scriptChanges.map((c) => c.uri),
+        );
         await this.reindexScriptsFromDisk(
-            scriptChanges
-                .map((c) => c.uri)
-                .filter((uri) => !this.deps.isOpen(uri)),
+            scripts.filter((uri) => !this.deps.isOpen(uri)),
         );
         for (const change of tweeChanges) {
             if (
@@ -165,8 +180,99 @@ export class WorkspaceFileTracker {
         if (this.isTrackedTweeFile(uri)) {
             this.deps.queue.indexFile(uri);
         } else {
-            await this.reindexScriptsFromDisk([uri]);
+            await this.reindexScriptsFromDisk(
+                await this.withoutSizeChanges([uri]),
+            );
         }
+    }
+
+    /**
+     * Remove `.js` files that have joined or left the index-able list due to
+     * them changing size above or below the threshold.
+     *
+     * @returns The files that didn't cross the limit.
+     */
+    private async withoutSizeChanges(uris: string[]): Promise<string[]> {
+        const oversizedFlags = await Promise.all(
+            uris.map(async (uri) =>
+                this.scriptRoles?.has(uri) || this.oversizedScripts.has(uri)
+                    ? await this.scriptFileIsOversized(uri)
+                    : undefined,
+            ),
+        );
+        return uris.filter((uri, i) => {
+            const isOversized = oversizedFlags[i];
+            if (
+                isOversized === undefined ||
+                isOversized === this.oversizedScripts.has(uri)
+            ) {
+                // It hasn't crossed the size threshold
+                return true;
+            }
+            this.pendingCreates.add(uri);
+            this.scheduleFileEventFlush();
+            return false;
+        });
+    }
+
+    /**
+     * Get the project's file sets from the client minus too-large
+     * script files.
+     */
+    fetchScannableFileSets(): Promise<ProjectFiles> {
+        // This is the public interface so we can make sure previously-running
+        // resolves finish before this one.
+        return this.serializeResolve(() => this.findScannableProjectFiles());
+    }
+
+    private async findScannableProjectFiles(): Promise<ProjectFiles> {
+        const files = await this.deps.findProjectFiles();
+        const scripts = [...files.storyScriptFiles, ...files.includedScripts];
+        const oversized = new Set<string>();
+        await Promise.all(
+            scripts.map(async (uri) => {
+                if (await this.scriptFileIsOversized(uri)) oversized.add(uri);
+            }),
+        );
+        this.oversizedScripts = oversized;
+        for (const uri of scripts.filter((u) => oversized.has(u))) {
+            this.reportOversized(uri);
+        }
+        return {
+            tweeFiles: files.tweeFiles,
+            storyScriptFiles: files.storyScriptFiles.filter(
+                (uri) => !oversized.has(uri),
+            ),
+            includedScripts: files.includedScripts.filter(
+                (uri) => !oversized.has(uri),
+            ),
+        };
+    }
+
+    /**
+     * Whether a file is over the size limit on disk.
+     */
+    private async scriptFileIsOversized(uri: string): Promise<boolean> {
+        try {
+            return (await this.deps.stat(uri)).size > maxScriptFileBytes;
+        } catch {
+            return false;
+        }
+    }
+
+    /**
+     * Tell the author we skipped a file.
+     */
+    private reportOversized(uri: string): void {
+        if (this.loggedOversized.has(uri)) return;
+        this.loggedOversized.add(uri);
+        const reason = `it's over ${maxScriptFileMegs} MB. Rename and reference finding won't find story variables (if any) in the file`;
+        this.deps.log(`Skipped ${uri}: ${reason}.`);
+        if (this.warnedOversized) return;
+        this.warnedOversized = true;
+        this.deps.showWarning(
+            `${uri} wasn't scanned because ${reason}. Add it to "ignores" in tt3.config.json to silence this warning.`,
+        );
     }
 
     /**
@@ -267,7 +373,7 @@ export class WorkspaceFileTracker {
             this.deps.queue.indexWorkspace();
             return Promise.resolve();
         }
-        return this.serialize(async () => {
+        return this.serializeResolve(async () => {
             let reregister = postDeleteWork.scriptFiles;
             let revalidate = postDeleteWork.any;
             let tweeQueued = false;
@@ -317,13 +423,13 @@ export class WorkspaceFileTracker {
      * Ask the client for the file sets once any running resolves are done.
      */
     private resolveFileSets(): Promise<boolean> {
-        return this.serialize(() => this.fetchFileSets());
+        return this.serializeResolve(() => this.fetchFileSets());
     }
 
     /**
-     * Run task serially so a slow task can't overwrite a newer but faster one.
+     * Run a file resolution serially so a slow one can't overwrite a newer but faster one.
      */
-    private serialize<T>(task: () => Promise<T>): Promise<T> {
+    private serializeResolve<T>(task: () => Promise<T>): Promise<T> {
         const result = this.resolveChain.then(task);
         this.resolveChain = result.catch(() => undefined);
         return result;
@@ -336,7 +442,7 @@ export class WorkspaceFileTracker {
      */
     private async fetchFileSets(): Promise<boolean> {
         try {
-            this.setFileSets(await this.deps.findProjectFiles());
+            this.setFileSets(await this.findScannableProjectFiles());
             return true;
         } catch (err) {
             // A re-index would cause the same failing request, so skip it

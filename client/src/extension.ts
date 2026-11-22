@@ -17,6 +17,7 @@ import {
     FindProjectFilesRequest,
     ReadFileRequest,
     SC2MacroInfo,
+    StatFileRequest,
     StoryFormat,
 } from "@tt3/shared";
 import { clearAnnotationOnChangeEvent } from "./annotations";
@@ -661,6 +662,12 @@ export function startClient(context: vscode.ExtensionContext) {
             );
         },
     );
+    client.onRequest(StatFileRequest, async (args: { uri: URI }) => {
+        const { size } = await workspaceProvider.fs.stat(
+            vscode.Uri.parse(args.uri),
+        );
+        return { size };
+    });
 
     // Add our code actions
     context.subscriptions.push(

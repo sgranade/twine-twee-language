@@ -36,6 +36,7 @@ import {
     FindFilesRequest,
     FindProjectFilesRequest,
     ReadFileRequest,
+    StatFileRequest,
     StoryFormat,
 } from "@tt3/shared";
 import { generateCompletions } from "./completions";
@@ -82,12 +83,12 @@ let hasPrepareProviderCapability = false;
 let hasDocumentChangesCapability = false;
 let scriptRegistrar: ScriptFeatureRegistrar | undefined;
 
-const indexingQueue = new IndexingQueue({
+const indexingQueue: IndexingQueue = new IndexingQueue({
     index: projectIndex,
     getOpenDocument: (uri) => documents.get(uri),
     getAllOpenDocuments: () => documents.all(),
     readDocument: (uri) => readDocument(uri),
-    findProjectFiles: () => connection.sendRequest(FindProjectFilesRequest),
+    findProjectFiles: () => fileTracker.fetchScannableFileSets(),
     findFiles: (glob) => connection.sendRequest(FindFilesRequest, glob),
     indexStoryData: (doc) =>
         updateProjectIndex(doc, ParseLevel.StoryData, projectIndex),
@@ -112,7 +113,7 @@ const indexingQueue = new IndexingQueue({
     logError: (message) => connection.console.error(message),
 });
 
-const fileTracker = new WorkspaceFileTracker({
+const fileTracker: WorkspaceFileTracker = new WorkspaceFileTracker({
     index: projectIndex,
     queue: indexingQueue,
     findProjectFiles: () => connection.sendRequest(FindProjectFilesRequest),
@@ -125,6 +126,10 @@ const fileTracker = new WorkspaceFileTracker({
     scriptFilesChanged: (uris) => void scriptRegistrar?.update(uris),
     revalidateOpenTweeDocuments: () => revalidateOpenTweeDocuments(),
     logError: (message) => connection.console.error(message),
+    stat: (uri) => connection.sendRequest(StatFileRequest, { uri }),
+    log: (message) => connection.console.log(message),
+    showWarning: (message) =>
+        void connection.window.showWarningMessage(message),
 });
 
 connection.onInitialize((params: InitializeParams) => {

@@ -36,3 +36,12 @@ export const ReadFileRequest: RequestType<
     string,
     unknown
 > = new RequestType("fs/readFile");
+
+/**
+ * Request from the server that the client get a file's on-disk size in bytes.
+ */
+export const StatFileRequest: RequestType<
+    { uri: URI },
+    { size: number },
+    unknown
+> = new RequestType("fs/stat");
