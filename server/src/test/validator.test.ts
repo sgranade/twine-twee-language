@@ -334,5 +334,54 @@ describe("Validator", () => {
 
             expect(result).to.eql(["foo"]);
         });
+
+        for (const [desc, setText, readText] of [
+            [
+                "a copy of a story variable",
+                "<<set _p to $player>>",
+                "<<print _p.hp>>",
+            ],
+            [
+                "member access",
+                "<<set $x to setup.items.sword>>",
+                "<<print $x.damage>>",
+            ],
+            ["element access", "<<set _a to $arr[0]>>", "<<print _a.name>>"],
+            ["a new object", "<<set $d to new Date()>>", "<<print $d.year>>"],
+            [
+                "an object literal with a spread",
+                "<<set $o to {...$base, a: 1}>>",
+                "<<print $o.b>>",
+            ],
+            [
+                "a destructured call result",
+                "<<set [_a, _b] to fn()>>",
+                "<<print _b.c>>",
+            ],
+            [
+                "a mix of known and opaque values",
+                "<<set $player to {hp: 10}>><<set $player to clone($saved)>>",
+                "<<print $player.hpp>>",
+            ],
+        ]) {
+            it(`should not warn on a property of ${desc}`, async () => {
+                // No arrange
+
+                const result = await neverSetIn(setText, readText);
+
+                expect(result).to.be.empty;
+            });
+        }
+
+        it("should warn on a typo'd property of a variable defaulted to itself", async () => {
+            // No arrange
+
+            const result = await neverSetIn(
+                "<<set $inv to $inv || {}>><<set $inv.sword to 1>>",
+                "<<print $inv.sword + $inv.typo>>",
+            );
+
+            expect(result).to.eql(["typo"]);
+        });
     });
 });

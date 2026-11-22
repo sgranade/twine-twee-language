@@ -362,15 +362,73 @@ export function parentOf(ancestors: acorn.Node[]): acorn.AnyNode | undefined {
 }
 
 /**
+ * Get the static dotted path of an identifier or member chain
+ * (`a.b.c`), if any.
+ *
+ * @param node Node to inspect.
+ * @returns The path, or undefined if the node isn't a static name or chain.
+ */
+function staticPathOf(node: acorn.AnyNode): string | undefined {
+    if (node.type === "Identifier") return node.name;
+    if (node.type === "ChainExpression") return staticPathOf(node.expression);
+    if (node.type !== "MemberExpression") return undefined;
+    const chain = captureMemberChain(node);
+    if (!chain || isDynamicChain(chain)) return undefined;
+    return [chain.root.name, ...chain.properties.map((p) => p.name)].join(".");
+}
+
+/**
  * Could a value be an object of unknown shape?
  *
  * @param value Expression being assigned.
+ * @param selfPath Path being assigned (if static). A value (or branch) that
+ * is the path itself contributes nothing: `x = x || {}` isn't opaque.
  * @returns True if assigning the value is an opaque assignment.
  */
-function isOpaqueValue(value: acorn.AnyNode): boolean {
-    if (value.type === "ChainExpression")
-        return isOpaqueValue(value.expression);
-    return value.type === "CallExpression";
+function isOpaqueValue(value: acorn.AnyNode, selfPath?: string): boolean {
+    switch (value.type) {
+        case "ChainExpression":
+            return isOpaqueValue(value.expression, selfPath);
+        case "Identifier":
+            // Globals that stand for literal values
+            if (["undefined", "NaN", "Infinity"].includes(value.name)) {
+                return false;
+            }
+            return selfPath === undefined || value.name !== selfPath;
+        case "MemberExpression":
+            return selfPath === undefined || staticPathOf(value) !== selfPath;
+        case "CallExpression":
+        case "TaggedTemplateExpression":
+        case "NewExpression":
+        case "ThisExpression":
+        case "AwaitExpression":
+        case "YieldExpression":
+            return true;
+        case "ConditionalExpression":
+            return (
+                isOpaqueValue(value.consequent, selfPath) ||
+                isOpaqueValue(value.alternate, selfPath)
+            );
+        case "LogicalExpression":
+            return (
+                isOpaqueValue(value.left, selfPath) ||
+                isOpaqueValue(value.right, selfPath)
+            );
+        case "ObjectExpression":
+            return value.properties.some((p) => p.type === "SpreadElement");
+        case "AssignmentExpression":
+            // `x = y = fn()` gives `x` the value of `fn()`
+            return (
+                value.operator === "=" && isOpaqueValue(value.right, selfPath)
+            );
+        case "SequenceExpression":
+            return isOpaqueValue(
+                value.expressions[value.expressions.length - 1],
+                selfPath,
+            );
+        default:
+            return false;
+    }
 }
 
 /**
@@ -398,6 +456,49 @@ function assignedValue(
 }
 
 /**
+ * Get the source from which a destructuring target is unpacked (`fn()` in
+ * `[a, b] = fn()`) if the target is inside a destructuring pattern.
+ *
+ * @param target Identifier or member expression being written.
+ * @param ancestors The target's ancestors, ending with the target itself.
+ * @returns The destructured source, or undefined if there isn't one.
+ */
+function destructuredSource(
+    target: acorn.AnyNode,
+    ancestors: acorn.Node[],
+): acorn.AnyNode | undefined {
+    let current: acorn.Node = target;
+    let inPattern = false;
+    for (let i = ancestors.length - 2; i >= 0; i--) {
+        const ancestor = ancestors[i] as acorn.AnyNode;
+        switch (ancestor.type) {
+            case "ArrayPattern":
+            case "ObjectPattern":
+            case "RestElement":
+                inPattern = true;
+                break;
+            case "AssignmentPattern":
+                if (ancestor.left !== current) return undefined;
+                break;
+            case "AssignmentExpression":
+                return inPattern &&
+                    ancestor.left === current &&
+                    ancestor.operator === "="
+                    ? ancestor.right
+                    : undefined;
+            case "VariableDeclarator":
+                return inPattern && ancestor.id === current
+                    ? (ancestor.init ?? undefined)
+                    : undefined;
+            default:
+                return undefined;
+        }
+        current = ancestor;
+    }
+    return undefined;
+}
+
+/**
  * Is a write target an opaque assignment?
  *
  * @param target Identifier or member expression being written.
@@ -409,7 +510,11 @@ function isOpaqueAssignment(
     ancestors: acorn.Node[],
 ): boolean {
     const value = assignedValue(target, ancestors);
-    return value !== undefined && isOpaqueValue(value);
+    if (value !== undefined) {
+        return isOpaqueValue(value, staticPathOf(target));
+    }
+    const source = destructuredSource(target, ancestors);
+    return source !== undefined && isOpaqueValue(source);
 }
 
 /**
@@ -853,6 +958,7 @@ function captureObjectExpressionProperties(
         scope?: string,
         assigned?: boolean,
         isCallee?: boolean,
+        opaque?: boolean,
     ) => void,
 ) {
     const isGlobalObject = isGlobalObjectScope(parentScope, isGlobalName);
@@ -866,6 +972,9 @@ function captureObjectExpressionProperties(
         );
         if (!propName) continue;
 
+        // Compute new scope including this property
+        const newScope = parentScope ? `${parentScope}.${propName}` : propName;
+
         // Capture the property. Note we blank out the scope for globals so
         // their properties aren't tracked
         capturePropertyCallback(
@@ -873,15 +982,12 @@ function captureObjectExpressionProperties(
             getPropertyNameStart(prop.key),
             isGlobalObject ? undefined : parentScope,
             assigned,
+            false,
+            assigned && isOpaqueValue(prop.value, newScope),
         );
 
         // Recurse for contained object literals
         if (prop.value.type === "ObjectExpression") {
-            // Compute new scope including this property
-            const newScope = parentScope
-                ? `${parentScope}.${propName}`
-                : propName;
-
             captureObjectExpressionProperties(
                 prop.value,
                 newScope,
@@ -1297,10 +1403,11 @@ function extractSymbols(
                 // If we're a non-static property, bail out
                 if (!propName) break;
 
-                // Find the parent scope (if any) for the property
+                // Find the enclosing assigned object literal and capture all of
+                // its keys (including this one) with their full scopes. A
+                // declaration's keys are always written; a bare assignment's
+                // follow the flag.
                 let parentScope: string | undefined;
-                // A declaration's keys are always written; a bare assignment's follow the flag
-                let keysAssigned = isAssignmentContext;
 
                 for (let i = ancestors.length - 2; i >= 0; i--) {
                     const ancestor = ancestors[i] as acorn.AnyNode;
@@ -1365,22 +1472,11 @@ function extractSymbols(
                                 true,
                                 captureProperty,
                             );
-                            keysAssigned = true;
                         }
                         break;
                     }
                 }
 
-                // Capture the property. Note we blank out the scope for built-in
-                // objects so they don't get tracked as occurrences
-                captureProperty(
-                    propName,
-                    getPropertyNameStart(node.key),
-                    isGlobalObjectScope(parentScope || "", isGlobalName)
-                        ? undefined
-                        : parentScope || undefined,
-                    keysAssigned,
-                );
                 break;
             }
         }

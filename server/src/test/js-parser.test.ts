@@ -800,6 +800,7 @@ describe("JS Parser", () => {
                     ),
                     prefix: "var1.rootprop1.rootprop2",
                     assigned: true,
+                    opaque: true,
                 },
                 {
                     contents: "prop2",
@@ -863,6 +864,7 @@ describe("JS Parser", () => {
                     ),
                     prefix: "var1.rootprop1.rootprop2",
                     assigned: true,
+                    opaque: true,
                 },
                 {
                     contents: "prop2",
@@ -3016,6 +3018,162 @@ describe("JS Parser", () => {
             expect(result.variables.find((v) => v.contents === "x")?.opaque).to
                 .be.undefined;
         });
+
+        for (const [desc, code] of [
+            ["an identifier", "x = y"],
+            ["member access", "x = setup.items.sword"],
+            ["element access", "x = arr[0]"],
+            ["a new expression", "x = new Date()"],
+            ["this", "function f() { x = this }"],
+            ["an await expression", "async function f() { x = await p }"],
+            ["a yield expression", "function* f() { x = yield 1 }"],
+            ["a tagged template", "x = tag`a`"],
+            ["a chained assignment of an opaque value", "x = y = fn()"],
+            ["a sequence ending in an opaque value", "x = (1, fn())"],
+            ["a conditional with an opaque branch", "x = c ? fn() : 1"],
+            ["an || with an opaque operand", "x = 1 || y"],
+            ["a ?? with an opaque operand", "x = y ?? {}"],
+        ]) {
+            it(`should mark a variable assigned ${desc} as opaque`, () => {
+                // No arrange
+
+                const result = tokenize(code, true);
+
+                expect(result.variables.find((v) => v.contents === "x")?.opaque)
+                    .to.be.true;
+            });
+        }
+
+        it("should not mark a variable assigned a conditional of known shapes as opaque", () => {
+            // No arrange
+
+            const result = tokenize("x = c ? 1 : {}", true);
+
+            expect(result.variables.find((v) => v.contents === "x")?.opaque).to
+                .be.undefined;
+        });
+
+        it("should ignore a variable's own value when deciding if its assignment is opaque", () => {
+            // No arrange
+
+            const result = tokenize("x = x || {}", true);
+
+            expect(
+                result.variables.find((v) => v.contents === "x" && v.assigned)
+                    ?.opaque,
+            ).to.be.undefined;
+        });
+
+        it("should ignore a property path's own value when deciding if its assignment is opaque", () => {
+            // No arrange
+
+            const result = tokenize("a.b = a.b ?? {}", true);
+
+            expect(
+                result.properties.find((p) => p.contents === "b" && p.assigned)
+                    ?.opaque,
+            ).to.be.undefined;
+        });
+
+        it("should mark a variable assigned an object literal with a spread as opaque", () => {
+            // No arrange
+
+            const result = tokenize("x = {...y, a: 1}", true);
+
+            expect(result.variables.find((v) => v.contents === "x")?.opaque).to
+                .be.true;
+        });
+
+        it("should record a key beside a spread as a known property write", () => {
+            // No arrange
+            const result = tokenize("x = {...y, a: 1}", true);
+
+            expect(
+                result.properties
+                    .filter((p) => p.contents === "a")
+                    .map((p) => [p.prefix, p.assigned, p.opaque]),
+            ).to.eql([["x", true, undefined]]);
+        });
+
+        it("should mark an object literal's key with an opaque value as opaque", () => {
+            // No arrange
+
+            const result = tokenize("x = {a: fn(), b: 1}", true);
+
+            expect(result.properties.map((p) => [p.contents, p.opaque])).to.eql(
+                [
+                    ["a", true],
+                    ["b", undefined],
+                ],
+            );
+        });
+
+        it("should mark a nested object literal's key holding a spread as opaque", () => {
+            // No arrange
+
+            const result = tokenize("x.y = {a: {...z}}", true);
+
+            expect(
+                result.properties
+                    .filter((p) => p.prefix === "x.y")
+                    .map((p) => [p.contents, p.opaque]),
+            ).to.eql([["a", true]]);
+        });
+
+        it("should mark each target destructured from an opaque source as opaque", () => {
+            // No arrange
+
+            const result = tokenize(
+                "[a, ...b] = fn(); ({c, d: e.f} = g)",
+                true,
+            );
+
+            expect(
+                [
+                    ...result.variables.filter((v) => v.assigned),
+                    ...result.properties.filter((p) => p.assigned),
+                ].map((s) => [s.contents, s.opaque]),
+            ).to.eql([
+                ["a", true],
+                ["b", true],
+                ["c", true],
+                ["f", true],
+            ]);
+        });
+
+        it("should not mark a target destructured from a known shape as opaque", () => {
+            // No arrange
+
+            const result = tokenize("[a] = [1]", true);
+
+            expect(result.variables.find((v) => v.contents === "a")?.opaque).to
+                .be.undefined;
+        });
+
+        for (const code of [
+            "x = 'a'",
+            "x = null",
+            "x = undefined",
+            "x = /a/",
+            "x = [y]",
+            "x = {a: 1}",
+            "x = `a${y}`",
+            "x = y * 2",
+            "x = y < z",
+            "x = typeof y",
+            "x = !y",
+            "x = -y",
+            "x = 'a' + y",
+        ]) {
+            it(`should not mark \`${code}\` as opaque`, () => {
+                // No arrange
+
+                const result = tokenize(code, true);
+
+                expect(result.variables.find((v) => v.contents === "x")?.opaque)
+                    .to.be.undefined;
+            });
+        }
     });
 
     describe("Diagnostics", () => {
