@@ -13,10 +13,7 @@ import {
     collisionProneBrowserGlobals,
     jQueryGlobals,
 } from "../../host-globals";
-import {
-    capturePreSemanticTokenFor,
-    StoryFormatParsingState,
-} from "../../types";
+import { StoryFormatParsingState, tokenizeWithScratchState } from "../../types";
 
 /**
  * SugarCube's story-format built-in functions, which a called identifier
@@ -297,12 +294,8 @@ export function tokenizeTwineScriptExpression(
     // We have to translate the positions of Javascript variable and property labels,
     // as well as semantic tokens, into positions relative to the original TwineScript
     // expression. As part of that, we'll stash the JavaScript semantic tokens in
-    // a temporary story format parsing state.
-    const desugaredStoryFormatState: StoryFormatParsingState = {
-        passageTokens: {},
-        hostGlobals: storyFormatState.hostGlobals,
-    };
-    // We'll also create a fake document that contains just the expression
+    // a temporary story format parsing state and parse a fake document that contains
+    // just the expression.
     const desugaredDocument = TextDocument.create(
         "fake-uri",
         "javascript",
@@ -310,13 +303,28 @@ export function tokenizeTwineScriptExpression(
         desugared,
     );
 
-    const jsTokens = tokenizeJavaScript(
-        isProgram,
-        desugared,
-        0, // offset of 0 since the desugared expression starts at the start of the doc
-        desugaredDocument,
-        desugaredStoryFormatState,
-        { isAssignmentContext: isSetterContext },
+    const jsTokens = tokenizeWithScratchState(
+        storyFormatState,
+        (desugaredStoryFormatState) =>
+            tokenizeJavaScript(
+                isProgram,
+                desugared,
+                0, // offset of 0 since the desugared expression starts at the start of the doc
+                desugaredDocument,
+                desugaredStoryFormatState,
+                { isAssignmentContext: isSetterContext },
+            ),
+        // Adjust semantic token locations and (if needed) text
+        (t) => {
+            const { sugaredPosition, sugaredText } =
+                getSugaredPositionAndNewText(t.at, positionMapping);
+            let text = t.text;
+            // Variable sigils need to replace the first part of the existing string
+            if (sugaredText === "$" || sugaredText === "_") {
+                text = sugaredText + text.slice(1);
+            } else if (sugaredText !== undefined) text = sugaredText;
+            return { text, at: offset + sugaredPosition };
+        },
     );
 
     // Adjust variable and property locations and (if needed) text
@@ -372,26 +380,6 @@ export function tokenizeTwineScriptExpression(
         );
         jsTokens.error.start = offset + sugaredStart;
         jsTokens.error.end = offset + sugaredEnd;
-    }
-    // Adjust semantic token locations and (if needed) text
-    for (const t of Object.values(desugaredStoryFormatState.passageTokens)) {
-        const { sugaredPosition, sugaredText } = getSugaredPositionAndNewText(
-            t.at,
-            positionMapping,
-        );
-
-        // Variable sigils need to replace the first part of the existing string
-        if (sugaredText === "$" || sugaredText === "_") {
-            t.text = sugaredText + t.text.slice(1);
-        } else if (sugaredText !== undefined) t.text = sugaredText;
-
-        capturePreSemanticTokenFor(
-            t.text,
-            offset + sugaredPosition,
-            t.type,
-            t.modifiers,
-            storyFormatState,
-        );
     }
 
     return jsTokens;

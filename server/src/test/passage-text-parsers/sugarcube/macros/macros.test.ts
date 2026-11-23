@@ -336,6 +336,7 @@ describe("SugarCube Macros", () => {
                             Range.create(1, 5, 1, 7),
                         ),
                         kind: OSugarCubeSymbolKind.VariableSet,
+                        opaque: true,
                     },
                     {
                         contents: "$l",

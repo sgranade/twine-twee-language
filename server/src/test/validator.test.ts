@@ -383,5 +383,89 @@ describe("Validator", () => {
 
             expect(result).to.eql(["typo"]);
         });
+
+        it("should not warn on a property of a <<for>> range's value variable", async () => {
+            // No arrange
+
+            const result = await neverSetIn(
+                "<<for _item range $list>><</for>>",
+                "<<print _item.name>>",
+            );
+
+            expect(result).to.be.empty;
+        });
+
+        it("should warn on a property of a <<for>> range's key variable", async () => {
+            // No arrange
+
+            const result = await neverSetIn(
+                "<<for _k, _v range $obj>><</for>>",
+                "<<print _k.foo + _v.bar>>",
+            );
+
+            expect(result).to.eql(["foo"]);
+        });
+
+        it("should not warn on a property of a <<for>> range's value variable with no space after the comma", async () => {
+            // No arrange
+
+            const result = await neverSetIn(
+                "<<for _k,_v range $obj>><</for>>",
+                "<<print _v.bar>>",
+            );
+
+            expect(result).to.be.empty;
+        });
+
+        it("should not warn on a property beneath a quoted receiver's property path", async () => {
+            // No arrange
+
+            const result = await neverSetIn(
+                `<<set $p to {}>><<textbox "$p.stats" "">>`,
+                "<<print $p.stats.str>>",
+            );
+
+            expect(result).to.be.empty;
+        });
+
+        it("should warn on a property of an index variable in a back-ticked receiver", async () => {
+            // No arrange
+
+            const result = await neverSetIn(
+                '<<set _i to 0>><<textbox `$a[_i]` "">>',
+                "<<print _i.x>>",
+            );
+
+            expect(result).to.eql(["x"]);
+        });
+
+        it("should warn on a property of a variable used as a back-ticked receiver", async () => {
+            // No arrange
+
+            const result = await neverSetIn(
+                '<<set $target to "$name">><<textbox `$target` "">>',
+                "<<print $target.x>>",
+            );
+
+            expect(result).to.eql(["x"]);
+        });
+
+        for (const setText of [
+            `<<checkbox "$r" false true>>`,
+            `<<cycle "$r">><<option "a">><</cycle>>`,
+            `<<listbox "$r">><<option "a">><</listbox>>`,
+            `<<numberbox "$r" 0>>`,
+            `<<radiobutton "$r" 1>>`,
+            `<<textarea "$r" "">>`,
+            `<<textbox "$r" "">>`,
+        ]) {
+            it(`should not warn on a property of the receiver in ${setText}`, async () => {
+                // No arrange
+
+                const result = await neverSetIn(setText, "<<print $r.x>>");
+
+                expect(result).to.be.empty;
+            });
+        }
     });
 });

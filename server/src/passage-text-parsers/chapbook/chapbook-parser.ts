@@ -9,6 +9,7 @@ import type { AcornSyntaxError } from "../../acorn-errors";
 import { createDiagnosticFor } from "../../diagnostics";
 import { EmbeddedDocument } from "../../embedded-languages";
 import {
+    markAllWritten,
     parseJSStrict,
     TokenizedJS,
     tokenizeJavaScript,
@@ -972,12 +973,7 @@ function findAndParseEngineStateSets(
                     state.textDocument,
                     chapbookState,
                 );
-                for (const v of tokens.variables) {
-                    v.assigned = true;
-                }
-                for (const p of tokens.properties) {
-                    p.assigned = true;
-                }
+                markAllWritten(tokens);
                 createVariableAndPropertyReferences(tokens, state);
             }
         }
