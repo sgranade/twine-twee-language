@@ -213,6 +213,51 @@ describe("Chapbook Parser", () => {
             ]);
         });
 
+        describe("Opaque Assignments", () => {
+            function opaquePaths(passage: string) {
+                const header = ":: Passage [script]\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                state.currentPassage = buildPassage({ isScript: true });
+                const parser = uut.getChapbookParser(undefined);
+
+                parser?.parsePassageText(passage, header.length, state);
+                return callbacks.references
+                    .filter((r) => r.opaque)
+                    .map((r) => r.contents);
+            }
+
+            it("should judge engine.state.set and setDefault by their value argument", () => {
+                expect(
+                    opaquePaths(
+                        "engine.state.set('r', fn()); engine.state.set('x', 5);" +
+                            "const s = engine.state; s.setDefault('p', player);",
+                    ),
+                ).to.eql(["r", "p"]);
+            });
+
+            it("should mark a property-path set opaque at the property, not the variable", () => {
+                expect(opaquePaths("engine.state.set('a.b', fn());")).to.eql([
+                    "a.b",
+                ]);
+            });
+
+            it("should ignore a self-reference through engine.state.get", () => {
+                expect(
+                    opaquePaths(
+                        "engine.state.set('inv', engine.state.get('inv') || {});",
+                    ),
+                ).to.eql([]);
+            });
+
+            it("should never mark a conditional reference opaque", () => {
+                expect(opaquePaths("a = fn(); b.c = fn();")).to.eql([]);
+            });
+        });
+
         it("should not parse vars in script passages that are formatted like Chapbook var section", () => {
             const header = ":: Passage [script]\n";
             const passage = "\n var1: 17\n--\n";
@@ -740,6 +785,7 @@ describe("Chapbook Parser", () => {
                 contents: "var1",
                 location: Location.create("fake-uri", Range.create(2, 1, 2, 5)),
                 kind: OChapbookSymbolKind.VariableSet,
+                opaque: true,
             });
         });
 
@@ -762,6 +808,45 @@ describe("Chapbook Parser", () => {
                 length: 1,
                 tokenType: ETokenType.operator,
                 tokenModifiers: [],
+            });
+        });
+
+        describe("Opaque Assignments", () => {
+            function opaquePaths(vars: string) {
+                const header = ":: Passage\n";
+                const passage = `${vars}\n--\n`;
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const parser = uut.getChapbookParser(undefined);
+
+                parser?.parsePassageText(passage, header.length, state);
+                return callbacks.references
+                    .filter((r) => r.opaque)
+                    .map((r) => r.contents);
+            }
+
+            it("should mark an entry with an opaque value opaque", () => {
+                expect(opaquePaths("r: fn()\np: player\nx: 5")).to.eql([
+                    "r",
+                    "p",
+                ]);
+            });
+
+            it("should mark a property entry opaque at the property, not the variable", () => {
+                expect(opaquePaths("a.b: fn()")).to.eql(["a.b"]);
+            });
+
+            it("should mark a conditional entry by its value, not its condition", () => {
+                expect(opaquePaths("r (flag): fn()\ns (fn()): 5")).to.eql([
+                    "r",
+                ]);
+            });
+
+            it("should ignore an entry's self-reference", () => {
+                expect(opaquePaths("inv: inv || {}")).to.eql([]);
             });
         });
     });

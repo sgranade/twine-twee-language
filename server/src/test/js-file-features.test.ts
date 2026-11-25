@@ -5,27 +5,37 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 import { getDefinitionAt } from "../definition";
 import { updateProjectIndex, updateScriptFileIndex } from "../indexer";
 import { ParseLevel } from "../parser-types";
-import { Index } from "../project-index";
+import { Index, ScriptFileRole } from "../project-index";
 import { getReferencesToSymbolAt } from "../references";
 import { generateDiagnostics } from "../validator";
 
 // Essentially e2e tests for how JS vars affect Twee parsing
 
-const storyData =
-    ':: StoryData\n{"ifid": "x", "format": "SugarCube", "format-version": "2.36.1"}\n\n';
-
 describe(".js File Story Variable References", () => {
-    function build(js: string, passageText = "<<print $gold>>") {
+    function build(
+        js: string,
+        passageText = "<<print $gold>>",
+        {
+            format = "SugarCube",
+            formatVersion = "2.36.1",
+            role = "story-script",
+        }: {
+            format?: string;
+            formatVersion?: string;
+            role?: ScriptFileRole;
+        } = {},
+    ) {
         const index = new Index();
         const tw = TextDocument.create(
             "file:///story.tw",
             "twee3",
             1,
-            storyData + `:: Start\n${passageText}\n`,
+            `:: StoryData\n{"ifid": "x", "format": "${format}", "format-version": "${formatVersion}"}\n\n` +
+                `:: Start\n${passageText}\n`,
         );
         const script = TextDocument.create("file:///s.js", "javascript", 1, js);
         updateProjectIndex(tw, ParseLevel.Full, index);
-        updateScriptFileIndex(script, "story-script", ParseLevel.Full, index);
+        updateScriptFileIndex(script, role, ParseLevel.Full, index);
         return { index, tw, script };
     }
 
@@ -87,23 +97,61 @@ describe(".js File Story Variable References", () => {
     });
 
     describe("Opaque Assignments", () => {
-        async function neverSetCodes(js: string) {
-            const { index, tw } = build(js, "<<print $r.isError>>");
-            return (await generateDiagnostics(tw, index))
-                .map((d) => d.code)
-                .filter((c) => c === "variable-never-set");
-        }
+        describe("SugarCube", () => {
+            async function sugarCubeNeverSetCodes(js: string) {
+                const { index, tw } = build(js, "<<print $r.isError>>");
+                return (await generateDiagnostics(tw, index))
+                    .map((d) => d.code)
+                    .filter((c) => c === "variable-never-set");
+            }
 
-        it("should not warn in a .tw on a property of a value a .js set from a call", async () => {
-            expect(await neverSetCodes("State.variables.r = fn();\n")).to.eql(
-                [],
-            );
+            it("should not warn in a .tw on a property of a value a .js set from a call", async () => {
+                expect(
+                    await sugarCubeNeverSetCodes("State.variables.r = fn();\n"),
+                ).to.eql([]);
+            });
+
+            it("should still warn in a .tw on a property of a known-shape value a .js set", async () => {
+                expect(
+                    await sugarCubeNeverSetCodes("State.variables.r = 5;\n"),
+                ).to.eql(["variable-never-set"]);
+            });
         });
 
-        it("should still warn in a .tw on a property of a known-shape value a .js set", async () => {
-            expect(await neverSetCodes("State.variables.r = 5;\n")).to.eql([
-                "variable-never-set",
-            ]);
+        describe("Chapbook", () => {
+            async function chapbookNeverSetCodes(
+                js: string,
+                role: ScriptFileRole,
+            ) {
+                const { index, tw } = build(js, "{r.isError}", {
+                    format: "Chapbook",
+                    formatVersion: "2.3.0",
+                    role,
+                });
+                return (await generateDiagnostics(tw, index))
+                    .map((d) => d.code)
+                    .filter((c) => c === "variable-never-set");
+            }
+
+            for (const role of ["story-script", "included-script"] as const) {
+                it(`should not warn in a .tw on a property of a value a ${role} file set from a call`, async () => {
+                    expect(
+                        await chapbookNeverSetCodes(
+                            "engine.state.set('r', fn());\n",
+                            role,
+                        ),
+                    ).to.eql([]);
+                });
+            }
+
+            it("should still warn in a .tw on a property of a known-shape value a .js set", async () => {
+                expect(
+                    await chapbookNeverSetCodes(
+                        "engine.state.set('r', 5);\n",
+                        "story-script",
+                    ),
+                ).to.eql(["variable-never-set"]);
+            });
         });
     });
 });

@@ -3,8 +3,8 @@ import * as acornWalk from "acorn-walk";
 
 import {
     isCallee,
+    isOpaqueArgument,
     isOpaqueAssignment,
-    isOpaqueValue,
     isWriteTarget,
     parentOf,
     ScriptPropertyOccurrence,
@@ -232,7 +232,6 @@ export const extractSugarCubeScriptSymbols: ScriptSymbolExtractor = ({
                 const sigil = literal.name[0];
                 if (!isSigil(sigil)) break;
                 const isSet = call.method === "setVar";
-                const value = node.arguments[1];
                 addVariable(
                     sigil,
                     { name: literal.name.slice(1), start: literal.start + 1 },
@@ -240,9 +239,11 @@ export const extractSugarCubeScriptSymbols: ScriptSymbolExtractor = ({
                         assigned: isSet,
                         opaque:
                             isSet &&
-                            value !== undefined &&
-                            value.type !== "SpreadElement" &&
-                            isOpaqueValue(value, literal.name, statePathOf),
+                            isOpaqueArgument(
+                                node.arguments[1],
+                                literal.name,
+                                statePathOf,
+                            ),
                     },
                 );
                 break;

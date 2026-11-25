@@ -3,15 +3,18 @@ import * as acornWalk from "acorn-walk";
 
 import {
     isEcmaScriptGlobal,
+    isOpaqueArgument,
     ScriptPropertyOccurrence,
     ScriptSymbolExtractor,
     ScriptVariableOccurrence,
 } from "../../js-parser";
+import { opaqueFlag } from "../../project-index";
 import { browserGlobals } from "../host-globals";
 import {
     createScriptAnalysis,
     isIdentifierName,
     MISSING_IDENTIFIER,
+    StaticName,
 } from "../../script-analysis";
 
 /**
@@ -44,7 +47,7 @@ export function whatExcludedBareNameIs(name: string): string | undefined {
  *
  * @param options Extractor options.
  * @param options.recordRootDeclarations True to also record root-level
- * declarations, which conditional references are later filtered against. Only
+ * declarations for filtering conditional references against. Only
  * code that shares the story's script scope (`script` passages and story
  * script files) should do so.
  */
@@ -55,10 +58,10 @@ export function createChapbookScriptExtractor({
 }): ScriptSymbolExtractor {
     /*
      * Story variables and properties only come from `engine.state.get`/`set`/`setDefault`
-     * with a literal key (or a never-reassigned alias of `engine.state`). An
-     * unbound `config` is a story variable; every other unbound bare name is a
-     * conditional reference. We reject escaped spellings (`g\u006FLd`) and
-     * declarations.
+     * with a literal key (or a never-reassigned alias of `engine.state`). A `set`/`setDefault`
+     * whose value could be an object of unknown shape marks its path opaque.
+     * An unbound bare `config` is a story variable; every other unbound bare name is a
+     * conditional reference. Escaped spellings (`g\u006FLd`) and declarations are rejected.
      */
     return ({ ast, text, scopeManager, isGlobalName }) => {
         const variables: ScriptVariableOccurrence[] = [];
@@ -81,28 +84,59 @@ export function createChapbookScriptExtractor({
             );
         };
 
-        acornWalk.full(ast, (rawNode) => {
-            const node = rawNode as acorn.AnyNode;
+        // `engine.state.get`/`set`/`setDefault` call w/a literal key
+        const engineStateCall = (
+            node: acorn.AnyNode,
+        ):
+            | { method: "get" | "set" | "setDefault"; key: StaticName }
+            | undefined => {
             if (
                 node.type !== "CallExpression" ||
                 node.callee.type !== "MemberExpression" ||
                 !isEngineState(node.callee.object)
             )
-                return;
+                return undefined;
             const method = memberName(node.callee)?.name;
             if (method !== "get" && method !== "set" && method !== "setDefault")
-                return;
+                return undefined;
             const key =
                 node.arguments[0] && staticKeyName(node.arguments[0], true);
-            if (!key) return;
+            return key ? { method, key } : undefined;
+        };
+
+        // Key of an `engine.state.get` call, so we can ignore a self-reference
+        // like `set('inv', get('inv') || {})`
+        const statePathOf = (node: acorn.AnyNode): string | undefined => {
+            if (node.type === "ChainExpression") {
+                return statePathOf(node.expression);
+            }
+            const call = engineStateCall(node);
+            return call?.method === "get" ? call.key.name : undefined;
+        };
+
+        acornWalk.full(ast, (rawNode) => {
+            const node = rawNode as acorn.AnyNode;
+            const call = engineStateCall(node);
+            if (!call) return;
+            const { method, key } = call;
             const segments = key.name.split(".");
             if (!segments.every((s) => isIdentifierName(s))) return;
 
             const assigned = method !== "get";
+            const opaque =
+                assigned &&
+                isOpaqueArgument(
+                    (node as acorn.CallExpression).arguments[1],
+                    key.name,
+                    statePathOf,
+                );
             let at = key.start;
             segments.forEach((segment, i) => {
+                const flag = opaqueFlag({
+                    opaque: opaque && i === segments.length - 1,
+                });
                 if (i === 0) {
-                    variables.push({ text: segment, at, assigned });
+                    variables.push({ text: segment, at, assigned, ...flag });
                 } else {
                     properties.push({
                         text: segment,
@@ -110,6 +144,7 @@ export function createChapbookScriptExtractor({
                         scope: segments.slice(0, i).join("."),
                         assigned,
                         isCallee: false,
+                        ...flag,
                     });
                 }
                 at += segment.length + 1;

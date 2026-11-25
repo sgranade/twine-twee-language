@@ -403,6 +403,7 @@ function staticPathOf(node: acorn.AnyNode): string | undefined {
     if (!chain || isDynamicChain(chain)) return undefined;
     return [chain.root.name, ...chain.properties.map((p) => p.name)].join(".");
 }
+
 /**
  * Gets the static path an expression stands for, if it has one.
  */
@@ -1590,6 +1591,45 @@ export function parseJSStrict(
             sourceType,
             ranges: true,
         });
+    }
+}
+
+/**
+ * Is a format-forced write (`setVar('$x', …)`, `engine.state.set('x', …)`)
+ * an opaque assignment based on its value argument?
+ *
+ * @param arg Value argument if any.
+ * @param selfPath Path being assigned.
+ * @param pathOf Gets an expression's path to compare with `selfPath`.
+ * @returns True if the argument could be an object of unknown shape.
+ */
+export function isOpaqueArgument(
+    arg: acorn.AnyNode | undefined,
+    selfPath: string,
+    pathOf: StaticPathOf,
+): boolean {
+    return (
+        arg !== undefined &&
+        arg.type !== "SpreadElement" &&
+        isOpaqueValue(arg, selfPath, pathOf)
+    );
+}
+
+/**
+ * Could the value of an expression's text be an object of unknown shape?
+ *
+ * @param text Text of the expression being assigned.
+ * @param selfPath Path being assigned.
+ * @returns True if assigning the value is an opaque assignment.
+ */
+export function isOpaqueValueText(text: string, selfPath: string): boolean {
+    try {
+        return isOpaqueValue(
+            parseJSStrict(text, false) as acorn.AnyNode,
+            selfPath,
+        );
+    } catch {
+        return false;
     }
 }
 
