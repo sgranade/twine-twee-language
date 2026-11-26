@@ -14,6 +14,7 @@ import {
     jQueryGlobals,
 } from "../../host-globals";
 import { StoryFormatParsingState, tokenizeWithScratchState } from "../../types";
+import { extractTwineScriptSymbols } from "../sugarcube-script-symbols";
 
 /**
  * SugarCube's story-format built-in functions, which a called identifier
@@ -292,6 +293,12 @@ function resugarShapeSources(
         const sources: string[] = [];
         for (const source of label.shapeSources) {
             const [root, ...rest] = source.split(".");
+            // A state root's path is already sigiled, since desugaring
+            // leaves no sigil at the start of a name
+            if (root.startsWith("$") || root.startsWith("_")) {
+                sources.push(source);
+                continue;
+            }
             const sugaredRoot = sugaredNames.get(root);
             // A shape source whose root had no sigil isn't story state
             if (sugaredRoot === undefined) {
@@ -346,6 +353,11 @@ export function tokenizeTwineScriptExpression(
         desugared,
     );
 
+    // Story variables are sigiled names (`$x`, `_x`) and those reached through a
+    // SugarCube state root (`State.variables.x`). Other bare names and their properties
+    // aren't returned, and neither are properties whose "ownership" the parser couldn't
+    // trace back to a story variable or to `settings` or `setup`.
+
     const jsTokens = tokenizeWithScratchState(
         storyFormatState,
         (desugaredStoryFormatState) =>
@@ -355,7 +367,10 @@ export function tokenizeTwineScriptExpression(
                 0, // offset of 0 since the desugared expression starts at the start of the doc
                 desugaredDocument,
                 desugaredStoryFormatState,
-                { isAssignmentContext: isSetterContext },
+                {
+                    isAssignmentContext: isSetterContext,
+                    extractScriptSymbols: extractTwineScriptSymbols,
+                },
             ),
         // Adjust semantic token locations and (if needed) text
         (t) => {
@@ -403,13 +418,25 @@ export function tokenizeTwineScriptExpression(
         }
 
         v.location = createLocationFor(
-            v.contents,
+            "sigilOutsideRange" in v && v.sigilOutsideRange
+                ? v.contents.slice(1)
+                : v.contents,
             offset + sugaredPosition,
             textDocument,
         );
     }
 
     resugarShapeSources(jsTokens, desugared, positionMapping);
+
+    // Other bare names are plain JavaScript, not story variables
+    jsTokens.variables = jsTokens.variables.filter((v) =>
+        startIsVarRegexp.test(v.contents),
+    );
+    jsTokens.properties = jsTokens.properties.filter(
+        (p) =>
+            p.prefix !== undefined &&
+            startIsVarRegexp.test(`${p.prefix}.${p.contents}`),
+    );
 
     // Adjust diagnostic location
     if (jsTokens.error) {

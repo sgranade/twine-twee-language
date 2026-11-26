@@ -1,9 +1,11 @@
 import * as acorn from "acorn";
 import * as acornWalk from "acorn-walk";
+import * as eslintScope from "eslint-scope";
 
 import {
     argumentShape,
     assignmentShape,
+    extractSymbols,
     assignedValue,
     isWriteTarget,
     memberChainProperties,
@@ -11,6 +13,8 @@ import {
     ScriptPropertyOccurrence,
     ScriptSymbolExtractor,
     ScriptVariableOccurrence,
+    StaticPathOf,
+    storyPathOf,
 } from "../../js-parser";
 import { shapeFlags, shorthandFlag, ValueShape } from "../../project-index";
 import {
@@ -31,24 +35,23 @@ function sigilForRootName(name: string | undefined): Sigil | undefined {
     return undefined;
 }
 
+type StateRootTracer = ReturnType<typeof createStateRootTracer>;
+
 /**
- * Extract SugarCube story variables and properties from JavaScript code.
+ * Create scope-aware helpers that recognize SugarCube state roots and the
+ * story paths reached through them.
+ *
+ * @param text Text the AST was parsed from.
+ * @param scopeManager Scope analysis of the AST.
+ * @returns State-root helpers.
  */
-export const extractSugarCubeScriptSymbols: ScriptSymbolExtractor = ({
-    ast,
-    text,
-    scopeManager,
-}) => {
-    const variables: ScriptVariableOccurrence[] = [];
-    const properties: ScriptPropertyOccurrence[] = [];
+function createStateRootTracer(
+    text: string,
+    scopeManager: eslintScope.ScopeManager,
+) {
     const { isUnbound, staticKeyName, memberName, aliasRoot } =
         createScriptAnalysis(text, scopeManager);
 
-    /*
-     * To get to a story variable in JavaScript, you have to use `State.variables`,
-     * `State.temporary`, `variables()`, `temporary()`, `SugarCube.State.*` (which
-     * can include `window.`), or `State.getVar`/`setVar` w/a literal key.
-     */
     // `State`, `SugarCube.State`, or `window.SugarCube.State`
     const isStateObject = (node: acorn.Node): boolean => {
         if (node.type === "Identifier") {
@@ -104,8 +107,8 @@ export const extractSugarCubeScriptSymbols: ScriptSymbolExtractor = ({
         return undefined;
     };
 
-    // Story path that a state-root expression stands for (`$a.b` for
-    // `variables().a.b` or `State.getVar("$a")`), if any.
+    // Story path a state-root expression stands for (`$a.b` for
+    // `variables().a.b` or `State.getVar("$a")`), if it has one
     const statePathOf = (node: acorn.AnyNode): string | undefined => {
         switch (node.type) {
             case "ChainExpression":
@@ -126,7 +129,7 @@ export const extractSugarCubeScriptSymbols: ScriptSymbolExtractor = ({
         return undefined;
     };
 
-    // `State.getVar`/`setVar` call with a literal key (if the node is one).
+    // `State.getVar`/`setVar` call with a literal key, if the node is one
     const stateVarCall = (
         node: acorn.CallExpression,
     ): { method: "getVar" | "setVar"; key: StaticName } | undefined => {
@@ -139,6 +142,73 @@ export const extractSugarCubeScriptSymbols: ScriptSymbolExtractor = ({
         return literal ? { method, key: literal } : undefined;
     };
 
+    return { rootSigil, statePathOf, stateVarCall, staticKeyName, memberName };
+}
+
+/**
+ * Extract SugarCube story variables and properties from JavaScript code.
+ */
+export const extractSugarCubeScriptSymbols: ScriptSymbolExtractor = ({
+    ast,
+    text,
+    scopeManager,
+}) => {
+    const tracer = createStateRootTracer(text, scopeManager);
+    return extractStateRootSymbols(ast, tracer, tracer.statePathOf);
+};
+
+/**
+ * Extract story variables and properties from desugared TwineScript.
+ */
+export const extractTwineScriptSymbols: ScriptSymbolExtractor = ({
+    ast,
+    text,
+    scopeManager,
+    isGlobalName,
+    isAssignmentContext,
+}) => {
+    // A story variable is either a sigiled name, found by the default extractor,
+    // or reached through a state root, as in script code. Copies through either
+    // kind record their story path as a shape source: a state root's path is
+    // sigiled (`$a`), and a sigiled name's is left desugared (`Xa`) for the
+    // caller to resugar.
+    const tracer = createStateRootTracer(text, scopeManager);
+    const defaultPathOf = storyPathOf(isGlobalName);
+    const pathOf: StaticPathOf = (node) =>
+        tracer.statePathOf(node) ?? defaultPathOf(node);
+    const sigiled = extractSymbols(ast, isGlobalName, isAssignmentContext, {
+        pathOf,
+    });
+    const stateRooted = extractStateRootSymbols(ast, tracer, pathOf);
+    return {
+        variables: [...sigiled.variables, ...stateRooted.variables].sort(
+            (a, b) => a.at - b.at,
+        ),
+        properties: [...sigiled.properties, ...stateRooted.properties].sort(
+            (a, b) => a.at - b.at,
+        ),
+    };
+};
+
+/**
+ * Extract story variables and properties reached through state roots.
+ *
+ * @param ast Parsed code.
+ * @param tracer State-root helpers for the code.
+ * @param pathOf Gets an expression's story path, to find shape sources.
+ * @returns Variable and property occurrences, in ascending order of position.
+ */
+function extractStateRootSymbols(
+    ast: acorn.Node,
+    { rootSigil, stateVarCall, staticKeyName, memberName }: StateRootTracer,
+    pathOf: StaticPathOf,
+): {
+    variables: ScriptVariableOccurrence[];
+    properties: ScriptPropertyOccurrence[];
+} {
+    const variables: ScriptVariableOccurrence[] = [];
+    const properties: ScriptPropertyOccurrence[] = [];
+
     const addVariable = (
         sigil: Sigil,
         name: StaticName,
@@ -148,7 +218,7 @@ export const extractSugarCubeScriptSymbols: ScriptSymbolExtractor = ({
             shape = {},
         }: { assigned: boolean; shorthand?: boolean; shape?: ValueShape },
     ) => {
-        if (!isIdentifierName(name.name)) return; // Don't add non-identifiers
+        if (!isIdentifierName(name.name)) return;
         variables.push({
             text: sigil + name.name,
             rangeText: name.name,
@@ -173,7 +243,7 @@ export const extractSugarCubeScriptSymbols: ScriptSymbolExtractor = ({
                 addVariable(sigil, name, {
                     assigned: written,
                     shape: written
-                        ? assignmentShape(node, ancestors, statePathOf)
+                        ? assignmentShape(node, ancestors, pathOf)
                         : {},
                 });
                 if (written) {
@@ -181,20 +251,19 @@ export const extractSugarCubeScriptSymbols: ScriptSymbolExtractor = ({
                         ...objectLiteralProperties(
                             assignedValue(node, ancestors),
                             sigil + name.name,
-                            statePathOf,
+                            pathOf,
                             { assigned: true },
                         ),
                     );
                 }
 
-                // Capture properties by walking up through static property accesses
                 properties.push(
                     ...memberChainProperties(
                         node,
                         sigil + name.name,
                         ancestors,
                         memberName,
-                        statePathOf,
+                        pathOf,
                     ),
                 );
                 break;
@@ -230,7 +299,7 @@ export const extractSugarCubeScriptSymbols: ScriptSymbolExtractor = ({
                             ? argumentShape(
                                   node.arguments[1],
                                   literal.name,
-                                  statePathOf,
+                                  pathOf,
                               )
                             : {},
                     },
@@ -240,7 +309,7 @@ export const extractSugarCubeScriptSymbols: ScriptSymbolExtractor = ({
                         ...objectLiteralProperties(
                             node.arguments[1],
                             literal.name,
-                            statePathOf,
+                            pathOf,
                             { assigned: true },
                         ),
                     );
@@ -265,4 +334,4 @@ export const extractSugarCubeScriptSymbols: ScriptSymbolExtractor = ({
     variables.sort((a, b) => a.at - b.at);
     properties.sort((a, b) => a.at - b.at);
     return { variables, properties };
-};
+}

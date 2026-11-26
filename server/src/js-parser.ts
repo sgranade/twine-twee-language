@@ -164,6 +164,7 @@ export type ScriptSymbolExtractor = (context: {
     text: string;
     scopeManager: eslintScope.ScopeManager;
     isGlobalName: (name: string) => boolean;
+    isAssignmentContext: boolean;
 }) => {
     variables: ScriptVariableOccurrence[];
     properties: ScriptPropertyOccurrence[];
@@ -417,7 +418,7 @@ export type StaticPathOf = (node: acorn.AnyNode) => string | undefined;
  * @param isGlobalName Global-name predicate.
  * @returns The path getter.
  */
-function storyPathOf(isGlobalName: IsGlobalName): StaticPathOf {
+export function storyPathOf(isGlobalName: IsGlobalName): StaticPathOf {
     return (node) => {
         // A root that scope analysis found to be locally bound, or that's a global,
         // has no story path.
@@ -1420,17 +1421,6 @@ function computeSemanticTokens(
 }
 
 /**
- * A property occurrence found while extracting symbols, before it's turned into a `JSPropertyLabel`.
- */
-interface RawPropertyOccurrence extends ValueShape {
-    text: string;
-    at: number;
-    scope?: string;
-    assigned: boolean;
-    isCallee: boolean;
-}
-
-/**
  * Extract story-variable and story-property occurrences from a parsed JavaScript
  * program or expression.
  *
@@ -1441,21 +1431,24 @@ interface RawPropertyOccurrence extends ValueShape {
  * @param ast Parsed text, already annotated by `annotateVariableScopes`.
  * @param isGlobalName Global-name predicate.
  * @param isAssignmentContext True if write-shaped syntax counts as an assignment.
+ * @param options Extraction options.
+ * @param options.pathOf Gets an expression's story path, to find shape sources.
+ * Defaults to the path of an unbound, non-global root.
  * @returns Variable and property occurrences, in ascending order of position.
  */
-function extractSymbols(
+export function extractSymbols(
     ast: acorn.Node,
     isGlobalName: IsGlobalName,
     isAssignmentContext: boolean,
+    { pathOf = storyPathOf(isGlobalName) }: { pathOf?: StaticPathOf } = {},
 ): {
     variables: ScriptVariableOccurrence[];
-    properties: RawPropertyOccurrence[];
+    properties: ScriptPropertyOccurrence[];
 } {
     // Keyed by position so that, when converted to an array below, occurrences
     // come out in ascending source position order
     const variableTokens: Record<number, ScriptVariableOccurrence> = {};
-    const propertyTokens: Record<number, RawPropertyOccurrence> = {};
-    const pathOf = storyPathOf(isGlobalName);
+    const propertyTokens: Record<number, ScriptPropertyOccurrence> = {};
 
     // Helper function to add a variable occurrence if it's an unbound (story)
     // variable and not a global
@@ -1927,6 +1920,7 @@ export function tokenizeJavaScript(
                   text,
                   scopeManager: analyzeScopes(ast),
                   isGlobalName,
+                  isAssignmentContext,
               })
             : extractSymbols(ast, isGlobalName, isAssignmentContext);
         for (const variable of variables) {

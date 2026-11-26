@@ -85,48 +85,6 @@ export function createVariableAndPropertyReferences(
         let contents =
             p.prefix !== undefined ? `${p.prefix}.${p.contents}` : p.contents;
 
-        // Handle `State.temporary.<var>` and `State.variables.<var>`, which in
-        // JavaScript correspond to Twinescript `_var` and `$var`, respectively.
-        if (contents.startsWith("State.")) {
-            let isVariable = false;
-            let isTemporary = false;
-            if (contents.startsWith("State.temporary.")) {
-                isVariable = true;
-                isTemporary = true;
-            } else if (contents.startsWith("State.variables.")) {
-                isVariable = true;
-                isTemporary = false;
-            }
-            if (isVariable) {
-                const ref = {
-                    contents: (isTemporary ? "_" : "$") + contents.slice(16),
-                    location: p.location,
-                    assigned: p.assigned,
-                    sigilOutsideRange: true,
-                    ...calleeFlag(p),
-                    ...shapeFlags(p),
-                };
-                const firstPeriodNdx = ref.contents.indexOf(".");
-                if (firstPeriodNdx === -1) {
-                    // This is the property corresponding to the root variable: State.variable.var
-                    createVariableAndPropertyReferences(
-                        { variables: [ref], properties: [] },
-                        state,
-                        sugarcubeState,
-                    );
-                } else {
-                    // This corresponds to a property: State.variable.var.prop
-                    createVariableAndPropertyReferences(
-                        { variables: [], properties: [ref] },
-                        state,
-                        sugarcubeState,
-                    );
-                }
-
-                continue;
-            }
-        }
-
         // Don't capture properties of the auto-generated variable `output` in a <<script>> macro
         if (
             (contents === "output" || contents.startsWith("output.")) &&
