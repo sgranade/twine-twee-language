@@ -1,12 +1,14 @@
 import "mocha";
 import { expect } from "chai";
 import { TextDocument } from "vscode-languageserver-textdocument";
+import { WorkspaceEdit } from "vscode-languageserver";
 
 import { getDefinitionAt } from "../definition";
 import { updateProjectIndex, updateScriptFileIndex } from "../indexer";
 import { ParseLevel } from "../parser-types";
 import { Index, ScriptFileRole } from "../project-index";
 import { getReferencesToSymbolAt } from "../references";
+import { generateRenames } from "../renames";
 import { generateDiagnostics } from "../validator";
 
 // Essentially e2e tests for how JS vars affect Twee parsing
@@ -141,6 +143,138 @@ describe(".js File Story Variable References", () => {
             );
 
             expect(refs?.map((r) => tw.getText(r.range))).to.eql(["hp", "hp"]);
+        });
+    });
+
+    describe("Object Literals Written to Story State", () => {
+        async function neverSetTexts(js: string, passageText: string) {
+            const { index, tw } = build(js, passageText);
+            return (await generateDiagnostics(tw, index))
+                .filter((d) => d.code === "variable-never-set")
+                .map((d) => tw.getText(d.range));
+        }
+
+        it("should count a .js literal's keys as property writes", async () => {
+            expect(
+                await neverSetTexts(
+                    "State.variables.player = {hp: 1};\n",
+                    "<<print $player.hp + $player.hpp>>",
+                ),
+            ).to.eql(["hpp"]);
+        });
+
+        it("should count a .js literal's nested keys and make only an opaque key's path opaque", async () => {
+            expect(
+                await neverSetTexts(
+                    "State.variables.player = {stats: {str: 1}, inv: fn()};\n",
+                    "<<print $player.stats.str + $player.inv.x + $player.stats.x + $player.x>>",
+                ),
+            ).to.eql(["x", "x"]);
+        });
+
+        it("should check a .js literal's spread against its shape source", async () => {
+            expect(
+                await neverSetTexts(
+                    "State.variables.base = {b: 1};\nState.variables.o = {...State.variables.base, a: 1};\n",
+                    "<<print $o.a + $o.b + $o.c>>",
+                ),
+            ).to.eql(["c"]);
+        });
+
+        it("should count the keys of a literal a .js passes to setVar", async () => {
+            expect(
+                await neverSetTexts(
+                    "State.setVar('$player', {hp: 1});\n",
+                    "<<print $player.hp + $player.hpp>>",
+                ),
+            ).to.eql(["hpp"]);
+        });
+
+        it("should count a <<script>> literal's keys as property writes", async () => {
+            expect(
+                await neverSetTexts(
+                    "",
+                    "<<script>>State.variables.player = {hp: 1};<</script>><<print $player.hp + $player.hpp>>",
+                ),
+            ).to.eql(["hpp"]);
+        });
+
+        for (const method of ["set", "setDefault"]) {
+            it(`should count the keys of a literal a Chapbook .js passes to engine.state.${method}`, async () => {
+                const { index, tw } = build(
+                    `engine.state.${method}('player', {hp: 1, stats: {str: 1}, inv: fn()});\n`,
+                    "{player.hp} {player.stats.str} {player.inv.x} {player.hpp}",
+                    { format: "Chapbook", formatVersion: "2.3.0" },
+                );
+                expect(
+                    (await generateDiagnostics(tw, index))
+                        .filter((d) => d.code === "variable-never-set")
+                        .map((d) => tw.getText(d.range)),
+                ).to.eql(["hpp"]);
+            });
+        }
+
+        it("should count the keys of a literal a Chapbook [JavaScript] modifier passes to engine.state.set", async () => {
+            const { index, tw } = build(
+                "",
+                "[JavaScript]\nengine.state.set('player', {hp: 1});\n[continue]\n{player.hp} {player.hpp}",
+                { format: "Chapbook", formatVersion: "2.3.0" },
+            );
+            expect(
+                (await generateDiagnostics(tw, index))
+                    .filter((d) => d.code === "variable-never-set")
+                    .map((d) => tw.getText(d.range)),
+            ).to.eql(["hpp"]);
+        });
+
+        it("should include a .js literal's key in a property's references", () => {
+            const { index, tw } = build(
+                "State.variables.player = {hp: 1};\n",
+                "<<print $player.hp>>",
+            );
+
+            const refs = getReferencesToSymbolAt(
+                tw.uri,
+                tw.positionAt(tw.getText().indexOf("hp")),
+                index,
+                true,
+            );
+
+            expect(refs?.map((r) => r.uri).sort()).to.eql([
+                "file:///s.js",
+                "file:///story.tw",
+            ]);
+        });
+
+        it("should rename a .js literal's key along with the property", () => {
+            const { index, tw, script } = build(
+                "State.variables.player = {hp: 1};\n",
+                "<<print $player.hp>>",
+            );
+
+            const edit = generateRenames(
+                tw.uri,
+                tw.positionAt(tw.getText().indexOf("hp")),
+                "health",
+                index,
+            ) as WorkspaceEdit;
+
+            expect(
+                TextDocument.applyEdits(
+                    script,
+                    edit.changes?.[script.uri] ?? [],
+                ),
+            ).to.equal("State.variables.player = {health: 1};\n");
+        });
+
+        it("should count a <<run>> literal's keys as property writes", async () => {
+            expect(
+                await neverSetTexts(
+                    "",
+                    "<<run State.variables.player = {hp: 1, stats: {str: 1}, inv: JSON.parse('{}')}>>" +
+                        "<<print $player.hp + $player.stats.str + $player.inv.x + $player.hpp>>",
+                ),
+            ).to.eql(["hpp"]);
         });
     });
 

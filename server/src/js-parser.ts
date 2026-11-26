@@ -554,7 +554,7 @@ export function shapeOfValue(
  * @param ancestors The target's ancestors, ending with the target itself.
  * @returns The assigned value, or undefined if there isn't one.
  */
-function assignedValue(
+export function assignedValue(
     target: acorn.AnyNode,
     ancestors: acorn.Node[],
 ): acorn.AnyNode | undefined {
@@ -1061,6 +1061,78 @@ function captureMemberChain(
 }
 
 /**
+ * A static key of an object literal with the path it's a property of.
+ */
+interface ObjectLiteralKey {
+    name: string;
+    at: number;
+    /** Path the key is a property of (`a.b` for `c` in `a.b = {c: 1}`). */
+    scope: string;
+    shape: ValueShape;
+}
+
+/**
+ * Get every static key of an object literal, including those of nested
+ * literals (`{stats: {str: 1}}` has `stats` and `stats.str`).
+ *
+ * @param node Object literal.
+ * @param scope Path the literal is assigned to.
+ * @param pathOf Predicate to get an expression's story path to find shape
+ * sources and recognize a self-reference.
+ * @returns The literal's keys, in source order.
+ */
+function objectLiteralKeys(
+    node: acorn.ObjectExpression,
+    scope: string,
+    pathOf: StaticPathOf,
+): ObjectLiteralKey[] {
+    const keys: ObjectLiteralKey[] = [];
+    for (const prop of node.properties) {
+        if (prop.type !== "Property") continue;
+        const name = getStaticPropertyName(prop.key, prop.computed ?? false);
+        if (!name) continue;
+        const keyPath = `${scope}.${name}`;
+        keys.push({
+            name,
+            at: getPropertyNameStart(prop.key),
+            scope,
+            shape: shapeOfValue(prop.value, keyPath, pathOf),
+        });
+        if (prop.value.type === "ObjectExpression") {
+            keys.push(...objectLiteralKeys(prop.value, keyPath, pathOf));
+        }
+    }
+    return keys;
+}
+
+/**
+ * Get the property writes an object literal makes when script code assigns
+ * it to a story path (e.g. `State.variables.p = {hp: 1}` writes `$p.hp`).
+ *
+ * @param value Value being assigned, if any.
+ * @param path Story path being assigned.
+ * @param pathOf Gets an expression's story path, to find shape sources and
+ * recognize a self-reference.
+ * @returns The literal's keys as written properties, or none if the value
+ * isn't an object literal.
+ */
+export function objectLiteralWrites(
+    value: acorn.AnyNode | undefined,
+    path: string,
+    pathOf: StaticPathOf,
+): ScriptPropertyOccurrence[] {
+    if (value?.type !== "ObjectExpression") return [];
+    return objectLiteralKeys(value, path, pathOf).map((key) => ({
+        text: key.name,
+        at: key.at,
+        scope: key.scope,
+        assigned: true,
+        isCallee: false,
+        ...shapeFlags(key.shape),
+    }));
+}
+
+/**
  * Recursively capture all properties in an object expression.
  *
  * @param node ObjectExpression node.
@@ -1084,42 +1156,22 @@ function captureObjectExpressionProperties(
     ) => void,
 ) {
     const isGlobalObject = isGlobalObjectScope(parentScope, isGlobalName);
+    const keys = objectLiteralKeys(
+        node,
+        parentScope,
+        storyPathOf(isGlobalName),
+    );
 
-    for (const prop of node.properties) {
-        if (prop.type !== "Property") continue; // We only care about properties
-
-        const propName = getStaticPropertyName(
-            prop.key,
-            prop.computed ?? false,
-        );
-        if (!propName) continue;
-
-        // Compute new scope including this property
-        const newScope = parentScope ? `${parentScope}.${propName}` : propName;
-
-        // Capture the property. Note we blank out the scope for globals so
-        // their properties aren't tracked
+    for (const key of keys) {
         capturePropertyCallback(
-            propName,
-            getPropertyNameStart(prop.key),
-            isGlobalObject ? undefined : parentScope,
+            key.name,
+            key.at,
+            // Blank out the scope for globals so their properties aren't tracked
+            isGlobalObject ? undefined : key.scope,
             assigned,
             false,
-            assigned
-                ? shapeOfValue(prop.value, newScope, storyPathOf(isGlobalName))
-                : knownShape,
+            assigned ? key.shape : knownShape,
         );
-
-        // Recurse for contained object literals
-        if (prop.value.type === "ObjectExpression") {
-            captureObjectExpressionProperties(
-                prop.value,
-                newScope,
-                isGlobalName,
-                assigned,
-                capturePropertyCallback,
-            );
-        }
     }
 }
 

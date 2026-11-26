@@ -4,6 +4,7 @@ import * as acornWalk from "acorn-walk";
 import {
     argumentShape,
     isEcmaScriptGlobal,
+    objectLiteralWrites,
     ScriptPropertyOccurrence,
     ScriptSymbolExtractor,
     ScriptVariableOccurrence,
@@ -123,12 +124,9 @@ export function createChapbookScriptExtractor({
             if (!segments.every((s) => isIdentifierName(s))) return;
 
             const assigned = method !== "get";
+            const value = (node as acorn.CallExpression).arguments[1];
             const shape = assigned
-                ? argumentShape(
-                      (node as acorn.CallExpression).arguments[1],
-                      key.name,
-                      statePathOf,
-                  )
+                ? argumentShape(value, key.name, statePathOf)
                 : {};
             let at = key.start;
             segments.forEach((segment, i) => {
@@ -147,6 +145,11 @@ export function createChapbookScriptExtractor({
                 }
                 at += segment.length + 1;
             });
+            if (assigned) {
+                properties.push(
+                    ...objectLiteralWrites(value, key.name, statePathOf),
+                );
+            }
         });
 
         // Keyed by position so a read-and-write like `a += 1` yields one occurrence

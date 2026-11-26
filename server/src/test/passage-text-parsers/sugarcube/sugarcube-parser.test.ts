@@ -231,6 +231,14 @@ describe("SugarCube Parser", () => {
                     ),
                     kind: OSugarCubeSymbolKind.PropertySet,
                 },
+                {
+                    contents: "$var1.prop.other",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(2, 31, 2, 36),
+                    ),
+                    kind: OSugarCubeSymbolKind.PropertySet,
+                },
             ]);
         });
 
