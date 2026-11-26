@@ -24,7 +24,11 @@ import {
     Sigiled,
     sigilFlag,
 } from "./project-index";
-import { isIdentifierName, MISSING_IDENTIFIER } from "./script-analysis";
+import {
+    isIdentifierName,
+    MISSING_IDENTIFIER,
+    StaticName,
+} from "./script-analysis";
 import { ETokenType, TokenModifier, TokenType } from "./semantic-tokens";
 import { Label } from "./types";
 
@@ -479,15 +483,15 @@ function copiedPath(
 }
 
 /**
- * Get the shape of a value: unknown (opaque), a copy of story
- * state (w/shape sources), or known.
+ * Get the shape of a value being assigned to: unknown (opaque), a copy of
+ * story state (w/shape sources), or known.
  *
  * @param value Expression being assigned.
  * @param selfPath Path being assigned (if static).
  * @param pathOf Predicate that gets an expression's path to compare with `selfPath`.
  * @returns True if assigning the value is an opaque assignment.
  */
-export function shapeOfValue(
+export function shapeOfAssignedValue(
     value: acorn.AnyNode,
     selfPath: string | undefined,
     pathOf: StaticPathOf,
@@ -500,7 +504,7 @@ export function shapeOfValue(
     const source = copiedPath(value, pathOf);
     if (source !== undefined) return copyShape(source);
     const shapeOf = (branch: acorn.AnyNode) =>
-        shapeOfValue(branch, selfPath, pathOf);
+        shapeOfAssignedValue(branch, selfPath, pathOf);
     switch (value.type) {
         case "ChainExpression":
             return shapeOf(value.expression);
@@ -547,7 +551,7 @@ export function shapeOfValue(
 }
 
 /**
- * Get the value a write target is assigned if the target takes on that
+ * Get the value assigned to a write target if the target takes on that
  * value. (Compound assignments like `+=` don't, so they have none.)
  *
  * @param target Identifier or member expression being written.
@@ -631,11 +635,11 @@ export function assignmentShape(
     // don't track its place in the source
     const value = assignedValue(target, ancestors);
     if (value !== undefined) {
-        return shapeOfValue(value, pathOf(target), pathOf);
+        return shapeOfAssignedValue(value, pathOf(target), pathOf);
     }
     const source = destructuredSource(target, ancestors);
     if (source === undefined) return knownShape;
-    const shape = shapeOfValue(source, undefined, pathOf);
+    const shape = shapeOfAssignedValue(source, undefined, pathOf);
     return shape.opaque || shape.shapeSources ? opaqueShape : knownShape;
 }
 
@@ -1095,7 +1099,7 @@ export function objectLiteralProperties(
                 isCallee: false,
                 ...shapeFlags(
                     assigned
-                        ? shapeOfValue(prop.value, keyPath, pathOf)
+                        ? shapeOfAssignedValue(prop.value, keyPath, pathOf)
                         : knownShape,
                 ),
             },
@@ -1104,6 +1108,66 @@ export function objectLiteralProperties(
             }),
         ];
     });
+}
+
+/**
+ * Given a chain of static member accesses off a story variable path,
+ * get the properties it stands for (e.g. `a` and `b` in `$p.a.b`),
+ * stopping at the first segment that isn't static (e.g. an index or a
+ * function call result).
+ *
+ * @param start Expression that stands for the story path.
+ * @param path Story path `start` stands for.
+ * @param ancestors The start's ancestors, ending with `start` itself.
+ * @param memberName Predicate that gets a member expression's static
+ * property name.
+ * @param pathOf Predicate that gets an expression's story path to find
+ * shape sources and recognize a self-reference.
+ * @param isSegment True if a static property name can continue the chain.
+ * @returns The chain's properties in source order.
+ */
+export function memberChainProperties(
+    start: acorn.AnyNode,
+    path: string,
+    ancestors: acorn.Node[],
+    memberName: (node: acorn.MemberExpression) => StaticName | undefined,
+    pathOf: StaticPathOf,
+    isSegment: (name: string) => boolean = () => true,
+): ScriptPropertyOccurrence[] {
+    const properties: ScriptPropertyOccurrence[] = [];
+    let current = start;
+    // Capture properties by walking up through static property accesses
+    for (let depth = ancestors.length - 2; depth >= 0; depth--) {
+        const up = ancestors[depth] as acorn.AnyNode;
+        if (up.type !== "MemberExpression" || up.object !== current) break;
+        const prop = memberName(up);
+        if (!prop || !isSegment(prop.name)) break;
+        const upAncestors = ancestors.slice(0, depth + 1);
+        const assigned = isWriteTarget(up, upAncestors, true);
+        properties.push({
+            text: prop.name,
+            at: prop.start,
+            scope: path,
+            assigned,
+            isCallee: isCallee(up, parentOf(upAncestors)),
+            ...shapeFlags(
+                assigned ? assignmentShape(up, upAncestors, pathOf) : {},
+            ),
+        });
+        path = `${path}.${prop.name}`;
+        if (assigned) {
+            properties.push(
+                ...objectLiteralProperties(
+                    assignedValue(up, upAncestors),
+                    path,
+                    pathOf,
+                    { assigned: true },
+                ),
+            );
+        }
+        current = up;
+    }
+    return properties;
 }
 
 /**
@@ -1703,7 +1767,7 @@ export function argumentShape(
 ): ValueShape {
     return arg === undefined || arg.type === "SpreadElement"
         ? knownShape
-        : shapeOfValue(arg, selfPath, pathOf);
+        : shapeOfAssignedValue(arg, selfPath, pathOf);
 }
 
 /**
@@ -1722,7 +1786,7 @@ export function valueTextShape(
     hostGlobals?: ReadonlySet<string>,
 ): ValueShape {
     try {
-        return shapeOfValue(
+        return shapeOfAssignedValue(
             parseJSStrict(text, false) as acorn.AnyNode,
             selfPath,
             storyPathOf(globalNamePredicate(hostGlobals)),

@@ -3,13 +3,9 @@ import * as acornWalk from "acorn-walk";
 
 import {
     argumentShape,
-    assignedValue,
-    assignmentShape,
-    isCallee,
     isEcmaScriptGlobal,
-    isWriteTarget,
+    memberChainProperties,
     objectLiteralProperties,
-    parentOf,
     ScriptPropertyOccurrence,
     ScriptSymbolExtractor,
     ScriptVariableOccurrence,
@@ -119,56 +115,12 @@ export function createChapbookScriptExtractor({
             }
             if (node.type === "MemberExpression") {
                 const name = memberName(node);
-                const parent = name && statePathOf(node.object);
+                if (!name || !isIdentifierName(name.name)) return undefined;
+                const parent = statePathOf(node.object);
                 return parent && `${parent}.${name.name}`;
             }
             const call = engineStateCall(node);
             return call?.method === "get" ? call.key.name : undefined;
-        };
-
-        // Static member accesses off a `get` call (`get('p').a.b`) continue
-        // its path, up to the first indexed segment or call
-        const captureChain = (
-            call: acorn.AnyNode,
-            path: string,
-            ancestors: acorn.Node[],
-        ) => {
-            let current = call;
-            let depth = ancestors.length - 2;
-            while (depth >= 0) {
-                const up = ancestors[depth] as acorn.AnyNode;
-                if (up.type !== "MemberExpression" || up.object !== current)
-                    break;
-                const prop = memberName(up);
-                if (!prop || !isIdentifierName(prop.name)) break;
-                const upAncestors = ancestors.slice(0, depth + 1);
-                const assigned = isWriteTarget(up, upAncestors, true);
-                properties.push({
-                    text: prop.name,
-                    at: prop.start,
-                    scope: path,
-                    assigned,
-                    isCallee: isCallee(up, parentOf(upAncestors)),
-                    ...shapeFlags(
-                        assigned
-                            ? assignmentShape(up, upAncestors, statePathOf)
-                            : {},
-                    ),
-                });
-                path = `${path}.${prop.name}`;
-                if (assigned) {
-                    properties.push(
-                        ...objectLiteralProperties(
-                            assignedValue(up, upAncestors),
-                            path,
-                            statePathOf,
-                            { assigned: true },
-                        ),
-                    );
-                }
-                current = up;
-                depth--;
-            }
         };
 
         acornWalk.fullAncestor(ast, (rawNode, _, ancestors) => {
@@ -178,8 +130,19 @@ export function createChapbookScriptExtractor({
             const { method, key } = call;
             const segments = key.name.split(".");
             if (!segments.every((s) => isIdentifierName(s))) return;
-            if (method === "get") captureChain(node, key.name, ancestors);
-
+            if (method === "get") {
+                properties.push(
+                    ...memberChainProperties(
+                        node,
+                        key.name,
+                        ancestors,
+                        memberName,
+                        statePathOf,
+                        // Static member accesses off a `get` call continue its path
+                        isIdentifierName,
+                    ),
+                );
+            }
             const assigned = method !== "get";
             const value = (node as acorn.CallExpression).arguments[1];
             const shape = assigned

@@ -5,10 +5,9 @@ import {
     argumentShape,
     assignmentShape,
     assignedValue,
-    isCallee,
     isWriteTarget,
+    memberChainProperties,
     objectLiteralProperties,
-    parentOf,
     ScriptPropertyOccurrence,
     ScriptSymbolExtractor,
     ScriptVariableOccurrence,
@@ -189,43 +188,15 @@ export const extractSugarCubeScriptSymbols: ScriptSymbolExtractor = ({
                 }
 
                 // Capture properties by walking up through static property accesses
-                let current: acorn.AnyNode = node;
-                let scope = sigil + name.name;
-                let depth = ancestors.length - 2;
-                while (depth >= 0) {
-                    const up = ancestors[depth] as acorn.AnyNode;
-                    if (up.type !== "MemberExpression" || up.object !== current)
-                        break;
-                    const prop = memberName(up);
-                    if (!prop) break;
-                    const upAncestors = ancestors.slice(0, depth + 1);
-                    const assigned = isWriteTarget(up, upAncestors, true);
-                    properties.push({
-                        text: prop.name,
-                        at: prop.start,
-                        scope,
-                        assigned,
-                        isCallee: isCallee(up, parentOf(upAncestors)),
-                        ...shapeFlags(
-                            assigned
-                                ? assignmentShape(up, upAncestors, statePathOf)
-                                : {},
-                        ),
-                    });
-                    if (assigned) {
-                        properties.push(
-                            ...objectLiteralProperties(
-                                assignedValue(up, upAncestors),
-                                `${scope}.${prop.name}`,
-                                statePathOf,
-                                { assigned: true },
-                            ),
-                        );
-                    }
-                    scope = `${scope}.${prop.name}`;
-                    current = up;
-                    depth--;
-                }
+                properties.push(
+                    ...memberChainProperties(
+                        node,
+                        sigil + name.name,
+                        ancestors,
+                        memberName,
+                        statePathOf,
+                    ),
+                );
                 break;
             }
 
