@@ -6,21 +6,22 @@ import { isBuiltinJSProperty } from "../js-parser";
 import { ProjectIndex } from "../project-index";
 
 /**
- * Get every location in the project that assigns to a story variable.
+ * Get every location in the project that assigns to a story variable
+ * or property.
  *
  * @param index Project index.
  * @param assignmentKind Story format's symbol kind for an assignment.
- * @param name Story variable's name.
+ * @param nameOrPath Story variable's name or property's full path.
  * @returns Assignment locations, or undefined if there are none.
  */
 export function getAssignmentLocations(
     index: ProjectIndex,
     assignmentKind: number,
-    name: string,
+    nameOrPath: string,
 ): Location[] | undefined {
     const locations = index
         .getProjectReferences([assignmentKind])
-        .filter((ref) => ref.contents === name)
+        .filter((ref) => ref.contents === nameOrPath)
         .flatMap((ref) => ref.locations);
     return locations.length > 0 ? locations : undefined;
 }

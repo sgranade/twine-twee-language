@@ -27,6 +27,7 @@ Four big changes:
 - Passage tags now auto-complete.
 - Story variables and properties that haven't been defined now create a warning across both story format code (Chapbook/SugarCube) and JavaScript sections.
 - Now auto-completes object properties from expressions like `var['prop'] = { prop1: 2 }`.
+- Go to definition now works on properties of story variables like `{player.hp}` or `$player.hp`.
 - When building a story, duplicated passages are replaced by the final defined version of those passages and a warning raised.
 - SugarCube: Story variables and properties in script passages and `<<script>>` macros are now properly indexed, including `State.variables.var` and `state.temporary.temp` variables.
 - SugarCube: Special story variables `_args` and `_contents` now produce warnings if used outside of `<<widget>>` macros.

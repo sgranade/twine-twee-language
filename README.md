@@ -24,7 +24,7 @@ A VS Code extension for [Twine] (using the [Twee3] format) and the [Chapbook] an
 - Syntax highlighting
 - Error highlighting
 - Highlight variable references
-- Find and rename variables
+- Find, rename, and go to where variables and their properties are set
 - Support for inserts and modifiers
     - Autocomplete (both names and arguments)
     - Hover information
@@ -40,7 +40,7 @@ A VS Code extension for [Twine] (using the [Twee3] format) and the [Chapbook] an
 - Syntax highlighting
 - Error highlighting
 - Highlight variable references
-- Find and rename variables
+- Find, rename, and go to where variables and their properties are set
 - Support for macros
     - Autocomplete (names only)
     - Hover information

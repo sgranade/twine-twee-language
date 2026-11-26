@@ -98,6 +98,106 @@ describe(".js File Story Variable References", () => {
         expect(await codes()).to.not.include("variable-never-set");
     });
 
+    describe("Go to Story Property Definitions", () => {
+        // Each definition as "<file>: <text>"
+        function definitionsAt(
+            js: string,
+            passageText: string,
+            at: string,
+            options: { format?: string; formatVersion?: string } = {},
+        ) {
+            const { index, tw, script } = build(js, passageText, options);
+            const definition = getDefinitionAt(
+                tw,
+                tw.positionAt(tw.getText().indexOf(at) + at.length - 1),
+                index,
+            );
+            return [definition]
+                .flat()
+                .filter((d) => d !== undefined)
+                .map((d) => {
+                    const doc = d.uri === script.uri ? script : tw;
+                    return `${d.uri.slice(-4)}: ${doc.getText(d.range)}`;
+                })
+                .sort();
+        }
+
+        const chapbook = { format: "Chapbook", formatVersion: "2.3.0" };
+
+        it("should list a SugarCube property's direct writes, including an object-literal key and a .js write", () => {
+            expect(
+                definitionsAt(
+                    "State.variables.player.hp = 2;\n",
+                    "<<set $player.hp to 1>><<set $player to {hp: 3}>><<print $player.hp>>",
+                    "<<print $player.hp",
+                ),
+            ).to.eql(["s.js: hp", "y.tw: hp", "y.tw: hp"]);
+        });
+
+        it("should list a Chapbook property's direct writes, including an object-literal key and a .js write", () => {
+            expect(
+                definitionsAt(
+                    "engine.state.get('player').hp = 2;\nengine.state.set('player', {hp: 3});\n",
+                    "player.hp: 1\n--\n{player.hp}",
+                    "{player.hp",
+                    chapbook,
+                ),
+            ).to.eql(["s.js: hp", "s.js: hp", "y.tw: hp"]);
+        });
+
+        it("should not find a SugarCube property written only beneath an opaque path", () => {
+            expect(
+                definitionsAt(
+                    "State.variables.player = JSON.parse('{}');\n",
+                    "<<print $player.hp>>",
+                    "$player.hp",
+                ),
+            ).to.be.empty;
+        });
+
+        it("should not find a Chapbook property written only beneath an opaque path", () => {
+            expect(
+                definitionsAt(
+                    "engine.state.set('player', JSON.parse('{}'));\n",
+                    "{player.hp}",
+                    "{player.hp",
+                    chapbook,
+                ),
+            ).to.be.empty;
+        });
+
+        it("should not find a SugarCube property written only through a shape source", () => {
+            expect(
+                definitionsAt(
+                    "State.variables.player.hp = 1;\n",
+                    "<<set $p to $player>><<print $p.hp>>",
+                    "$p.hp",
+                ),
+            ).to.be.empty;
+        });
+
+        it("should not find a Chapbook property written only through a shape source", () => {
+            expect(
+                definitionsAt(
+                    "engine.state.set('player.hp', 1);\n",
+                    "p: player\n--\n{p.hp}",
+                    "{p.hp",
+                    chapbook,
+                ),
+            ).to.be.empty;
+        });
+
+        it("should not find a SugarCube property that is never set", () => {
+            expect(definitionsAt("", "<<print $player.hp>>", "$player.hp")).to
+                .be.empty;
+        });
+
+        it("should not find a Chapbook property that is never set", () => {
+            expect(definitionsAt("", "{player.hp}", "{player.hp", chapbook)).to
+                .be.empty;
+        });
+    });
+
     describe("Shape Sources", () => {
         async function neverSetTexts(
             js: string,
