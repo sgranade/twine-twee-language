@@ -2,13 +2,13 @@ import * as acorn from "acorn";
 import * as acornWalk from "acorn-walk";
 
 import {
-    argumentShape,
-    isEcmaScriptGlobal,
+    ecmaScriptGlobals,
     memberChainProperties,
     objectLiteralProperties,
     ScriptPropertyOccurrence,
     ScriptSymbolExtractor,
     ScriptVariableOccurrence,
+    storyVarSetArgumentShape,
 } from "../../js-parser";
 import { shapeFlags } from "../../project-index";
 import { browserGlobals } from "../host-globals";
@@ -39,7 +39,7 @@ const storyVariableNames: ReadonlySet<string> = new Set(["config"]);
  */
 export function whatExcludedBareNameIs(name: string): string | undefined {
     if (excludedNames.has(name)) return "a Chapbook built-in";
-    if (isEcmaScriptGlobal(name)) return "a JavaScript global";
+    if (ecmaScriptGlobals.has(name)) return "a JavaScript global";
     if (browserGlobals.has(name)) return "a browser global";
     return undefined;
 }
@@ -146,7 +146,7 @@ export function createChapbookScriptExtractor({
             const assigned = method !== "get";
             const value = (node as acorn.CallExpression).arguments[1];
             const shape = assigned
-                ? argumentShape(value, key.name, statePathOf)
+                ? storyVarSetArgumentShape(value, key.name, statePathOf)
                 : {};
             let at = key.start;
             segments.forEach((segment, i) => {

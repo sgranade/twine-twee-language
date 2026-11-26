@@ -6,7 +6,7 @@ import {
 
 import { DiagnosticCodes } from "@tt3/shared";
 import { createDiagnosticFor } from "../../../diagnostics";
-import { markAllWritten, TokenizedJS } from "../../../js-parser";
+import { markTokensAsAssigned, TokenizedJS } from "../../../js-parser";
 import { logDiagnosticFor, logRawDiagnostic } from "../../../parser";
 import { skipSpaces } from "../../../utilities";
 import { createVariableAndPropertyReferences } from "../sugarcube-utils";
@@ -130,7 +130,7 @@ export const forMacro: MacroInfo = {
                         sugarcubeState,
                     );
                     // We're creating the index variable
-                    markAllWritten(indexTokens);
+                    markTokensAsAssigned(indexTokens);
                     jsTokens.variables = indexTokens.variables;
                     jsTokens.properties = indexTokens.properties;
                 }
@@ -144,7 +144,7 @@ export const forMacro: MacroInfo = {
                     );
                     // We're creating the value variable, which holds
                     // collection members of unknown shape
-                    markAllWritten(valueTokens, { opaque: true });
+                    markTokensAsAssigned(valueTokens, { opaque: true });
                     jsTokens.variables = [
                         ...jsTokens.variables,
                         ...valueTokens.variables,

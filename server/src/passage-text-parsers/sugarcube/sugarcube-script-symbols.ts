@@ -3,7 +3,6 @@ import * as acornWalk from "acorn-walk";
 import * as eslintScope from "eslint-scope";
 
 import {
-    argumentShape,
     assignmentShape,
     extractSymbols,
     assignedValue,
@@ -15,6 +14,7 @@ import {
     ScriptVariableOccurrence,
     StaticPathOf,
     storyPathOf,
+    storyVarSetArgumentShape,
 } from "../../js-parser";
 import { shapeFlags, shorthandFlag, ValueShape } from "../../project-index";
 import {
@@ -176,7 +176,8 @@ export const extractTwineScriptSymbols: ScriptSymbolExtractor = ({
     const defaultPathOf = storyPathOf(isGlobalName);
     const pathOf: StaticPathOf = (node) =>
         tracer.statePathOf(node) ?? defaultPathOf(node);
-    const sigiled = extractSymbols(ast, isGlobalName, isAssignmentContext, {
+    const sigiled = extractSymbols(ast, isGlobalName, {
+        isAssignmentContext,
         pathOf,
     });
     const stateRooted = extractStateRootSymbols(ast, tracer, pathOf);
@@ -296,7 +297,7 @@ function extractStateRootSymbols(
                     {
                         assigned: isSet,
                         shape: isSet
-                            ? argumentShape(
+                            ? storyVarSetArgumentShape(
                                   node.arguments[1],
                                   literal.name,
                                   pathOf,

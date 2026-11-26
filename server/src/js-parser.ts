@@ -54,12 +54,12 @@ const typeofToSemantic: Record<string, TokenType> = {
  * defines it elsewhere and no root-level declaration binds it.
  * - `root-declaration`: a root-level declaration.
  */
-export type ScriptOccurrenceRole = "conditional-reference" | "root-declaration";
+type ScriptOccurrenceRole = "conditional-reference" | "root-declaration";
 
 /**
  * Label for a parsed javascript variable.
  */
-export interface JSVariableLabel extends Label, Sigiled, Shorthand, ValueShape {
+interface JSVariableLabel extends Label, Sigiled, Shorthand, ValueShape {
     /**
      * What the variable is if it isn't a story variable.
      */
@@ -108,7 +108,7 @@ export namespace JSPropertyLabel {
 /**
  * Errors from javascript parsing.
  */
-export interface JSDiagnostic {
+interface JSDiagnostic {
     /**
      * Start index in the document where the diagnostic occurs.
      */
@@ -119,6 +119,15 @@ export interface JSDiagnostic {
     end: number;
     message: string;
     severity: DiagnosticSeverity;
+}
+
+/**
+ * Results of tokenizing JavaScript
+ */
+export interface TokenizedJS {
+    variables: JSVariableLabel[];
+    properties: JSPropertyLabel[];
+    error?: JSDiagnostic;
 }
 
 /**
@@ -148,16 +157,7 @@ export interface ScriptPropertyOccurrence extends ValueShape {
 }
 
 /**
- * Results of tokenizing JavaScript
- */
-export interface TokenizedJS {
-    variables: JSVariableLabel[];
-    properties: JSPropertyLabel[];
-    error?: JSDiagnostic;
-}
-
-/**
- * Format-specific extraction of story variables and properties from script code.
+ * Story-format-specific extraction of story variables and properties from script code.
  */
 export type ScriptSymbolExtractor = (context: {
     ast: acorn.Node;
@@ -171,12 +171,13 @@ export type ScriptSymbolExtractor = (context: {
 };
 
 /**
- * Mark every variable and property in tokenized JavaScript as written.
+ * Mark every variable and property in tokenized JavaScript as assigned.
  *
  * @param tokens Tokenized JavaScript to mark in place.
- * @param options.opaque True to also mark every write opaque.
+ * @param options.opaque True to also mark every assignment as opaque
+ * (i.e. we don't know the shape of the object being assigned to it).
  */
-export function markAllWritten(
+export function markTokensAsAssigned(
     tokens: TokenizedJS,
     { opaque = false }: { opaque?: boolean } = {},
 ): void {
@@ -187,11 +188,11 @@ export function markAllWritten(
 }
 
 /**
- * Mark every write in tokenized JavaScript as opaque.
+ * Mark every assignment in tokenized JavaScript as opaque.
  *
  * @param tokens Tokenized JavaScript to mark in place.
  */
-export function markWritesOpaque(tokens: TokenizedJS): void {
+export function markTokenAssignmentsOpaque(tokens: TokenizedJS): void {
     for (const label of [...tokens.variables, ...tokens.properties]) {
         if (label.assigned) label.opaque = true;
     }
@@ -205,7 +206,7 @@ export function markWritesOpaque(tokens: TokenizedJS): void {
  * to accept so story authors can use them even though they're also
  * browser globals.
  */
-const ecmaScriptGlobals: ReadonlySet<string> = new Set([
+export const ecmaScriptGlobals: ReadonlySet<string> = new Set([
     // Taken from https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects
     "Object",
     "Function",
@@ -365,9 +366,9 @@ const builtInJSMethodNames = new Set([
 ]);
 
 /**
- * Add scope information to an Acorn identifier.
+ * An Acorn identifier with assignment and story-variable-ness info.
  */
-interface ScopedIdentifier extends acorn.Identifier {
+interface EnhancedIdentifier extends acorn.Identifier {
     _isAssignment?: boolean;
     _isStoryVariable?: boolean;
 }
@@ -384,10 +385,10 @@ type IdentifierRole = "declaration" | "reference" | "neither";
  * The list of ancestors includes the node itself at the end (via the `fullAncestor`
  * acorn-walk setting).
  *
- * @param ancestors Node's ancestors, including the node.
+ * @param ancestors Node's ancestors, ending with the node.
  * @returns The node's parent, or undefined if it has none.
  */
-export function parentOf(ancestors: acorn.Node[]): acorn.AnyNode | undefined {
+function parentOf(ancestors: acorn.Node[]): acorn.AnyNode | undefined {
     return ancestors[ancestors.length - 2] as acorn.AnyNode | undefined;
 }
 
@@ -412,8 +413,8 @@ function staticPathOf(node: acorn.AnyNode): string | undefined {
  */
 export type StaticPathOf = (node: acorn.AnyNode) => string | undefined;
 
-/*
- * Build a path getter that only gives story-variable-rooted paths.
+/**
+ * Build a path getter that only returns story-variable-rooted paths.
  *
  * @param isGlobalName Global-name predicate.
  * @returns The path getter.
@@ -423,7 +424,7 @@ export function storyPathOf(isGlobalName: IsGlobalName): StaticPathOf {
         // A root that scope analysis found to be locally bound, or that's a global,
         // has no story path.
         const expr = node.type === "ChainExpression" ? node.expression : node;
-        const root: ScopedIdentifier | undefined =
+        const root: EnhancedIdentifier | undefined =
             expr.type === "Identifier"
                 ? expr
                 : expr.type === "MemberExpression"
@@ -445,8 +446,9 @@ const knownShape: ValueShape = {};
 const opaqueShape: ValueShape = { opaque: true };
 
 /**
- * Combine the shapes of a value's possible parts or branches. Opaque wins;
- * otherwise their shape sources are united.
+ * Combine the shapes of a value's possible parts or branches. If any
+ * shape is opaque, then the combination is also opaque; otherwise
+ * the sources are the union.
  *
  * @param shapes Shapes to combine.
  * @returns Combined shape.
@@ -458,17 +460,18 @@ function combineShapes(shapes: ValueShape[]): ValueShape {
 }
 
 /**
- * Get the story path an expression copies (`$p` in `$p` or `clone($p)`),
- * if it's a shape source.
+ * Get the story path an expression copies (`$p` in `$p` or, for SugarCube,
+ * `clone($p)`), if it's a shape source.
  *
  * @param value Expression to inspect.
- * @param pathOf Gets an expression's story path.
+ * @param pathOf Predicate that gets an expression's story path.
  * @returns The copied path, or undefined if the expression isn't a copy.
  */
 function copiedPath(
     value: acorn.AnyNode,
     pathOf: StaticPathOf,
 ): string | undefined {
+    // Handle SugarCube's `clone()` method for non-spread arguments
     if (
         value.type === "CallExpression" &&
         value.callee.type === "Identifier" &&
@@ -492,7 +495,7 @@ function copiedPath(
  * @param pathOf Predicate that gets an expression's path to compare with `selfPath`.
  * @returns True if assigning the value is an opaque assignment.
  */
-export function shapeOfAssignedValue(
+function shapeOfAssignedValue(
     value: acorn.AnyNode,
     selfPath: string | undefined,
     pathOf: StaticPathOf,
@@ -508,6 +511,7 @@ export function shapeOfAssignedValue(
         shapeOfAssignedValue(branch, selfPath, pathOf);
     switch (value.type) {
         case "ChainExpression":
+            // `a.?b`
             return shapeOf(value.expression);
         case "Identifier":
             // Globals that stand for literal values
@@ -528,6 +532,7 @@ export function shapeOfAssignedValue(
                 shapeOf(value.alternate),
             ]);
         case "LogicalExpression":
+            // Could have either side's shape
             return combineShapes([shapeOf(value.left), shapeOf(value.right)]);
         case "ObjectExpression":
             // Only a spread of a copy is a shape source
@@ -545,6 +550,7 @@ export function shapeOfAssignedValue(
             // `x = y = fn()` gives `x` the value of `fn()`
             return value.operator === "=" ? shapeOf(value.right) : knownShape;
         case "SequenceExpression":
+            // Sequence expressions (`1, 2, 3`) returns the final value
             return shapeOf(value.expressions[value.expressions.length - 1]);
         default:
             return knownShape;
@@ -552,10 +558,10 @@ export function shapeOfAssignedValue(
 }
 
 /**
- * Get the value assigned to a write target if the target takes on that
+ * Get the value assigned to an assignment target if the target takes on that
  * value. (Compound assignments like `+=` don't, so they have none.)
  *
- * @param target Identifier or member expression being written.
+ * @param target Identifier or member expression being assigned to.
  * @param ancestors The target's ancestors, ending with the target itself.
  * @returns The assigned value, or undefined if there isn't one.
  */
@@ -576,8 +582,8 @@ export function assignedValue(
 }
 
 /**
- * Get the source from which a destructuring target is unpacked (`fn()` in
- * `[a, b] = fn()`) if the target is inside a destructuring pattern.
+ * Get the source node from which a destructuring target is unpacked (`fn()`
+ * in `[a, b] = fn()`) if the target is inside a destructuring pattern.
  *
  * @param target Identifier or member expression being written.
  * @param ancestors The target's ancestors, ending with the target itself.
@@ -619,9 +625,9 @@ function destructuredSource(
 }
 
 /**
- * Get the shape of the value a write target is assigned.
+ * Get the shape of the value an assignment target is assigned.
  *
- * @param target Identifier or member expression being written.
+ * @param target Identifier or member expression being assigned to.
  * @param ancestors The target's ancestors, ending with the target itself.
  * @param pathOf Predicate that gets an expression's story path to find shape
  * sources and recognize a self-reference.
@@ -645,20 +651,67 @@ export function assignmentShape(
 }
 
 /**
- * Classify an identifier given its ancestors.
+ * Get the shape of an argument to a story format's story-var-setting
+ * Javascript function (`setVar('$x', …)`, `engine.state.set('x', …)`).
+ *
+ * @param arg Value argument (if any).
+ * @param selfPath Path being assigned.
+ * @param pathOf Predicate that get an expression's story path to
+ * find shape sources and recognize a self-reference.
+ * @returns The argument's shape.
+ */
+export function storyVarSetArgumentShape(
+    arg: acorn.AnyNode | undefined,
+    selfPath: string,
+    pathOf: StaticPathOf,
+): ValueShape {
+    return arg === undefined || arg.type === "SpreadElement"
+        ? knownShape
+        : shapeOfAssignedValue(arg, selfPath, pathOf);
+}
+
+/**
+ * Get the shape of an expression's text as a value being assigned.
+ *
+ * Every name in the text that isn't a global is considered a story variable.
+ *
+ * @param text Text of the expression being assigned.
+ * @param selfPath Path being assigned.
+ * @param hostGlobals Host globals supplied by the story format, if any.
+ * @returns The value's shape, or a known shape if the text doesn't parse.
+ */
+export function valueTextShape(
+    text: string,
+    selfPath: string,
+    hostGlobals?: ReadonlySet<string>,
+): ValueShape {
+    // Parse the text and theng et the shape
+    try {
+        return shapeOfAssignedValue(
+            parseJSStrict(text, false) as acorn.AnyNode,
+            selfPath,
+            storyPathOf(globalNamePredicate(hostGlobals)),
+        );
+    } catch {
+        return knownShape;
+    }
+}
+
+/**
+ * Classify an identifier's role given its ancestors.
  *
  * @param node Node to classify.
  * @param ancestors Node's ancestors, ending with `node` itself (the
  * acorn-walk `fullAncestor` convention).
  * @returns The identifier's role.
  */
-function classifyIdentifier(
+function classifyIdentifierRole(
     node: acorn.AnyNode,
     ancestors: acorn.Node[],
 ): IdentifierRole {
     const parent = parentOf(ancestors);
 
-    // Consider parent-less identifiers as a reference for times when we just parse the tiniest snippet
+    // Consider parent-less identifiers as a reference for times when we parse just a tiny snippet
     if (!parent) return "reference";
 
     switch (parent.type) {
@@ -674,6 +727,8 @@ function classifyIdentifier(
             return "reference";
 
         case "Property":
+        case "MethodDefinition":
+        case "PropertyDefinition":
             // Static key isn't a reference or a declaration
             return parent.key === node && !parent.computed
                 ? "neither"
@@ -682,14 +737,6 @@ function classifyIdentifier(
         case "MemberExpression":
             // Non-computed property key -- same reasoning as above
             return parent.property === node && !parent.computed
-                ? "neither"
-                : "reference";
-
-        case "MethodDefinition":
-        case "PropertyDefinition":
-            // Non-computed key's a property name, not a variable -- same
-            // reasoning as above
-            return parent.key === node && !parent.computed
                 ? "neither"
                 : "reference";
 
@@ -718,19 +765,18 @@ function classifyIdentifier(
 /**
  * Is a reference a write, given the caller's assignment context?
  *
- * A declaration's initializer always writes. Any other write-shaped
- * syntax (`a = 1`, `a++`, `[a] = b`, `for (a of b)`) is a write only
- * in an assignment context, since elsewhere it's more often a `==`
- * typo or side effect
- *
  * @param ref eslint-scope reference to the identifier.
  * @param isAssignmentContext True if write-shaped syntax counts as an assignment
  * @returns True if the reference is a write.
  */
-export function isWriteReference(
+function isWriteReference(
     ref: eslintScope.Reference,
     isAssignmentContext: boolean,
 ): boolean {
+    // A declaration's initializer always writes. Any other write-shaped
+    // syntax (`a = 1`, `a++`, `[a] = b`, `for (a of b)`) is a write only
+    // in an assignment context, since elsewhere it's more often a `==`
+    // typo or side effect
     return ref.init === true || (isAssignmentContext && ref.isWrite());
 }
 
@@ -788,11 +834,11 @@ function hasModuleSyntax(program: ESTree.Program): boolean {
 
 /**
  * Get a `Program` for eslint-scope to analyze.
- *
- * An expression parse has no `Program` root, so it's wrapped in one.
  */
 function toProgram(ast: acorn.Node): ESTree.Program {
+    // We're already a program!
     if (ast.type === "Program") return ast as unknown as ESTree.Program;
+    // Wrap an expression parse in a `Program` root
     const range: [number, number] = [ast.start, ast.end];
     return {
         type: "Program",
@@ -835,7 +881,7 @@ function findOuterClassVariable(
  * @param ast AST to analyze.
  * @returns The scope manager.
  */
-export function analyzeScopes(ast: acorn.Node): eslintScope.ScopeManager {
+function analyzeScopes(ast: acorn.Node): eslintScope.ScopeManager {
     const program = toProgram(ast);
     return eslintScope.analyze(program, {
         ecmaVersion: ScopeEcmaVersion,
@@ -845,40 +891,40 @@ export function analyzeScopes(ast: acorn.Node): eslintScope.ScopeManager {
 }
 
 /**
- * Annotate variable definitions or references along with their scope.
- *
- * A reference counts as being in the "global" scope (i.e. a story variable)
- * if nothing resolves it or it resolves to a root-level declaration
- * (global or module scope).
+ * Annotate variable definitions' or references' assignment status and
+ * story-variable-ness.
  *
  * @param ast AST to annotate.
  * @param isAssignmentContext True if write-shaped syntax counts as an assignment.
  */
-function annotateVariableScopes(ast: acorn.Node, isAssignmentContext: boolean) {
+function annotateVariables(ast: acorn.Node, isAssignmentContext: boolean) {
     const scopeManager = analyzeScopes(ast);
     const isRootScope = (scope: eslintScope.Scope): boolean =>
         scope.type === "global" || scope.type === "module";
 
     for (const scope of scopeManager.scopes) {
         for (const ref of scope.references) {
-            const id = ref.identifier as unknown as ScopedIdentifier;
+            const id = ref.identifier as unknown as EnhancedIdentifier;
             id._isAssignment = isWriteReference(ref, isAssignmentContext);
 
-            let variable = ref.resolved;
+            let resolvedVariable = ref.resolved;
             // A class's name inside its own body resolves to an inner
             // binding. Redirect to the outer variable the class declares.
-            if (variable?.scope.type === "class") {
-                const def = variable.defs[0];
-                variable =
+            if (resolvedVariable?.scope.type === "class") {
+                const def = resolvedVariable.defs[0];
+                resolvedVariable =
                     def?.node.type === "ClassDeclaration"
-                        ? findOuterClassVariable(variable)
-                        : variable;
+                        ? findOuterClassVariable(resolvedVariable)
+                        : resolvedVariable;
             }
-            id._isStoryVariable = !variable || isRootScope(variable.scope);
+            // Counts as a story variable if nothing resolves it or it resolves
+            // to a root-level declaration (global/module scope)
+            id._isStoryVariable =
+                !resolvedVariable || isRootScope(resolvedVariable.scope);
         }
     }
     // Root-level declarations are assignments, whether or not they have an
-    // initializer (and so a write reference).
+    // initializer (and so a write reference), and count as story vars.
     const rootScopes = scopeManager.scopes.filter(isRootScope);
     for (const scope of rootScopes) {
         for (const variable of scope.variables) {
@@ -888,7 +934,7 @@ function annotateVariableScopes(ast: acorn.Node, isAssignmentContext: boolean) {
                     def.type === "FunctionName" ||
                     def.type === "ClassName"
                 ) {
-                    const id = def.name as unknown as ScopedIdentifier;
+                    const id = def.name as unknown as EnhancedIdentifier;
                     id._isAssignment = true;
                     id._isStoryVariable = true;
                 }
@@ -901,7 +947,7 @@ function annotateVariableScopes(ast: acorn.Node, isAssignmentContext: boolean) {
  * Helper type for capturing the variable and all properties in a MemberExpression.
  */
 type MemberChain = {
-    root: ScopedIdentifier;
+    root: EnhancedIdentifier;
     properties: MemberSegment[];
 };
 
@@ -922,14 +968,7 @@ function isDynamicChain(chain: MemberChain): boolean {
 }
 
 /**
- * Is the name one of JavaScript's own globals?
- */
-export function isEcmaScriptGlobal(name: string): boolean {
-    return ecmaScriptGlobals.has(name);
-}
-
-/**
- * Predicate for names that are globals so aren't story variables.
+ * Predicate for names that are globals.
  */
 type IsGlobalName = (name: string) => boolean;
 
@@ -960,16 +999,15 @@ function isGlobalObjectScope(
 /**
  * Does a property reference correspond to a built-in JS object's instance property?
  *
- * The property name is the last segment of its full path (`prop2` in
- * `var.prop1.prop2`). Instance properties are exempt anywhere; method names
- * are exempt only when the property is called.
- *
  * @param property Property to reference inspect, w/its full path in `contents`.
  * @returns True if the property matches a built-in property or called built-in method.
  */
 export function isBuiltinJSProperty(
     property: Pick<Label, "contents"> & Callable,
 ): boolean {
+    // The property name is the last segment of its full path (`prop2` in
+    // `var.prop1.prop2`). Instance properties are exempt anywhere; method names
+    // are exempt only when the property is called.
     const name = property.contents.split(".").pop() || "";
     return (
         builtInJSObjectInstanceProperties.has(name) ||
@@ -1039,7 +1077,7 @@ function captureMemberChain(
 ): MemberChain | undefined {
     const props: MemberSegment[] = [];
     let current: acorn.Expression | acorn.Super = node;
-    let root: ScopedIdentifier | undefined;
+    let root: EnhancedIdentifier | undefined;
 
     while (true) {
         if (current.type === "MemberExpression") {
@@ -1054,7 +1092,7 @@ function captureMemberChain(
             current = current.object; // Head up the chain in the expression
         } else if (current.type === "Identifier") {
             // This is the variable at the root
-            root = current as ScopedIdentifier;
+            root = current as EnhancedIdentifier;
             break;
         } else {
             return undefined; // Don't handle other object types
@@ -1067,8 +1105,8 @@ function captureMemberChain(
 
 /**
  * Get the properties an object literal's static keys stand for when it's
- * assigned to a path, including those of nested literals
- * (`p = {stats: {str: 1}}` has `p.stats` and `p.stats.str`).
+ * assigned to a path, including those of nested literals (e.g.
+ * `p = {stats: {str: 1}}` has `p.stats` and `p.stats.str`).
  *
  * @param value Value being assigned, if any.
  * @param path Path being assigned.
@@ -1172,14 +1210,14 @@ export function memberChainProperties(
 }
 
 /**
- * Is a node the callee of a call or `new` expression (`foo` in `foo(bar)`,
- * `obj.method` in `obj.method(x)`, `Foo` in `new Foo(bar)`)?
+ * Is a node the callee of a call or `new` expression (e.g. `foo` in
+ * `foo(bar)`, `obj.method` in `obj.method(x)`, `Foo` in `new Foo(bar)`)?
  *
  * @param node The node to test.
  * @param parent The node's immediate parent node, if any.
  * @returns True if the node is a call or `new` callee.
  */
-export function isCallee(
+function isCallee(
     node: acorn.AnyNode,
     parent: acorn.AnyNode | undefined,
 ): boolean {
@@ -1213,15 +1251,15 @@ function isFunctionOwnBinding(
  * Is an identifier excluded from highlighting and extraction because it's a
  * function's own name or parameter?
  *
- * @param role The identifier's classified role.
+ * @param node The identifier.
+ * @param role The identifier's role.
  * @param parent The identifier's immediate parent node, if any.
- * @param node The identifier itself.
  * @returns True if the identifier should be excluded from both highlighting and extraction.
  */
 function isExcludedIdentifier(
+    node: acorn.AnyNode,
     role: IdentifierRole,
     parent: acorn.AnyNode | undefined,
-    node: acorn.AnyNode,
 ): boolean {
     // A top-level function declaration's name is a write, so don't exclude it
     if (
@@ -1252,22 +1290,22 @@ function isPotentialTrackedVariableName(
 
 /**
  * Is an identifier a candidate variable occurrence -- that is, one that
- * highlighting marks as a variable and extraction considers (subject to scope)
- * as a story variable?
+ * highlighting marks as a variable and extraction considers as a story
+ * variable?
  *
  * @param node Identifier to test.
  * @param ancestors Node's ancestors, ending with `node` itself.
  * @param isGlobalName Global-name predicate.
- * @returns True if the identifier is a candidate variable occurrence.
+ * @returns True if the identifier is a candidate story variable occurrence.
  */
-function isCandidateVariable(
+function isCandidateStoryVariable(
     node: acorn.Identifier,
     ancestors: acorn.Node[],
     isGlobalName: IsGlobalName,
 ): boolean {
-    const role = classifyIdentifier(node, ancestors);
+    const role = classifyIdentifierRole(node, ancestors);
     if (role === "neither") return false;
-    if (isExcludedIdentifier(role, parentOf(ancestors), node)) return false;
+    if (isExcludedIdentifier(node, role, parentOf(ancestors))) return false;
     return isPotentialTrackedVariableName(node.name, isGlobalName);
 }
 
@@ -1310,7 +1348,7 @@ function computeSemanticTokens(
     };
 
     // Helper function to add a variable token if it's not a built-in JS object
-    const captureVariable = (id: ScopedIdentifier) => {
+    const captureVariable = (id: EnhancedIdentifier) => {
         if (!isPotentialTrackedVariableName(id.name, isGlobalName)) return;
         addToken(id.start, id.name, ETokenType.variable);
     };
@@ -1326,8 +1364,8 @@ function computeSemanticTokens(
         const node = rawNode as acorn.AnyNode;
         switch (node.type) {
             case "Identifier": {
-                if (isCandidateVariable(node, ancestors, isGlobalName)) {
-                    captureVariable(node as ScopedIdentifier);
+                if (isCandidateStoryVariable(node, ancestors, isGlobalName)) {
+                    captureVariable(node as EnhancedIdentifier);
                 }
                 break;
             }
@@ -1430,17 +1468,19 @@ function computeSemanticTokens(
  *
  * @param ast Parsed text, already annotated by `annotateVariableScopes`.
  * @param isGlobalName Global-name predicate.
- * @param isAssignmentContext True if write-shaped syntax counts as an assignment.
  * @param options Extraction options.
- * @param options.pathOf Gets an expression's story path, to find shape sources.
+ * @param options.isAssignmentContext True if write-shaped syntax counts as an assignment.
+ * @param options.pathOf Gets an expression's story path to find shape sources.
  * Defaults to the path of an unbound, non-global root.
  * @returns Variable and property occurrences, in ascending order of position.
  */
 export function extractSymbols(
     ast: acorn.Node,
     isGlobalName: IsGlobalName,
-    isAssignmentContext: boolean,
-    { pathOf = storyPathOf(isGlobalName) }: { pathOf?: StaticPathOf } = {},
+    {
+        isAssignmentContext = false,
+        pathOf = storyPathOf(isGlobalName),
+    }: { isAssignmentContext?: boolean; pathOf?: StaticPathOf } = {},
 ): {
     variables: ScriptVariableOccurrence[];
     properties: ScriptPropertyOccurrence[];
@@ -1452,7 +1492,7 @@ export function extractSymbols(
 
     // Helper function to add a variable occurrence if it's an unbound (story)
     // variable and not a global
-    const captureVariable = (id: ScopedIdentifier, shape = knownShape) => {
+    const captureVariable = (id: EnhancedIdentifier, shape = knownShape) => {
         if (!isPotentialTrackedVariableName(id.name, isGlobalName)) return;
         if (!id._isStoryVariable) return;
         variableTokens[id.start] = {
@@ -1504,8 +1544,8 @@ export function extractSymbols(
         const node = rawNode as acorn.AnyNode;
         switch (node.type) {
             case "Identifier": {
-                if (isCandidateVariable(node, ancestors, isGlobalName)) {
-                    const id = node as ScopedIdentifier;
+                if (isCandidateStoryVariable(node, ancestors, isGlobalName)) {
+                    const id = node as EnhancedIdentifier;
                     captureVariable(
                         id,
                         id._isAssignment
@@ -1582,7 +1622,7 @@ export function extractSymbols(
             case "AssignmentExpression": {
                 if (node.right.type !== "ObjectExpression") break;
                 const left = node.left;
-                const root: ScopedIdentifier | undefined =
+                const root: EnhancedIdentifier | undefined =
                     left.type === "Identifier"
                         ? left
                         : left.type === "MemberExpression"
@@ -1604,7 +1644,7 @@ export function extractSymbols(
                 if (
                     node.id.type === "Identifier" &&
                     node.init?.type === "ObjectExpression" &&
-                    (node.id as ScopedIdentifier)._isStoryVariable
+                    (node.id as EnhancedIdentifier)._isStoryVariable
                 ) {
                     captureObjectLiteral(node.init, node.id.name, true);
                 }
@@ -1650,7 +1690,7 @@ export function isEveryIdentifierAVariable(
         const node = rawNode as acorn.AnyNode;
         // Only check identifiers
         if (node.type !== "Identifier") return;
-        const role = classifyIdentifier(node, ancestors);
+        const role = classifyIdentifierRole(node, ancestors);
         if (role === "neither") return;
         const parent = parentOf(ancestors);
         if (isCallee(node, parent) || isFunctionOwnBinding(role, parent))
@@ -1695,52 +1735,6 @@ export function parseJSStrict(
             sourceType,
             ranges: true,
         });
-    }
-}
-
-/**
- * Get the shape of a format-forced write's value argument
- * (`setVar('$x', …)`, `engine.state.set('x', …)`).
- *
- * @param arg Value argument if any.
- * @param selfPath Path being assigned.
- * @param pathOf Predicate that get an expression's story path to
- * find shape sources and recognize a self-reference.
- * @returns The argument's shape.
- */
-export function argumentShape(
-    arg: acorn.AnyNode | undefined,
-    selfPath: string,
-    pathOf: StaticPathOf,
-): ValueShape {
-    return arg === undefined || arg.type === "SpreadElement"
-        ? knownShape
-        : shapeOfAssignedValue(arg, selfPath, pathOf);
-}
-
-/**
- * Get the shape of an expression's text, as a value being assigned.
- *
- * Every name in the text that isn't a global is a story variable.
- *
- * @param text Text of the expression being assigned.
- * @param selfPath Path being assigned.
- * @param hostGlobals Host globals supplied by the story format, if any.
- * @returns The value's shape, or a known shape if the text doesn't parse.
- */
-export function valueTextShape(
-    text: string,
-    selfPath: string,
-    hostGlobals?: ReadonlySet<string>,
-): ValueShape {
-    try {
-        return shapeOfAssignedValue(
-            parseJSStrict(text, false) as acorn.AnyNode,
-            selfPath,
-            storyPathOf(globalNamePredicate(hostGlobals)),
-        );
-    } catch {
-        return knownShape;
     }
 }
 
@@ -1819,7 +1813,7 @@ export function valueTextProperties(
  * @returns Top-most node in the AST, or undefined if the parsing failed, and
  * the strict parse's error if the loose parse was used.
  */
-export function parseJS(
+function parseJS(
     text: string,
     isProgram: boolean,
     offset = 0,
@@ -1913,7 +1907,7 @@ export function tokenizeJavaScript(
     const [ast, diagnostic] = parseJS(text, isProgram, offset, { isWholeFile });
     tokenized.error = diagnostic;
     if (ast !== undefined) {
-        annotateVariableScopes(ast, !!isAssignmentContext);
+        annotateVariables(ast, !!isAssignmentContext);
         const isGlobalName = globalNamePredicate(storyFormatState.hostGlobals);
 
         // Collect all semantic tokens (which ignores token scope)
@@ -1937,7 +1931,7 @@ export function tokenizeJavaScript(
                   isGlobalName,
                   isAssignmentContext,
               })
-            : extractSymbols(ast, isGlobalName, isAssignmentContext);
+            : extractSymbols(ast, isGlobalName, { isAssignmentContext });
         for (const variable of variables) {
             tokenized.variables.push({
                 contents: variable.text,

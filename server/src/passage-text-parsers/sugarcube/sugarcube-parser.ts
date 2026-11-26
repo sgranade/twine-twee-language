@@ -9,7 +9,7 @@ import {
 import { createDiagnosticFromRange } from "../../diagnostics";
 import { EmbeddedDocument } from "../../embedded-languages";
 import {
-    markWritesOpaque,
+    markTokenAssignmentsOpaque,
     TokenizedJS,
     tokenizeJavaScript,
 } from "../../js-parser";
@@ -356,7 +356,7 @@ function tokenizeReceiverTarget(
     if (tokens.error !== undefined) return undefined;
 
     // Receivers are opaque so we don't have to model each macro's value
-    markWritesOpaque(tokens);
+    markTokenAssignmentsOpaque(tokens);
     return tokens;
 }
 
