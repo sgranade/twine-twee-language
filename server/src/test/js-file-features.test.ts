@@ -146,6 +146,98 @@ describe(".js File Story Variable References", () => {
         });
     });
 
+    describe("Chained engine.state.get in Chapbook", () => {
+        async function neverSetTexts(js: string, passageText: string) {
+            const { index, tw } = build(js, passageText, {
+                format: "Chapbook",
+                formatVersion: "2.3.0",
+            });
+            return (await generateDiagnostics(tw, index))
+                .filter((d) => d.code === "variable-never-set")
+                .map((d) => tw.getText(d.range));
+        }
+
+        it("should count a write through a chained get as setting the path", async () => {
+            expect(
+                await neverSetTexts(
+                    "engine.state.set('player.name', 'a');\nengine.state.get('player').hp = 3;\n",
+                    "{player.hp}",
+                ),
+            ).to.eql([]);
+        });
+
+        it("should check a read through a chained get", async () => {
+            const { index, script } = build(
+                "engine.state.set('player.name', 'a');\nengine.state.get('player').hpp;\n",
+                "{player.name}",
+                { format: "Chapbook", formatVersion: "2.3.0" },
+            );
+
+            expect(
+                (await generateDiagnostics(script, index))
+                    .filter((d) => d.code === "variable-never-set")
+                    .map((d) => script.getText(d.range)),
+            ).to.eql(["hpp"]);
+        });
+
+        it("should check a copy of a chained get against its source", async () => {
+            expect(
+                await neverSetTexts(
+                    "engine.state.set('player.stats.str', 1);\nengine.state.set('s', engine.state.get('player').stats);\n",
+                    "{s.str} {s.stt}",
+                ),
+            ).to.eql(["stt"]);
+        });
+
+        it("should not warn past an indexed segment or a method call", async () => {
+            const { index, script } = build(
+                "engine.state.set('list', []);\nengine.state.set('inv', []);\nengine.state.get('list')[0].x;\nengine.state.get('inv').push(1).y;\n",
+                "{list} {inv}",
+                { format: "Chapbook", formatVersion: "2.3.0" },
+            );
+
+            expect(
+                (await generateDiagnostics(script, index)).filter(
+                    (d) => d.code === "variable-never-set",
+                ),
+            ).to.be.empty;
+        });
+
+        it("should find and rename a chained property", () => {
+            const { index, tw, script } = build(
+                "engine.state.set('player.hp', 1);\nengine.state.get('player').hp = 2;\n",
+                "{player.hp}",
+                { format: "Chapbook", formatVersion: "2.3.0" },
+            );
+            const chained = script.positionAt(
+                script.getText().lastIndexOf("hp"),
+            );
+
+            const refs = getReferencesToSymbolAt(
+                tw.uri,
+                tw.positionAt(tw.getText().indexOf("hp}")),
+                index,
+                true,
+            );
+            const renames = generateRenames(
+                script.uri,
+                chained,
+                "health",
+                index,
+            ) as WorkspaceEdit;
+
+            expect(refs?.filter((r) => r.uri === script.uri)).to.have.length(2);
+            expect(
+                TextDocument.applyEdits(
+                    script,
+                    renames.changes?.[script.uri] ?? [],
+                ),
+            ).to.equal(
+                "engine.state.set('player.health', 1);\nengine.state.get('player').health = 2;\n",
+            );
+        });
+    });
+
     describe("Object Literals Written to Story State", () => {
         async function neverSetTexts(js: string, passageText: string) {
             const { index, tw } = build(js, passageText);

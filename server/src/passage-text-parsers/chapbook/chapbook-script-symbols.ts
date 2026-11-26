@@ -3,8 +3,13 @@ import * as acornWalk from "acorn-walk";
 
 import {
     argumentShape,
+    assignedValue,
+    assignmentShape,
+    isCallee,
     isEcmaScriptGlobal,
+    isWriteTarget,
     objectLiteralProperties,
+    parentOf,
     ScriptPropertyOccurrence,
     ScriptSymbolExtractor,
     ScriptVariableOccurrence,
@@ -105,23 +110,75 @@ export function createChapbookScriptExtractor({
             return key ? { method, key } : undefined;
         };
 
-        // Key of an `engine.state.get` call, so we can ignore a self-reference
-        // like `set('inv', get('inv') || {})`
+        // Path an `engine.state.get` call, or a static member chain off one,
+        // reaches, so `set('s', get('p').a)` copies `p.a` and a
+        // self-reference like `set('inv', get('inv') || {})` is ignored
         const statePathOf = (node: acorn.AnyNode): string | undefined => {
             if (node.type === "ChainExpression") {
                 return statePathOf(node.expression);
+            }
+            if (node.type === "MemberExpression") {
+                const name = memberName(node);
+                const parent = name && statePathOf(node.object);
+                return parent && `${parent}.${name.name}`;
             }
             const call = engineStateCall(node);
             return call?.method === "get" ? call.key.name : undefined;
         };
 
-        acornWalk.full(ast, (rawNode) => {
+        // Static member accesses off a `get` call (`get('p').a.b`) continue
+        // its path, up to the first indexed segment or call
+        const captureChain = (
+            call: acorn.AnyNode,
+            path: string,
+            ancestors: acorn.Node[],
+        ) => {
+            let current = call;
+            let depth = ancestors.length - 2;
+            while (depth >= 0) {
+                const up = ancestors[depth] as acorn.AnyNode;
+                if (up.type !== "MemberExpression" || up.object !== current)
+                    break;
+                const prop = memberName(up);
+                if (!prop || !isIdentifierName(prop.name)) break;
+                const upAncestors = ancestors.slice(0, depth + 1);
+                const assigned = isWriteTarget(up, upAncestors, true);
+                properties.push({
+                    text: prop.name,
+                    at: prop.start,
+                    scope: path,
+                    assigned,
+                    isCallee: isCallee(up, parentOf(upAncestors)),
+                    ...shapeFlags(
+                        assigned
+                            ? assignmentShape(up, upAncestors, statePathOf)
+                            : {},
+                    ),
+                });
+                path = `${path}.${prop.name}`;
+                if (assigned) {
+                    properties.push(
+                        ...objectLiteralProperties(
+                            assignedValue(up, upAncestors),
+                            path,
+                            statePathOf,
+                            { assigned: true },
+                        ),
+                    );
+                }
+                current = up;
+                depth--;
+            }
+        };
+
+        acornWalk.fullAncestor(ast, (rawNode, _, ancestors) => {
             const node = rawNode as acorn.AnyNode;
             const call = engineStateCall(node);
             if (!call) return;
             const { method, key } = call;
             const segments = key.name.split(".");
             if (!segments.every((s) => isIdentifierName(s))) return;
+            if (method === "get") captureChain(node, key.name, ancestors);
 
             const assigned = method !== "get";
             const value = (node as acorn.CallExpression).arguments[1];

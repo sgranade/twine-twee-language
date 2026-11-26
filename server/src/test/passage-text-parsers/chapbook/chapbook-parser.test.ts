@@ -302,6 +302,36 @@ describe("Chapbook Parser", () => {
             ]);
         });
 
+        it("should continue a get's path through chained static members, stopping at an index or call", () => {
+            const header = ":: Passage [script]\n";
+            const passage =
+                "engine.state.get('p.stats').str = 1; engine.state.get('list')[0].x; engine.state.get('inv').push(y).z;\n";
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                uri: "fake-uri",
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            state.currentPassage = buildPassage({ isScript: true });
+            const parser = uut.getChapbookParser(undefined);
+
+            parser?.parsePassageText(passage, header.length, state);
+            const result = callbacks.references.map((r) => [
+                r.contents,
+                r.kind,
+            ]);
+
+            expect(result).to.eql([
+                ["p", OChapbookSymbolKind.Variable],
+                ["list", OChapbookSymbolKind.Variable],
+                ["inv", OChapbookSymbolKind.Variable],
+                ["y", OChapbookSymbolKind.ConditionalReference],
+                ["p.stats", OChapbookSymbolKind.Property],
+                ["p.stats.str", OChapbookSymbolKind.PropertySet],
+                ["inv.push", OChapbookSymbolKind.Property],
+            ]);
+        });
+
         it("should treat setDefault as an assignment and follow an engine.state alias", () => {
             const header = ":: Passage [script]\n";
             const passage =
