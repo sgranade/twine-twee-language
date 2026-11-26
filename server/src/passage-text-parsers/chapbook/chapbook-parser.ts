@@ -13,6 +13,7 @@ import {
     parseJSStrict,
     TokenizedJS,
     tokenizeJavaScript,
+    valueTextProperties,
     valueTextShape,
 } from "../../js-parser";
 import {
@@ -2319,6 +2320,19 @@ function parseVarsSection(
             name,
             valueTextShape(value, name, chapbookState.hostGlobals),
         );
+        // An object literal's keys are set, too (`player: {hp: 3}` sets `player.hp`)
+        // Skip an empty name, which isn't a valid variable
+        if (name !== "") {
+            nameTokens.properties.push(
+                ...valueTextProperties(
+                    value,
+                    name,
+                    sectionIndex + valueIndex,
+                    state.textDocument,
+                    chapbookState.hostGlobals,
+                ),
+            );
+        }
         createVariableAndPropertyReferences(nameTokens, state, true);
         // Capture tokens for variables and properties
         const varsAndProps = name.split(".");

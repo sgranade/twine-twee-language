@@ -1,5 +1,5 @@
 import "mocha";
-import { expect } from "chai";
+import { assert, expect } from "chai";
 import { TextDocument } from "vscode-languageserver-textdocument";
 import { WorkspaceEdit } from "vscode-languageserver";
 
@@ -7,6 +7,7 @@ import { getDefinitionAt } from "../definition";
 import { updateProjectIndex, updateScriptFileIndex } from "../indexer";
 import { ParseLevel } from "../parser-types";
 import { Index, ScriptFileRole } from "../project-index";
+import { OChapbookSymbolKind } from "../passage-text-parsers/chapbook/types";
 import { getReferencesToSymbolAt } from "../references";
 import { generateRenames } from "../renames";
 import { generateDiagnostics } from "../validator";
@@ -137,12 +138,12 @@ describe(".js File Story Variable References", () => {
         it("should list a Chapbook property's direct writes, including an object-literal key and a .js write", () => {
             expect(
                 definitionsAt(
-                    "engine.state.get('player').hp = 2;\nengine.state.set('player', {hp: 3});\n",
-                    "player.hp: 1\n--\n{player.hp}",
+                    "engine.state.get('player').hp = 2;\nengine.state.set('player', {hp: 4});\n",
+                    "player.hp: 1\nplayer: {hp: 3}\n--\n{player.hp}",
                     "{player.hp",
                     chapbook,
                 ),
-            ).to.eql(["s.js: hp", "s.js: hp", "y.tw: hp"]);
+            ).to.eql(["s.js: hp", "s.js: hp", "y.tw: hp", "y.tw: hp"]);
         });
 
         it("should not find a SugarCube property written only beneath an opaque path", () => {
@@ -195,6 +196,98 @@ describe(".js File Story Variable References", () => {
         it("should not find a Chapbook property that is never set", () => {
             expect(definitionsAt("", "{player.hp}", "{player.hp", chapbook)).to
                 .be.empty;
+        });
+    });
+
+    describe("Chapbook vars-Section Object Literals", () => {
+        const chapbook = { format: "Chapbook", formatVersion: "2.3.0" };
+
+        async function neverSetTexts(passageText: string) {
+            const { index, tw } = build("", passageText, chapbook);
+            return (await generateDiagnostics(tw, index))
+                .filter((d) => d.code === "variable-never-set")
+                .map((d) => tw.getText(d.range));
+        }
+
+        it("should count a literal's keys, nested keys included, as property writes", async () => {
+            expect(
+                await neverSetTexts(
+                    "player: {hp: 3, stats: {str: 1}}\n--\n{player.hp} {player.stats.str} {player.mp}",
+                ),
+            ).to.eql(["mp"]);
+        });
+
+        it("should count the keys of a literal on a conditional line", async () => {
+            expect(
+                await neverSetTexts(
+                    "hasHp: true\nplayer (hasHp): {hp: 3}\n--\n{player.hp}",
+                ),
+            ).to.eql([]);
+        });
+
+        it("should make only an opaque key's path opaque", async () => {
+            expect(
+                await neverSetTexts(
+                    "src.fn: 1\nplayer: {inv: src.fn(), hp: 1}\n--\n{player.inv.size} {player.hpp}",
+                ),
+            ).to.eql(["hpp"]);
+        });
+
+        it("should check a spread against its shape source", async () => {
+            expect(
+                await neverSetTexts(
+                    "base.hp: 1\nplayer: {...base}\n--\n{player.hp} {player.hpp}",
+                ),
+            ).to.eql(["hpp"]);
+        });
+
+        it("should find and rename a literal's key along with the property", () => {
+            const { index, tw } = build(
+                "",
+                "player: {hp: 3, 'mp': 1}\n--\n{player.hp} {player.mp}",
+                chapbook,
+            );
+            const at = tw.positionAt(tw.getText().indexOf("hp"));
+
+            const refs = getReferencesToSymbolAt(tw.uri, at, index, true);
+            const edits = generateRenames(tw.uri, at, "health", index);
+
+            expect(refs?.map((r) => tw.getText(r.range))).to.eql(["hp", "hp"]);
+            if (edits && "changes" in edits)
+                expect(
+                    edits?.changes?.[tw.uri].map((e) => tw.getText(e.range)),
+                ).to.eql(["hp", "hp"]);
+            else
+                assert.fail(
+                    false,
+                    true,
+                    "`edits` is not of type `WorkspaceEdit`",
+                );
+        });
+
+        it("should find a quoted key's name, not its quotes", () => {
+            const { index, tw } = build(
+                "",
+                "player: {'mp': 1}\n--\n{player.mp}",
+                chapbook,
+            );
+
+            const refs = getReferencesToSymbolAt(
+                tw.uri,
+                tw.positionAt(tw.getText().indexOf("mp")),
+                index,
+                true,
+            );
+
+            expect(refs?.map((r) => tw.getText(r.range))).to.eql(["mp", "mp"]);
+        });
+
+        it("should ignore a literal on a line with no variable name", () => {
+            const { index } = build("", ": {hp: 1}\n--\nText", chapbook);
+
+            expect(
+                index.getProjectReferences([OChapbookSymbolKind.PropertySet]),
+            ).to.be.empty;
         });
     });
 

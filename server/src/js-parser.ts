@@ -1745,6 +1745,66 @@ export function valueTextShape(
 }
 
 /**
+ * Convert a property occurrence to a property label.
+ *
+ * @param property Property occurrence.
+ * @param offset The text's offset in the document.
+ * @param document Document containing the text.
+ * @returns Property label.
+ */
+function toPropertyLabel(
+    property: ScriptPropertyOccurrence,
+    offset: number,
+    document: TextDocument,
+): JSPropertyLabel {
+    return {
+        contents: property.text,
+        location: createLocationFor(
+            property.text,
+            offset + property.at,
+            document,
+        ),
+        prefix: property.scope,
+        assigned: property.assigned,
+        ...calleeFlag(property),
+        ...shapeFlags(property),
+    };
+}
+
+/**
+ * Get the keys of an object literal that a value's text assigns to a path.
+ *
+ * @param text Text of the value being assigned.
+ * @param path Path being assigned.
+ * @param offset Offset into the document of the value's text.
+ * @param document Document containing the value's text.
+ * @param hostGlobals Names the story format's host provides as globals.
+ * @returns The literal's keys as written property labels, or none if the
+ * value isn't an object literal or can't be parsed.
+ */
+export function valueTextProperties(
+    text: string,
+    path: string,
+    offset: number,
+    document: TextDocument,
+    hostGlobals?: ReadonlySet<string>,
+): JSPropertyLabel[] {
+    const isGlobalName = globalNamePredicate(hostGlobals);
+    // Like for any assigned literal, a global's properties aren't tracked
+    if (isGlobalObjectScope(path, isGlobalName)) return [];
+    try {
+        return objectLiteralProperties(
+            parseJSStrict(text, false) as acorn.AnyNode,
+            path,
+            storyPathOf(isGlobalName),
+            { assigned: true },
+        ).map((p) => toPropertyLabel(p, offset, document));
+    } catch {
+        return [];
+    }
+}
+
+/**
  * Parse a JavaScript program or expression.
  *
  * This performs strict parsing, then loose parsing, and does not throw an exception.
@@ -1894,18 +1954,9 @@ export function tokenizeJavaScript(
             });
         }
         for (const property of properties) {
-            tokenized.properties.push({
-                contents: property.text,
-                location: createLocationFor(
-                    property.text,
-                    offset + property.at,
-                    document,
-                ),
-                prefix: property.scope,
-                assigned: property.assigned,
-                ...calleeFlag(property),
-                ...shapeFlags(property),
-            });
+            tokenized.properties.push(
+                toPropertyLabel(property, offset, document),
+            );
         }
     }
 
