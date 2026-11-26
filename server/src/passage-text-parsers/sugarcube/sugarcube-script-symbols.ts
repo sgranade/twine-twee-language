@@ -7,7 +7,7 @@ import {
     assignedValue,
     isCallee,
     isWriteTarget,
-    objectLiteralWrites,
+    objectLiteralProperties,
     parentOf,
     ScriptPropertyOccurrence,
     ScriptSymbolExtractor,
@@ -179,10 +179,11 @@ export const extractSugarCubeScriptSymbols: ScriptSymbolExtractor = ({
                 });
                 if (written) {
                     properties.push(
-                        ...objectLiteralWrites(
+                        ...objectLiteralProperties(
                             assignedValue(node, ancestors),
                             sigil + name.name,
                             statePathOf,
+                            { assigned: true },
                         ),
                     );
                 }
@@ -213,10 +214,11 @@ export const extractSugarCubeScriptSymbols: ScriptSymbolExtractor = ({
                     });
                     if (assigned) {
                         properties.push(
-                            ...objectLiteralWrites(
+                            ...objectLiteralProperties(
                                 assignedValue(up, upAncestors),
                                 `${scope}.${prop.name}`,
                                 statePathOf,
+                                { assigned: true },
                             ),
                         );
                     }
@@ -264,10 +266,11 @@ export const extractSugarCubeScriptSymbols: ScriptSymbolExtractor = ({
                 );
                 if (isSet && isIdentifierName(literal.name.slice(1))) {
                     properties.push(
-                        ...objectLiteralWrites(
+                        ...objectLiteralProperties(
                             node.arguments[1],
                             literal.name,
                             statePathOf,
+                            { assigned: true },
                         ),
                     );
                 }

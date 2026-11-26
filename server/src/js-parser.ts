@@ -1061,118 +1061,49 @@ function captureMemberChain(
 }
 
 /**
- * A static key of an object literal with the path it's a property of.
- */
-interface ObjectLiteralKey {
-    name: string;
-    at: number;
-    /** Path the key is a property of (`a.b` for `c` in `a.b = {c: 1}`). */
-    scope: string;
-    shape: ValueShape;
-}
-
-/**
- * Get every static key of an object literal, including those of nested
- * literals (`{stats: {str: 1}}` has `stats` and `stats.str`).
- *
- * @param node Object literal.
- * @param scope Path the literal is assigned to.
- * @param pathOf Predicate to get an expression's story path to find shape
- * sources and recognize a self-reference.
- * @returns The literal's keys, in source order.
- */
-function objectLiteralKeys(
-    node: acorn.ObjectExpression,
-    scope: string,
-    pathOf: StaticPathOf,
-): ObjectLiteralKey[] {
-    const keys: ObjectLiteralKey[] = [];
-    for (const prop of node.properties) {
-        if (prop.type !== "Property") continue;
-        const name = getStaticPropertyName(prop.key, prop.computed ?? false);
-        if (!name) continue;
-        const keyPath = `${scope}.${name}`;
-        keys.push({
-            name,
-            at: getPropertyNameStart(prop.key),
-            scope,
-            shape: shapeOfValue(prop.value, keyPath, pathOf),
-        });
-        if (prop.value.type === "ObjectExpression") {
-            keys.push(...objectLiteralKeys(prop.value, keyPath, pathOf));
-        }
-    }
-    return keys;
-}
-
-/**
- * Get the property writes an object literal makes when script code assigns
- * it to a story path (e.g. `State.variables.p = {hp: 1}` writes `$p.hp`).
+ * Get the properties an object literal's static keys stand for when it's
+ * assigned to a path, including those of nested literals
+ * (`p = {stats: {str: 1}}` has `p.stats` and `p.stats.str`).
  *
  * @param value Value being assigned, if any.
- * @param path Story path being assigned.
+ * @param path Path being assigned.
  * @param pathOf Gets an expression's story path, to find shape sources and
  * recognize a self-reference.
- * @returns The literal's keys as written properties, or none if the value
- * isn't an object literal.
+ * @param options Options.
+ * @param options.assigned True if the keys count as being written.
+ * @returns The literal's keys as properties in source order, or none if the
+ * value isn't an object literal.
  */
-export function objectLiteralWrites(
+export function objectLiteralProperties(
     value: acorn.AnyNode | undefined,
     path: string,
     pathOf: StaticPathOf,
+    { assigned }: { assigned: boolean },
 ): ScriptPropertyOccurrence[] {
     if (value?.type !== "ObjectExpression") return [];
-    return objectLiteralKeys(value, path, pathOf).map((key) => ({
-        text: key.name,
-        at: key.at,
-        scope: key.scope,
-        assigned: true,
-        isCallee: false,
-        ...shapeFlags(key.shape),
-    }));
-}
-
-/**
- * Recursively capture all properties in an object expression.
- *
- * @param node ObjectExpression node.
- * @param parentScope Parent scope for the object expression.
- * @param isGlobalName: Global-name predicate.
- * @param assigned Whether the literal's keys count as written.
- * @param capturePropertyCallback Callback for capturing a property's token.
- */
-function captureObjectExpressionProperties(
-    node: acorn.ObjectExpression,
-    parentScope: string,
-    isGlobalName: IsGlobalName,
-    assigned: boolean,
-    capturePropertyCallback: (
-        name: string,
-        start: number,
-        scope?: string,
-        assigned?: boolean,
-        isCallee?: boolean,
-        shape?: ValueShape,
-    ) => void,
-) {
-    const isGlobalObject = isGlobalObjectScope(parentScope, isGlobalName);
-    const keys = objectLiteralKeys(
-        node,
-        parentScope,
-        storyPathOf(isGlobalName),
-    );
-
-    for (const key of keys) {
-        capturePropertyCallback(
-            key.name,
-            key.at,
-            // Blank out the scope for globals so their properties aren't tracked
-            isGlobalObject ? undefined : key.scope,
-            assigned,
-            false,
-            assigned ? key.shape : knownShape,
-        );
-    }
+    return value.properties.flatMap((prop) => {
+        if (prop.type !== "Property") return [];
+        const name = getStaticPropertyName(prop.key, prop.computed ?? false);
+        if (!name) return [];
+        const keyPath = `${path}.${name}`;
+        return [
+            {
+                text: name,
+                at: getPropertyNameStart(prop.key),
+                scope: path,
+                assigned,
+                isCallee: false,
+                ...shapeFlags(
+                    assigned
+                        ? shapeOfValue(prop.value, keyPath, pathOf)
+                        : knownShape,
+                ),
+            },
+            ...objectLiteralProperties(prop.value, keyPath, pathOf, {
+                assigned,
+            }),
+        ];
+    });
 }
 
 /**
@@ -1497,6 +1428,21 @@ function extractSymbols(
         };
     };
 
+    // Capture an assigned object literal's keys. A global's properties
+    // aren't tracked
+    const captureObjectLiteral = (
+        literal: acorn.ObjectExpression,
+        path: string,
+        assigned: boolean,
+    ) => {
+        if (isGlobalObjectScope(path, isGlobalName)) return;
+        for (const prop of objectLiteralProperties(literal, path, pathOf, {
+            assigned,
+        })) {
+            propertyTokens[prop.at] = prop;
+        }
+    };
+
     acornWalk.fullAncestor(ast, (rawNode, _, ancestors) => {
         const node = rawNode as acorn.AnyNode;
         switch (node.type) {
@@ -1601,12 +1547,10 @@ function extractSymbols(
                         if (left.type === "Identifier") {
                             if ((left as ScopedIdentifier)._isStoryVariable) {
                                 parentScope = left.name;
-                                captureObjectExpressionProperties(
+                                captureObjectLiteral(
                                     ancestor.right,
                                     parentScope,
-                                    isGlobalName,
                                     isAssignmentContext,
-                                    captureProperty,
                                 );
                             }
                             break;
@@ -1622,12 +1566,10 @@ function extractSymbols(
                                     chain.root.name,
                                     ...chain.properties.map((p) => p.name),
                                 ].join(".");
-                                captureObjectExpressionProperties(
+                                captureObjectLiteral(
                                     ancestor.right,
                                     parentScope,
-                                    isGlobalName,
                                     isAssignmentContext,
-                                    captureProperty,
                                 );
                                 break;
                             }
@@ -1644,12 +1586,10 @@ function extractSymbols(
 
                         if (id._isStoryVariable) {
                             parentScope = id.name;
-                            captureObjectExpressionProperties(
+                            captureObjectLiteral(
                                 ancestor.init,
                                 parentScope,
-                                isGlobalName,
                                 true,
-                                captureProperty,
                             );
                         }
                         break;
