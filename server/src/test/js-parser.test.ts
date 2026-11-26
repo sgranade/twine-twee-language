@@ -1577,6 +1577,15 @@ describe("JS Parser", () => {
                 properties: ["obj.a=", "obj.a.b="],
             },
             {
+                description:
+                    "obj = f({a: 1}), isAssignmentContext // a literal passed to a call isn't the value",
+                input: "obj = f({a: 1})",
+                isProgram: true,
+                isAssignmentContext: true,
+                variables: ["obj=", "f"],
+                properties: [],
+            },
+            {
                 description: "obj.x = {a: 1}",
                 input: "obj.x = {a: 1}",
                 isProgram: true,

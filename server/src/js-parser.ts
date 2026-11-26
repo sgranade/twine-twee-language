@@ -1577,82 +1577,37 @@ export function extractSymbols(
                 break;
             }
 
-            case "Property": {
-                const propName = getStaticPropertyName(
-                    node.key,
-                    node.computed ?? false,
-                );
-                // If we're a non-static property, bail out
-                if (!propName) break;
-
-                // Find the enclosing assigned object literal and capture all of
-                // its keys (including this one) with their full scopes. A
-                // declaration's keys are always written; a bare assignment's
-                // follow the flag.
-                let parentScope: string | undefined;
-
-                for (let i = ancestors.length - 2; i >= 0; i--) {
-                    const ancestor = ancestors[i] as acorn.AnyNode;
-
-                    // var.prop1.prop2... = { ... } (for any number of properties)
-                    if (
-                        ancestor.type === "AssignmentExpression" &&
-                        ancestor.right.type === "ObjectExpression"
-                    ) {
-                        // Get the scope from the left side to prepend to the property scopes
-                        const left = ancestor.left;
-                        if (left.type === "Identifier") {
-                            if ((left as ScopedIdentifier)._isStoryVariable) {
-                                parentScope = left.name;
-                                captureObjectLiteral(
-                                    ancestor.right,
-                                    parentScope,
-                                    isAssignmentContext,
-                                );
-                            }
-                            break;
-                        } else if (left.type === "MemberExpression") {
-                            const chain = captureMemberChain(left);
-                            if (
-                                chain &&
-                                !isDynamicChain(chain) &&
-                                chain.root._isStoryVariable
-                            ) {
-                                // If it's dynamic, then we don't save the properties
-                                parentScope = [
-                                    chain.root.name,
-                                    ...chain.properties.map((p) => p.name),
-                                ].join(".");
-                                captureObjectLiteral(
-                                    ancestor.right,
-                                    parentScope,
-                                    isAssignmentContext,
-                                );
-                                break;
-                            }
-                        }
-                    }
-
-                    // const obj = { ... }
-                    if (
-                        ancestor.type === "VariableDeclarator" &&
-                        ancestor.id.type === "Identifier" &&
-                        ancestor.init?.type === "ObjectExpression"
-                    ) {
-                        const id = ancestor.id as ScopedIdentifier;
-
-                        if (id._isStoryVariable) {
-                            parentScope = id.name;
-                            captureObjectLiteral(
-                                ancestor.init,
-                                parentScope,
-                                true,
-                            );
-                        }
-                        break;
-                    }
+            // var.prop1.prop2... = { ... } (for any number of properties).
+            // A bare assignment's keys follow the assignment-context flag
+            case "AssignmentExpression": {
+                if (node.right.type !== "ObjectExpression") break;
+                const left = node.left;
+                const root: ScopedIdentifier | undefined =
+                    left.type === "Identifier"
+                        ? left
+                        : left.type === "MemberExpression"
+                          ? captureMemberChain(left)?.root
+                          : undefined;
+                // A dynamic chain has no static path so its properties
+                // aren't tracked
+                const path = root?._isStoryVariable
+                    ? staticPathOf(left)
+                    : undefined;
+                if (path !== undefined) {
+                    captureObjectLiteral(node.right, path, isAssignmentContext);
                 }
+                break;
+            }
 
+            // const obj = { ... }. A declaration's keys are always written
+            case "VariableDeclarator": {
+                if (
+                    node.id.type === "Identifier" &&
+                    node.init?.type === "ObjectExpression" &&
+                    (node.id as ScopedIdentifier)._isStoryVariable
+                ) {
+                    captureObjectLiteral(node.init, node.id.name, true);
+                }
                 break;
             }
         }
