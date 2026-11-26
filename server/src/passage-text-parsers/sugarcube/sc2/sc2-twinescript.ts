@@ -75,7 +75,7 @@ const desugarMap: { [key: string]: string } = {
     // Story $variable sigil-prefix.
     $: "X",
     // Temporary _variable sigil-prefix.
-    _: "X",
+    _: "Y",
     // Assignment operator.
     to: "=",
     // Equality operators.
@@ -132,7 +132,7 @@ interface DesugarResult {
  *
  * Note that `def` and `ndef` aren't properly translated to
  * `"undefined" !== typeof` and `"undefined" === typeof`, while
- * variable sigils `$` and `_` are replaced by `X`
+ * variable sigils `$` and `_` are replaced by `X` and `Y`
  *
  * @param str TwineScript string to desugar.
  * @returns The desugared string and mapping of old to new positions.
@@ -263,6 +263,49 @@ export function isTwineScriptExpression(expression: string): boolean {
 }
 
 /**
+ * Restore the sigils in tokenized labels' shape sources from the the
+ * desugared expression.
+ *
+ * @param jsTokens Tokenized labels to update in place.
+ * @param desugared Desugared expression.
+ * @param positionMapping Mapping from the desugared expression to the original one.
+ */
+function resugarShapeSources(
+    jsTokens: TokenizedJS,
+    desugared: string,
+    positionMapping: PositionMapping[],
+): void {
+    const sugaredNames = new Map<string, string>();
+    for (const mapping of positionMapping) {
+        const sigil = mapping.originalString;
+        if (sigil !== "$" && sigil !== "_") continue;
+        const name = /^[\w$]+/.exec(desugared.slice(mapping.newStart))?.[0];
+        if (name === undefined) continue;
+        sugaredNames.set(
+            name,
+            sigil + name.slice(mapping.newEnd - mapping.newStart),
+        );
+    }
+
+    for (const label of [...jsTokens.variables, ...jsTokens.properties]) {
+        if (label.shapeSources === undefined) continue;
+        const sources: string[] = [];
+        for (const source of label.shapeSources) {
+            const [root, ...rest] = source.split(".");
+            const sugaredRoot = sugaredNames.get(root);
+            // A shape source whose root had no sigil isn't story state
+            if (sugaredRoot === undefined) {
+                label.opaque = true;
+                delete label.shapeSources;
+                break;
+            }
+            sources.push([sugaredRoot, ...rest].join("."));
+        }
+        if (label.shapeSources !== undefined) label.shapeSources = sources;
+    }
+}
+
+/**
  * Tokenize a TwineScript expression and find referenced variables and properties in it.
  *
  * Returned properties are only those for which the parser could trace their "ownership"
@@ -365,6 +408,8 @@ export function tokenizeTwineScriptExpression(
             textDocument,
         );
     }
+
+    resugarShapeSources(jsTokens, desugared, positionMapping);
 
     // Adjust diagnostic location
     if (jsTokens.error) {

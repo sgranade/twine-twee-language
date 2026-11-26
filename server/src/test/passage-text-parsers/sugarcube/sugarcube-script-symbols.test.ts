@@ -161,6 +161,39 @@ describe("SugarCube Script Symbols", () => {
                 ).opaque,
             ).to.eql([]);
         });
+
+        it("should record copies of story state through any state root as shape sources", () => {
+            const text =
+                "State.variables.p = variables().player;" +
+                "State.setVar('_q', State.getVar('$player').stats);" +
+                "State.variables.a.b = clone(State.temporary.c);";
+            const state = buildParsingState({
+                uri: "fake-uri",
+                content: text,
+                callbacks: new MockCallbacks(),
+            });
+            const result = tokenizeJavaScript(
+                true,
+                text,
+                0,
+                state.textDocument,
+                { passageTokens: {} },
+                {
+                    isAssignmentContext: true,
+                    extractScriptSymbols: uut.extractSugarCubeScriptSymbols,
+                },
+            );
+
+            expect(
+                [...result.variables, ...result.properties]
+                    .filter((l) => l.shapeSources)
+                    .map((l) => [l.contents, l.shapeSources]),
+            ).to.eql([
+                ["$p", ["$player"]],
+                ["_q", ["$player.stats"]],
+                ["b", ["_c"]],
+            ]);
+        });
     });
 
     it("should ignore bare names, declarations, UMD names and shadowed roots", () => {

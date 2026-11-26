@@ -46,24 +46,60 @@ export interface NeverSetCheck {
 }
 
 /**
- * Is a property beneath (but not at) any opaque path?
- *
- * @param property Property's full dotted path.
- * @param opaquePaths Opaque paths.
- * @returns True if the property is beneath an opaque path.
+ * Decides whether a story property counts as set, following shape sources.
  */
-function isBeneathOpaquePath(
-    property: string,
-    opaquePaths: Set<string>,
-): boolean {
-    for (
-        let end = property.lastIndexOf(".");
-        end > 0;
-        end = property.lastIndexOf(".", end - 1)
-    ) {
-        if (opaquePaths.has(property.slice(0, end))) return true;
+class PropertySetResolver {
+    constructor(
+        private readonly propSetNames: Set<string>,
+        private readonly opaquePaths: Set<string>,
+        private readonly shapeSources: Map<string, Set<string>>,
+        private readonly builtInVariables: Set<string>,
+    ) {}
+
+    /**
+     * Does a property count as set?
+     *
+     * @param property Property's full dotted path.
+     * @param following Ancestor paths whose shape sources are being followed.
+     * @returns True if the property counts as set.
+     */
+    isSet(property: string, following = new Set<string>()): boolean {
+        /*
+         * A property counts as set if it's written directly, lies beneath an opaque
+         * path, or counts as set at the same place beneath one of an ancestor path's
+         * shape sources (`_p.a.b` as `$player.a.b` for `_p = $player`). A shape
+         * source that leads back to a path already being followed is a cycle, and one
+         * rooted in a story format's built-in variable is of unknown shape.
+         */
+
+        if (this.propSetNames.has(property)) return true;
+        for (
+            let end = property.lastIndexOf(".");
+            end > 0;
+            end = property.lastIndexOf(".", end - 1)
+        ) {
+            const ancestor = property.slice(0, end);
+            if (this.opaquePaths.has(ancestor)) return true;
+            const sources = this.shapeSources.get(ancestor);
+            if (sources === undefined) continue;
+            if (following.has(ancestor)) return true;
+            following.add(ancestor);
+            const rest = property.slice(end);
+            for (const source of sources) {
+                if (
+                    // The story format sets its own variables' properties
+                    // where we can't see them
+                    this.builtInVariables.has(source.split(".", 1)[0]) ||
+                    this.isSet(source + rest, following)
+                ) {
+                    following.delete(ancestor);
+                    return true;
+                }
+            }
+            following.delete(ancestor);
+        }
+        return false;
     }
-    return false;
 }
 
 /**
@@ -92,10 +128,21 @@ export function generateNeverAssignedToDiagnostics(
         ...check.builtInProperties,
         ...propSets.map((ref) => ref.contents),
     ]);
-    const opaquePaths = new Set(
-        [...varSets, ...propSets]
-            .filter((ref) => ref.opaque)
-            .map((ref) => ref.contents),
+    const opaquePaths = new Set<string>();
+    const shapeSources = new Map<string, Set<string>>();
+    for (const ref of [...varSets, ...propSets]) {
+        if (ref.opaque) opaquePaths.add(ref.contents);
+        for (const source of ref.shapeSources ?? []) {
+            const sources = shapeSources.get(ref.contents) ?? new Set();
+            sources.add(source);
+            shapeSources.set(ref.contents, sources);
+        }
+    }
+    const resolver = new PropertySetResolver(
+        propSetNames,
+        opaquePaths,
+        shapeSources,
+        new Set(check.builtInVariables),
     );
     for (const varRef of index.getReferences(uri, check.variableKind) ?? []) {
         if (!varSetNames.has(varRef.contents)) {
@@ -110,11 +157,11 @@ export function generateNeverAssignedToDiagnostics(
         }
     }
     for (const propRef of index.getReferences(uri, check.propertyKind) ?? []) {
-        // Don't report built-in JS properties or those that hang off of an opaque item
+        // Don't report built-in JS properties, those that hang off of an opaque item,
+        // or those that match shape sources
         if (
-            !propSetNames.has(propRef.contents) &&
             !isBuiltinJSProperty(propRef) &&
-            !isBeneathOpaquePath(propRef.contents, opaquePaths)
+            !resolver.isSet(propRef.contents)
         ) {
             diagnostics.push(
                 ...referencesToDiagnostics(

@@ -4,7 +4,7 @@ import { TokenizedJS } from "../../js-parser";
 import { logDiagnostic, logRawDiagnostic } from "../../parser";
 import {
     calleeFlag,
-    opaqueFlag,
+    shapeFlags,
     shorthandFlag,
     sigilFlag,
 } from "../../project-index";
@@ -76,7 +76,7 @@ export function createVariableAndPropertyReferences(
                         : OSugarCubeSymbolKind.Variable,
                 ...sigilFlag(v),
                 ...shorthandFlag(v),
-                ...opaqueFlag(v),
+                ...shapeFlags(v),
             });
     }
     for (const p of jsTokens.properties) {
@@ -104,7 +104,7 @@ export function createVariableAndPropertyReferences(
                     assigned: p.assigned,
                     sigilOutsideRange: true,
                     ...calleeFlag(p),
-                    ...opaqueFlag(p),
+                    ...shapeFlags(p),
                 };
                 const firstPeriodNdx = ref.contents.indexOf(".");
                 if (firstPeriodNdx === -1) {
@@ -145,7 +145,7 @@ export function createVariableAndPropertyReferences(
                         ? OSugarCubeSymbolKind.PropertySet
                         : OSugarCubeSymbolKind.Property,
                 ...calleeFlag(p),
-                ...opaqueFlag(p),
+                ...shapeFlags(p),
             });
     }
     if (jsTokens.error) {

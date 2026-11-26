@@ -77,29 +77,43 @@ export function shorthandFlag(source: Shorthand): Shorthand {
 }
 
 /**
- * Tracks whether an assignment is opaque (it could be an object with
- * an unknown shape, equivalent to TypeScript's `Any` type).
+ * What's known about the shape of an assigned value: if it's opaque (its
+ * value could be an object of an unknown shape, roughly equivalent to
+ * Typescript's `Any` type), and where it gets its known shape from
+ * (story paths whose shape it copies).
  */
-export interface Opaque {
+export interface ValueShape {
     /**
      * True if the occurrence is an opaque assignment, so story properties
      * beneath its path are never reported as never set.
      */
     opaque?: boolean;
+    /**
+     * Story paths whose shape the assigned value copies (`$player` in
+     * `_p = $player`). This lets us handle common assignment cases that
+     * we'd otherwise naively mark as opaque.
+     */
+    shapeSources?: string[];
 }
 
 /**
- * Spread-ready `opaque` flag that's absent unless true.
+ * Spread-ready `opaque` flag and shape sources that are absent unless set.
  */
-export function opaqueFlag(source: Opaque): Opaque {
-    return source.opaque ? { opaque: true } : {};
+export function shapeFlags(source: ValueShape): ValueShape {
+    // We'll sort and short shape sources for de-duping
+    return {
+        ...(source.opaque ? { opaque: true } : {}),
+        ...(source.shapeSources?.length
+            ? { shapeSources: [...new Set(source.shapeSources)].sort() }
+            : {}),
+    };
 }
 
 /**
  * A label with additional symbol information (kind, callable, sigiled, shorthand, opaque).
  */
 export interface ProjSymbol
-    extends Label, Kind, Callable, Sigiled, Shorthand, Opaque {}
+    extends Label, Kind, Callable, Sigiled, Shorthand, ValueShape {}
 
 /**
  * Kind of a Twine symbol.
@@ -113,7 +127,8 @@ export enum TwineSymbolKind {
 /**
  * References, which have contents, locations, and information about its contents.
  */
-export interface References extends Kind, Callable, Sigiled, Shorthand, Opaque {
+export interface References
+    extends Kind, Callable, Sigiled, Shorthand, ValueShape {
     contents: string;
     locations: Location[];
 }

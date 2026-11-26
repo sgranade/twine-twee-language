@@ -2,16 +2,16 @@ import * as acorn from "acorn";
 import * as acornWalk from "acorn-walk";
 
 import {
+    argumentShape,
+    assignmentShape,
     isCallee,
-    isOpaqueArgument,
-    isOpaqueAssignment,
     isWriteTarget,
     parentOf,
     ScriptPropertyOccurrence,
     ScriptSymbolExtractor,
     ScriptVariableOccurrence,
 } from "../../js-parser";
-import { opaqueFlag, shorthandFlag } from "../../project-index";
+import { shapeFlags, shorthandFlag, ValueShape } from "../../project-index";
 import {
     createScriptAnalysis,
     isIdentifierName,
@@ -144,8 +144,8 @@ export const extractSugarCubeScriptSymbols: ScriptSymbolExtractor = ({
         {
             assigned,
             shorthand = false,
-            opaque = false,
-        }: { assigned: boolean; shorthand?: boolean; opaque?: boolean },
+            shape = {},
+        }: { assigned: boolean; shorthand?: boolean; shape?: ValueShape },
     ) => {
         if (!isIdentifierName(name.name)) return; // Don't add non-identifiers
         variables.push({
@@ -155,7 +155,7 @@ export const extractSugarCubeScriptSymbols: ScriptSymbolExtractor = ({
             assigned,
             sigilOutsideRange: true,
             ...shorthandFlag({ shorthand }),
-            ...opaqueFlag({ opaque }),
+            ...shapeFlags(shape),
         });
     };
 
@@ -171,9 +171,9 @@ export const extractSugarCubeScriptSymbols: ScriptSymbolExtractor = ({
                 const written = isWriteTarget(node, ancestors, true);
                 addVariable(sigil, name, {
                     assigned: written,
-                    opaque:
-                        written &&
-                        isOpaqueAssignment(node, ancestors, statePathOf),
+                    shape: written
+                        ? assignmentShape(node, ancestors, statePathOf)
+                        : {},
                 });
 
                 // Capture properties by walking up through static property accesses
@@ -194,15 +194,11 @@ export const extractSugarCubeScriptSymbols: ScriptSymbolExtractor = ({
                         scope,
                         assigned,
                         isCallee: isCallee(up, parentOf(upAncestors)),
-                        ...opaqueFlag({
-                            opaque:
-                                assigned &&
-                                isOpaqueAssignment(
-                                    up,
-                                    upAncestors,
-                                    statePathOf,
-                                ),
-                        }),
+                        ...shapeFlags(
+                            assigned
+                                ? assignmentShape(up, upAncestors, statePathOf)
+                                : {},
+                        ),
                     });
                     scope = `${scope}.${prop.name}`;
                     current = up;
@@ -237,13 +233,13 @@ export const extractSugarCubeScriptSymbols: ScriptSymbolExtractor = ({
                     { name: literal.name.slice(1), start: literal.start + 1 },
                     {
                         assigned: isSet,
-                        opaque:
-                            isSet &&
-                            isOpaqueArgument(
-                                node.arguments[1],
-                                literal.name,
-                                statePathOf,
-                            ),
+                        shape: isSet
+                            ? argumentShape(
+                                  node.arguments[1],
+                                  literal.name,
+                                  statePathOf,
+                              )
+                            : {},
                     },
                 );
                 break;

@@ -96,6 +96,54 @@ describe(".js File Story Variable References", () => {
         expect(await codes()).to.not.include("variable-never-set");
     });
 
+    describe("Shape Sources", () => {
+        async function neverSetTexts(
+            js: string,
+            passageText: string,
+            options: { format?: string; formatVersion?: string } = {},
+        ) {
+            const { index, tw } = build(js, passageText, options);
+            return (await generateDiagnostics(tw, index))
+                .filter((d) => d.code === "variable-never-set")
+                .map((d) => tw.getText(d.range));
+        }
+
+        it("should check a .tw read of a copy a .js made against its source", async () => {
+            expect(
+                await neverSetTexts(
+                    "State.variables.player.hp = 1;\nState.variables.p = State.variables.player;\n",
+                    "<<print $p.hp + $p.hpp>>",
+                ),
+            ).to.eql(["hpp"]);
+        });
+
+        it("should check a .tw read of a copy a Chapbook .js made against its source", async () => {
+            expect(
+                await neverSetTexts(
+                    "engine.state.set('player.hp', 1);\nengine.state.set('p', engine.state.get('player'));\n",
+                    "{p.hp} {p.hpp}",
+                    { format: "Chapbook", formatVersion: "2.3.0" },
+                ),
+            ).to.eql(["hpp"]);
+        });
+
+        it("should not include a copy's properties in a property's references", () => {
+            const { index, tw } = build(
+                "",
+                "<<set $player to {hp: 1}>><<set _p to $player>><<print $player.hp + _p.hp>>",
+            );
+
+            const refs = getReferencesToSymbolAt(
+                tw.uri,
+                tw.positionAt(tw.getText().indexOf("hp")),
+                index,
+                true,
+            );
+
+            expect(refs?.map((r) => tw.getText(r.range))).to.eql(["hp", "hp"]);
+        });
+    });
+
     describe("Opaque Assignments", () => {
         describe("SugarCube", () => {
             async function sugarCubeNeverSetCodes(js: string) {

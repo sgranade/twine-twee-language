@@ -2,13 +2,13 @@ import * as acorn from "acorn";
 import * as acornWalk from "acorn-walk";
 
 import {
+    argumentShape,
     isEcmaScriptGlobal,
-    isOpaqueArgument,
     ScriptPropertyOccurrence,
     ScriptSymbolExtractor,
     ScriptVariableOccurrence,
 } from "../../js-parser";
-import { opaqueFlag } from "../../project-index";
+import { shapeFlags } from "../../project-index";
 import { browserGlobals } from "../host-globals";
 import {
     createScriptAnalysis,
@@ -123,18 +123,16 @@ export function createChapbookScriptExtractor({
             if (!segments.every((s) => isIdentifierName(s))) return;
 
             const assigned = method !== "get";
-            const opaque =
-                assigned &&
-                isOpaqueArgument(
-                    (node as acorn.CallExpression).arguments[1],
-                    key.name,
-                    statePathOf,
-                );
+            const shape = assigned
+                ? argumentShape(
+                      (node as acorn.CallExpression).arguments[1],
+                      key.name,
+                      statePathOf,
+                  )
+                : {};
             let at = key.start;
             segments.forEach((segment, i) => {
-                const flag = opaqueFlag({
-                    opaque: opaque && i === segments.length - 1,
-                });
+                const flag = shapeFlags(i === segments.length - 1 ? shape : {});
                 if (i === 0) {
                     variables.push({ text: segment, at, assigned, ...flag });
                 } else {

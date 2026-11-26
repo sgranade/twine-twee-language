@@ -829,9 +829,32 @@ describe("Chapbook Parser", () => {
             }
 
             it("should mark an entry with an opaque value opaque", () => {
-                expect(opaquePaths("r: fn()\np: player\nx: 5")).to.eql([
-                    "r",
-                    "p",
+                expect(
+                    opaquePaths("r: fn()\np: list[i]\nm: Math.PI\nx: 5"),
+                ).to.eql(["r", "p", "m"]);
+            });
+
+            it("should record an entry's copies of story state as shape sources", () => {
+                const header = ":: Passage\n";
+                const passage =
+                    "p: player\ns: clone(player.stats)\no: {...base, a: 1}\n--\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const parser = uut.getChapbookParser(undefined);
+
+                parser?.parsePassageText(passage, header.length, state);
+
+                expect(
+                    callbacks.references
+                        .filter((r) => r.shapeSources)
+                        .map((r) => [r.contents, r.shapeSources]),
+                ).to.eql([
+                    ["p", ["player"]],
+                    ["s", ["player.stats"]],
+                    ["o", ["base"]],
                 ]);
             });
 

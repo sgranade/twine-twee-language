@@ -337,11 +337,6 @@ describe("Validator", () => {
 
         for (const [desc, setText, readText] of [
             [
-                "a copy of a story variable",
-                "<<set _p to $player>>",
-                "<<print _p.hp>>",
-            ],
-            [
                 "member access",
                 "<<set $x to setup.items.sword>>",
                 "<<print $x.damage>>",
@@ -349,18 +344,13 @@ describe("Validator", () => {
             ["element access", "<<set _a to $arr[0]>>", "<<print _a.name>>"],
             ["a new object", "<<set $d to new Date()>>", "<<print $d.year>>"],
             [
-                "an object literal with a spread",
-                "<<set $o to {...$base, a: 1}>>",
-                "<<print $o.b>>",
-            ],
-            [
                 "a destructured call result",
                 "<<set [_a, _b] to fn()>>",
                 "<<print _b.c>>",
             ],
             [
                 "a mix of known and opaque values",
-                "<<set $player to {hp: 10}>><<set $player to clone($saved)>>",
+                "<<set $player to {hp: 10}>><<set $player to clone(fn())>>",
                 "<<print $player.hpp>>",
             ],
         ]) {
@@ -382,6 +372,146 @@ describe("Validator", () => {
             );
 
             expect(result).to.eql(["typo"]);
+        });
+
+        describe("Shape Sources", () => {
+            it("should check a copy's properties against its source's writes", async () => {
+                // No arrange
+
+                const result = await neverSetIn(
+                    "<<set $player to {hp: 10}>><<set _p to $player>>",
+                    "<<print _p.hp + _p.hpp>>",
+                );
+
+                expect(result).to.eql(["hpp"]);
+            });
+
+            it("should check a copy of a property chain and its descendants against the chain", async () => {
+                // No arrange
+
+                const result = await neverSetIn(
+                    "<<set $player to {stats: {str: {base: 1}}}>><<set _s to $player.stats>>",
+                    "<<print _s.str.base + _s.str.bsae + _s.dex>>",
+                );
+
+                expect(result).to.eql(["bsae", "dex"]);
+            });
+
+            it("should check a clone's properties against its source's writes", async () => {
+                // No arrange
+
+                const result = await neverSetIn(
+                    "<<set $player to {hp: 10}>><<set _p to clone($player)>>",
+                    "<<print _p.hp + _p.hpp>>",
+                );
+
+                expect(result).to.eql(["hpp"]);
+            });
+
+            it("should check a temporary copy of a same-named story variable against the story variable", async () => {
+                // No arrange
+
+                const result = await neverSetIn(
+                    "<<set $player to {hp: 10}>><<set _player to clone($player)>>",
+                    "<<print _player.hp + _player.hpp>>",
+                );
+
+                expect(result).to.eql(["hpp"]);
+            });
+
+            it("should treat a copy of a non-story name as opaque", async () => {
+                // No arrange
+
+                const result = await neverSetIn(
+                    "<<set _p to Foo>>",
+                    "<<print _p.hp>>",
+                );
+
+                expect(result).to.be.empty;
+            });
+
+            it("should check an object literal with spreads against each spread and its own keys", async () => {
+                // No arrange
+
+                const result = await neverSetIn(
+                    "<<set $base to {b: 1}>><<set $extra to {e: 1}>><<set $o to {...$base, ...$extra, a: 1}>>",
+                    "<<print $o.a + $o.b + $o.e + $o.x>>",
+                );
+
+                expect(result).to.eql(["x"]);
+            });
+
+            it("should accept a property set on any of a path's sources", async () => {
+                // No arrange
+
+                const result = await neverSetIn(
+                    "<<set $player to {hp: 1}>><<set $enemy to {ac: 1}>><<set _c to $player>><<set _c to $enemy>>",
+                    "<<print _c.hp + _c.ac + _c.xp>>",
+                );
+
+                expect(result).to.eql(["xp"]);
+            });
+
+            it("should not warn beneath a copy if any of its sources is opaque", async () => {
+                // No arrange
+
+                const result = await neverSetIn(
+                    "<<set $player to {hp: 1}>><<set $enemy to fn()>><<set _c to $player>><<set _c to $enemy>>",
+                    "<<print _c.xp>>",
+                );
+
+                expect(result).to.be.empty;
+            });
+
+            it("should follow a chain of copies", async () => {
+                // No arrange
+
+                const result = await neverSetIn(
+                    "<<set $player to {hp: 1}>><<set _p to $player>><<set _q to _p>>",
+                    "<<print _q.hp + _q.hpp>>",
+                );
+
+                expect(result).to.eql(["hpp"]);
+            });
+
+            it("should treat a cycle of copies as opaque", async () => {
+                // No arrange
+
+                const result = await neverSetIn(
+                    "<<set _a to _b>><<set _b to _a>><<set $c to {...$c.d}>>",
+                    "<<print _a.x + $c.y>>",
+                );
+
+                expect(result).to.be.empty;
+            });
+
+            for (const [desc, setText, readText] of [
+                [
+                    "a spread of a call",
+                    "<<set $o to {...fn()}>>",
+                    "<<print $o.x>>",
+                ],
+                ["an element", "<<set _a to $arr[_i]>>", "<<print _a.name>>"],
+            ]) {
+                it(`should not warn on a property of ${desc}`, async () => {
+                    // No arrange
+
+                    const result = await neverSetIn(setText, readText);
+
+                    expect(result).to.be.empty;
+                });
+            }
+
+            it("should tell a story variable source from a same-named temporary in one expression", async () => {
+                // No arrange
+
+                const result = await neverSetIn(
+                    "<<set $p to {a: 1}>><<set _r to $p, _t to _p>>",
+                    "<<print _r.a + _r.x>>",
+                );
+
+                expect(result).to.eql(["x"]);
+            });
         });
 
         it("should not warn on a property of a <<for>> range's value variable", async () => {
