@@ -5752,7 +5752,6 @@ describe("SugarCube Parser", () => {
                 expect(errors[0].message).to.equal(
                     "`Save.browser.slot.save` isn't available until SugarCube version 2.37.0 but your StoryFormat version is 2.36.1",
                 );
-                // `save` is at 18-22
                 expect(errors[0].range).to.eql(Range.create(1, 18, 1, 22));
             });
 
@@ -5767,7 +5766,6 @@ describe("SugarCube Parser", () => {
                 expect(errors[0].message).to.equal(
                     "`Save.browser.slot.save` isn't available until SugarCube version 2.37.0 but your StoryFormat version is 2.36.1",
                 );
-                // `save` is at 24-28
                 expect(errors[0].range).to.eql(Range.create(1, 24, 1, 28));
             });
 
@@ -5779,7 +5777,6 @@ describe("SugarCube Parser", () => {
 
                 expect(errors.length).to.equal(1);
                 expect(errors[0].code).to.equal("api-not-available");
-                // `filter` is at 25-31
                 expect(errors[0].range).to.eql(Range.create(1, 25, 1, 31));
             });
 
@@ -5787,6 +5784,36 @@ describe("SugarCube Parser", () => {
                 const errors = errorsFor("<<run Save.browser.slot.save(0)>>\n");
 
                 expect(errors).to.eql([]);
+            });
+
+            it("should error on a too-new global function in Story JavaScript", () => {
+                const errors = errorsFor(
+                    'let a = triggerEvent("x");\n',
+                    "2.36.1",
+                    true,
+                );
+
+                expect(errors.length).to.equal(1);
+                expect(errors[0].code).to.equal("api-not-available");
+                expect(errors[0].severity).to.eql(DiagnosticSeverity.Error);
+                expect(errors[0].message).to.equal(
+                    "`triggerEvent` isn't available until SugarCube version 2.37.0 but your StoryFormat version is 2.36.1",
+                );
+                expect(errors[0].range).to.eql(Range.create(1, 8, 1, 20));
+            });
+
+            it("should error on a too-new global function in an <<if>> macro", () => {
+                const errors = errorsFor(
+                    '<<if $x is 1 and hasVisited("p")>><</if>>\n',
+                    "2.6.0",
+                );
+
+                expect(errors.length).to.equal(1);
+                expect(errors[0].code).to.equal("api-not-available");
+                expect(errors[0].message).to.equal(
+                    "`hasVisited` isn't available until SugarCube version 2.7.0 but your StoryFormat version is 2.6.0",
+                );
+                expect(errors[0].range).to.eql(Range.create(1, 17, 1, 27));
             });
         });
 

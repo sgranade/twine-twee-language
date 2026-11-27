@@ -406,6 +406,7 @@ function createRootTracer(
         );
 
     return {
+        isUnbound,
         isSugarCubeGlobal,
         sugarCubeApiPath,
         rootSigil,
@@ -421,43 +422,61 @@ function createRootTracer(
 }
 
 /**
- * Find plain calls to SugarCube API object methods that a format version
- * doesn't have yet, such as `Save.browser.slot.save(…)` before 2.37.0.
+ * Find plain calls to SugarCube API object methods and global functions that
+ * a format version doesn't have yet, such as `Save.browser.slot.save(…)`
+ * before 2.37.0.
  *
  * @param ast Parsed code.
  * @param tracer Root helpers for the code.
  * @param formatVersion The project's SugarCube version. If it's missing or
  * doesn't parse, nothing is reported.
- * @returns Diagnostics for the calls, located on the method names.
+ * @returns Diagnostics for the calls.
  */
 function findUnavailableApiCalls(
     ast: acorn.Node,
-    { sugarCubeApiPath, memberName }: RootTracer,
+    { sugarCubeApiPath, memberName, isUnbound }: RootTracer,
     formatVersion: string | undefined,
 ): ScriptDiagnosticOccurrence[] {
     const diagnostics: ScriptDiagnosticOccurrence[] = [];
     if (formatVersion === undefined) return diagnostics;
 
+    // The API path a call names and the name to locate it on, if the call
+    // is to a SugarCube API-object method or global function
+    const apiCall = (
+        node: acorn.CallExpression,
+    ): { path: string; name: StaticName } | undefined => {
+        const callee = node.callee;
+        if (callee.type === "Identifier") {
+            // A global function: SugarCube doesn't export these on
+            // `SugarCube`, so only a bare unbound name reaches one. An
+            // optional call counts, since `?.` can't guard a missing name.
+            return isUnbound(callee)
+                ? { path: callee.name, name: callee }
+                : undefined;
+        }
+        // An optional method call is feature detection
+        if (node.optional || callee.type !== "MemberExpression")
+            return undefined;
+        const name = memberName(callee);
+        const path = name && sugarCubeApiPath(callee);
+        return path ? { path, name } : undefined;
+    };
+
     acornWalk.full(ast, (rawNode) => {
         const node = rawNode as acorn.AnyNode;
-        // The callee must be a static member path rooted at a SugarCube global
-        // (`Save`, `SugarCube.Save` or `window.SugarCube.Save`). Optional calls
-        // (`Setting.addValue?.(…)`) and bare member reads aren't reported
-        if (
-            node.type !== "CallExpression" ||
-            node.optional ||
-            node.callee.type !== "MemberExpression"
-        )
-            return;
-        const method = memberName(node.callee);
-        const path = method && sugarCubeApiPath(node.callee);
-        const since = path && apiIntroducedIn.get(path);
-        if (!method || !since || !isVersionBefore(formatVersion, since)) return;
+        // A method's callee must be a static member path rooted at a
+        // SugarCube global (`Save`, `SugarCube.Save` or
+        // `window.SugarCube.Save`). Optional method calls (`Setting.addValue?.(…)`)
+        // and bare member reads aren't reported.
+        if (node.type !== "CallExpression") return;
+        const call = apiCall(node);
+        const since = call && apiIntroducedIn.get(call.path);
+        if (!since || !isVersionBefore(formatVersion, since)) return;
         diagnostics.push({
             code: DiagnosticCodes.SugarCubeApiNotAvailable,
-            message: `\`${path}\` isn't available until SugarCube version ${since} but your StoryFormat version is ${formatVersion}`,
-            text: method.name,
-            at: method.start,
+            message: `\`${call.path}\` isn't available until SugarCube version ${since} but your StoryFormat version is ${formatVersion}`,
+            text: call.name.name,
+            at: call.name.start,
         });
     });
     return diagnostics;

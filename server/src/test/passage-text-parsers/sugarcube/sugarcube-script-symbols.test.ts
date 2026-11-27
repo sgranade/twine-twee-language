@@ -599,15 +599,6 @@ describe("SugarCube Script Symbols", () => {
             ).to.eql([]);
         });
 
-        // I'll handle global functions next
-        it("should not report global functions yet", () => {
-            expect(
-                extract('triggerEvent("x"); recall("k");', {
-                    formatVersion: "2.0.0",
-                }).diagnostics,
-            ).to.eql([]);
-        });
-
         for (const formatVersion of [undefined, "two.thirty"]) {
             it(`should not report anything with a format version of ${formatVersion}`, () => {
                 expect(
@@ -616,5 +607,70 @@ describe("SugarCube Script Symbols", () => {
                 ).to.eql([]);
             });
         }
+    });
+
+    describe("global functions newer than the format version", () => {
+        for (const [call, name, before, since] of [
+            ['triggerEvent("x")', "triggerEvent", "2.36.1", "2.37.0"],
+            ['recall("k")', "recall", "2.28.0", "2.29.0"],
+            ['hasVisited("p")', "hasVisited", "2.6.0", "2.7.0"],
+        ]) {
+            it(`should report ${name} at ${before} but not at ${since}`, () => {
+                const text = `${call};`;
+
+                expect(
+                    extract(text, { formatVersion: before }).diagnostics,
+                ).to.eql([
+                    [
+                        "api-not-available",
+                        name,
+                        `\`${name}\` isn't available until SugarCube version ${since} but your StoryFormat version is ${before}`,
+                    ],
+                ]);
+                expect(
+                    extract(text, { formatVersion: since }).diagnostics,
+                ).to.eql([]);
+            });
+        }
+
+        // A missing global throws a ReferenceError whatever `?.` follows it
+        it("should report an optional call on the function name", () => {
+            expect(
+                extract('recall?.("k");', {
+                    formatVersion: "2.28.0",
+                }).diagnostics.map((d) => d[1]),
+            ).to.eql(["recall"]);
+        });
+
+        it("should not report a call to a local binding of the same name", () => {
+            expect(
+                extract('function recall() {} recall("k");', {
+                    formatVersion: "2.28.0",
+                }).diagnostics,
+            ).to.eql([]);
+        });
+
+        it("should not report typeof reads or calls through window or SugarCube", () => {
+            expect(
+                extract(
+                    'typeof triggerEvent; window.recall("k"); SugarCube.recall("k");',
+                    { formatVersion: "2.0.0" },
+                ).diagnostics,
+            ).to.eql([]);
+        });
+
+        it("should report temporary() and still index what it reaches", () => {
+            const result = extract("temporary().x;", {
+                formatVersion: "2.18.0",
+            });
+
+            expect(result.diagnostics.map((d) => [d[1], d[2]])).to.eql([
+                [
+                    "temporary",
+                    "`temporary` isn't available until SugarCube version 2.19.0 but your StoryFormat version is 2.18.0",
+                ],
+            ]);
+            expect(result.vars).to.eql([["_x", "x", false, true]]);
+        });
     });
 });
