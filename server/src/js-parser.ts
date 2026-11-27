@@ -26,8 +26,10 @@ import {
     sigilFlag,
 } from "./project-index";
 import {
+    createScriptAnalysis,
     isIdentifierName,
     MISSING_IDENTIFIER,
+    ScriptAnalysis,
     StaticName,
 } from "./script-analysis";
 import { ETokenType, TokenModifier, TokenType } from "./semantic-tokens";
@@ -915,13 +917,15 @@ function analyzeScopes(ast: acorn.Node): eslintScope.ScopeManager {
 
 /**
  * Annotate variable definitions' or references' assignment status and
- * story-variable-ness.
+ * story-variable-ness in a scope.
  *
- * @param ast AST to annotate.
+ * @param scopeManager Scope analysis of the AST to annotate.
  * @param isAssignmentContext True if write-shaped syntax counts as an assignment.
  */
-function annotateVariables(ast: acorn.Node, isAssignmentContext: boolean) {
-    const scopeManager = analyzeScopes(ast);
+function annotateVariableScopes(
+    scopeManager: eslintScope.ScopeManager,
+    isAssignmentContext: boolean,
+) {
     const isRootScope = (scope: eslintScope.Scope): boolean =>
         scope.type === "global" || scope.type === "module";
 
@@ -1492,6 +1496,8 @@ function computeSemanticTokens(
  * @param ast Parsed text, already annotated by `annotateVariableScopes`.
  * @param isGlobalName Global-name predicate.
  * @param options Extraction options.
+ * @param options.objectAssignCall Splits a call to the global `Object.assign`,
+ * whose literal sources' keys are written to its target's path..
  * @param options.isAssignmentContext True if write-shaped syntax counts as an assignment.
  * @param options.pathOf Gets an expression's story path to find shape sources.
  * Defaults to the path of an unbound, non-global root.
@@ -1501,9 +1507,14 @@ export function extractSymbols(
     ast: acorn.Node,
     isGlobalName: IsGlobalName,
     {
+        objectAssignCall,
         isAssignmentContext = false,
         pathOf = storyPathOf(isGlobalName),
-    }: { isAssignmentContext?: boolean; pathOf?: StaticPathOf } = {},
+    }: {
+        objectAssignCall: ScriptAnalysis["objectAssignCall"];
+        isAssignmentContext?: boolean;
+        pathOf?: StaticPathOf;
+    },
 ): {
     variables: ScriptVariableOccurrence[];
     properties: ScriptPropertyOccurrence[];
@@ -1658,6 +1669,20 @@ export function extractSymbols(
                     : undefined;
                 if (path !== undefined) {
                     captureObjectLiteral(node.right, path, isAssignmentContext);
+                }
+                break;
+            }
+
+            // Object.assign(target, { ... }). A literal source's keys are
+            // always written to the target's path
+            case "CallExpression": {
+                const assign = objectAssignCall(node);
+                const path = assign && pathOf(assign.target);
+                if (!assign || path === undefined) break;
+                for (const source of assign.sources) {
+                    if (source.type === "ObjectExpression") {
+                        captureObjectLiteral(source, path, true);
+                    }
                 }
                 break;
             }
@@ -1999,7 +2024,8 @@ export function tokenizeJavaScript(
     const [ast, diagnostic] = parseJS(text, isProgram, offset, { isWholeFile });
     tokenized.error = diagnostic;
     if (ast !== undefined) {
-        annotateVariables(ast, !!isAssignmentContext);
+        const scopeManager = analyzeScopes(ast);
+        annotateVariableScopes(scopeManager, !!isAssignmentContext);
         const isGlobalName = globalNamePredicate(storyFormatState.hostGlobals);
 
         // Collect all semantic tokens (which ignores token scope)
@@ -2023,11 +2049,15 @@ export function tokenizeJavaScript(
             ? extractScriptSymbols({
                   ast,
                   text,
-                  scopeManager: analyzeScopes(ast),
+                  scopeManager,
                   isGlobalName,
                   isAssignmentContext,
               })
-            : extractSymbols(ast, isGlobalName, { isAssignmentContext });
+            : extractSymbols(ast, isGlobalName, {
+                  isAssignmentContext,
+                  objectAssignCall: createScriptAnalysis(text, scopeManager)
+                      .objectAssignCall,
+              });
         for (const variable of variables) {
             tokenized.variables.push({
                 contents: variable.text,

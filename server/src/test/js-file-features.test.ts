@@ -622,6 +622,160 @@ describe(".js File Story Variable References", () => {
         });
     });
 
+    describe("literal Object.assign writes in SugarCube", () => {
+        async function neverSetTexts(
+            js: string,
+            passageText: string,
+            options: { format?: string; formatVersion?: string } = {},
+        ) {
+            const { index, tw } = build(js, passageText, options);
+            return (await generateDiagnostics(tw, index))
+                .filter((d) => d.code === "variable-never-set")
+                .map((d) => tw.getText(d.range));
+        }
+
+        it("should count a literal's keys assigned to a sigiled variable in TwineScript", async () => {
+            expect(
+                await neverSetTexts(
+                    "",
+                    "<<set $inv to {}>><<run Object.assign($inv, { sword: 1, bag: { gem: 1 } })>><<print $inv.sword + $inv.bag.gem + $inv.typo>>",
+                ),
+            ).to.eql(["typo"]);
+        });
+
+        for (const target of ["State.variables.inv", "setup.inv"]) {
+            const read = target.startsWith("setup") ? "setup.inv" : "$inv";
+            it(`should count a literal's keys assigned to ${target} in TwineScript`, async () => {
+                expect(
+                    await neverSetTexts(
+                        "",
+                        `<<set ${read} to {}>><<run Object.assign(${target}, { sword: 1 })>><<print ${read}.sword + ${read}.typo>>`,
+                    ),
+                ).to.eql(["typo"]);
+            });
+        }
+
+        for (const target of ["State.variables.inv", "variables().inv"]) {
+            it(`should count a .js literal's keys assigned to ${target}`, async () => {
+                expect(
+                    await neverSetTexts(
+                        `State.variables.inv = {};\nObject.assign(${target}, { sword: 1 }, { bag: { gem: 1 } });\n`,
+                        "<<print $inv.sword + $inv.bag.gem + $inv.typo>>",
+                    ),
+                ).to.eql(["typo"]);
+            });
+        }
+
+        it("should count a literal's keys assigned in a script passage", async () => {
+            expect(
+                await neverSetTexts(
+                    "",
+                    "<<print $inv.sword + $inv.typo>>\n\n:: Init [script]\nState.variables.inv = {};\nObject.assign(State.variables.inv, { sword: 1 });",
+                ),
+            ).to.eql(["typo"]);
+        });
+
+        it("should count a .js literal's keys assigned through a state-root alias", async () => {
+            expect(
+                await neverSetTexts(
+                    "const v = State.variables;\nv.inv = {};\nObject.assign(v.inv, { sword: 1 });\n",
+                    "<<print $inv.sword + $inv.typo>>",
+                ),
+            ).to.eql(["typo"]);
+        });
+
+        for (const [desc, js, passageText] of [
+            [
+                "a .js non-literal source",
+                "State.variables.inv = {};\nObject.assign(State.variables.inv, data);\n",
+                "<<print $inv.sword>>",
+            ],
+            [
+                "a TwineScript non-literal source",
+                "",
+                "<<set $inv to {}, _data to {}>><<run Object.assign($inv, _data)>><<print $inv.sword>>",
+            ],
+            [
+                "a shadowed Object in a .js",
+                "const Object = { assign() {} };\nState.variables.inv = {};\nObject.assign(State.variables.inv, { sword: 1 });\n",
+                "<<print $inv.sword>>",
+            ],
+            [
+                "a shadowed Object in TwineScript",
+                "",
+                "<<set $inv to {}, _o to {}>><<run (Object => Object.assign($inv, { sword: 1 }))(_o)>><<print $inv.sword>>",
+            ],
+        ]) {
+            it(`should still warn after ${desc}`, async () => {
+                expect(await neverSetTexts(js, passageText)).to.eql(["sword"]);
+            });
+        }
+
+        it("should find and rename a key in a .js literal along with the property", () => {
+            const { index, tw, script } = build(
+                "State.variables.inv = {};\nObject.assign(State.variables.inv, { sword: 1 });\n",
+                "<<print $inv.sword>>",
+            );
+
+            const refs = getReferencesToSymbolAt(
+                tw.uri,
+                tw.positionAt(tw.getText().indexOf("sword")),
+                index,
+                true,
+            );
+            const renames = generateRenames(
+                tw.uri,
+                tw.positionAt(tw.getText().indexOf("sword")),
+                "blade",
+                index,
+            ) as WorkspaceEdit;
+
+            expect(refs?.map((r) => r.uri).sort()).to.eql([script.uri, tw.uri]);
+            expect(
+                TextDocument.applyEdits(
+                    script,
+                    renames.changes?.[script.uri] ?? [],
+                ),
+            ).to.equal(
+                "State.variables.inv = {};\nObject.assign(State.variables.inv, { blade: 1 });\n",
+            );
+        });
+
+        describe("liter Object.assign writes in Chapbook", () => {
+            const chapbook = { format: "Chapbook", formatVersion: "2.3.0" };
+
+            it("should count a .js literal's keys assigned to engine.state.get", async () => {
+                expect(
+                    await neverSetTexts(
+                        "engine.state.set('inv', {});\nObject.assign(engine.state.get('inv'), { sword: 1 });\n",
+                        "{inv.sword} {inv.typo}",
+                        chapbook,
+                    ),
+                ).to.eql(["typo"]);
+            });
+
+            it("should not count a .js literal's keys assigned to a bare name", async () => {
+                expect(
+                    await neverSetTexts(
+                        "engine.state.set('inv', {});\nObject.assign(inv, { sword: 1 });\n",
+                        "{inv.sword}",
+                        chapbook,
+                    ),
+                ).to.eql(["sword"]);
+            });
+
+            it("should count a vars-section literal's keys assigned to a bare name", async () => {
+                expect(
+                    await neverSetTexts(
+                        "",
+                        "inv: {}\nx: Object.assign(inv, { sword: 1 })\n--\n{inv.sword} {inv.typo}",
+                        chapbook,
+                    ),
+                ).to.eql(["typo"]);
+            });
+        });
+    });
+
     describe("SugarCube setup Object Properties", () => {
         async function neverSetTexts(
             js: string,

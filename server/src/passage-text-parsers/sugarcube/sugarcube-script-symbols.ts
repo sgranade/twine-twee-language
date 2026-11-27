@@ -321,7 +321,7 @@ export function createSugarCubeScriptExtractor({
             variables: stateRooted.variables,
             properties: [
                 ...stateRooted.properties,
-                ...extractObjectRootProperties(ast, tracer, pathOf),
+                ...extractObjectRootAndAssignedProperties(ast, tracer, pathOf),
             ].sort((a, b) => a.at - b.at),
             diagnostics: findUnavailableApiCalls(ast, tracer, formatVersion),
         };
@@ -329,7 +329,8 @@ export function createSugarCubeScriptExtractor({
 }
 
 /**
- * Extract setup properties and settings from SugarCube JavaScript code.
+ * Extract setup properties and settings from SugarCube JavaScript code, along
+ * w/the keys of literal `Object.assign` sources.
  *
  * @param ast Parsed code.
  * @param tracer Root helpers for the code.
@@ -337,7 +338,7 @@ export function createSugarCubeScriptExtractor({
  * shape sources and recognize a self-reference.
  * @returns Property occurrences.
  */
-function extractObjectRootProperties(
+function extractObjectRootAndAssignedProperties(
     ast: acorn.Node,
     {
         objectRootPath,
@@ -422,8 +423,10 @@ function extractObjectRootProperties(
                     }
                     break;
                 }
+                // A literal source's keys are written to any target with a
+                // story, setup or settings path
                 const assign = objectAssignCall(node);
-                const path = assign && objectPathOf(assign.target);
+                const path = assign && pathOf(assign.target);
                 if (!assign || !path) break;
                 for (const source of assign.sources) {
                     properties.push(
@@ -470,6 +473,7 @@ export function createTwineScriptExtractor({
             defaultPathOf(node);
         const sigiled = extractSymbols(ast, isGlobalName, {
             isAssignmentContext,
+            objectAssignCall: tracer.objectAssignCall,
             pathOf,
         });
         const stateRooted = extractStateRootSymbols(ast, tracer, pathOf);

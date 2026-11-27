@@ -62,14 +62,20 @@ export function createChapbookScriptExtractor({
      * Story variables and properties only come from `engine.state.get`/`set`/`setDefault`
      * with a literal key (or a never-reassigned alias of `engine.state`). A `set`/`setDefault`
      * whose value could be an object of unknown shape marks its path opaque.
+     * The keys of a literal `Object.assign` source are written to a target w/such a path.
      * An unbound bare `config` is a story variable; every other unbound bare name is a
      * conditional reference. Escaped spellings (`g\u006FLd`) and declarations are rejected.
      */
     return ({ ast, text, scopeManager, isGlobalName }) => {
         const variables: ScriptVariableOccurrence[] = [];
         const properties: ScriptPropertyOccurrence[] = [];
-        const { isUnbound, staticKeyName, memberName, aliasRoot } =
-            createScriptAnalysis(text, scopeManager);
+        const {
+            isUnbound,
+            staticKeyName,
+            memberName,
+            aliasRoot,
+            objectAssignCall,
+        } = createScriptAnalysis(text, scopeManager);
 
         // `engine.state`, or a never-reassigned alias of it
         const isEngineState = (node: acorn.Node): boolean => {
@@ -125,6 +131,25 @@ export function createChapbookScriptExtractor({
 
         acornWalk.fullAncestor(ast, (rawNode, _, ancestors) => {
             const node = rawNode as acorn.AnyNode;
+            // A literal source's keys are written to a target w/a story path.
+            // A bare name has none since it's only a conditional reference.
+            const assign =
+                node.type === "CallExpression"
+                    ? objectAssignCall(node)
+                    : undefined;
+            const assignPath = assign && statePathOf(assign.target);
+            if (assignPath) {
+                for (const source of assign.sources) {
+                    properties.push(
+                        ...objectLiteralProperties(
+                            source,
+                            assignPath,
+                            statePathOf,
+                            { assigned: true },
+                        ),
+                    );
+                }
+            }
             const call = engineStateCall(node);
             if (!call) return;
             const { method, key } = call;

@@ -37,7 +37,7 @@ export function isNumericVersion(version: string): boolean {
  * @returns -1 if ver1 < ver2, 0 if ver1 = ver2, and 1 if ver1 > ver2;
  * undefined if either version is missing or doesn't parse as numbers.
  */
-function compareVersions(
+export function compareVersions(
     ver1: string | undefined,
     ver2: string,
 ): number | undefined {

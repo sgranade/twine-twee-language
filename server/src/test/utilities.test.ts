@@ -31,7 +31,7 @@ describe("Utilities", () => {
         it("should handle ver1 = ver2", () => {
             // No arrange
 
-            const result = uut.versionCompare("1.1.10", "1.1.10");
+            const result = uut.compareVersions("1.1.10", "1.1.10");
 
             expect(result).to.equal(0);
         });
@@ -39,7 +39,7 @@ describe("Utilities", () => {
         it("should handle ver1 < ver2 when they have the same depth", () => {
             // No arrange
 
-            const result = uut.versionCompare("1.1.9", "1.1.10");
+            const result = uut.compareVersions("1.1.9", "1.1.10");
 
             expect(result).to.equal(-1);
         });
@@ -47,7 +47,7 @@ describe("Utilities", () => {
         it("should handle ver1 > ver2 when they have the same depth", () => {
             // No arrange
 
-            const result = uut.versionCompare("1.1.10", "1.1.9");
+            const result = uut.compareVersions("1.1.10", "1.1.9");
 
             expect(result).to.equal(1);
         });
@@ -55,7 +55,7 @@ describe("Utilities", () => {
         it("should handle ver1 < ver2 when ver1 is shorter than ver2", () => {
             // No arrange
 
-            const result = uut.versionCompare("1.1", "1.1.1");
+            const result = uut.compareVersions("1.1", "1.1.1");
 
             expect(result).to.equal(-1);
         });
@@ -63,7 +63,7 @@ describe("Utilities", () => {
         it("should handle ver1 > ver2 when ver1 is shorter than ver2", () => {
             // No arrange
 
-            const result = uut.versionCompare("1.2", "1.1.1");
+            const result = uut.compareVersions("1.2", "1.1.1");
 
             expect(result).to.equal(1);
         });
@@ -71,7 +71,7 @@ describe("Utilities", () => {
         it("should handle ver1 < ver2 when ver2 is shorter than ver1", () => {
             // No arrange
 
-            const result = uut.versionCompare("1.1.1", "1.2");
+            const result = uut.compareVersions("1.1.1", "1.2");
 
             expect(result).to.equal(-1);
         });
@@ -79,37 +79,25 @@ describe("Utilities", () => {
         it("should handle ver1 > ver2 when ver2 is shorter than ver1", () => {
             // No arrange
 
-            const result = uut.versionCompare("1.1.1", "1.1");
+            const result = uut.compareVersions("1.1.1", "1.1");
 
             expect(result).to.equal(1);
         });
 
-        it("should raise an exception when ver1 contains a non-number", () => {
+        it("should return undefined when ver1 contains a non-number", () => {
             // No arrange
 
-            try {
-                uut.versionCompare("1.a.1", "1.1.1");
-            } catch (e) {
-                //
-                // Assert
-                expect(e).to.eql(
-                    new TypeError("1.a.1 contains non-numeric values"),
-                );
-            }
+            const result = uut.compareVersions("1.a.1", "1.1.1");
+
+            expect(result).to.be.undefined;
         });
 
-        it("should raise an exception when ver2 contains a non-number", () => {
+        it("should return undefined when ver2 contains a non-number", () => {
             // No arrange
 
-            try {
-                uut.versionCompare("1.1.1", "1.a.1");
-            } catch (e) {
-                //
-                // Assert
-                expect(e).to.eql(
-                    new TypeError("1.a.1 contains non-numeric values"),
-                );
-            }
+            const result = uut.compareVersions("1.1.1", "1.a.1");
+
+            expect(result).to.be.undefined;
         });
     });
 
