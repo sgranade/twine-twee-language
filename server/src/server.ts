@@ -40,16 +40,18 @@ import {
     StoryFormat,
     storyFormatsDiffer,
 } from "@tt3/shared";
+import { getCodeActionsAt } from "./code-actions";
 import { generateCompletions } from "./completions";
 import { getDefinitionAt } from "./definition";
 import { createDiagnosticFromRange } from "./diagnostics";
 import { generateHover } from "./hover";
-import { updateProjectIndex, updateScriptFileIndex } from "./indexer";
+import { updateProjectIndex } from "./indexer";
 import { IndexingQueue } from "./indexing-queue";
 import { ParseLevel } from "./parser-types";
-import { Index } from "./project-index";
+import { Index, ScriptFileRole } from "./project-index";
 import { getReferencesToSymbolAt } from "./references";
 import { generateRenames, prepareRename } from "./renames";
+import { ScriptDiagnosticsPublisher } from "./script-diagnostics-publisher";
 import { ScriptFeatureRegistrar } from "./script-file-registration";
 import { semanticTokensLegend } from "./semantic-tokens";
 import { StoryFormatAnnouncer } from "./story-format-announcer";
@@ -69,7 +71,6 @@ import {
     setCustomMacrosAndEnums,
     tweeConfigFileToMacrosAndEnums,
 } from "./passage-text-parsers/sugarcube/macros";
-import { generateCodeActions } from "./code-actions";
 
 const connection: Connection = createConnection(ProposedFeatures.all);
 
@@ -91,6 +92,14 @@ const storyFormatAnnouncer = new StoryFormatAnnouncer({
     reindexWorkspace: () => indexingQueue.indexWorkspace(),
 });
 
+const scriptDiagnostics = new ScriptDiagnosticsPublisher({
+    index: projectIndex,
+    sendDiagnostics: (uri, diagnostics) =>
+        void connection.sendDiagnostics({ uri, diagnostics }),
+});
+const indexScriptFile = (doc: TextDocument, role: ScriptFileRole) =>
+    scriptDiagnostics.indexScriptFile(doc, role);
+
 const indexingQueue: IndexingQueue = new IndexingQueue({
     index: projectIndex,
     getOpenDocument: (uri) => documents.get(uri),
@@ -100,8 +109,7 @@ const indexingQueue: IndexingQueue = new IndexingQueue({
     findFiles: (glob) => connection.sendRequest(FindFilesRequest, glob),
     indexStoryData: (doc) =>
         updateProjectIndex(doc, ParseLevel.StoryData, projectIndex),
-    indexScriptFile: (doc, role) =>
-        updateScriptFileIndex(doc, role, ParseLevel.Full, projectIndex),
+    indexScriptFile,
     parseDocument: (doc, level, reindex) =>
         parseTextDocument(doc, level, reindex),
     validateDocument: (doc) => validateTextDocument(doc),
@@ -118,6 +126,7 @@ const indexingQueue: IndexingQueue = new IndexingQueue({
     indexingComplete: () => {
         void connection.sendNotification(CustomMessages.IndexingComplete);
         void scriptRegistrar?.update(projectIndex.getScriptFileUris());
+        scriptDiagnostics.clearRemovedScriptDiagnostics();
     },
     logError: (message) => connection.console.error(message),
 });
@@ -129,10 +138,12 @@ const fileTracker: WorkspaceFileTracker = new WorkspaceFileTracker({
     isOpen: (uri) => documents.get(uri) !== undefined,
     parseMacroFile: (uri) => parseT3LTMacroFile(uri),
     onMacroChanges: () => onSCMacroChanges(),
-    indexScriptFile: (doc, role) =>
-        updateScriptFileIndex(doc, role, ParseLevel.Full, projectIndex),
+    indexScriptFile,
     readDocument: async (uri) => documents.get(uri) ?? (await fetchFile(uri)),
-    scriptFilesChanged: (uris) => void scriptRegistrar?.update(uris),
+    scriptFilesChanged: (uris) => {
+        void scriptRegistrar?.update(uris);
+        scriptDiagnostics.clearRemovedScriptDiagnostics();
+    },
     revalidateOpenTweeDocuments: () => revalidateOpenTweeDocuments(),
     logError: (message) => connection.console.error(message),
     stat: (uri) => connection.sendRequest(StatFileRequest, { uri }),
@@ -252,17 +263,11 @@ connection.onInitialized(async () => {
 // });
 
 connection.onCodeAction((params): CodeAction[] => {
-    const passage = projectIndex.getPassageAt(
+    return getCodeActionsAt(
         params.textDocument.uri,
         params.range.start,
-    );
-    if (passage === undefined) {
-        return [];
-    }
-    return generateCodeActions(
-        params.textDocument.uri,
-        passage,
         params.context.diagnostics,
+        projectIndex,
     );
 });
 
