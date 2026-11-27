@@ -2,7 +2,12 @@ import { DiagnosticCodes } from "@tt3/shared";
 import { createDiagnosticFromRange } from "../../diagnostics";
 import { TokenizedJS } from "../../js-parser";
 import { logDiagnostic, logRawDiagnostic } from "../../parser";
-import { calleeFlag, shorthandFlag, sigilFlag } from "../../project-index";
+import {
+    calleeFlag,
+    shapeFlags,
+    shorthandFlag,
+    sigilFlag,
+} from "../../project-index";
 import { positionInRange } from "../../utilities";
 import { ParsingState } from "../types";
 import { builtinVars, builtInVarsAndProperties } from "./sugarcube-variables";
@@ -71,6 +76,7 @@ export function createVariableAndPropertyReferences(
                         : OSugarCubeSymbolKind.Variable,
                 ...sigilFlag(v),
                 ...shorthandFlag(v),
+                ...shapeFlags(v),
             });
     }
     for (const p of jsTokens.properties) {
@@ -78,47 +84,6 @@ export function createVariableAndPropertyReferences(
         // full object context (ex: `var.prop.subprop`).
         let contents =
             p.prefix !== undefined ? `${p.prefix}.${p.contents}` : p.contents;
-
-        // Handle `State.temporary.<var>` and `State.variables.<var>`, which in
-        // JavaScript correspond to Twinescript `_var` and `$var`, respectively.
-        if (contents.startsWith("State.")) {
-            let isVariable = false;
-            let isTemporary = false;
-            if (contents.startsWith("State.temporary.")) {
-                isVariable = true;
-                isTemporary = true;
-            } else if (contents.startsWith("State.variables.")) {
-                isVariable = true;
-                isTemporary = false;
-            }
-            if (isVariable) {
-                const ref = {
-                    contents: (isTemporary ? "_" : "$") + contents.slice(16),
-                    location: p.location,
-                    assigned: p.assigned,
-                    sigilOutsideRange: true,
-                    ...calleeFlag(p),
-                };
-                const firstPeriodNdx = ref.contents.indexOf(".");
-                if (firstPeriodNdx === -1) {
-                    // This is the property corresponding to the root variable: State.variable.var
-                    createVariableAndPropertyReferences(
-                        { variables: [ref], properties: [] },
-                        state,
-                        sugarcubeState,
-                    );
-                } else {
-                    // This corresponds to a property: State.variable.var.prop
-                    createVariableAndPropertyReferences(
-                        { variables: [], properties: [ref] },
-                        state,
-                        sugarcubeState,
-                    );
-                }
-
-                continue;
-            }
-        }
 
         // Don't capture properties of the auto-generated variable `output` in a <<script>> macro
         if (
@@ -138,6 +103,7 @@ export function createVariableAndPropertyReferences(
                         ? OSugarCubeSymbolKind.PropertySet
                         : OSugarCubeSymbolKind.Property,
                 ...calleeFlag(p),
+                ...shapeFlags(p),
             });
     }
     if (jsTokens.error) {

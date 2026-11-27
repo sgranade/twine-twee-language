@@ -77,9 +77,43 @@ export function shorthandFlag(source: Shorthand): Shorthand {
 }
 
 /**
- * A label with additional symbol information (kind, callable, sigiled, shorthand).
+ * What's known about the shape of an assigned value: if it's opaque (its
+ * value could be an object of an unknown shape, roughly equivalent to
+ * Typescript's `Any` type), and where it gets its known shape from
+ * (story paths whose shape it copies).
  */
-export interface ProjSymbol extends Label, Kind, Callable, Sigiled, Shorthand {}
+export interface ValueShape {
+    /**
+     * True if the occurrence is an opaque assignment, so story properties
+     * beneath its path are never reported as never set.
+     */
+    opaque?: boolean;
+    /**
+     * Story paths whose shape the assigned value copies (`$player` in
+     * `_p = $player`). This lets us handle common assignment cases that
+     * we'd otherwise naively mark as opaque.
+     */
+    shapeSources?: string[];
+}
+
+/**
+ * Spread-ready `opaque` flag and shape sources that are absent unless set.
+ */
+export function shapeFlags(source: ValueShape): ValueShape {
+    // We'll sort and short shape sources for de-duping
+    return {
+        ...(source.opaque ? { opaque: true } : {}),
+        ...(source.shapeSources?.length
+            ? { shapeSources: [...new Set(source.shapeSources)].sort() }
+            : {}),
+    };
+}
+
+/**
+ * A label with additional symbol information (kind, callable, sigiled, shorthand, opaque).
+ */
+export interface ProjSymbol
+    extends Label, Kind, Callable, Sigiled, Shorthand, ValueShape {}
 
 /**
  * Kind of a Twine symbol.
@@ -93,7 +127,8 @@ export enum TwineSymbolKind {
 /**
  * References, which have contents, locations, and information about its contents.
  */
-export interface References extends Kind, Callable, Sigiled, Shorthand {
+export interface References
+    extends Kind, Callable, Sigiled, Shorthand, ValueShape {
     contents: string;
     locations: Location[];
 }
@@ -268,6 +303,22 @@ export interface ProjectIndex {
      * @param kind Kind of symbol reference to get.
      */
     getReferences(uri: string, kind: number): References[] | undefined;
+    /**
+     * Get every definition of a kind across all indexed documents.
+     * @param kind Kind of symbol definitions to get.
+     */
+    getProjectDefinitions(kind: number): ProjSymbol[];
+    /**
+     * Get every reference of the given kinds across all indexed documents,
+     * grouped by document and then by kind.
+     * @param kinds Kinds of symbol references to get.
+     * @param inDocument Predicate to filter indexed documents by prior to
+     * finding references.
+     */
+    getProjectReferences(
+        kinds: readonly number[],
+        inDocument?: (uri: string) => boolean,
+    ): References[];
     /**
      * Get a document's list of embedded documents.
      * @param uri Document URI.
@@ -553,6 +604,21 @@ export class Index implements ProjectIndex {
             return referencesPerSymbolKind[kind];
         }
         return undefined;
+    }
+    getProjectDefinitions(kind: number): ProjSymbol[] {
+        return this.getIndexedUris().flatMap(
+            (uri) => this.getDefinitions(uri, kind) ?? [],
+        );
+    }
+    getProjectReferences(
+        kinds: readonly number[],
+        inDocument?: (uri: string) => boolean,
+    ): References[] {
+        return this.getIndexedUris()
+            .filter((uri) => inDocument?.(uri) ?? true)
+            .flatMap((uri) =>
+                kinds.flatMap((kind) => this.getReferences(uri, kind) ?? []),
+            );
     }
     getEmbeddedDocuments(uri: string): EmbeddedDocument[] {
         return this._embeddedDocuments[uri] ?? [];

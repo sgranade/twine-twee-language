@@ -234,6 +234,65 @@ describe("Indexer", () => {
             ]);
         });
 
+        it("should group references whose shape sources differ only in order and duplicates", () => {
+            const doc = buildDocument({
+                uri: "test-uri",
+                content: "::Passage 1\nYup\n\n",
+            });
+            const index = new Index();
+
+            uut.updateProjectIndex(doc, ParseLevel.Full, index, () => {
+                return {
+                    id: "FakeFormat",
+                    parsePassageText: (
+                        passageText: string,
+                        textIndex: number,
+                        state: ParsingState,
+                    ) => {
+                        if (passageText === "Yup\n\n") {
+                            state.callbacks.onSymbolReference({
+                                contents: "$p",
+                                location: Location.create(
+                                    "test-uri",
+                                    Range.create(1, 2, 3, 4),
+                                ),
+                                kind: 1,
+                                shapeSources: ["$b", "$a"],
+                            });
+                            state.callbacks.onSymbolReference({
+                                contents: "$p",
+                                location: Location.create(
+                                    "test-uri",
+                                    Range.create(5, 6, 7, 8),
+                                ),
+                                kind: 1,
+                                shapeSources: ["$a", "$b", "$a"],
+                            });
+                        }
+                    },
+                    generateCompletions: () => null,
+                    generateDiagnostics: () => [],
+                    generateHover: () => null,
+                    generateRenamesAt: () => undefined,
+                    getDefinitionAt: () => undefined,
+                    getReferencesToSymbolAt: () => undefined,
+                };
+            });
+            const result = index.getReferences("test-uri", 1);
+
+            expect(result).to.eql([
+                {
+                    contents: "$p",
+                    locations: [
+                        Location.create("test-uri", Range.create(1, 2, 3, 4)),
+                        Location.create("test-uri", Range.create(5, 6, 7, 8)),
+                    ],
+                    kind: 1,
+                    shapeSources: ["$a", "$b"],
+                },
+            ]);
+        });
+
         it("should add the story title to the index", () => {
             const doc = buildDocument({
                 uri: "test-uri",

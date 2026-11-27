@@ -297,3 +297,40 @@ export function capturePreSemanticTokenFor(
             modifiers,
         };
 }
+
+/**
+ * Tokenize against a scratch story format state, then capture its semantic tokens in the real one.
+ *
+ * @param storyFormatState Story format parsing state to capture the semantic tokens in.
+ * @param tokenize Tokenizer that captures semantic tokens in the scratch state it's given.
+ * @param relocate Predicate to give each scratch semantic token's text and location in the real state,
+ * or undefined to drop it.
+ * @returns The tokenizer's result.
+ */
+export function tokenizeWithScratchState<T>(
+    storyFormatState: StoryFormatParsingState,
+    tokenize: (scratchState: StoryFormatParsingState) => T,
+    relocate: (
+        token: Readonly<PreSemanticToken>,
+        result: T,
+    ) => { text: string; at: number } | undefined,
+): T {
+    const scratchState: StoryFormatParsingState = {
+        passageTokens: {},
+        hostGlobals: storyFormatState.hostGlobals,
+    };
+    const result = tokenize(scratchState);
+    for (const t of Object.values(scratchState.passageTokens)) {
+        const relocated = relocate(t, result);
+        if (relocated !== undefined) {
+            capturePreSemanticTokenFor(
+                relocated.text,
+                relocated.at,
+                t.type,
+                t.modifiers,
+                storyFormatState,
+            );
+        }
+    }
+    return result;
+}

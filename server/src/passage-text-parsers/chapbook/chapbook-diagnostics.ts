@@ -3,8 +3,8 @@ import { TextDocument } from "vscode-languageserver-textdocument";
 
 import { DiagnosticCodes } from "@tt3/shared";
 import { referencesToDiagnostics } from "../../diagnostics";
-import { isBuiltinJSProperty } from "../../js-parser";
 import { ProjectIndex } from "../../project-index";
+import { generateNeverAssignedToDiagnostics } from "../assignments";
 import {
     findEndOfPartialInsert,
     findEndOfPartialModifier,
@@ -20,8 +20,6 @@ import {
     chapbookPropertyRoots,
 } from "./chapbook-properties";
 import { OChapbookSymbolKind } from "./types";
-
-const builtinVars = [...chapbookPropertyRoots];
 
 /**
  * Generate diagnostics involving custom inserts.
@@ -189,61 +187,18 @@ export function generateDiagnostics(
     const text = document.getText();
 
     // Check for variables and properties that don't have a matching set statement in a vars section
-    const propSetNamesWithDuplicates: string[] = [...chapbookProperties];
-    for (const uri of index.getIndexedUris()) {
-        propSetNamesWithDuplicates.push(
-            ...(index
-                .getReferences(uri, OChapbookSymbolKind.PropertySet)
-                ?.map((ref) => ref.contents) ?? []),
-        );
-    }
-    const propSetNames = new Set(propSetNamesWithDuplicates);
-
-    const varNamesWithDuplicates = [...builtinVars];
-    for (const uri of index.getIndexedUris()) {
-        varNamesWithDuplicates.push(
-            ...(index
-                .getReferences(uri, OChapbookSymbolKind.VariableSet)
-                ?.map((ref) => ref.contents) ?? []),
-        );
-    }
-    const varSetNames = new Set(varNamesWithDuplicates);
-
-    const unsetVarMessage =
-        "This isn't set in any vars or JavaScript section; make sure it's spelled correctly";
-    for (const varRef of index.getReferences(
-        document.uri,
-        OChapbookSymbolKind.Variable,
-    ) ?? []) {
-        if (!varSetNames.has(varRef.contents)) {
-            diagnostics.push(
-                ...referencesToDiagnostics(
-                    index,
-                    varRef,
-                    DiagnosticCodes.VariableNeverSet,
-                    unsetVarMessage,
-                ),
-            );
-        }
-    }
-    for (const propRef of index.getReferences(
-        document.uri,
-        OChapbookSymbolKind.Property,
-    ) ?? []) {
-        if (
-            !propSetNames.has(propRef.contents) &&
-            !isBuiltinJSProperty(propRef)
-        ) {
-            diagnostics.push(
-                ...referencesToDiagnostics(
-                    index,
-                    propRef,
-                    DiagnosticCodes.VariableNeverSet,
-                    unsetVarMessage,
-                ),
-            );
-        }
-    }
+    diagnostics.push(
+        ...generateNeverAssignedToDiagnostics(document.uri, index, {
+            variableKind: OChapbookSymbolKind.Variable,
+            variableSetKind: OChapbookSymbolKind.VariableSet,
+            propertyKind: OChapbookSymbolKind.Property,
+            propertySetKind: OChapbookSymbolKind.PropertySet,
+            builtInVariables: chapbookPropertyRoots,
+            builtInProperties: chapbookProperties,
+            message:
+                "This isn't set in any vars or JavaScript section; make sure it's spelled correctly",
+        }),
+    );
 
     // Check for unrecognized custom inserts (if that option is set) and
     // any argument errors in recognized custom inserts

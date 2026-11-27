@@ -231,6 +231,14 @@ describe("SugarCube Parser", () => {
                     ),
                     kind: OSugarCubeSymbolKind.PropertySet,
                 },
+                {
+                    contents: "$var1.prop.other",
+                    location: Location.create(
+                        "fake-uri",
+                        Range.create(2, 31, 2, 36),
+                    ),
+                    kind: OSugarCubeSymbolKind.PropertySet,
+                },
             ]);
         });
 
@@ -448,6 +456,127 @@ describe("SugarCube Parser", () => {
             ]);
         });
 
+        describe("State Roots in TwineScript", () => {
+            const referencesFor = (passage: string) => {
+                const header = ":: Passage\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                uut.getSugarCubeParser(undefined)?.parsePassageText(
+                    passage,
+                    header.length,
+                    state,
+                );
+                return callbacks.references.filter(
+                    (r) => r.contents !== "run" && r.contents !== "set",
+                );
+            };
+
+            it("should capture State.setVar with a literal key as a variable set", () => {
+                // No arrange
+
+                const result = referencesFor(
+                    "<<run State.setVar('$x', 5)>>",
+                ).map((r) => [r.contents, r.kind]);
+
+                expect(result).to.eql([
+                    ["$x", OSugarCubeSymbolKind.VariableSet],
+                ]);
+            });
+
+            it("should record a spread of a state root as a shape source", () => {
+                // No arrange
+
+                const result = referencesFor(
+                    "<<run State.variables.o = {...State.variables.base, a: 1}>>",
+                ).find((r) => r.contents === "$o");
+
+                expect(result?.shapeSources).to.eql(["$base"]);
+                expect(result?.opaque).to.not.be.true;
+            });
+
+            it("should record a copy through a state root as a shape source", () => {
+                // No arrange
+
+                const result = referencesFor(
+                    "<<set _p to State.variables.player>>",
+                ).find((r) => r.contents === "_p");
+
+                expect(result?.shapeSources).to.eql(["$player"]);
+                expect(result?.opaque).to.not.be.true;
+            });
+
+            it("should record a sigiled variable assigned through a state root as a shape source", () => {
+                // No arrange
+
+                const result = referencesFor(
+                    "<<run State.variables.r = $a>>",
+                ).find((r) => r.contents === "$r");
+
+                expect(result?.shapeSources).to.eql(["$a"]);
+            });
+
+            it("should not capture a bare identifier as a story variable", () => {
+                // No arrange
+
+                const result = referencesFor(
+                    "<<run State.variables.r = fn()>>",
+                ).map((r) => r.contents);
+
+                expect(result).to.eql(["$r"]);
+            });
+
+            it("should locate a variable reached through a state root without its sigil", () => {
+                const result = referencesFor(
+                    "<<set _p to State.variables.player>>",
+                ).find((r) => r.contents === "$player");
+
+                // `player` is at 28-34 in `<<set _p to State.variables.player>>`
+                expect(result?.location.range).to.eql(
+                    Range.create(1, 28, 1, 34),
+                );
+            });
+
+            it("should locate a State.setVar key without its sigil", () => {
+                const result = referencesFor(
+                    "<<run State.setVar('$x', 5)>>",
+                ).find((r) => r.contents === "$x");
+
+                expect(result?.location.range).to.eql(
+                    Range.create(1, 21, 1, 22),
+                );
+            });
+
+            it("should record a copy through variables() as a shape source", () => {
+                const result = referencesFor(
+                    "<<set $x to variables().y>>",
+                ).find((r) => r.contents === "$x");
+
+                expect(result?.shapeSources).to.eql(["$y"]);
+                expect(result?.opaque).to.not.be.true;
+            });
+
+            it("should record a copy through State.getVar as a shape source", () => {
+                const result = referencesFor(
+                    "<<set $x to State.getVar('_y')>>",
+                ).find((r) => r.contents === "$x");
+
+                expect(result?.shapeSources).to.eql(["_y"]);
+                expect(result?.opaque).to.not.be.true;
+            });
+
+            it("should record a copy through SugarCube.State as a shape source", () => {
+                const result = referencesFor(
+                    "<<set $x to SugarCube.State.variables.y>>",
+                ).find((r) => r.contents === "$x");
+
+                expect(result?.shapeSources).to.eql(["$y"]);
+                expect(result?.opaque).to.not.be.true;
+            });
+        });
+
         it("should capture an assignment in a <<print>> macro as a property read", () => {
             const header = ":: Passage\n";
             const passage = "<<print $a.b = 1>>";
@@ -467,6 +596,42 @@ describe("SugarCube Parser", () => {
                 ["$a", OSugarCubeSymbolKind.Variable],
                 ["$a.b", OSugarCubeSymbolKind.Property],
             ]);
+        });
+
+        it("should capture a <<set>> of a call's result as an opaque assignment", () => {
+            const header = ":: Passage\n";
+            const passage = "<<set _r to fn()>>";
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            const parser = uut.getSugarCubeParser(undefined);
+
+            parser?.parsePassageText(passage, header.length, state);
+            const result = callbacks.references
+                .filter((r) => r.contents === "_r")
+                .map((r) => [r.kind, r.opaque]);
+
+            expect(result).to.eql([[OSugarCubeSymbolKind.VariableSet, true]]);
+        });
+
+        it("should not capture an assignment in a <<print>> macro as opaque", () => {
+            const header = ":: Passage\n";
+            const passage = "<<print $x = fn()>>";
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            const parser = uut.getSugarCubeParser(undefined);
+
+            parser?.parsePassageText(passage, header.length, state);
+            const result = callbacks.references
+                .filter((r) => r.contents === "$x")
+                .map((r) => [r.kind, r.opaque]);
+
+            expect(result).to.eql([[OSugarCubeSymbolKind.Variable, undefined]]);
         });
 
         it("should capture State.temporary variables in a script passage", () => {
@@ -3365,11 +3530,44 @@ describe("SugarCube Parser", () => {
                             Range.create(1, 20, 1, 26),
                         ),
                         kind: OSugarCubeSymbolKind.VariableSet,
+                        opaque: true,
                     },
                 ]);
             });
 
-            it("should capture set variables for receiver values in backticks", () => {
+            it("should capture a quoted receiver's property path as a variable read and an opaque property write", () => {
+                const header = ":: Passage\n";
+                const passage = "Let's go: <<a bare '$p.stats'>>\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const macro = buildMacroInfoWithArgs({
+                    name: "a",
+                    args: ["bareword &+ receiver"],
+                });
+                const parser = uut.getSugarCubeParser(undefined, {
+                    allMacros: () => {
+                        return { a: macro };
+                    },
+                    allMacroEnums: () => {
+                        return {};
+                    },
+                });
+
+                parser?.parsePassageText(passage, header.length, state);
+                const results = callbacks.references
+                    .slice(1)
+                    .map((r) => [r.contents, r.kind, r.opaque]);
+
+                expect(results).to.eql([
+                    ["$p", OSugarCubeSymbolKind.Variable, undefined],
+                    ["$p.stats", OSugarCubeSymbolKind.PropertySet, true],
+                ]);
+            });
+
+            it("should capture variable reads for receiver values in backticks", () => {
                 const header = ":: Passage\n";
                 const passage = "Let's go: <<a bare `$testy`>>\n";
                 const callbacks = new MockCallbacks();
@@ -3400,9 +3598,73 @@ describe("SugarCube Parser", () => {
                             "fake-uri",
                             Range.create(1, 20, 1, 26),
                         ),
-                        kind: OSugarCubeSymbolKind.VariableSet,
+                        kind: OSugarCubeSymbolKind.Variable,
                     },
                 ]);
+            });
+
+            it("should capture only variable reads for a computed receiver in backticks", () => {
+                const header = ":: Passage\n";
+                const passage = "Let's go: <<a bare `$a[_i]`>>\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const macro = buildMacroInfoWithArgs({
+                    name: "a",
+                    args: ["bareword &+ receiver"],
+                });
+                const parser = uut.getSugarCubeParser(undefined, {
+                    allMacros: () => {
+                        return { a: macro };
+                    },
+                    allMacroEnums: () => {
+                        return {};
+                    },
+                });
+
+                parser?.parsePassageText(passage, header.length, state);
+                const results = callbacks.references
+                    .slice(1)
+                    .map((r) => [r.contents, r.kind, r.opaque]);
+
+                expect(results).to.eql([
+                    ["$a", OSugarCubeSymbolKind.Variable, undefined],
+                    ["_i", OSugarCubeSymbolKind.Variable, undefined],
+                ]);
+            });
+
+            it("should capture nothing for a quoted receiver that isn't an assignment target", () => {
+                const header = ":: Passage\n";
+                const passage = "Let's go: <<a bare '$junk + 1'>>\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const macro = buildMacroInfoWithArgs({
+                    name: "a",
+                    args: ["bareword &+ receiver"],
+                });
+                const parser = uut.getSugarCubeParser(undefined, {
+                    allMacros: () => {
+                        return { a: macro };
+                    },
+                    allMacroEnums: () => {
+                        return {};
+                    },
+                });
+
+                parser?.parsePassageText(passage, header.length, state);
+                const references = callbacks.references.slice(1);
+                const receiverTokens = callbacks.tokens.filter(
+                    (t) => t.char >= 19,
+                );
+
+                expect(references).to.be.empty;
+                expect(receiverTokens).to.be.empty;
+                expect(callbacks.errors).to.be.empty;
             });
         });
     });

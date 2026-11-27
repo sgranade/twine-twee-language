@@ -334,6 +334,107 @@ describe("SugarCube Diagnostics", () => {
 
             expect(results).to.be.empty;
         });
+
+        describe("opaque assignments", () => {
+            const read = (contents: string, kind: number) => ({
+                contents,
+                locations: [
+                    Location.create("fake-uri", Range.create(1, 2, 3, 4)),
+                ],
+                kind,
+            });
+            const opaqueWrite = (contents: string, kind: number) => ({
+                contents,
+                locations: [
+                    Location.create("other-uri", Range.create(5, 6, 7, 8)),
+                ],
+                kind,
+                opaque: true,
+            });
+
+            it("should not warn on a property of an opaque variable set in another file", () => {
+                const doc = TextDocument.create("fake-uri", "", 0, "");
+                const index = new Index();
+                index.setReferences("fake-uri", [
+                    read("_r.isError", OSugarCubeSymbolKind.Property),
+                ]);
+                index.setReferences("other-uri", [
+                    opaqueWrite("_r", OSugarCubeSymbolKind.VariableSet),
+                ]);
+                const parser = uut.getSugarCubeParser(undefined);
+
+                const results = parser?.generateDiagnostics(doc, index);
+
+                expect(results).to.be.empty;
+            });
+
+            it("should not warn on a nested property beneath an opaque variable", () => {
+                const doc = TextDocument.create("fake-uri", "", 0, "");
+                const index = new Index();
+                index.setReferences("fake-uri", [
+                    read("_r.a.b", OSugarCubeSymbolKind.Property),
+                ]);
+                index.setReferences("other-uri", [
+                    opaqueWrite("_r", OSugarCubeSymbolKind.VariableSet),
+                ]);
+                const parser = uut.getSugarCubeParser(undefined);
+
+                const results = parser?.generateDiagnostics(doc, index);
+
+                expect(results).to.be.empty;
+            });
+
+            it("should not warn on a property beneath an opaque property path", () => {
+                const doc = TextDocument.create("fake-uri", "", 0, "");
+                const index = new Index();
+                index.setReferences("fake-uri", [
+                    read("$a.b.c", OSugarCubeSymbolKind.Property),
+                ]);
+                index.setReferences("other-uri", [
+                    opaqueWrite("$a.b", OSugarCubeSymbolKind.PropertySet),
+                ]);
+                const parser = uut.getSugarCubeParser(undefined);
+
+                const results = parser?.generateDiagnostics(doc, index);
+
+                expect(results).to.be.empty;
+            });
+
+            it("should warn on a never-set sibling of an opaque property path", () => {
+                const doc = TextDocument.create("fake-uri", "", 0, "");
+                const index = new Index();
+                index.setReferences("fake-uri", [
+                    read("$a.x", OSugarCubeSymbolKind.Property),
+                ]);
+                index.setReferences("other-uri", [
+                    opaqueWrite("$a.b", OSugarCubeSymbolKind.PropertySet),
+                ]);
+                const parser = uut.getSugarCubeParser(undefined);
+
+                const results = parser?.generateDiagnostics(doc, index);
+
+                expect(results).to.have.lengthOf(1);
+            });
+
+            it("should warn on a property of a variable whose only write isn't opaque", () => {
+                const doc = TextDocument.create("fake-uri", "", 0, "");
+                const index = new Index();
+                index.setReferences("fake-uri", [
+                    read("$x.foo", OSugarCubeSymbolKind.Property),
+                ]);
+                index.setReferences("other-uri", [
+                    {
+                        ...opaqueWrite("$x", OSugarCubeSymbolKind.VariableSet),
+                        opaque: undefined,
+                    },
+                ]);
+                const parser = uut.getSugarCubeParser(undefined);
+
+                const results = parser?.generateDiagnostics(doc, index);
+
+                expect(results).to.have.lengthOf(1);
+            });
+        });
     });
 
     describe("macros", () => {

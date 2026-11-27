@@ -14,6 +14,7 @@ import { ParseLevel, ParserCallbacks } from "./parser-types";
 import { getStoryFormatParser } from "./passage-text-parsers";
 import {
     calleeFlag,
+    shapeFlags,
     shorthandFlag,
     sigilFlag,
     Passage,
@@ -56,14 +57,18 @@ class IndexingState {
 function collateReferences(symbols: ProjSymbol[]): References[] {
     const referencesMap: Record<string, References> = {};
     for (const symbol of symbols) {
-        const key = `${symbol.kind},${symbol.contents},${!!symbol.isCallee},${!!symbol.sigilOutsideRange},${!!symbol.shorthand}`;
+        const flags = {
+            ...calleeFlag(symbol),
+            ...sigilFlag(symbol),
+            ...shorthandFlag(symbol),
+            ...shapeFlags(symbol),
+        };
+        const key = JSON.stringify([symbol.kind, symbol.contents, flags]);
         const ref = referencesMap[key] || {
             contents: symbol.contents,
             locations: [],
             kind: symbol.kind,
-            ...calleeFlag(symbol),
-            ...sigilFlag(symbol),
-            ...shorthandFlag(symbol),
+            ...flags,
         };
         ref.locations.push(symbol.location);
         referencesMap[key] = ref;

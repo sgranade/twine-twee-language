@@ -131,7 +131,7 @@ export const forMacroIsRange = `^(?:\\S${anyChar}*?\\s+)?range\\s+\\S${anyChar}*
 /**
  * The separated internals of a for macro that's using the range format.
  */
-export const forMacroRangeFormat = `^(?:(?:(${variableWithSigil})\\s*,\\s)?(${variableWithSigil})\\s+)?range\\s+(\\S.*?)$`;
+export const forMacroRangeFormat = `^(?:(?:(${variableWithSigil})\\s*,\\s*)?(${variableWithSigil})\\s+)?range\\s+(\\S.*?)$`;
 
 // Most of the macro regexes are in `client-server.ts` because the client
 // needs access to them

@@ -60,28 +60,21 @@ function generateVariableAndPropertyCompletions(
                   document.positionAt(offset + text.length - m[3].length),
                   document.positionAt(offset + text.length),
               );
-    for (const uri of index.getIndexedUris()) {
-        if (context !== undefined) {
-            // Get all set properties whose contents match the full context
-            const allPropRefs = [
-                ...(index.getReferences(uri, OChapbookSymbolKind.PropertySet) ??
-                    []),
-            ];
-            completions.push(
-                ...(allPropRefs
-                    .filter((ref) => ref.contents.startsWith(context))
-                    .map(
-                        (ref) => ref.contents.split(".").pop() ?? ref.contents,
-                    ) ?? []),
-            );
-        } else {
-            // Get all set variables
-            const allVarRefs = [
-                ...(index.getReferences(uri, OChapbookSymbolKind.VariableSet) ??
-                    []),
-            ];
-            completions.push(...allVarRefs.map((ref) => ref.contents));
-        }
+    if (context !== undefined) {
+        // Get all set properties whose contents match the full context
+        completions.push(
+            ...index
+                .getProjectReferences([OChapbookSymbolKind.PropertySet])
+                .filter((ref) => ref.contents.startsWith(context))
+                .map((ref) => ref.contents.split(".").pop() ?? ref.contents),
+        );
+    } else {
+        // Get all set variables
+        completions.push(
+            ...index
+                .getProjectReferences([OChapbookSymbolKind.VariableSet])
+                .map((ref) => ref.contents),
+        );
     }
     if (range !== undefined) {
         return CompletionList.create(

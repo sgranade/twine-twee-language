@@ -2,16 +2,21 @@ import * as acorn from "acorn";
 import * as acornWalk from "acorn-walk";
 
 import {
-    isEcmaScriptGlobal,
+    ecmaScriptGlobals,
+    memberChainProperties,
+    objectLiteralProperties,
     ScriptPropertyOccurrence,
     ScriptSymbolExtractor,
     ScriptVariableOccurrence,
+    storyVarSetArgumentShape,
 } from "../../js-parser";
+import { shapeFlags } from "../../project-index";
 import { browserGlobals } from "../host-globals";
 import {
     createScriptAnalysis,
     isIdentifierName,
     MISSING_IDENTIFIER,
+    StaticName,
 } from "../../script-analysis";
 
 /**
@@ -34,7 +39,7 @@ const storyVariableNames: ReadonlySet<string> = new Set(["config"]);
  */
 export function whatExcludedBareNameIs(name: string): string | undefined {
     if (excludedNames.has(name)) return "a Chapbook built-in";
-    if (isEcmaScriptGlobal(name)) return "a JavaScript global";
+    if (ecmaScriptGlobals.has(name)) return "a JavaScript global";
     if (browserGlobals.has(name)) return "a browser global";
     return undefined;
 }
@@ -44,7 +49,7 @@ export function whatExcludedBareNameIs(name: string): string | undefined {
  *
  * @param options Extractor options.
  * @param options.recordRootDeclarations True to also record root-level
- * declarations, which conditional references are later filtered against. Only
+ * declarations for filtering conditional references against. Only
  * code that shares the story's script scope (`script` passages and story
  * script files) should do so.
  */
@@ -55,10 +60,10 @@ export function createChapbookScriptExtractor({
 }): ScriptSymbolExtractor {
     /*
      * Story variables and properties only come from `engine.state.get`/`set`/`setDefault`
-     * with a literal key (or a never-reassigned alias of `engine.state`). An
-     * unbound `config` is a story variable; every other unbound bare name is a
-     * conditional reference. We reject escaped spellings (`g\u006FLd`) and
-     * declarations.
+     * with a literal key (or a never-reassigned alias of `engine.state`). A `set`/`setDefault`
+     * whose value could be an object of unknown shape marks its path opaque.
+     * An unbound bare `config` is a story variable; every other unbound bare name is a
+     * conditional reference. Escaped spellings (`g\u006FLd`) and declarations are rejected.
      */
     return ({ ast, text, scopeManager, isGlobalName }) => {
         const variables: ScriptVariableOccurrence[] = [];
@@ -81,28 +86,73 @@ export function createChapbookScriptExtractor({
             );
         };
 
-        acornWalk.full(ast, (rawNode) => {
-            const node = rawNode as acorn.AnyNode;
+        // `engine.state.get`/`set`/`setDefault` call w/a literal key
+        const engineStateCall = (
+            node: acorn.AnyNode,
+        ):
+            | { method: "get" | "set" | "setDefault"; key: StaticName }
+            | undefined => {
             if (
                 node.type !== "CallExpression" ||
                 node.callee.type !== "MemberExpression" ||
                 !isEngineState(node.callee.object)
             )
-                return;
+                return undefined;
             const method = memberName(node.callee)?.name;
             if (method !== "get" && method !== "set" && method !== "setDefault")
-                return;
+                return undefined;
             const key =
                 node.arguments[0] && staticKeyName(node.arguments[0], true);
-            if (!key) return;
+            return key ? { method, key } : undefined;
+        };
+
+        // Path an `engine.state.get` call, or a static member chain off one,
+        // reaches, so `set('s', get('p').a)` copies `p.a` and a
+        // self-reference like `set('inv', get('inv') || {})` is ignored
+        const statePathOf = (node: acorn.AnyNode): string | undefined => {
+            if (node.type === "ChainExpression") {
+                return statePathOf(node.expression);
+            }
+            if (node.type === "MemberExpression") {
+                const name = memberName(node);
+                if (!name || !isIdentifierName(name.name)) return undefined;
+                const parent = statePathOf(node.object);
+                return parent && `${parent}.${name.name}`;
+            }
+            const call = engineStateCall(node);
+            return call?.method === "get" ? call.key.name : undefined;
+        };
+
+        acornWalk.fullAncestor(ast, (rawNode, _, ancestors) => {
+            const node = rawNode as acorn.AnyNode;
+            const call = engineStateCall(node);
+            if (!call) return;
+            const { method, key } = call;
             const segments = key.name.split(".");
             if (!segments.every((s) => isIdentifierName(s))) return;
-
+            if (method === "get") {
+                properties.push(
+                    ...memberChainProperties(
+                        node,
+                        key.name,
+                        ancestors,
+                        memberName,
+                        statePathOf,
+                        // Static member accesses off a `get` call continue its path
+                        isIdentifierName,
+                    ),
+                );
+            }
             const assigned = method !== "get";
+            const value = (node as acorn.CallExpression).arguments[1];
+            const shape = assigned
+                ? storyVarSetArgumentShape(value, key.name, statePathOf)
+                : {};
             let at = key.start;
             segments.forEach((segment, i) => {
+                const flag = shapeFlags(i === segments.length - 1 ? shape : {});
                 if (i === 0) {
-                    variables.push({ text: segment, at, assigned });
+                    variables.push({ text: segment, at, assigned, ...flag });
                 } else {
                     properties.push({
                         text: segment,
@@ -110,10 +160,18 @@ export function createChapbookScriptExtractor({
                         scope: segments.slice(0, i).join("."),
                         assigned,
                         isCallee: false,
+                        ...flag,
                     });
                 }
                 at += segment.length + 1;
             });
+            if (assigned) {
+                properties.push(
+                    ...objectLiteralProperties(value, key.name, statePathOf, {
+                        assigned: true,
+                    }),
+                );
+            }
         });
 
         // Keyed by position so a read-and-write like `a += 1` yields one occurrence

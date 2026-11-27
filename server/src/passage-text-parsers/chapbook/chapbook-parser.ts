@@ -9,9 +9,12 @@ import type { AcornSyntaxError } from "../../acorn-errors";
 import { createDiagnosticFor } from "../../diagnostics";
 import { EmbeddedDocument } from "../../embedded-languages";
 import {
+    markTokensAsAssigned,
     parseJSStrict,
     TokenizedJS,
     tokenizeJavaScript,
+    valueTextProperties,
+    valueTextShape,
 } from "../../js-parser";
 import {
     createLocationFor,
@@ -25,7 +28,12 @@ import {
     parsePassageReference,
 } from "../../parser";
 import { ParseLevel } from "../../parser-types";
-import { calleeFlag, ProjectIndex } from "../../project-index";
+import {
+    calleeFlag,
+    ValueShape,
+    shapeFlags,
+    ProjectIndex,
+} from "../../project-index";
 import { ETokenType, ETokenModifier } from "../../semantic-tokens";
 import { Token, TwineDiagnostic } from "../../types";
 import {
@@ -86,17 +94,35 @@ export function getChapbookDefinitions(
     kind: ChapbookSymbolKind,
     index: ProjectIndex,
 ): ChapbookSymbol[] {
-    const customSymbols: ChapbookSymbol[] = [];
-    for (const uri of index.getIndexedUris()) {
-        customSymbols.push(
-            ...(index
-                .getDefinitions(uri, kind)
-                ?.filter<ChapbookSymbol>((x): x is ChapbookSymbol =>
-                    ChapbookSymbol.is(x),
-                ) ?? []),
+    return index
+        .getProjectDefinitions(kind)
+        .filter<ChapbookSymbol>((x): x is ChapbookSymbol =>
+            ChapbookSymbol.is(x),
         );
+}
+
+/**
+ * Give the variable or property with a given path the shape of its value.
+ *
+ * Shape-giving is done in place.
+ *
+ * @param jsTokens Tokenized variables and properties to update in place.
+ * @param path Full dotted path to update.
+ * @param shape Shape of the value assigned to the path.
+ */
+function setPathShape(
+    jsTokens: TokenizedJS,
+    path: string,
+    shape: ValueShape,
+): void {
+    for (const v of jsTokens.variables) {
+        if (v.contents === path) Object.assign(v, shapeFlags(shape));
     }
-    return customSymbols;
+    for (const p of jsTokens.properties) {
+        if (`${p.prefix}.${p.contents}` === path) {
+            Object.assign(p, shapeFlags(shape));
+        }
+    }
 }
 
 /**
@@ -128,6 +154,7 @@ function createVariableAndPropertyReferences(
             contents: v.contents,
             location: v.location,
             kind,
+            ...shapeFlags(v),
         });
     }
     for (const p of jsTokens.properties) {
@@ -143,6 +170,7 @@ function createVariableAndPropertyReferences(
                     ? OChapbookSymbolKind.PropertySet
                     : OChapbookSymbolKind.Property,
             ...calleeFlag(p),
+            ...shapeFlags(p),
         });
     }
     if (jsTokens.error) {
@@ -976,12 +1004,7 @@ function findAndParseEngineStateSets(
                     state.textDocument,
                     chapbookState,
                 );
-                for (const v of tokens.variables) {
-                    v.assigned = true;
-                }
-                for (const p of tokens.properties) {
-                    p.assigned = true;
-                }
+                markTokensAsAssigned(tokens);
                 createVariableAndPropertyReferences(tokens, state);
             }
         }
@@ -2278,19 +2301,39 @@ function parseVarsSection(
 
         logShadowedVariableDiagnostic(name, sectionIndex + nameIndex, state);
 
+        const [value, valueIndex] = skipSpaces(
+            m[2].slice(colonIndex + 1),
+            m.index + m[1].length + colonIndex + 1,
+        );
+
         // Capture the variable name reference as being set by this vars section
         // and update the token for the name to show that it's being modified.
-        createVariableAndPropertyReferences(
-            tokenizeJavaScript(
-                false,
-                name,
-                sectionIndex + nameIndex,
-                state.textDocument,
-                chapbookState,
-            ),
-            state,
-            true,
+        const nameTokens = tokenizeJavaScript(
+            false,
+            name,
+            sectionIndex + nameIndex,
+            state.textDocument,
+            chapbookState,
         );
+        setPathShape(
+            nameTokens,
+            name,
+            valueTextShape(value, name, chapbookState.hostGlobals),
+        );
+        // An object literal's keys are set, too (`player: {hp: 3}` sets `player.hp`)
+        // Skip an empty name, which isn't a valid variable
+        if (name !== "") {
+            nameTokens.properties.push(
+                ...valueTextProperties(
+                    value,
+                    name,
+                    sectionIndex + valueIndex,
+                    state.textDocument,
+                    chapbookState.hostGlobals,
+                ),
+            );
+        }
+        createVariableAndPropertyReferences(nameTokens, state, true);
         // Capture tokens for variables and properties
         const varsAndProps = name.split(".");
         for (let i = 0, ndx = nameIndex; i < varsAndProps.length; ++i) {
@@ -2305,10 +2348,6 @@ function parseVarsSection(
         }
 
         // Handle the value
-        const [value, valueIndex] = skipSpaces(
-            m[2].slice(colonIndex + 1),
-            m.index + m[1].length + colonIndex + 1,
-        );
         createVariableAndPropertyReferences(
             tokenizeJavaScript(
                 false,

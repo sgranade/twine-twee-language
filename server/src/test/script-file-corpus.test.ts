@@ -269,6 +269,7 @@ describe("Script File Corpus", () => {
                     "VariableSet gold 9:22",
                     "Variable gold 9:47",
                     "ConditionalReference gold 10:11",
+                    "Property inventory.join 4:52",
                     "Variable counter0 12:61",
                     "VariableSet flag0 12:95",
                     "Variable counter1 13:61",

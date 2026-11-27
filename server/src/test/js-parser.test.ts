@@ -800,6 +800,7 @@ describe("JS Parser", () => {
                     ),
                     prefix: "var1.rootprop1.rootprop2",
                     assigned: true,
+                    shapeSources: ["val1"],
                 },
                 {
                     contents: "prop2",
@@ -863,6 +864,7 @@ describe("JS Parser", () => {
                     ),
                     prefix: "var1.rootprop1.rootprop2",
                     assigned: true,
+                    shapeSources: ["val1"],
                 },
                 {
                     contents: "prop2",
@@ -1573,6 +1575,15 @@ describe("JS Parser", () => {
                 isAssignmentContext: true,
                 variables: ["obj="],
                 properties: ["obj.a=", "obj.a.b="],
+            },
+            {
+                description:
+                    "obj = f({a: 1}), isAssignmentContext // a literal passed to a call isn't the value",
+                input: "obj = f({a: 1})",
+                isProgram: true,
+                isAssignmentContext: true,
+                variables: ["obj=", "f"],
+                properties: [],
             },
             {
                 description: "obj.x = {a: 1}",
@@ -2961,6 +2972,270 @@ describe("JS Parser", () => {
                     expect(member).to.equal(flag);
                 });
             }
+        }
+    });
+
+    describe("Opaque Assignments", () => {
+        function tokenize(input: string, isAssignmentContext: boolean) {
+            const state = buildParsingState({
+                uri: "fake-uri",
+                content: input,
+                callbacks: new MockCallbacks(),
+            });
+            return uut.tokenizeJavaScript(
+                true,
+                input,
+                0,
+                state.textDocument,
+                { passageTokens: {} },
+                { isAssignmentContext },
+            );
+        }
+
+        it("should mark a variable assigned a call's result as opaque", () => {
+            // No arrange
+
+            const result = tokenize("r = fn()", true);
+
+            expect(result.variables.find((v) => v.contents === "r")?.opaque).to
+                .be.true;
+        });
+
+        it("should mark a property path assigned a call's result as opaque", () => {
+            // No arrange
+
+            const result = tokenize("a.b = fn()", true);
+
+            expect(result.properties.find((p) => p.contents === "b")?.opaque).to
+                .be.true;
+        });
+
+        it("should not mark a write outside an assignment context as opaque", () => {
+            // No arrange
+
+            const result = tokenize("x = fn()", false);
+
+            expect(result.variables.find((v) => v.contents === "x")?.opaque).to
+                .be.undefined;
+        });
+
+        it("should not mark a variable assigned a known shape as opaque", () => {
+            // No arrange
+
+            const result = tokenize("x = 5", true);
+
+            expect(result.variables.find((v) => v.contents === "x")?.opaque).to
+                .be.undefined;
+        });
+
+        for (const [desc, code] of [
+            ["a local binding", "function f(y) { x = y }"],
+            ["a global's property", "x = Math.PI"],
+            ["element access", "x = arr[0]"],
+            ["a new expression", "x = new Date()"],
+            ["this", "function f() { x = this }"],
+            ["an await expression", "async function f() { x = await p }"],
+            ["a yield expression", "function* f() { x = yield 1 }"],
+            ["a tagged template", "x = tag`a`"],
+            ["a chained assignment of an opaque value", "x = y = fn()"],
+            ["a sequence ending in an opaque value", "x = (1, fn())"],
+            ["a conditional with an opaque branch", "x = c ? fn() : 1"],
+            ["an || with an opaque operand", "x = 1 || fn()"],
+            ["a ?? with an opaque operand", "x = fn() ?? {}"],
+        ]) {
+            it(`should mark a variable assigned ${desc} as opaque`, () => {
+                // No arrange
+
+                const result = tokenize(code, true);
+
+                expect(result.variables.find((v) => v.contents === "x")?.opaque)
+                    .to.be.true;
+            });
+        }
+
+        it("should not mark a variable assigned a conditional of known shapes as opaque", () => {
+            // No arrange
+
+            const result = tokenize("x = c ? 1 : {}", true);
+
+            expect(result.variables.find((v) => v.contents === "x")?.opaque).to
+                .be.undefined;
+        });
+
+        it("should ignore a variable's own value when deciding if its assignment is opaque", () => {
+            // No arrange
+
+            const result = tokenize("x = x || {}", true);
+
+            expect(
+                result.variables.find((v) => v.contents === "x" && v.assigned)
+                    ?.opaque,
+            ).to.be.undefined;
+        });
+
+        it("should ignore a property path's own value when deciding if its assignment is opaque", () => {
+            // No arrange
+
+            const result = tokenize("a.b = a.b ?? {}", true);
+
+            expect(
+                result.properties.find((p) => p.contents === "b" && p.assigned)
+                    ?.opaque,
+            ).to.be.undefined;
+        });
+
+        it("should mark a variable assigned an object literal with a spread as opaque", () => {
+            // No arrange
+
+            const result = tokenize("x = {...fn(), a: 1}", true);
+
+            expect(result.variables.find((v) => v.contents === "x")?.opaque).to
+                .be.true;
+        });
+
+        it("should record a key beside a spread as a known property write", () => {
+            // No arrange
+            const result = tokenize("x = {...y, a: 1}", true);
+
+            expect(
+                result.properties
+                    .filter((p) => p.contents === "a")
+                    .map((p) => [p.prefix, p.assigned, p.opaque]),
+            ).to.eql([["x", true, undefined]]);
+        });
+
+        it("should mark an object literal's key with an opaque value as opaque", () => {
+            // No arrange
+
+            const result = tokenize("x = {a: fn(), b: 1}", true);
+
+            expect(result.properties.map((p) => [p.contents, p.opaque])).to.eql(
+                [
+                    ["a", true],
+                    ["b", undefined],
+                ],
+            );
+        });
+
+        it("should mark a nested object literal's key holding a spread as opaque", () => {
+            // No arrange
+
+            const result = tokenize("x.y = {a: {...z()}}", true);
+
+            expect(
+                result.properties
+                    .filter((p) => p.prefix === "x.y")
+                    .map((p) => [p.contents, p.opaque]),
+            ).to.eql([["a", true]]);
+        });
+
+        it("should mark each target destructured from an opaque source as opaque", () => {
+            // No arrange
+
+            const result = tokenize(
+                "[a, ...b] = fn(); ({c, d: e.f} = g)",
+                true,
+            );
+
+            expect(
+                [
+                    ...result.variables.filter((v) => v.assigned),
+                    ...result.properties.filter((p) => p.assigned),
+                ].map((s) => [s.contents, s.opaque]),
+            ).to.eql([
+                ["a", true],
+                ["b", true],
+                ["c", true],
+                ["f", true],
+            ]);
+        });
+
+        it("should not mark a target destructured from a known shape as opaque", () => {
+            // No arrange
+
+            const result = tokenize("[a] = [1]", true);
+
+            expect(result.variables.find((v) => v.contents === "a")?.opaque).to
+                .be.undefined;
+        });
+
+        describe("Shape Sources", () => {
+            const shapeOf = (code: string, name = "x") => {
+                const result = tokenize(code, true);
+                const label = [...result.variables, ...result.properties].find(
+                    (l) => l.contents === name && l.assigned,
+                );
+                return [label?.opaque, label?.shapeSources];
+            };
+
+            for (const [desc, code, source] of [
+                ["a story variable", "x = y", "y"],
+                ["a story property chain", "x = y.a['b']", "y.a.b"],
+                ["a clone of a story variable", "x = clone(y.a)", "y.a"],
+            ]) {
+                it(`should record ${desc} as a shape source`, () => {
+                    expect(shapeOf(code)).to.eql([undefined, [source]]);
+                });
+            }
+
+            it("should record each spread of a copy as a shape source", () => {
+                expect(shapeOf("x = {...y, ...z.a, b: 1}")).to.eql([
+                    undefined,
+                    ["y", "z.a"],
+                ]);
+            });
+
+            it("should unite the shape sources of a conditional's branches", () => {
+                expect(shapeOf("x = c ? y : z || {}")).to.eql([
+                    undefined,
+                    ["y", "z"],
+                ]);
+            });
+
+            it("should record a copy assigned to an object literal's key", () => {
+                expect(shapeOf("x = {a: y}", "a")).to.eql([undefined, ["y"]]);
+            });
+
+            for (const code of [
+                "x = y[i]",
+                "x = y[0]",
+                "x = {...y, ...fn()}",
+                "x = c ? y : fn()",
+                "x = clone(fn())",
+            ]) {
+                it(`should mark \`${code}\` opaque instead of recording a shape source`, () => {
+                    expect(shapeOf(code)).to.eql([true, undefined]);
+                });
+            }
+
+            it("should mark a target destructured from a copy opaque", () => {
+                expect(shapeOf("[x] = y")).to.eql([true, undefined]);
+            });
+        });
+
+        for (const code of [
+            "x = 'a'",
+            "x = null",
+            "x = undefined",
+            "x = /a/",
+            "x = [y]",
+            "x = {a: 1}",
+            "x = `a${y}`",
+            "x = y * 2",
+            "x = y < z",
+            "x = typeof y",
+            "x = !y",
+            "x = -y",
+            "x = 'a' + y",
+        ]) {
+            it(`should not mark \`${code}\` as opaque`, () => {
+                // No arrange
+
+                const result = tokenize(code, true);
+
+                expect(result.variables.find((v) => v.contents === "x")?.opaque)
+                    .to.be.undefined;
+            });
         }
     });
 
