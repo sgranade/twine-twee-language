@@ -24,9 +24,14 @@ import {
 import { ParseLevel } from "../../parser-types";
 import { ProjectIndex, ProjSymbol } from "../../project-index";
 import { ETokenModifier, ETokenType } from "../../semantic-tokens";
-import { eraseMatches, versionCompare } from "../../utilities";
+import {
+    eraseMatches,
+    isVersionAtLeast,
+    isVersionBefore,
+    versionCompare,
+} from "../../utilities";
 import { allMacros, MacroInfo, MacroParent } from "./macros";
-import { extractSugarCubeScriptSymbols } from "./sugarcube-script-symbols";
+import { createSugarCubeScriptExtractor } from "./sugarcube-script-symbols";
 import {
     MacroLocationInfo,
     OSugarCubeSymbolKind,
@@ -128,22 +133,21 @@ function parseAsJavaScript(
     // We don't have a language server for JS, so we create an embedded document
     // for it that gets passed to our completions and hover functions, but we also
     // separately tokenize it.
-    createVariableAndPropertyReferences(
-        tokenizeJavaScript(
-            true,
-            text,
-            textIndex,
-            state.textDocument,
-            sugarcubeState,
-            {
-                isAssignmentContext: true,
-                extractScriptSymbols: extractSugarCubeScriptSymbols,
-                isWholeFile: state.isWholeFile,
-            },
-        ),
-        state,
+    const tokens = tokenizeJavaScript(
+        true,
+        text,
+        textIndex,
+        state.textDocument,
         sugarcubeState,
+        {
+            isAssignmentContext: true,
+            extractScriptSymbols: createSugarCubeScriptExtractor({
+                formatVersion: sugarcubeState.formatVersion,
+            }),
+            isWholeFile: state.isWholeFile,
+        },
     );
+    createVariableAndPropertyReferences(tokens, state, sugarcubeState);
     state.callbacks.onEmbeddedDocument(
         EmbeddedDocument.create(
             "script",
@@ -839,24 +843,12 @@ function checkMacroAvailability(
 ): void {
     const storyFormatVersion = state.storyFormat?.formatVersion;
     if (storyFormatVersion !== undefined) {
-        let notYetAvailable = false,
-            wasRemoved = false;
-        if (macroInfo.since !== undefined) {
-            try {
-                notYetAvailable =
-                    versionCompare(storyFormatVersion, macroInfo.since) < 0;
-            } catch {
-                // Ignore if versionCompare() throws
-            }
-        }
-        if (macroInfo.removed !== undefined) {
-            try {
-                wasRemoved =
-                    versionCompare(storyFormatVersion, macroInfo.removed) >= 0;
-            } catch {
-                // Ignore if versionCompare() throws
-            }
-        }
+        const notYetAvailable =
+            macroInfo.since !== undefined &&
+            isVersionBefore(storyFormatVersion, macroInfo.since);
+        const wasRemoved =
+            macroInfo.removed !== undefined &&
+            isVersionAtLeast(storyFormatVersion, macroInfo.removed);
         if (notYetAvailable) {
             logDiagnosticFor(
                 DiagnosticCodes.SugarCubeMacroNotAvailable,
@@ -1379,50 +1371,46 @@ function checkForSpecialPassages(state: ParsingState): boolean {
         state.currentPassage !== undefined &&
         state.storyFormat?.formatVersion !== undefined
     ) {
-        try {
-            if (
-                state.currentPassage.name.contents === "StoryDisplayTitle" &&
-                versionCompare(state.storyFormat.formatVersion, "2.31.0") < 0
-            ) {
-                logRawDiagnostic(
-                    createDiagnosticFromRange(
-                        DiagnosticCodes.SugarCubeUnsupporedSpecialPassage,
-                        state.currentPassage.name.location.range,
-                        `StoryDisplayTitle isn't supported in SugarCube version ${state.storyFormat.formatVersion}`,
-                    ),
-                    state,
-                );
-            }
+        if (
+            state.currentPassage.name.contents === "StoryDisplayTitle" &&
+            isVersionBefore(state.storyFormat.formatVersion, "2.31.0")
+        ) {
+            logRawDiagnostic(
+                createDiagnosticFromRange(
+                    DiagnosticCodes.SugarCubeUnsupporedSpecialPassage,
+                    state.currentPassage.name.location.range,
+                    `StoryDisplayTitle isn't supported in SugarCube version ${state.storyFormat.formatVersion}`,
+                ),
+                state,
+            );
+        }
 
-            if (
-                state.currentPassage.name.contents === "StoryInterface" &&
-                versionCompare(state.storyFormat.formatVersion, "2.18.0") < 0
-            ) {
-                logRawDiagnostic(
-                    createDiagnosticFromRange(
-                        DiagnosticCodes.SugarCubeUnsupporedSpecialPassage,
-                        state.currentPassage.name.location.range,
-                        `StoryInterface isn't supported in SugarCube version ${state.storyFormat.formatVersion}`,
-                    ),
-                    state,
-                );
-            }
+        if (
+            state.currentPassage.name.contents === "StoryInterface" &&
+            isVersionBefore(state.storyFormat.formatVersion, "2.18.0")
+        ) {
+            logRawDiagnostic(
+                createDiagnosticFromRange(
+                    DiagnosticCodes.SugarCubeUnsupporedSpecialPassage,
+                    state.currentPassage.name.location.range,
+                    `StoryInterface isn't supported in SugarCube version ${state.storyFormat.formatVersion}`,
+                ),
+                state,
+            );
+        }
 
-            if (
-                state.currentPassage.name.contents === "StoryShare" &&
-                versionCompare(state.storyFormat.formatVersion, "2.37.0") >= 0
-            ) {
-                logRawDiagnostic(
-                    createDiagnosticFromRange(
-                        DiagnosticCodes.SugarCubeDeprecatedSpecialPassage,
-                        state.currentPassage.name.location.range,
-                        `StoryShare is deprecated as of SugarCube version 2.37.0`,
-                    ),
-                    state,
-                );
-            }
-        } catch {
-            // Ignore if versionCompare() throws
+        if (
+            state.currentPassage.name.contents === "StoryShare" &&
+            isVersionAtLeast(state.storyFormat.formatVersion, "2.37.0")
+        ) {
+            logRawDiagnostic(
+                createDiagnosticFromRange(
+                    DiagnosticCodes.SugarCubeDeprecatedSpecialPassage,
+                    state.currentPassage.name.location.range,
+                    `StoryShare is deprecated as of SugarCube version 2.37.0`,
+                ),
+                state,
+            );
         }
     }
 
@@ -1486,23 +1474,19 @@ function checkPassageTags(
         isHtmlPassage = false;
         // Of the media tags, only Twine.image was originally in 2.0.0. The others
         // were added in 2.24.0
-        try {
-            if (
-                mediaTags[0].contents !== "Twine.image" &&
-                state.storyFormat?.formatVersion !== undefined &&
-                versionCompare(state.storyFormat.formatVersion, "2.24.0") < 0
-            ) {
-                logRawDiagnostic(
-                    createDiagnosticFromRange(
-                        DiagnosticCodes.SugarCubeUnsupporedMediaPassageTags,
-                        mediaTags[0].location.range,
-                        `${mediaTags[0].contents} isn't supported in SugarCube version ${state.storyFormat.formatVersion}`,
-                    ),
-                    state,
-                );
-            }
-        } catch {
-            // Ignore if versionCompare() throws
+        if (
+            mediaTags[0].contents !== "Twine.image" &&
+            state.storyFormat?.formatVersion !== undefined &&
+            isVersionBefore(state.storyFormat.formatVersion, "2.24.0")
+        ) {
+            logRawDiagnostic(
+                createDiagnosticFromRange(
+                    DiagnosticCodes.SugarCubeUnsupporedMediaPassageTags,
+                    mediaTags[0].location.range,
+                    `${mediaTags[0].contents} isn't supported in SugarCube version ${state.storyFormat.formatVersion}`,
+                ),
+                state,
+            );
         }
     } else if (mediaTags.length > 1) {
         isHtmlPassage = false;
@@ -1517,24 +1501,19 @@ function checkPassageTags(
             );
         }
     } else {
-        try {
-            if (
-                tagNames.includes("bookmark") &&
-                state.storyFormat?.formatVersion !== undefined &&
-                versionCompare(state.storyFormat.formatVersion, "2.37.0") >= 0
-            ) {
-                const ndx = tagNames.indexOf("bookmark");
-                logRawDiagnostic(
-                    createDiagnosticFromRange(
-                        DiagnosticCodes.SugarCubeDeprecatedTag,
-                        tags[ndx].location.range,
-                        `bookmark is deprecated as of SugarCube version 2.37.0`,
-                    ),
-                    state,
-                );
-            }
-        } catch {
-            // Ignore if versionCompare() throws
+        if (
+            tagNames.includes("bookmark") &&
+            isVersionAtLeast(state.storyFormat?.formatVersion, "2.37.0")
+        ) {
+            const ndx = tagNames.indexOf("bookmark");
+            logRawDiagnostic(
+                createDiagnosticFromRange(
+                    DiagnosticCodes.SugarCubeDeprecatedTag,
+                    tags[ndx].location.range,
+                    `bookmark is deprecated as of SugarCube version 2.37.0`,
+                ),
+                state,
+            );
         }
     }
 
@@ -1577,6 +1556,7 @@ export function parsePassageText(
     const sugarcubeState: SugarCubeParsingState = {
         passageTokens: {},
         hostGlobals: sugarCubeExcludedGlobals,
+        formatVersion: state.storyFormat?.formatVersion,
         unclosedMacros: [],
         widgetMacroRanges: [],
         api: api,

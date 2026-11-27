@@ -45,6 +45,58 @@ export function versionCompare(ver1: string, ver2: string): number {
     return 0;
 }
 
+/**
+ * Compare two versions, treating a missing or unparseable one as unknown.
+ *
+ * @param ver1 Version to compare.
+ * @param ver2 Version to compare it to.
+ * @returns The comparison, as `versionCompare()` gives it, or undefined if
+ * either version is missing or doesn't parse.
+ */
+function tryVersionCompare(
+    ver1: string | undefined,
+    ver2: string,
+): number | undefined {
+    if (ver1 === undefined) return undefined;
+    try {
+        return versionCompare(ver1, ver2);
+    } catch {
+        return undefined;
+    }
+}
+
+/**
+ * Is a version earlier than another?
+ *
+ * @param version Version to check, such as a story format version.
+ * @param target Version to check against.
+ * @returns True if `version` is earlier than `target`; false if it isn't, or
+ * if either version is missing or doesn't parse.
+ */
+export function isVersionBefore(
+    version: string | undefined,
+    target: string,
+): boolean {
+    const comparison = tryVersionCompare(version, target);
+    return comparison !== undefined && comparison < 0;
+}
+
+/**
+ * Is a version the same as or later than another?
+ *
+ * @param version Version to check, such as a story format version.
+ * @param target Version to check against.
+ * @returns True if `version` is `target` or later; false if it isn't, or if
+ * either version is missing or doesn't parse.
+ */
+export function isVersionAtLeast(
+    version: string | undefined,
+    target: string,
+): boolean {
+    const comparison = tryVersionCompare(version, target);
+    return comparison !== undefined && comparison >= 0;
+}
+
 /** TYPE NARROWING HELPERS **/
 
 /**

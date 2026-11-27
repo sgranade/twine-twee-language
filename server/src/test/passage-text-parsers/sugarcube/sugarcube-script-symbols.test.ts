@@ -5,7 +5,12 @@ import { buildParsingState, MockCallbacks } from "../../builders";
 import { tokenizeJavaScript } from "../../../js-parser";
 import * as uut from "../../../passage-text-parsers/sugarcube/sugarcube-script-symbols";
 
-function extract(text: string) {
+const extractWithoutVersion = uut.createSugarCubeScriptExtractor();
+
+function extract(
+    text: string,
+    { formatVersion }: { formatVersion?: string } = {},
+) {
     const state = buildParsingState({
         uri: "fake-uri",
         content: text,
@@ -19,10 +24,18 @@ function extract(text: string) {
         { passageTokens: {} },
         {
             isAssignmentContext: true,
-            extractScriptSymbols: uut.extractSugarCubeScriptSymbols,
+            extractScriptSymbols: uut.createSugarCubeScriptExtractor({
+                formatVersion,
+            }),
         },
     );
     return {
+        // Diagnostics as [code, located text, message]
+        diagnostics: (result.diagnostics ?? []).map((d) => [
+            d.code,
+            text.slice(d.start, d.end),
+            d.message,
+        ]),
         vars: result.variables.map((v) => [
             v.contents,
             text.slice(
@@ -190,7 +203,7 @@ describe("SugarCube Script Symbols", () => {
                 { passageTokens: {} },
                 {
                     isAssignmentContext: true,
-                    extractScriptSymbols: uut.extractSugarCubeScriptSymbols,
+                    extractScriptSymbols: extractWithoutVersion,
                 },
             );
 
@@ -243,7 +256,7 @@ describe("SugarCube Script Symbols", () => {
                 { passageTokens: {} },
                 {
                     isAssignmentContext: true,
-                    extractScriptSymbols: uut.extractSugarCubeScriptSymbols,
+                    extractScriptSymbols: extractWithoutVersion,
                 },
             );
 
@@ -371,5 +384,108 @@ describe("SugarCube Script Symbols", () => {
                 ["settings.audio", "volume", true, "volume"],
             ]);
         });
+    });
+
+    describe("Setting Methods Newer than the Format Version", () => {
+        it("should report Setting.addValue before 2.37.0 on the method name", () => {
+            expect(
+                extract('Setting.addValue("x", 1);', {
+                    formatVersion: "2.36.1",
+                }).diagnostics,
+            ).to.eql([
+                [
+                    "api-not-available",
+                    "addValue",
+                    "`Setting.addValue` isn't available until SugarCube version 2.37.0 but your StoryFormat version is 2.36.1",
+                ],
+            ]);
+        });
+
+        for (const [method, before, since] of [
+            ["getValue", "2.36.1", "2.37.0"],
+            ["setValue", "2.36.1", "2.37.0"],
+            ["addRange", "2.25.0", "2.26.0"],
+            ["addHeader", "2.7.0", "2.7.1"],
+        ]) {
+            it(`should report Setting.${method} at ${before} but not at ${since}`, () => {
+                const text = `Setting.${method}("x", 1);`;
+
+                expect(
+                    extract(text, { formatVersion: before }).diagnostics,
+                ).to.eql([
+                    [
+                        "api-not-available",
+                        method,
+                        `\`Setting.${method}\` isn't available until SugarCube version ${since} but your StoryFormat version is ${before}`,
+                    ],
+                ]);
+                expect(
+                    extract(text, { formatVersion: since }).diagnostics,
+                ).to.eql([]);
+            });
+        }
+
+        it("should never report Setting.addToggle or Setting.addList", () => {
+            expect(
+                extract(
+                    'Setting.addToggle("a", {}); Setting.addList("b", {});',
+                    {
+                        formatVersion: "2.0.0",
+                    },
+                ).diagnostics,
+            ).to.eql([]);
+        });
+
+        it("should report calls through SugarCube and window.SugarCube", () => {
+            expect(
+                extract(
+                    'SugarCube.Setting.addValue("a", 1); window.SugarCube.Setting.addValue("b", 1);',
+                    { formatVersion: "2.36.1" },
+                ).diagnostics.map((d) => d[1]),
+            ).to.eql(["addValue", "addValue"]);
+        });
+
+        it("should not report calls on a local binding named Setting", () => {
+            expect(
+                extract('function f(Setting) { Setting.addValue("a", 1); }', {
+                    formatVersion: "2.36.1",
+                }).diagnostics,
+            ).to.eql([]);
+        });
+
+        it("should not report optional calls or member reads", () => {
+            expect(
+                extract(
+                    'Setting.addValue?.("a", 1); if (Setting.addValue) {} const f = Setting.addValue;',
+                    { formatVersion: "2.36.1" },
+                ).diagnostics,
+            ).to.eql([]);
+        });
+
+        it("should report calls whatever their arguments", () => {
+            expect(
+                extract(
+                    'Setting.addValue(key, 1); Setting.addValue("music-on", 1);',
+                    { formatVersion: "2.36.1" },
+                ).diagnostics.map((d) => d[1]),
+            ).to.eql(["addValue", "addValue"]);
+        });
+
+        it("should still index a setting a too-new call defines", () => {
+            expect(
+                extract('Setting.addValue("music", 1);', {
+                    formatVersion: "2.36.1",
+                }).located,
+            ).to.eql([["settings", "music", true, "music"]]);
+        });
+
+        for (const formatVersion of [undefined, "two.thirty"]) {
+            it(`should not report anything with a format version of ${formatVersion}`, () => {
+                expect(
+                    extract('Setting.addValue("a", 1);', { formatVersion })
+                        .diagnostics,
+                ).to.eql([]);
+            });
+        }
     });
 });

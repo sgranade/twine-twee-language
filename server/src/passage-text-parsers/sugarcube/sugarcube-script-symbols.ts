@@ -2,6 +2,7 @@ import * as acorn from "acorn";
 import * as acornWalk from "acorn-walk";
 import * as eslintScope from "eslint-scope";
 
+import { DiagnosticCodes } from "@tt3/shared";
 import {
     assignmentShape,
     extractSymbols,
@@ -9,6 +10,7 @@ import {
     isWriteTarget,
     memberChainProperties,
     objectLiteralProperties,
+    ScriptDiagnosticOccurrence,
     ScriptPropertyOccurrence,
     ScriptSymbolExtractor,
     ScriptVariableOccurrence,
@@ -22,6 +24,7 @@ import {
     isIdentifierName,
     StaticName,
 } from "../../script-analysis";
+import { isVersionBefore } from "../../utilities";
 
 type Sigil = "$" | "_";
 
@@ -41,9 +44,7 @@ type ObjectRoot = (typeof objectRoots)[number];
 
 // How a `Setting` method uses the setting its first argument names: `define`
 // creates it w/a known value, `set` writes its second argument, and `read`
-// reads it. n.b. SugarCube added `addRange` in 2.26.0 and `addValue`,
-// `getValue` and `setValue` in 2.37.0, but all are recognized whatever
-// version a project targets. `addHeader` names no setting.
+// reads it.
 type SettingUse = "define" | "set" | "read";
 const settingMethods: ReadonlyMap<string, SettingUse> = new Map([
     ["addToggle", "define"],
@@ -52,6 +53,16 @@ const settingMethods: ReadonlyMap<string, SettingUse> = new Map([
     ["addValue", "define"],
     ["setValue", "set"],
     ["getValue", "read"],
+]);
+
+// SugarCube version each `Setting` method was added in, for those added after
+// 2.0.0, per SugarCube 2.37.3's documentation
+const settingMethodsSince: ReadonlyMap<string, string> = new Map([
+    ["addHeader", "2.7.1"],
+    ["addRange", "2.26.0"],
+    ["addValue", "2.37.0"],
+    ["getValue", "2.37.0"],
+    ["setValue", "2.37.0"],
 ]);
 
 type RootTracer = ReturnType<typeof createRootTracer>;
@@ -221,6 +232,7 @@ function createRootTracer(
     };
 
     return {
+        isSugarCubeGlobal,
         rootSigil,
         statePathOf: pathThrough(stateRootPath),
         objectPathOf: pathThrough(objectRootPath),
@@ -234,37 +246,87 @@ function createRootTracer(
 }
 
 /**
- * Extract SugarCube story variables and properties, and setup and
- * settings object properties, from JavaScript code.
+ * Find plain calls to SugarCube APIs that a format version doesn't have yet,
+ * such as `Setting.addValue(…)` before 2.37.0.
+ *
+ * @param ast Parsed code.
+ * @param tracer Root helpers for the code.
+ * @param formatVersion The project's SugarCube version. If it's missing or
+ * doesn't parse, nothing is reported.
+ * @returns Diagnostics for the calls, located on the method names.
  */
-export const extractSugarCubeScriptSymbols: ScriptSymbolExtractor = ({
-    ast,
-    text,
-    scopeManager,
-}) => {
-    /**
-     * In script code a story variable is reached only through a state root:
-     * `State.variables`, `State.temporary`, `variables()`, `temporary()`,
-     * `SugarCube.State.*` (w/ or w/o `window.`), or `State.getVar`/`setVar`
-     * w/ a literal key. A setup property is reached through `setup`, or
-     * `SugarCube.setup` (w/ or w/o `window.`), and a setting the same way
-     * through `settings`. A `Setting` call with a literal name (`addToggle`,
-     * `getValue`, …) also reaches a setting. A never-reassigned binding
-     * initialized with any kind of root is also that kind of root. Bare
-     * identifiers are never story variables.
-     */
-    const tracer = createRootTracer(text, scopeManager);
-    const pathOf: StaticPathOf = (node) =>
-        tracer.statePathOf(node) ?? tracer.objectPathOf(node);
-    const stateRooted = extractStateRootSymbols(ast, tracer, pathOf);
-    return {
-        variables: stateRooted.variables,
-        properties: [
-            ...stateRooted.properties,
-            ...extractObjectRootProperties(ast, tracer, pathOf),
-        ].sort((a, b) => a.at - b.at),
+function findUnavailableApiCalls(
+    ast: acorn.Node,
+    { isSugarCubeGlobal, memberName }: RootTracer,
+    formatVersion: string | undefined,
+): ScriptDiagnosticOccurrence[] {
+    const diagnostics: ScriptDiagnosticOccurrence[] = [];
+    if (formatVersion === undefined) return diagnostics;
+
+    acornWalk.full(ast, (rawNode) => {
+        const node = rawNode as acorn.AnyNode;
+        // Optional calls (`Setting.addValue?.(…)`) and bare member reads aren't reported
+        if (
+            node.type !== "CallExpression" ||
+            node.optional ||
+            node.callee.type !== "MemberExpression"
+        )
+            return;
+        const method = memberName(node.callee);
+        const since = method && settingMethodsSince.get(method.name);
+        if (
+            !method ||
+            !since ||
+            !isVersionBefore(formatVersion, since) ||
+            !isSugarCubeGlobal(node.callee.object, "Setting")
+        )
+            return;
+        diagnostics.push({
+            code: DiagnosticCodes.SugarCubeApiNotAvailable,
+            message: `\`Setting.${method.name}\` isn't available until SugarCube version ${since} but your StoryFormat version is ${formatVersion}`,
+            text: method.name,
+            at: method.start,
+        });
+    });
+    return diagnostics;
+}
+
+/**
+ * Create an extractor of story variables and properties from SugarCube script
+ * code, setup properties, and settings.
+ * @param options Extractor options.
+ * @param options.formatVersion The project's SugarCube version, if known.
+ * @returns The extractor.
+ */
+export function createSugarCubeScriptExtractor({
+    formatVersion,
+}: { formatVersion?: string } = {}): ScriptSymbolExtractor {
+    return ({ ast, text, scopeManager }) => {
+        /**
+         * In script code a story variable is reached only through a state root:
+         * `State.variables`, `State.temporary`, `variables()`, `temporary()`,
+         * `SugarCube.State.*` (w/ or w/o `window.`), or `State.getVar`/`setVar`
+         * w/ a literal key. A setup property is reached through `setup`, or
+         * `SugarCube.setup` (w/ or w/o `window.`), and a setting the same way
+         * through `settings`. A `Setting` call with a literal name (`addToggle`,
+         * `getValue`, …) also reaches a setting. A never-reassigned binding
+         * initialized with any kind of root is also that kind of root. Bare
+         * identifiers are never story variables.
+         */
+        const tracer = createRootTracer(text, scopeManager);
+        const pathOf: StaticPathOf = (node) =>
+            tracer.statePathOf(node) ?? tracer.objectPathOf(node);
+        const stateRooted = extractStateRootSymbols(ast, tracer, pathOf);
+        return {
+            variables: stateRooted.variables,
+            properties: [
+                ...stateRooted.properties,
+                ...extractObjectRootProperties(ast, tracer, pathOf),
+            ].sort((a, b) => a.at - b.at),
+            diagnostics: findUnavailableApiCalls(ast, tracer, formatVersion),
+        };
     };
-};
+}
 
 /**
  * Extract setup properties and settings from SugarCube JavaScript code.
@@ -388,40 +450,40 @@ function extractObjectRootProperties(
 }
 
 /**
- * Extract story variables and properties from desugared TwineScript.
+ * Create an extractor of story variables and properties from desugared
+ * TwineScript
  */
-export const extractTwineScriptSymbols: ScriptSymbolExtractor = ({
-    ast,
-    text,
-    scopeManager,
-    isGlobalName,
-    isAssignmentContext,
-}) => {
-    // A story variable is either a sigiled name, found by the default extractor,
-    // or reached through a state root, as in script code. Copies through either
-    // kind record their story path as a shape source: a state root's path is
-    // sigiled (`$a`), and a sigiled name's is left desugared (`Xa`) for the
-    // caller to resugar.
-    const tracer = createRootTracer(text, scopeManager);
-    const defaultPathOf = storyPathOf(isGlobalName);
-    const pathOf: StaticPathOf = (node) =>
-        tracer.statePathOf(node) ??
-        tracer.objectPathOf(node) ??
-        defaultPathOf(node);
-    const sigiled = extractSymbols(ast, isGlobalName, {
-        isAssignmentContext,
-        pathOf,
-    });
-    const stateRooted = extractStateRootSymbols(ast, tracer, pathOf);
-    return {
-        variables: [...sigiled.variables, ...stateRooted.variables].sort(
-            (a, b) => a.at - b.at,
-        ),
-        properties: [...sigiled.properties, ...stateRooted.properties].sort(
-            (a, b) => a.at - b.at,
-        ),
+export function createTwineScriptExtractor({
+    formatVersion,
+}: { formatVersion?: string } = {}): ScriptSymbolExtractor {
+    return ({ ast, text, scopeManager, isGlobalName, isAssignmentContext }) => {
+        // In TwineScript, a story variable is either a sigiled name (which
+        // is found by the default extractor) or reached through a state
+        // root as in script code. For copies of either, we'll capture their
+        // story path as a shape source, with state root's path sigiled (`$a`)
+        // and a sigiled name left desugared (`Xa`).
+        const tracer = createRootTracer(text, scopeManager);
+        const defaultPathOf = storyPathOf(isGlobalName);
+        const pathOf: StaticPathOf = (node) =>
+            tracer.statePathOf(node) ??
+            tracer.objectPathOf(node) ??
+            defaultPathOf(node);
+        const sigiled = extractSymbols(ast, isGlobalName, {
+            isAssignmentContext,
+            pathOf,
+        });
+        const stateRooted = extractStateRootSymbols(ast, tracer, pathOf);
+        return {
+            variables: [...sigiled.variables, ...stateRooted.variables].sort(
+                (a, b) => a.at - b.at,
+            ),
+            properties: [...sigiled.properties, ...stateRooted.properties].sort(
+                (a, b) => a.at - b.at,
+            ),
+            diagnostics: findUnavailableApiCalls(ast, tracer, formatVersion),
+        };
     };
-};
+}
 
 /**
  * Extract story variables and properties reached through state roots.

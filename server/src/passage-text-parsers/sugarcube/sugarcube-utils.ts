@@ -18,7 +18,8 @@ function isInScriptMacro(sugarcubeState: SugarCubeParsingState): boolean {
 }
 
 /**
- * Create symbol references for tokenized variables and properties, and log any tokenizing error.
+ * Create symbol references for tokenized variables and properties, and log
+ * any tokenizing error and diagnostics the script extractor found.
  *
  * `isSet` overrides the individual label's assignment information.
  *
@@ -113,6 +114,15 @@ export function createVariableAndPropertyReferences(
             jsTokens.error.end,
             state,
             jsTokens.error.message,
+        );
+    }
+    for (const diagnostic of jsTokens.diagnostics ?? []) {
+        logDiagnostic(
+            diagnostic.code,
+            diagnostic.start,
+            diagnostic.end,
+            state,
+            diagnostic.message,
         );
     }
 }

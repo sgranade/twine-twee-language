@@ -113,6 +113,33 @@ describe("Utilities", () => {
         });
     });
 
+    describe("version checks", () => {
+        it("should tell whether a version is before another", () => {
+            expect([
+                uut.isVersionBefore("2.36.1", "2.37.0"),
+                uut.isVersionBefore("2.37.0", "2.37.0"),
+                uut.isVersionBefore("2.37.1", "2.37.0"),
+            ]).to.eql([true, false, false]);
+        });
+
+        it("should tell whether a version is at least another", () => {
+            expect([
+                uut.isVersionAtLeast("2.36.1", "2.37.0"),
+                uut.isVersionAtLeast("2.37.0", "2.37.0"),
+                uut.isVersionAtLeast("2.37.1", "2.37.0"),
+            ]).to.eql([false, true, true]);
+        });
+
+        it("should say neither for a missing or unparseable version", () => {
+            expect([
+                uut.isVersionBefore(undefined, "2.37.0"),
+                uut.isVersionAtLeast(undefined, "2.37.0"),
+                uut.isVersionBefore("two.thirty", "2.37.0"),
+                uut.isVersionAtLeast("two.thirty", "2.37.0"),
+            ]).to.eql([false, false, false, false]);
+        });
+    });
+
     describe("next line index", () => {
         it("should find the next line after a \\n", () => {
             const text = "line1\nline2";

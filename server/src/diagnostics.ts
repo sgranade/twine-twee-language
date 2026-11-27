@@ -176,6 +176,9 @@ const DiagnosticMetadata: Record<DiagnosticCode, DiagnosticMetadata> = {
         severity: DiagnosticSeverity.Warning,
     },
     // SugarCube
+    [DiagnosticCodes.SugarCubeApiNotAvailable]: {
+        message: "This isn't available until a later version of SugarCube",
+    },
     [DiagnosticCodes.SugarCubeDeprecatedSpecialPassage]: {
         message:
             "This special passage is deprecated in this version of SugarCube",

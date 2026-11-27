@@ -4830,6 +4830,209 @@ describe("SugarCube Parser", () => {
             });
         });
 
+        describe("Setting methods newer than the format version in JavaScript", () => {
+            it("should error on a too-new Setting call in a script passage", () => {
+                const header = ":: Passage [script]\n";
+                const passage = 'Setting.addValue("x", 1);\n';
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                state.storyFormat = {
+                    format: "SugarCube",
+                    formatVersion: "2.36.1",
+                };
+                state.currentPassage = buildPassage({
+                    label: "Passage",
+                    isScript: true,
+                });
+                const parser = uut.getSugarCubeParser(undefined);
+
+                parser?.parsePassageText(passage, header.length, state);
+                const [result] = callbacks.errors;
+
+                expect(callbacks.errors.length).to.equal(1);
+                expect(result.code).to.equal("api-not-available");
+                expect(result.severity).to.eql(DiagnosticSeverity.Error);
+                expect(result.message).to.equal(
+                    "`Setting.addValue` isn't available until SugarCube version 2.37.0 but your StoryFormat version is 2.36.1",
+                );
+                expect(result.range).to.eql(Range.create(1, 8, 1, 16));
+            });
+
+            it("should error on a too-new Setting call in a <<script>> block", () => {
+                const header = ":: Passage\n";
+                const passage = '<<script>>Setting.getValue("x");<</script>>\n';
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                state.storyFormat = {
+                    format: "SugarCube",
+                    formatVersion: "2.36.1",
+                };
+                const parser = uut.getSugarCubeParser(undefined);
+
+                parser?.parsePassageText(passage, header.length, state);
+                const [result] = callbacks.errors;
+
+                expect(callbacks.errors.length).to.equal(1);
+                expect(result.code).to.equal("api-not-available");
+                expect(result.range).to.eql(Range.create(1, 18, 1, 26));
+            });
+
+            it("should not error on a Setting call without a format version", () => {
+                const header = ":: Passage [script]\n";
+                const passage = 'Setting.addValue("x", 1);\n';
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                state.currentPassage = buildPassage({
+                    label: "Passage",
+                    isScript: true,
+                });
+                const parser = uut.getSugarCubeParser(undefined);
+
+                parser?.parsePassageText(passage, header.length, state);
+
+                expect(callbacks.errors).to.eql([]);
+            });
+        });
+
+        describe("Setting methods newer than the format version in TwineScript", () => {
+            // Errors from parsing a passage, after a `:: Passage` header line
+            const errorsFor = (passage: string, formatVersion?: string) => {
+                const header = ":: Passage\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                if (formatVersion !== undefined) {
+                    state.storyFormat = { format: "SugarCube", formatVersion };
+                }
+                const parser = uut.getSugarCubeParser(undefined);
+                parser?.parsePassageText(passage, header.length, state);
+                return callbacks.errors;
+            };
+
+            it("should error on a too-new Setting call in a <<run>> macro", () => {
+                const errors = errorsFor(
+                    '<<run Setting.setValue("muted", true)>>\n',
+                    "2.36.1",
+                );
+
+                expect(errors.length).to.equal(1);
+                expect(errors[0].code).to.equal("api-not-available");
+                expect(errors[0].severity).to.eql(DiagnosticSeverity.Error);
+                expect(errors[0].message).to.equal(
+                    "`Setting.setValue` isn't available until SugarCube version 2.37.0 but your StoryFormat version is 2.36.1",
+                );
+                expect(errors[0].range).to.eql(Range.create(1, 14, 1, 22));
+            });
+
+            it("should locate a too-new Setting call after desugared text in the passage text", () => {
+                const errors = errorsFor(
+                    '<<set $x to $y and Setting.getValue("volume")>>\n',
+                    "2.36.1",
+                );
+
+                expect(errors.length).to.equal(1);
+                expect(errors[0].code).to.equal("api-not-available");
+                expect(errors[0].range).to.eql(Range.create(1, 27, 1, 35));
+            });
+
+            it("should error on a too-new window.SugarCube.Setting call", () => {
+                const errors = errorsFor(
+                    '<<run window.SugarCube.Setting.setValue("muted", true)>>\n',
+                    "2.36.1",
+                );
+
+                expect(errors.length).to.equal(1);
+                expect(errors[0].code).to.equal("api-not-available");
+                expect(errors[0].range).to.eql(Range.create(1, 31, 1, 39));
+            });
+
+            it("should not error on a too-new call through a local binding that shadows Setting", () => {
+                const errors = errorsFor(
+                    '<<run ((Setting) => Setting.setValue("muted", true))(_s)>>\n',
+                    "2.36.1",
+                );
+
+                expect(errors).to.eql([]);
+            });
+
+            it("should error on a too-new Setting call in a <<set>> to a temporary variable", () => {
+                const errors = errorsFor(
+                    '<<set _v to Setting.getValue("volume")>>\n',
+                    "2.36.1",
+                );
+
+                expect(errors.length).to.equal(1);
+                expect(errors[0].code).to.equal("api-not-available");
+                expect(errors[0].range).to.eql(Range.create(1, 20, 1, 28));
+            });
+
+            it("should error on a too-new SugarCube.Setting call", () => {
+                const errors = errorsFor(
+                    '<<set _v to SugarCube.Setting.getValue("volume")>>\n',
+                    "2.36.1",
+                );
+
+                expect(errors.length).to.equal(1);
+                expect(errors[0].code).to.equal("api-not-available");
+                expect(errors[0].range).to.eql(Range.create(1, 30, 1, 38));
+            });
+
+            it("should not error on a bare read of a too-new Setting method", () => {
+                const errors = errorsFor(
+                    "<<if Setting.addValue>>yes<</if>>\n",
+                    "2.36.1",
+                );
+
+                expect(errors).to.eql([]);
+            });
+
+            it("should not error on an optional call of a too-new Setting method", () => {
+                const errors = errorsFor(
+                    '<<run Setting.addValue?.("x", 1)>>\n',
+                    "2.36.1",
+                );
+
+                expect(errors).to.eql([]);
+            });
+
+            it("should not error on a Setting call at the version it was added in", () => {
+                const errors = errorsFor(
+                    '<<run Setting.setValue("muted", true)>>\n',
+                    "2.37.0",
+                );
+
+                expect(errors).to.eql([]);
+            });
+
+            it("should not error on a Setting call without a format version", () => {
+                const errors = errorsFor(
+                    '<<run Setting.setValue("muted", true)>>\n',
+                );
+
+                expect(errors).to.eql([]);
+            });
+
+            it("should not error on a Setting call with an unparseable format version", () => {
+                const errors = errorsFor(
+                    '<<run Setting.setValue("muted", true)>>\n',
+                    "not-a-version",
+                );
+
+                expect(errors).to.eql([]);
+            });
+        });
+
         describe("macros", () => {
             it("should error on a macro when the story format's version is earlier than when the macro was added to SugarCube", () => {
                 const header = ":: Passage\n";

@@ -14,7 +14,7 @@ import {
     jQueryGlobals,
 } from "../../host-globals";
 import { StoryFormatParsingState, tokenizeWithScratchState } from "../../types";
-import { extractTwineScriptSymbols } from "../sugarcube-script-symbols";
+import { createTwineScriptExtractor } from "../sugarcube-script-symbols";
 
 /**
  * SugarCube's story-format built-in functions, which a called identifier
@@ -375,7 +375,9 @@ export function tokenizeTwineScriptExpression(
                 desugaredStoryFormatState,
                 {
                     isAssignmentContext: isSetterContext,
-                    extractScriptSymbols: extractTwineScriptSymbols,
+                    extractScriptSymbols: createTwineScriptExtractor({
+                        formatVersion: storyFormatState.formatVersion,
+                    }),
                 },
             ),
         // Adjust semantic token locations and (if needed) text
@@ -458,6 +460,17 @@ export function tokenizeTwineScriptExpression(
         );
         jsTokens.error.start = offset + sugaredStart;
         jsTokens.error.end = offset + sugaredEnd;
+    }
+    // Diagnostics cover names that desugaring doesn't change, so only their
+    // start needs mapping
+    for (const diagnostic of jsTokens.diagnostics ?? []) {
+        const { sugaredPosition } = getSugaredPositionAndNewText(
+            diagnostic.start,
+            positionMapping,
+        );
+        diagnostic.end =
+            offset + sugaredPosition + diagnostic.end - diagnostic.start;
+        diagnostic.start = offset + sugaredPosition;
     }
 
     return jsTokens;

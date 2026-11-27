@@ -48,6 +48,7 @@ export const DiagnosticCodes = {
     ChapbookUnknownModifier: "unknown-modifier",
     ChapbookVariableShadowedByBrowser: "chapbook-variable-shadowed-by-browser",
     // SugarCube
+    SugarCubeApiNotAvailable: "api-not-available",
     SugarCubeDeprecatedSpecialPassage: "deprecated-special-passage",
     SugarCubeDeprecatedTag: "deprecated-tag",
     SugarCubeEitherDataPassageOrHref: "either-data-passage-or-href",

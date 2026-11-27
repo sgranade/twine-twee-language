@@ -271,6 +271,11 @@ export interface StoryFormatParsingState {
      * story-format built-ins the format wants excluded.
      */
     hostGlobals?: ReadonlySet<string>;
+    /**
+     * The project's story format version, if known, for checks of APIs
+     * that version doesn't have.
+     */
+    formatVersion?: string;
 }
 
 /**
@@ -318,6 +323,7 @@ export function tokenizeWithScratchState<T>(
     const scratchState: StoryFormatParsingState = {
         passageTokens: {},
         hostGlobals: storyFormatState.hostGlobals,
+        formatVersion: storyFormatState.formatVersion,
     };
     const result = tokenize(scratchState);
     for (const t of Object.values(scratchState.passageTokens)) {

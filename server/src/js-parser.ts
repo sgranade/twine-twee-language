@@ -6,6 +6,7 @@ import type * as ESTree from "estree";
 import { DiagnosticSeverity } from "vscode-languageserver";
 import { TextDocument } from "vscode-languageserver-textdocument";
 
+import type { DiagnosticCode } from "@tt3/shared";
 import { improveAcornErrorMessage } from "./acorn-errors";
 import { ParserWithState } from "./acorn-errors/parser-state";
 import { ParseEcmaVersion, ScopeEcmaVersion } from "./ecma-version";
@@ -128,6 +129,17 @@ export interface TokenizedJS {
     variables: JSVariableLabel[];
     properties: JSPropertyLabel[];
     error?: JSDiagnostic;
+    diagnostics?: TokenizedJSDiagnostic[]; // From story-format script extractors
+}
+
+/**
+ * A diagnostic found while tokenizing JavaScript.
+ */
+export interface TokenizedJSDiagnostic {
+    code: DiagnosticCode;
+    message: string;
+    start: number;
+    end: number;
 }
 
 /**
@@ -157,6 +169,16 @@ export interface ScriptPropertyOccurrence extends ValueShape {
 }
 
 /**
+ * A diagnostic found by a format-specific script extractor.
+ */
+export interface ScriptDiagnosticOccurrence {
+    code: DiagnosticCode;
+    message: string;
+    text: string;
+    at: number;
+}
+
+/**
  * Story-format-specific extraction of story variables and properties from script code.
  */
 export type ScriptSymbolExtractor = (context: {
@@ -168,6 +190,7 @@ export type ScriptSymbolExtractor = (context: {
 }) => {
     variables: ScriptVariableOccurrence[];
     properties: ScriptPropertyOccurrence[];
+    diagnostics?: ScriptDiagnosticOccurrence[];
 };
 
 /**
@@ -1923,7 +1946,11 @@ export function tokenizeJavaScript(
         }
 
         // Collect all scope-resolved variables and properties we care about
-        const { variables, properties } = extractScriptSymbols
+        const {
+            variables,
+            properties,
+            diagnostics,
+        }: ReturnType<ScriptSymbolExtractor> = extractScriptSymbols
             ? extractScriptSymbols({
                   ast,
                   text,
@@ -1951,6 +1978,14 @@ export function tokenizeJavaScript(
             tokenized.properties.push(
                 toPropertyLabel(property, offset, document),
             );
+        }
+        if (diagnostics?.length) {
+            tokenized.diagnostics = diagnostics.map((d) => ({
+                code: d.code,
+                message: d.message,
+                start: offset + d.at,
+                end: offset + d.at + d.text.length,
+            }));
         }
     }
 

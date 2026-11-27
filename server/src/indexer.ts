@@ -220,6 +220,7 @@ export function updateScriptFileIndex(
 
     const definitions: ProjSymbol[] = [];
     const symbols: ProjSymbol[] = [];
+    const parseErrors: Diagnostic[] = [];
     parseScriptFile(
         textDocument,
         // We only capture symbol definitions and references
@@ -227,6 +228,10 @@ export function updateScriptFileIndex(
             ...noopCallbacks,
             onSymbolDefinition: (symbol) => definitions.push(symbol),
             onSymbolReference: (symbol) => symbols.push(symbol),
+            onParseError: (error) => {
+                if (error.code !== DiagnosticCodes.IncorrectJavaScript)
+                    parseErrors.push(error);
+            },
         },
         parseLevel,
         index.getStoryData()?.storyFormat,
@@ -235,4 +240,5 @@ export function updateScriptFileIndex(
 
     index.setDefinitions(uri, definitions);
     index.setReferences(uri, collateReferences(symbols));
+    index.setParseErrors(uri, parseErrors);
 }

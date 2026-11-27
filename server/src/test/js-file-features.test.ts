@@ -834,6 +834,19 @@ describe(".js File Story Variable References", () => {
             ).to.eql(["musc"]);
         });
 
+        it("should report a too-new Setting call in a .js file but not its syntax errors", () => {
+            const { index, script } = build(
+                'Setting.addValue("music", {});\nlet = ;\n',
+                "<<if settings.music>><</if>>",
+            );
+
+            expect(
+                index
+                    .getParseErrors(script.uri)
+                    .map((d) => [d.code, script.getText(d.range)]),
+            ).to.eql([["api-not-available", "addValue"]]);
+        });
+
         it("should count a Setting.addToggle in an included script", async () => {
             expect(
                 await neverSetTexts(
