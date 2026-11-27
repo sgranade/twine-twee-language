@@ -181,6 +181,18 @@ export function allBuiltInMacros(): Readonly<Record<string, MacroInfo>> {
 }
 
 /**
+ * Get the list of built-in SugarCube macro definitions.
+ *
+ * Unlike {@link allBuiltInMacros}, two definitions that share a name
+ * both appear here.
+ *
+ * @returns Macro definitions.
+ */
+export function builtInMacroList(): readonly MacroInfo[] {
+    return builtins;
+}
+
+/**
  * Get all SugarCube macro enums.
  *
  * These only apply to custom macros.

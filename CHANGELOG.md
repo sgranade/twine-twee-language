@@ -61,6 +61,7 @@ Four big changes:
 - SugarCube: Now properly handles `;`-separated expressions in TwineScript where legal.
 - SugarCube: Now properly indexes image links.
 - SugarCube: Now properly handles comma-separated lists in `<<unset>>`.
+- SugarCube: The `<<choice>>` macro is now named "choice" and not "actions", whoops.
 
 ## [1.1.5] - 2026 04 12
 

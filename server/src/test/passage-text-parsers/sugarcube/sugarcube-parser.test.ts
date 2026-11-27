@@ -3933,6 +3933,92 @@ describe("SugarCube Parser", () => {
                 ]);
             });
 
+            it("should capture a variable reference for every variable argument to <<actions>>", () => {
+                const references = referencesFor("<<actions $q $r>>");
+
+                expect(references).to.eql([
+                    {
+                        contents: "$q",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(1, 10, 1, 12),
+                        ),
+                        kind: OSugarCubeSymbolKind.Variable,
+                    },
+                    {
+                        contents: "$r",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(1, 13, 1, 15),
+                        ),
+                        kind: OSugarCubeSymbolKind.Variable,
+                    },
+                ]);
+            });
+
+            for (const passage of ['<<actions "a" "b">>', "<<actions a b>>"]) {
+                it(`should capture a passage reference for every passage argument in ${passage}`, () => {
+                    const aStart = passage.lastIndexOf("a");
+                    const bStart = passage.lastIndexOf("b");
+
+                    const references = referencesFor(passage);
+
+                    expect(references).to.eql([
+                        {
+                            contents: "a",
+                            location: Location.create(
+                                "fake-uri",
+                                Range.create(1, aStart, 1, aStart + 1),
+                            ),
+                            kind: TwineSymbolKind.Passage,
+                        },
+                        {
+                            contents: "b",
+                            location: Location.create(
+                                "fake-uri",
+                                Range.create(1, bStart, 1, bStart + 1),
+                            ),
+                            kind: TwineSymbolKind.Passage,
+                        },
+                    ]);
+                });
+            }
+
+            it("should capture a variable reference and no passage reference for a variable argument to <<choice>>", () => {
+                const references = referencesFor("<<choice $q>>");
+
+                expect(references).to.eql([
+                    {
+                        contents: "$q",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(1, 9, 1, 11),
+                        ),
+                        kind: OSugarCubeSymbolKind.Variable,
+                    },
+                ]);
+            });
+
+            for (const passage of [
+                '<<choice "Next">>',
+                '<<choice "Next" "text">>',
+            ]) {
+                it(`should capture a passage reference only for the passage name in ${passage}`, () => {
+                    const references = referencesFor(passage);
+
+                    expect(references).to.eql([
+                        {
+                            contents: "Next",
+                            location: Location.create(
+                                "fake-uri",
+                                Range.create(1, 10, 1, 14),
+                            ),
+                            kind: TwineSymbolKind.Passage,
+                        },
+                    ]);
+                });
+            }
+
             it("should capture only a variable reference for a variable link target", () => {
                 const references = referencesFor("<<link [[x|$q]]>><</link>>");
 

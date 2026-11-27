@@ -33,7 +33,7 @@ export const actionsMacro: MacroInfo = {
 };
 
 export const choiceMacro: MacroInfo = {
-    name: "actions",
+    name: "choice",
     arguments: ["passage |+ text", "link", "image"],
     syntax: "<<choice passageName [linkText]>>\n<<choice linkMarkup>>\n<<choice imageMarkup>>",
     description:

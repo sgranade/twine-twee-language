@@ -43,6 +43,14 @@ describe("SugarCube Macros", () => {
     });
 
     describe("built-in macros", () => {
+        // Since I managed to copy/paste a macro def and not change its name...
+        it("should not have two built-in macros with the same name", () => {
+            const names = uut.builtInMacroList().map((m) => m.name);
+            const duplicates = names.filter((n, i) => names.indexOf(n) !== i);
+
+            expect(duplicates).to.be.empty;
+        });
+
         describe("widget", () => {
             it("should capture a macro definition symbol", () => {
                 const callbacks = new MockCallbacks();
