@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 
 import { CustomCommands } from "./constants";
+import { codesToDisableGlobally } from "./global-disable";
 
 /**
  * Code action provider to disable diagnostics globally.
@@ -15,21 +16,19 @@ export class DisableDiagnosticCodeActionProvider
     ): vscode.CodeAction[] {
         const actions: vscode.CodeAction[] = [];
 
-        for (const diagnostic of context.diagnostics) {
-            if (typeof diagnostic.code === "string") {
-                const action = new vscode.CodeAction(
-                    `Disable ${diagnostic.code} globally`,
-                    vscode.CodeActionKind.QuickFix,
-                );
-                action.command = {
-                    command: CustomCommands.DisableDiagnosticGlobally,
-                    title: `Disable ${diagnostic.code} globally`,
-                    arguments: [diagnostic.code],
-                };
-                // Don't attach the diagnostic to it or else it'll show above
-                // the language servers' diagnostic-specific quick actions
-                actions.push(action);
-            }
+        for (const code of codesToDisableGlobally(context.diagnostics)) {
+            const action = new vscode.CodeAction(
+                `Disable ${code} globally`,
+                vscode.CodeActionKind.QuickFix,
+            );
+            action.command = {
+                command: CustomCommands.DisableDiagnosticGlobally,
+                title: `Disable ${code} globally`,
+                arguments: [code],
+            };
+            // Don't attach the diagnostic to it or else it'll show above
+            // the language servers' diagnostic-specific quick actions
+            actions.push(action);
         }
 
         return actions;

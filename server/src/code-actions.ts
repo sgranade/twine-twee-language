@@ -6,9 +6,9 @@ import {
     TextEdit,
 } from "vscode-languageserver";
 
-import { DisableDiagnosticTag, isDiagnosticCode } from "@tt3/shared";
-import { Passage } from "./project-index";
-import { Label, TwineDiagnostic } from "./types";
+import { DisableDiagnosticTag, isTwineDiagnostic } from "@tt3/shared";
+import { Passage, ProjectIndex } from "./project-index";
+import { Label } from "./types";
 
 /**
  * Generate a position at the end of a label.
@@ -21,13 +21,14 @@ function positionAfterLabel(label: Label): Position {
 }
 
 /**
- * Generate code actions for the extension.
+ * Generate diagnostic-disabling actions for a passage
+ * .
  * @param uri Document URI.
  * @param passage Passage that contains the diagnostics.
  * @param diagnostics Diagnostics from that passage.
- * @returns
+ * @returns Code actions.
  */
-export function generateCodeActions(
+function generateCodeActions(
     uri: string,
     passage: Passage,
     diagnostics: Diagnostic[],
@@ -59,12 +60,7 @@ export function generateCodeActions(
         }
     }
 
-    for (const d of diagnostics.filter(
-        (d) =>
-            d.source === "Twine" &&
-            typeof d.code === "string" &&
-            isDiagnosticCode(d.code),
-    ) as TwineDiagnostic[]) {
+    for (const d of diagnostics.filter(isTwineDiagnostic)) {
         let editText: string;
         if (tagAction === "create") {
             editText = ` [${DisableDiagnosticTag} ${d.code}]`;
@@ -89,4 +85,26 @@ export function generateCodeActions(
     }
 
     return actions;
+}
+
+/**
+ * Generate code actions for diagnostics at a position in a document.
+ *
+ * @param uri Document URI.
+ * @param position Position the actions were requested at.
+ * @param diagnostics Diagnostics at that position.
+ * @param projectIndex Project index.
+ * @returns Code actions.
+ */
+export function getCodeActionsAt(
+    uri: string,
+    position: Position,
+    diagnostics: Diagnostic[],
+    projectIndex: ProjectIndex,
+): CodeAction[] {
+    const passage = projectIndex.getPassageAt(uri, position);
+    if (passage === undefined) {
+        return [];
+    }
+    return generateCodeActions(uri, passage, diagnostics);
 }

@@ -659,6 +659,7 @@ export function startClient(context: vscode.ExtensionContext) {
                 { language: "twee3" },
                 { language: "twee3-chapbook-2" },
                 { language: "twee3-sugarcube-2" },
+                { language: "javascript" }, // For story script files & included scripts
             ],
             new DisableDiagnosticCodeActionProvider(),
             {

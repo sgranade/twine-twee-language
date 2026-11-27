@@ -11,6 +11,7 @@ import {
     DiagnosticCodes,
     DisableDiagnosticTag,
     isDiagnosticCode,
+    TwineDiagnosticSource,
 } from "@tt3/shared";
 import type { ProjectIndex, References } from "./project-index";
 import { Label, TwineDiagnostic } from "./types";
@@ -371,7 +372,7 @@ export function createDiagnostic(
             end: textDocument.positionAt(end),
         },
         message: message ?? DiagnosticMetadata[code].message,
-        source: "Twine",
+        source: TwineDiagnosticSource,
     };
 
     return diagnostic;
@@ -394,7 +395,7 @@ export function createDiagnosticFromRange(
         severity: DiagnosticMetadata[code].severity ?? DiagnosticSeverity.Error,
         range: range,
         message: message ?? DiagnosticMetadata[code].message,
-        source: "Twine",
+        source: TwineDiagnosticSource,
     };
 
     return diagnostic;

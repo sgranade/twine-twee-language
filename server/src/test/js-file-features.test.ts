@@ -1120,4 +1120,54 @@ describe(".js File Story Variable References", () => {
             });
         });
     });
+
+    describe("Chapbook script diagnostics", () => {
+        for (const role of ["story-script", "included-script"] as const) {
+            describe(`with role ${role}`, () => {
+                function parseErrors(js: string) {
+                    const { index, script } = build(js, "Hi.", {
+                        format: "Chapbook",
+                        formatVersion: "2.0.0",
+                        role,
+                    });
+                    return index
+                        .getParseErrors(script.uri)
+                        .map((d) => [d.code, script.getText(d.range)]);
+                }
+
+                it("should report an engine.extend version newer than the project's format version", () => {
+                    expect(
+                        parseErrors("engine.extend('3.0.0', () => {});\n"),
+                    ).to.eql([["story-format-versio-mismatch", "3.0.0"]]);
+                });
+
+                it("should report a non-numeric engine.extend version", () => {
+                    expect(
+                        parseErrors("engine.extend('abc', () => {});\n"),
+                    ).to.eql([["non-numeric-engine-extension-version", "abc"]]);
+                });
+
+                it("should report an unknown engine.template function inside engine.extend", () => {
+                    expect(
+                        parseErrors(
+                            "engine.extend('1.0.0', () => { engine.template.foo.add({}); });\n",
+                        ),
+                    ).to.eql([
+                        [
+                            "unknown-engine-template-function",
+                            "engine.template.foo",
+                        ],
+                    ]);
+                });
+
+                it("should report an engine.state.set name shadowed by a host global", () => {
+                    expect(
+                        parseErrors("engine.state.set('document', 1);\n"),
+                    ).to.eql([
+                        ["chapbook-variable-shadowed-by-browser", "document"],
+                    ]);
+                });
+            });
+        }
+    });
 });

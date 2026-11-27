@@ -91,6 +91,11 @@ export type DiagnosticMap<T> = Partial<Record<DiagnosticCode, T>>;
 
 export const DisableDiagnosticTag = "tt3-disable";
 
+/**
+ * The `source` for diagnostics from this extension.
+ */
+export const TwineDiagnosticSource = "Twine";
+
 // A set of the codes for quick lookup
 export const diagnosticCodeSet: ReadonlySet<DiagnosticCode> = new Set(
     Object.values(DiagnosticCodes),
@@ -103,4 +108,23 @@ export const diagnosticCodeSet: ReadonlySet<DiagnosticCode> = new Set(
  */
 export function isDiagnosticCode(code: string): code is DiagnosticCode {
     return diagnosticCodeSet.has(code as DiagnosticCode);
+}
+
+/**
+ * Is a diagnostic one of this extension's w/a known diagnostic code?
+ *
+ * Only these diagnostics can be disabled, either for a passage or in
+ * `tt3.disabledDiagnostics`. Other extensions (such as ESLint) publish
+ * diagnostics with codes that mean nothing to this one.
+ * @param diagnostic Diagnostic to check.
+ * @returns True if the diagnostic is this extension's and its code is known.
+ */
+export function isTwineDiagnostic<
+    T extends { source?: string; code?: unknown },
+>(diagnostic: T): diagnostic is T & { code: DiagnosticCode } {
+    return (
+        diagnostic.source === TwineDiagnosticSource &&
+        typeof diagnostic.code === "string" &&
+        isDiagnosticCode(diagnostic.code)
+    );
 }
