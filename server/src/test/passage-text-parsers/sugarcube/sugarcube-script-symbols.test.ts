@@ -584,10 +584,105 @@ describe("SugarCube Script Symbols", () => {
         it("should not report optional calls or member reads", () => {
             expect(
                 extract(
-                    "Save.browser.slot.save?.(); if (Fullscreen.request) {} const f = Story.filter;",
-                    { formatVersion: "2.36.1" },
+                    "Save.metadata.entries?.(); if (Fullscreen.request) {} const f = Story.filter;",
+                    { formatVersion: "2.35.0" },
                 ).diagnostics,
             ).to.eql([]);
+        });
+
+        describe("optional chains", () => {
+            for (const [call, formatVersion] of [
+                ["Save.browser?.slot.save()", "2.36.1"],
+                ["SugarCube.Save.browser?.auto.load()", "2.36.1"],
+                ["State.metadata.entries?.()", "2.35.0"],
+                ["SugarCube.Fullscreen?.request()", "2.30.0"],
+                ["window.SugarCube.Fullscreen?.request()", "2.30.0"],
+            ]) {
+                it(`should not report ${call} at ${formatVersion}, where ?. follows the first missing part`, () => {
+                    expect(
+                        extract(`${call};`, { formatVersion }).diagnostics,
+                    ).to.eql([]);
+                });
+            }
+
+            for (const [call, path, method, formatVersion, since] of [
+                // State.metadata exists, so calling the missing entries throws
+                [
+                    "State.metadata?.entries()",
+                    "State.metadata.entries",
+                    "entries",
+                    "2.35.0",
+                    "2.36.0",
+                ],
+                // Save is never undefined, so reading .slot of the missing
+                // Save.browser throws
+                [
+                    "Save?.browser.slot.save()",
+                    "Save.browser.slot.save",
+                    "save",
+                    "2.36.1",
+                    "2.37.0",
+                ],
+                // Reading .slot of the missing Save.browser throws before
+                // either ?. is reached
+                [
+                    "Save.browser.slot?.save()",
+                    "Save.browser.slot.save",
+                    "save",
+                    "2.36.1",
+                    "2.37.0",
+                ],
+                [
+                    "Save.browser.slot.save?.()",
+                    "Save.browser.slot.save",
+                    "save",
+                    "2.36.1",
+                    "2.37.0",
+                ],
+                // A missing bare root throws a ReferenceError whatever ?.
+                // follows it
+                [
+                    "Fullscreen?.request()",
+                    "Fullscreen.request",
+                    "request",
+                    "2.30.0",
+                    "2.31.0",
+                ],
+                [
+                    "Fullscreen.request?.()",
+                    "Fullscreen.request",
+                    "request",
+                    "2.30.0",
+                    "2.31.0",
+                ],
+                [
+                    'Template?.add("t", f)',
+                    "Template.add",
+                    "add",
+                    "2.28.0",
+                    "2.29.0",
+                ],
+                // Reading .request of the missing SugarCube.Fullscreen throws
+                [
+                    "window.SugarCube.Fullscreen.request?.()",
+                    "Fullscreen.request",
+                    "request",
+                    "2.30.0",
+                    "2.31.0",
+                ],
+            ]) {
+                it(`should report ${call} at ${formatVersion} on the method name`, () => {
+                    expect(
+                        extract(`${call};`, { formatVersion }).diagnostics,
+                    ).to.eql([
+                        [
+                            "api-not-available",
+                            method,
+                            `\`${path}\` isn't available until SugarCube version ${since} but your StoryFormat version is ${formatVersion}`,
+                        ],
+                    ]);
+                });
+            }
         });
 
         it("should never report methods from 2.0.0 or names not in the table", () => {

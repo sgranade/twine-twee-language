@@ -81,6 +81,7 @@ const browserSaveMethods = [
 // "Introduced" lines in SugarCube 2.38.0-alpha.10's documentation (commit
 // ba17b12) minus APIs introduced in 2.38.0 since that's in
 // pre-release (2026/11/27).
+// N.B. This and `apiObjectIntroducedIn` need to be kept synchronized
 const apiIntroducedIn: ReadonlyMap<string, string> = new Map(
     (
         [
@@ -206,6 +207,33 @@ const apiIntroducedIn: ReadonlyMap<string, string> = new Map(
     ),
 );
 
+// SugarCube version each API object and namespace was introduced in, for
+// those introduced after 2.0.0, keyed by full path (`Save.browser.slot`).
+// I'm keeping this separate instead of auto-generated from `apiIntroducedIn`,
+// because that leaves out 2.0.0 members (since we don't have history info for
+// them), so has to be synchronized with that const.
+const apiObjectIntroducedIn: ReadonlyMap<string, string> = new Map([
+    ["LoadScreen", "2.15.0"],
+    ["UIBar", "2.17.0"],
+    ["SimpleAudio", "2.28.0"],
+    ["SimpleAudio.tracks", "2.28.0"],
+    ["SimpleAudio.groups", "2.28.0"],
+    ["SimpleAudio.lists", "2.28.0"],
+    ["Template", "2.29.0"],
+    ["State.metadata", "2.29.0"],
+    ["State.prng", "2.29.0"],
+    ["Fullscreen", "2.31.0"],
+    ["Save.onLoad", "2.36.0"],
+    ["Save.onSave", "2.36.0"],
+    // `Serial.createReviver` is its only member
+    ["Serial", "2.37.0"],
+    ["Save.browser", "2.37.0"],
+    ["Save.browser.auto", "2.37.0"],
+    ["Save.browser.slot", "2.37.0"],
+    ["Save.disk", "2.37.0"],
+    ["Save.base64", "2.37.0"],
+]);
+
 type RootTracer = ReturnType<typeof createRootTracer>;
 
 /**
@@ -257,20 +285,30 @@ function createRootTracer(
             : undefined;
     };
 
-    // Full API path a member expression names (`Save.browser.slot.save`),
-    // if it's a static member path rooted at a SugarCube global
-    const sugarCubeApiPath = (
+    // The API path a member expression names (`Save.browser.slot.save`), if
+    // it's a static member path rooted at a SugarCube global.
+    const sugarCubeApiChain = (
         node: acorn.MemberExpression,
-    ): string | undefined => {
+    ):
+        | { names: string[]; optional: boolean[]; bareRoot: boolean }
+        | undefined => {
         const names: string[] = [];
+        const optional: boolean[] = [];
         let current: acorn.Node = node;
         while (current.type === "MemberExpression") {
             const member = current as acorn.MemberExpression;
             const name = memberName(member);
             if (!name) return undefined;
             names.unshift(name.name);
+            optional.unshift(member.optional);
             const root = sugarCubeGlobalName(member.object);
-            if (root) return [root, ...names].join(".");
+            if (root) {
+                return {
+                    names: [root, ...names],
+                    optional,
+                    bareRoot: member.object.type === "Identifier",
+                };
+            }
             current = member.object;
         }
         return undefined;
@@ -408,7 +446,7 @@ function createRootTracer(
     return {
         isUnbound,
         isSugarCubeGlobal,
-        sugarCubeApiPath,
+        sugarCubeApiChain,
         rootSigil,
         statePathOf: pathThrough(stateRootPath),
         objectPathOf: pathThrough(objectRootPath),
@@ -434,44 +472,76 @@ function createRootTracer(
  */
 function findUnavailableApiCalls(
     ast: acorn.Node,
-    { sugarCubeApiPath, memberName, isUnbound }: RootTracer,
+    { sugarCubeApiChain, memberName, isUnbound }: RootTracer,
     formatVersion: string | undefined,
 ): ScriptDiagnosticOccurrence[] {
     const diagnostics: ScriptDiagnosticOccurrence[] = [];
     if (formatVersion === undefined) return diagnostics;
 
-    // The API path a call names and the name to locate it on, if the call
-    // is to a SugarCube API-object method or global function
-    const apiCall = (
+    const isTooNew = (since: string | undefined): since is string =>
+        since !== undefined && isVersionBefore(formatVersion, since);
+
+    // The SugarCube API path a call names, the name to locate it on, and the
+    // version it was introduced in, if the call is to a SugarCube API-object
+    // method or global function that the format version lacks and that isn't
+    // guarded by an optional chain (`.?`)
+    const unavailableApiCall = (
         node: acorn.CallExpression,
-    ): { path: string; name: StaticName } | undefined => {
+    ): { path: string; name: StaticName; since: string } | undefined => {
         const callee = node.callee;
         if (callee.type === "Identifier") {
-            // A global function: SugarCube doesn't export these on
-            // `SugarCube`, so only a bare unbound name reaches one. An
-            // optional call counts, since `?.` can't guard a missing name.
-            return isUnbound(callee)
-                ? { path: callee.name, name: callee }
+            // A global function. SugarCube doesn't export these on
+            // `SugarCube`, so you only get there by a bare unbound name.
+            const since = apiIntroducedIn.get(callee.name);
+            return isUnbound(callee) && isTooNew(since)
+                ? { path: callee.name, name: callee, since }
                 : undefined;
         }
-        // An optional method call is feature detection
-        if (node.optional || callee.type !== "MemberExpression")
-            return undefined;
+        if (callee.type !== "MemberExpression") return undefined;
+        // A method's callee must be a static member path rooted at a
+        // SugarCube global (`Save`, `SugarCube.Save` or
+        // `window.SugarCube.Save`). Bare member reads aren't reported, and
+        // neither is a call guarded by an optional chain (`Save.browser?.slot.save()`).
+        // Bare member reads aren't reported.
+
         const name = memberName(callee);
-        const path = name && sugarCubeApiPath(callee);
-        return path ? { path, name } : undefined;
+        const chain = name && sugarCubeApiChain(callee);
+        if (!chain) return undefined;
+        const { names, optional, bareRoot } = chain;
+        const path = names.join(".");
+        const since = apiIntroducedIn.get(path);
+        if (!isTooNew(since)) return undefined;
+
+        // `?.` short-circuits only on the first missing segment, the
+        // `undefined` one. The method itself is missing if nothing before
+        // it is.
+        const last = names.length - 1;
+        let firstMissing = 0;
+        while (
+            firstMissing < last &&
+            !isTooNew(
+                apiObjectIntroducedIn.get(
+                    names.slice(0, firstMissing + 1).join("."),
+                ),
+            )
+        ) {
+            firstMissing++;
+        }
+        const reported = { path, name, since };
+        // A missing bare root throws a ReferenceError before any `?.`
+        if (firstMissing === 0 && bareRoot) return reported;
+        // A missing method is guarded by an optional call
+        if (firstMissing === last) return node.optional ? undefined : reported;
+        // A missing namespace is guarded by an optional read from it
+        return optional[firstMissing] ? undefined : reported;
     };
 
     acornWalk.full(ast, (rawNode) => {
         const node = rawNode as acorn.AnyNode;
-        // A method's callee must be a static member path rooted at a
-        // SugarCube global (`Save`, `SugarCube.Save` or
-        // `window.SugarCube.Save`). Optional method calls (`Setting.addValue?.(…)`)
-        // and bare member reads aren't reported.
         if (node.type !== "CallExpression") return;
-        const call = apiCall(node);
-        const since = call && apiIntroducedIn.get(call.path);
-        if (!since || !isVersionBefore(formatVersion, since)) return;
+        const call = unavailableApiCall(node);
+        if (!call) return;
+        const { since } = call;
         diagnostics.push({
             code: DiagnosticCodes.SugarCubeApiNotAvailable,
             message: `\`${call.path}\` isn't available until SugarCube version ${since} but your StoryFormat version is ${formatVersion}`,

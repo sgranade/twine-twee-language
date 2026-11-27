@@ -5780,6 +5780,30 @@ describe("SugarCube Parser", () => {
                 expect(errors[0].range).to.eql(Range.create(1, 25, 1, 31));
             });
 
+            it("should not error on a too-new method that an optional chain guards in a <<run>> macro", () => {
+                const errors = errorsFor(
+                    "<<run Save.browser?.slot.save(0)>>\n",
+                    "2.36.1",
+                );
+
+                expect(errors).to.eql([]);
+            });
+
+            it("should error on a too-new method that an optional chain doesn't guard in a <<run>> macro", () => {
+                const errors = errorsFor(
+                    "<<run State.metadata?.entries()>>\n",
+                    "2.35.0",
+                );
+
+                expect(errors.length).to.equal(1);
+                expect(errors[0].code).to.equal("api-not-available");
+                expect(errors[0].message).to.equal(
+                    "`State.metadata.entries` isn't available until SugarCube version 2.36.0 but your StoryFormat version is 2.35.0",
+                );
+                // `entries` is at 22-29
+                expect(errors[0].range).to.eql(Range.create(1, 22, 1, 29));
+            });
+
             it("should not error on a too-new method without a format version", () => {
                 const errors = errorsFor("<<run Save.browser.slot.save(0)>>\n");
 
