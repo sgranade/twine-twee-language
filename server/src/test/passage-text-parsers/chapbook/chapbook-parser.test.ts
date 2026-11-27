@@ -4356,6 +4356,54 @@ describe("Chapbook Parser", () => {
     });
 
     describe("errors", () => {
+        describe("text after an expression", () => {
+            // Errors from parsing a passage after a `:: Passage` header line
+            const errorsFor = (passage: string) => {
+                const header = ":: Passage\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const parser = uut.getChapbookParser(undefined);
+                parser?.parsePassageText(passage, header.length, state);
+                return callbacks.errors;
+            };
+
+            it("should report text after a vars section value as a syntax error", () => {
+                const errors = errorsFor("x: 1 2\n--\nhi");
+
+                expect(errors.length).to.equal(1);
+                expect(errors[0].severity).to.eql(DiagnosticSeverity.Error);
+                expect(errors[0].range).to.eql(Range.create(1, 5, 1, 6));
+            });
+
+            it("should report text after a vars section condition as a syntax error", () => {
+                const errors = errorsFor("x (a b): 1\n--\nhi");
+
+                expect(errors.length).to.equal(1);
+                expect(errors[0].severity).to.eql(DiagnosticSeverity.Error);
+                expect(errors[0].range).to.eql(Range.create(1, 5, 1, 6));
+            });
+
+            it("should report text after an insert property value as a syntax error", () => {
+                const errors = errorsFor("{embed passage: 'x' 2}");
+
+                // `2` is at 20-21
+                expect(errors.map((e) => e.range)).to.deep.include(
+                    Range.create(1, 20, 1, 21),
+                );
+            });
+
+            it("should report text after an [if] condition as a syntax error", () => {
+                const errors = errorsFor("[if a b + 1]\nhi");
+
+                expect(errors.length).to.equal(1);
+                expect(errors[0].severity).to.eql(DiagnosticSeverity.Error);
+                expect(errors[0].range).to.eql(Range.create(1, 6, 1, 11));
+            });
+        });
+
         describe("vars section", () => {
             it("should warn on a missing colon", () => {
                 const header = ":: Passage\n";

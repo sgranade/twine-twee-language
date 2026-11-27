@@ -3950,6 +3950,244 @@ describe("SugarCube Parser", () => {
         });
     });
 
+    describe("TwineScript statements", () => {
+        // References (without macro references) and errors from parsing a
+        // passage after a `:: Passage` header line
+        const parse = (passage: string, formatVersion?: string) => {
+            const header = ":: Passage\n";
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                uri: "fake-uri",
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            if (formatVersion !== undefined) {
+                state.storyFormat = { format: "SugarCube", formatVersion };
+            }
+            const parser = uut.getSugarCubeParser(undefined);
+            parser?.parsePassageText(passage, header.length, state);
+            return {
+                references: callbacks.references.filter(
+                    (r) =>
+                        r.kind !== OSugarCubeSymbolKind.KnownMacro &&
+                        r.kind !== OSugarCubeSymbolKind.UnknownMacro,
+                ),
+                errors: callbacks.errors,
+                tokens: callbacks.tokens,
+            };
+        };
+
+        it("should index and diagnose every statement in a <<set>> macro", () => {
+            const { references, errors } = parse(
+                '<<set $a to "x"; $b to Setting.getValue("v")>>',
+                "2.36.1",
+            );
+
+            expect(
+                references
+                    .filter((r) => r.kind === OSugarCubeSymbolKind.VariableSet)
+                    .map((r) => r.contents),
+            ).to.eql(["$a", "$b"]);
+            expect(errors.length).to.equal(1);
+            expect(errors[0].code).to.equal("api-not-available");
+            expect(errors[0].severity).to.eql(DiagnosticSeverity.Error);
+            expect(errors[0].range).to.eql(Range.create(1, 31, 1, 39));
+        });
+
+        it("should index every statement in a <<run>> macro", () => {
+            const { references } = parse("<<run $a.push(1); $b.push(2)>>");
+
+            expect(references.map((r) => r.contents)).to.have.members([
+                "$a",
+                "$a.push",
+                "$b",
+                "$b.push",
+            ]);
+        });
+
+        for (const passage of [
+            "<<if $a; $b>>x<</if>>",
+            "<<if 0>><<elseif $a; $b>>x<</if>>",
+            "<<print $a; $b>>",
+            "<<= $a; $b>>",
+            "<<- $a; $b>>",
+            "<<switch $a; $b>><</switch>>",
+        ]) {
+            it(`should read every statement in ${passage}`, () => {
+                const { references, errors } = parse(passage);
+
+                expect(references.map((r) => [r.contents, r.kind])).to.eql([
+                    ["$a", OSugarCubeSymbolKind.Variable],
+                    ["$b", OSugarCubeSymbolKind.Variable],
+                ]);
+                expect(errors).to.be.empty;
+            });
+        }
+
+        for (const passage of [
+            "[[go|P][$a to 1; $b to 2]]",
+            "[img[pic.png][P][$a to 1; $b to 2]]",
+            '<a data-setter="$a to 1; $b to 2">x</a>',
+        ]) {
+            it(`should assign every statement in ${passage}`, () => {
+                const { references, errors } = parse(passage);
+
+                expect(
+                    references
+                        .filter(
+                            (r) => r.kind === OSugarCubeSymbolKind.VariableSet,
+                        )
+                        .map((r) => r.contents),
+                ).to.eql(["$a", "$b"]);
+                expect(errors).to.be.empty;
+            });
+        }
+
+        it("should index a variable image source", () => {
+            const { references } = parse("[img[$src][P][$a to 1]]");
+
+            expect(
+                references.map((r) => [r.contents, r.location.range]),
+            ).to.have.deep.members([
+                ["$src", Range.create(1, 5, 1, 9)],
+                ["P", Range.create(1, 11, 1, 12)],
+                ["$a", Range.create(1, 14, 1, 16)],
+            ]);
+        });
+
+        for (const passage of [
+            "<<link `$a; $b`>><</link>>",
+            '<<textbox `$a; $b` "">>',
+            "<<cycle '_c'>><<option `$a; $b`>><</cycle>>",
+            "<<unknownmacro `$a; $b`>>",
+        ]) {
+            it(`should index every statement in a back-ticked argument in ${passage}`, () => {
+                const { references } = parse(passage);
+
+                expect(references.map((r) => r.contents)).to.include("$b");
+            });
+        }
+
+        it("should report a syntax error that starts at text after a complete statement", () => {
+            const { errors } = parse("<<set $a to 1 $b>>");
+
+            expect(errors.length).to.equal(1);
+            expect(errors[0].severity).to.eql(DiagnosticSeverity.Error);
+            expect(errors[0].range.start).to.eql({ line: 1, character: 14 });
+        });
+
+        it("should not report an error for a trailing semicolon", () => {
+            const { errors } = parse("<<set $a to 1;>>");
+
+            expect(errors).to.be.empty;
+        });
+
+        it("should report a syntax error for code that starts with an object literal", () => {
+            const { errors } = parse("<<print {a: 1, b: 2}>>");
+
+            expect(errors.length).to.equal(1);
+            expect(errors[0].severity).to.eql(DiagnosticSeverity.Error);
+        });
+
+        it("should not report an error for an object literal <<for>> range collection", () => {
+            const { errors } = parse(
+                "<<for _k, _v range {a: 1, b: 2}>><</for>>",
+            );
+
+            expect(errors).to.be.empty;
+        });
+
+        it("should index every statement in a <<for>> range collection", () => {
+            const { references, errors } = parse(
+                "<<for _v range $a; $b>><</for>>",
+            );
+
+            expect(references.map((r) => r.contents)).to.eql([
+                "_v",
+                "$a",
+                "$b",
+            ]);
+            expect(errors).to.be.empty;
+        });
+
+        it("should report text after the expression in an expression-only site as a syntax error", () => {
+            const { errors } = parse("<<for _v range {a: 1} $b + 1 >><</for>>");
+
+            expect(errors.length).to.equal(1);
+            expect(errors[0].severity).to.eql(DiagnosticSeverity.Error);
+            expect(errors[0].range).to.eql(Range.create(1, 22, 1, 28));
+        });
+
+        it("should locate references, semantic tokens and diagnostics on both sides of a semicolon", () => {
+            const { references, errors, tokens } = parse(
+                '<<set $x to $y and $z; $w to Setting.getValue("v")>>',
+                "2.36.1",
+            );
+
+            expect(
+                references.map((r) => [r.contents, r.location.range]),
+            ).to.eql([
+                ["$x", Range.create(1, 6, 1, 8)],
+                ["$y", Range.create(1, 12, 1, 14)],
+                ["$z", Range.create(1, 19, 1, 21)],
+                ["$w", Range.create(1, 23, 1, 25)],
+            ]);
+            expect(
+                tokens
+                    .filter((t) => t.line === 1 && t.char >= 15)
+                    .map((t) => [t.char, t.length, t.tokenType]),
+            ).to.include.deep.members([
+                [15, 3, ETokenType.operator], // and
+                [19, 2, ETokenType.variable], // $z
+                [23, 2, ETokenType.variable], // $w
+                [26, 2, ETokenType.operator], // to
+            ]);
+            expect(errors.length).to.equal(1);
+            expect(errors[0].code).to.equal("api-not-available");
+            expect(errors[0].range).to.eql(Range.create(1, 37, 1, 45));
+        });
+
+        it("should keep an assignment in a <<print>> macro a read", () => {
+            const { references } = parse("<<print $x = 1>>");
+
+            expect(references.map((r) => [r.contents, r.kind])).to.eql([
+                ["$x", OSugarCubeSymbolKind.Variable],
+            ]);
+        });
+
+        it("should parse a TwineScript <<script>> body as statements", () => {
+            const { references, errors } = parse(
+                "<<script TwineScript>>$a.push(1); $b.push(2)<</script>>",
+            );
+
+            expect(references.map((r) => r.contents)).to.have.members([
+                "$a",
+                "$a.push",
+                "$b",
+                "$b.push",
+            ]);
+            expect(errors).to.be.empty;
+        });
+
+        for (const passage of [
+            "<<unset $a $b>>",
+            "<<unset $a; $b>>",
+            "<<unset $a, $b>>",
+            "<<unset $a ,; _b>>",
+        ]) {
+            it(`should index every variable in ${passage}`, () => {
+                const { references, errors } = parse(passage);
+                const b = passage.endsWith("_b>>") ? "_b" : "$b";
+
+                expect(references.map((r) => r.contents)).to.eql(["$a", b]);
+                expect(references[1].location.range.start.character).to.equal(
+                    passage.indexOf(b),
+                );
+                expect(errors).to.be.empty;
+            });
+        }
+    });
+
     describe("block comments", () => {
         it("should produce semantic tokens for a /* */ block comment", () => {
             const header = ":: Passage\n";

@@ -1,4 +1,4 @@
-import { MacroInfo, parseArgsAsTwineScriptExpression } from "./types";
+import { MacroInfo, parseArgsAsTwineScript } from "./types";
 
 export const runMacro: MacroInfo = {
     name: "run",
@@ -7,13 +7,9 @@ export const runMacro: MacroInfo = {
         "Runs given expression.\n\n*Functionally identical to `<<set>>`. Intended to be mnemonically better for uses where the expression is arbitrary code, rather than variables to set—i.e., `<<run>>` to run code, `<<set>>` to set variables.*",
     since: "2.0.0",
     parseArgs: (args, argsIndex, state, sugarcubeState) =>
-        parseArgsAsTwineScriptExpression(
-            args,
-            argsIndex,
-            state,
-            sugarcubeState,
-            { isSetterContext: true },
-        ),
+        parseArgsAsTwineScript(args, argsIndex, state, sugarcubeState, {
+            isSetterContext: true,
+        }),
 };
 
 export const scriptMacro: MacroInfo = {

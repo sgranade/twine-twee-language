@@ -50,7 +50,7 @@ import * as SC2Patterns from "./sc2/sc2-patterns";
 import {
     startIsVarRegexp,
     sugarCubeExcludedGlobals,
-    tokenizeTwineScriptExpression,
+    tokenizeTwineScript,
 } from "./sc2/sc2-twinescript";
 import {
     Arg as T3LTArg,
@@ -177,7 +177,7 @@ function parseBareVariables(
 ): void {
     for (const m of passageText.matchAll(bareVariableRegex)) {
         createVariableAndPropertyReferences(
-            tokenizeTwineScriptExpression(
+            tokenizeTwineScript(
                 m[0],
                 m.index + textIndex,
                 state.textDocument,
@@ -291,7 +291,7 @@ function parseAndRemoveTwineLinks(
     // Twine links in SugarCube can include TwineScript, which can have all
     // kinds of array reference shenanigans, so we can't do a simple regex
     // search. Instead, iterate over all possible link-opening sigils
-    for (const m of passageText.matchAll(/\[\[[^]/g)) {
+    for (const m of passageText.matchAll(/\[(?:[<>]?img)?\[[^]/gi)) {
         const markupData = parseSugarCubeTwineLink(
             passageText,
             m.index,
@@ -301,8 +301,8 @@ function parseAndRemoveTwineLinks(
         );
         if (
             markupData.error === undefined &&
-            markupData.isLink &&
-            markupData.link !== undefined
+            (markupData.isImage ||
+                (markupData.isLink && markupData.link !== undefined))
         ) {
             // Blank out the link so any variables in it aren't re-parsed
             passageText =
@@ -347,12 +347,12 @@ function tokenizeReceiverTarget(
     const tokens = tokenizeWithScratchState(
         sugarcubeState,
         (scratchState) =>
-            tokenizeTwineScriptExpression(
+            tokenizeTwineScript(
                 `${receiver}={}`,
                 at,
                 state.textDocument,
                 scratchState,
-                { isSetterContext: true },
+                { isSetterContext: true, isProgram: false },
             ),
         (t, tokens) =>
             tokens.error === undefined && t.at < end ? t : undefined,
@@ -545,7 +545,7 @@ function parseMacroArgs(
                     }
                     // The expression's value names the receiver at runtime,
                     // so everything in it is a read
-                    const tokens = tokenizeTwineScriptExpression(
+                    const tokens = tokenizeTwineScript(
                         receiver,
                         receiverAt,
                         state.textDocument,
@@ -581,7 +581,7 @@ function parseMacroArgs(
                     // The passage name is only known at runtime so
                     // there's no passage reference
                     createVariableAndPropertyReferences(
-                        tokenizeTwineScriptExpression(
+                        tokenizeTwineScript(
                             sc2Token.text,
                             sc2Token.at,
                             state.textDocument,
@@ -603,7 +603,7 @@ function parseMacroArgs(
             } else if (t3ltArg.type === T3LTArgType.Expression) {
                 // We got a `backtick expression` (which we parse regardless of what kind of T3LT arg type it mapped to)
                 createVariableAndPropertyReferences(
-                    tokenizeTwineScriptExpression(
+                    tokenizeTwineScript(
                         sc2Token.text.slice(1, -1), // Remove the backticks
                         sc2Token.at + 1,
                         state.textDocument,
@@ -671,7 +671,7 @@ function parseMacroArgs(
                 arg.message,
             );
         } else if (arg.type === MacroParse.Item.Bareword) {
-            let jsTokens = tokenizeTwineScriptExpression(
+            let jsTokens = tokenizeTwineScript(
                 arg.text,
                 arg.at,
                 state.textDocument,
@@ -700,7 +700,7 @@ function parseMacroArgs(
         } else if (arg.type === MacroParse.Item.Expression) {
             // TwineScript code inside backticks
             createVariableAndPropertyReferences(
-                tokenizeTwineScriptExpression(
+                tokenizeTwineScript(
                     arg.text.slice(1, -1),
                     arg.at + 1,
                     state.textDocument,
@@ -725,11 +725,12 @@ function parseMacroArgs(
         } else if (arg.type === MacroParse.Item.Container) {
             // Array or object
             createVariableAndPropertyReferences(
-                tokenizeTwineScriptExpression(
+                tokenizeTwineScript(
                     arg.text,
                     arg.at,
                     state.textDocument,
                     sugarcubeState,
+                    { isProgram: false },
                 ),
                 state,
                 sugarcubeState,
@@ -832,7 +833,7 @@ function parseScriptMacro(
 ): void {
     if (isTwinescript) {
         createVariableAndPropertyReferences(
-            tokenizeTwineScriptExpression(
+            tokenizeTwineScript(
                 contents,
                 contentsIndex,
                 state.textDocument,
@@ -1303,7 +1304,7 @@ function parseHtmlAttributesAndDirectives(
                 const isDataSetter = attrName.endsWith("data-setter");
 
                 createVariableAndPropertyReferences(
-                    tokenizeTwineScriptExpression(
+                    tokenizeTwineScript(
                         attrContents,
                         textIndex + attrContentsIndex,
                         state.textDocument,

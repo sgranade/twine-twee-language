@@ -1,6 +1,6 @@
 import { ParsingState } from "../../types";
 import { createVariableAndPropertyReferences } from "../sugarcube-utils";
-import { tokenizeTwineScriptExpression } from "../sc2/sc2-twinescript";
+import { tokenizeTwineScript } from "../sc2/sc2-twinescript";
 import { Parameters } from "../sc2/t3lt-parameters";
 import { MacroLocationInfo, SugarCubeParsingState } from "../types";
 
@@ -132,7 +132,7 @@ export interface MacroInfo {
 }
 
 /**
- * Utility function for macros who parse their arguments as a TwineScript expression.
+ * Utility function for macros who parse their arguments as TwineScript.
  *
  * @param args Unparsed arguments.
  * @param argsIndex Index of the unparsed arguments in the larger document (zero-based).
@@ -143,16 +143,18 @@ export interface MacroInfo {
  * so write-shaped syntax counts as assignment.
  * @returns True to indicate that parsing is complete, or false to let parsing continue.
  */
-export function parseArgsAsTwineScriptExpression(
+export function parseArgsAsTwineScript(
     args: string | undefined,
     argsIndex: number,
     state: ParsingState,
     sugarcubeState: SugarCubeParsingState,
     options: { isSetterContext?: boolean } = {},
 ): boolean {
+    // SugarCube runs the arguments through a bare `eval`, so they're parsed
+    // as a program.
     if (args !== undefined) {
         createVariableAndPropertyReferences(
-            tokenizeTwineScriptExpression(
+            tokenizeTwineScript(
                 args,
                 argsIndex,
                 state.textDocument,

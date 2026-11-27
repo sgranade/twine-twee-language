@@ -1,4 +1,6 @@
-import { MacroInfo, parseArgsAsTwineScriptExpression } from "./types";
+import { tokenizeTwineScript } from "../sc2/sc2-twinescript";
+import { createVariableAndPropertyReferences } from "../sugarcube-utils";
+import { MacroInfo, parseArgsAsTwineScript } from "./types";
 
 export const captureMacro: MacroInfo = {
     name: "capture",
@@ -17,13 +19,9 @@ export const setMacro: MacroInfo = {
         "Sets story `$variables` and temporary `_variables` based on the given expression.",
     since: "2.0.0",
     parseArgs: (args, argsIndex, state, sugarcubeState) =>
-        parseArgsAsTwineScriptExpression(
-            args,
-            argsIndex,
-            state,
-            sugarcubeState,
-            { isSetterContext: true },
-        ),
+        parseArgsAsTwineScript(args, argsIndex, state, sugarcubeState, {
+            isSetterContext: true,
+        }),
 };
 
 export const unsetMacro: MacroInfo = {
@@ -32,5 +30,20 @@ export const unsetMacro: MacroInfo = {
     syntax: "<<unset variableList>>",
     description: "Unsets story `$variables` and temporary `_variables`.",
     since: "2.0.0",
-    parseArgs: parseArgsAsTwineScriptExpression,
+    parseArgs: (args, argsIndex, state, sugarcubeState) => {
+        // SugarCube splits the list on commas, semicolons and whitespace
+        for (const m of (args ?? "").matchAll(/[^\s,;]+/g)) {
+            createVariableAndPropertyReferences(
+                tokenizeTwineScript(
+                    m[0],
+                    argsIndex + m.index,
+                    state.textDocument,
+                    sugarcubeState,
+                ),
+                state,
+                sugarcubeState,
+            );
+        }
+        return true;
+    },
 };

@@ -289,7 +289,7 @@ describe("SugarCube TwineScript", () => {
                 passageTokens: {},
             };
 
-            uut.tokenizeTwineScriptExpression(
+            uut.tokenizeTwineScript(
                 expression,
                 offset,
                 textDocument,
@@ -332,7 +332,7 @@ describe("SugarCube TwineScript", () => {
                 passageTokens: {},
             };
 
-            const result = uut.tokenizeTwineScriptExpression(
+            const result = uut.tokenizeTwineScript(
                 expression,
                 offset,
                 textDocument,
@@ -365,7 +365,7 @@ describe("SugarCube TwineScript", () => {
                 passageTokens: {},
             };
 
-            const result = uut.tokenizeTwineScriptExpression(
+            const result = uut.tokenizeTwineScript(
                 expression,
                 offset,
                 textDocument,
@@ -399,7 +399,7 @@ describe("SugarCube TwineScript", () => {
                 passageTokens: {},
             };
 
-            const result = uut.tokenizeTwineScriptExpression(
+            const result = uut.tokenizeTwineScript(
                 expression,
                 offset,
                 textDocument,
@@ -442,7 +442,7 @@ describe("SugarCube TwineScript", () => {
                 passageTokens: {},
             };
 
-            uut.tokenizeTwineScriptExpression(
+            uut.tokenizeTwineScript(
                 expression,
                 offset,
                 textDocument,
@@ -521,7 +521,7 @@ describe("SugarCube TwineScript", () => {
                 passageTokens: {},
             };
 
-            uut.tokenizeTwineScriptExpression(
+            uut.tokenizeTwineScript(
                 expression,
                 offset,
                 textDocument,
@@ -600,7 +600,7 @@ describe("SugarCube TwineScript", () => {
                 passageTokens: {},
             };
 
-            uut.tokenizeTwineScriptExpression(
+            uut.tokenizeTwineScript(
                 expression,
                 offset,
                 textDocument,
@@ -655,7 +655,7 @@ describe("SugarCube TwineScript", () => {
                 passageTokens: {},
             };
 
-            uut.tokenizeTwineScriptExpression(
+            uut.tokenizeTwineScript(
                 expression,
                 offset,
                 textDocument,
@@ -728,7 +728,7 @@ describe("SugarCube TwineScript", () => {
                 passageTokens: {},
             };
 
-            const result = uut.tokenizeTwineScriptExpression(
+            const result = uut.tokenizeTwineScript(
                 expression,
                 offset,
                 textDocument,
@@ -752,7 +752,7 @@ describe("SugarCube TwineScript", () => {
                 passageTokens: {},
             };
 
-            const result = uut.tokenizeTwineScriptExpression(
+            const result = uut.tokenizeTwineScript(
                 expression,
                 offset,
                 textDocument,
@@ -778,7 +778,7 @@ describe("SugarCube TwineScript", () => {
                 passageTokens: {},
             };
 
-            const result = uut.tokenizeTwineScriptExpression(
+            const result = uut.tokenizeTwineScript(
                 expression,
                 offset,
                 textDocument,
@@ -806,7 +806,7 @@ describe("SugarCube TwineScript", () => {
                 passageTokens: {},
             };
 
-            const result = uut.tokenizeTwineScriptExpression(
+            const result = uut.tokenizeTwineScript(
                 expression,
                 offset,
                 textDocument,

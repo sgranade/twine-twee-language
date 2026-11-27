@@ -1727,6 +1727,52 @@ export function isEveryIdentifierAVariable(
 }
 
 /**
+ * A syntax error for text after a complete expression.
+ */
+class TrailingTextError extends SyntaxError {
+    /**
+     * @param expression The expression before the trailing text.
+     * @param start Start of the trailing text.
+     * @param end End of the trailing text.
+     */
+    constructor(
+        public readonly expression: acorn.Node,
+        public readonly start: number,
+        public readonly end: number,
+    ) {
+        super("Unexpected text after the expression");
+        this.name = "TrailingTextError";
+    }
+}
+
+/**
+ * Find where text after an expression starts, skipping whitespace and comments.
+ *
+ * @param text Text containing the expression.
+ * @param expressionEnd End of the expression in the text.
+ * @param options Acorn options used to parse the expression.
+ * @returns Start of the trailing text, or undefined if there is none.
+ */
+function trailingTextStart(
+    text: string,
+    expressionEnd: number,
+    options: acorn.Options,
+): number | undefined {
+    try {
+        const token = acorn
+            .tokenizer(text.slice(expressionEnd), options)
+            .getToken();
+        return token.type === acorn.tokTypes.eof
+            ? undefined
+            : expressionEnd + token.start;
+    } catch {
+        // The trailing text isn't even a token
+        const m = /\S/.exec(text.slice(expressionEnd));
+        return m === null ? undefined : expressionEnd + m.index;
+    }
+}
+
+/**
  * Parse text as a JavaScript program or expression.
  *
  * This performs strict parsing, and throws an augmented SyntaxError if
@@ -1753,11 +1799,22 @@ export function parseJSStrict(
             ranges: true,
         });
     } else {
-        return ParserWithState.parseExpressionAt(text, 0, {
+        const options: acorn.Options = {
             ecmaVersion: ParseEcmaVersion,
             sourceType,
             ranges: true,
-        });
+        };
+        const expression = ParserWithState.parseExpressionAt(text, 0, options);
+        // `parseExpressionAt` stops after the expression and ignores the rest
+        const trailingStart = trailingTextStart(text, expression.end, options);
+        if (trailingStart !== undefined) {
+            throw new TrailingTextError(
+                expression,
+                trailingStart,
+                text.trimEnd().length,
+            );
+        }
+        return expression;
     }
 }
 
@@ -1851,6 +1908,18 @@ function parseJS(
     } catch (err) {
         if (!(err instanceof SyntaxError)) {
             return [undefined, undefined];
+        }
+        if (err instanceof TrailingTextError) {
+            // The expression itself is fine, so keep its strict AST
+            return [
+                err.expression,
+                {
+                    start: offset + err.start,
+                    end: offset + err.end,
+                    message: err.message,
+                    severity: DiagnosticSeverity.Error,
+                },
+            ];
         }
         if (isWholeFile && isProgram) {
             try {

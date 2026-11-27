@@ -13,7 +13,7 @@ import { createVariableAndPropertyReferences } from "../sugarcube-utils";
 import { SugarCubeParsingState } from "../types";
 import {
     isTwineScriptExpression,
-    tokenizeTwineScriptExpression,
+    tokenizeTwineScript,
 } from "./sc2-twinescript";
 
 /**
@@ -43,11 +43,12 @@ export function parseSugarCubePassageRefOrTwinescriptExpr(
     // we look foolish.
     if (isTwineScriptExpression(text)) {
         createVariableAndPropertyReferences(
-            tokenizeTwineScriptExpression(
+            tokenizeTwineScript(
                 text,
                 textIndex,
                 state.textDocument,
                 sugarcubeState,
+                { isProgram: false }, // SC2 checks it as an expression
             ),
             state,
             sugarcubeState,
@@ -55,6 +56,35 @@ export function parseSugarCubePassageRefOrTwinescriptExpr(
     } else {
         parsePassageReference(text, textIndex, state, sugarcubeState);
     }
+}
+
+/**
+ * Parse a link's setter, if any.
+ *
+ * @param markupData Markup data about the link.
+ * @param textIndex Index of the text the markup data's positions are relative to (zero-based).
+ * @param state Parsing state.
+ * @param sugarcubeState SugarCube-specific parsing state.
+ */
+function parseLinkSetter(
+    markupData: LinkMarkupData,
+    textIndex: number,
+    state: ParsingState,
+    sugarcubeState: SugarCubeParsingState,
+): void {
+    if (!markupData.setter?.text) return;
+    createVariableAndPropertyReferences(
+        tokenizeTwineScript(
+            markupData.setter.text,
+            markupData.setter.at + textIndex,
+            state.textDocument,
+            sugarcubeState,
+            // Link setters define variables on assignment
+            { isSetterContext: true },
+        ),
+        state,
+        sugarcubeState,
+    );
 }
 
 /**
@@ -121,19 +151,7 @@ export function parseSugarCubeTwineLink(
                 sugarcubeState,
             );
         }
-        if (markupData.setter !== undefined && markupData.setter.text) {
-            createVariableAndPropertyReferences(
-                tokenizeTwineScriptExpression(
-                    markupData.setter.text,
-                    markupData.setter.at + textIndex,
-                    state.textDocument,
-                    sugarcubeState,
-                    { isSetterContext: true }, // Link setters define variables on assignment
-                ),
-                state,
-                sugarcubeState,
-            );
-        }
+        parseLinkSetter(markupData, textIndex, state, sugarcubeState);
         if (markupData.innerMeta !== undefined) {
             capturePreSemanticTokenFor(
                 markupData.innerMeta.text,
@@ -143,6 +161,34 @@ export function parseSugarCubeTwineLink(
                 sugarcubeState,
             );
         }
+    } else if (error === undefined && markupData.isImage) {
+        // SugarCube evaluates an image source as TwineScript if it can
+        if (
+            markupData.source !== undefined &&
+            isTwineScriptExpression(markupData.source.text)
+        ) {
+            createVariableAndPropertyReferences(
+                tokenizeTwineScript(
+                    markupData.source.text,
+                    markupData.source.at + textIndex,
+                    state.textDocument,
+                    sugarcubeState,
+                    { isProgram: false }, // SC2 checks it as an expression
+                ),
+                state,
+                sugarcubeState,
+            );
+        }
+        // An image's link and setter work like a regular link's
+        if (markupData.link !== undefined) {
+            parseSugarCubePassageRefOrTwinescriptExpr(
+                markupData.link.text,
+                markupData.link.at + textIndex,
+                state,
+                sugarcubeState,
+            );
+        }
+        parseLinkSetter(markupData, textIndex, state, sugarcubeState);
     } else if (error !== undefined) {
         logDiagnosticFor(
             DiagnosticCodes.SugarCubeIncorrectTwineLink,

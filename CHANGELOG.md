@@ -51,12 +51,16 @@ Four big changes:
 - Renaming or deleting files now properly updates all diagnostics.
 - Typing a new story format or version in `StoryData` no longer triggers a download prompt and reindex for every intermediate value.
 - Changing only the capitalization of a story format's name (e.g. `Sugarcube` to `SugarCube`) no longer re-downloads or reindexes.
+- Extraneous text after an expression now raises an error.
 - SugarCube: Improved syntax highlighting of twee links.
 - SugarCube: Fixed parsing of special variables in `<<script>>` macros.
 - SugarCube: Now includes story variables and properties only assigned to in e.g. `<<set>>` macros in completions.
 - SugarCube: No longer incorrectly indexes apparent story variables in non-data HTML attributes.
 - SugarCube: Now correctly places the end of diagnostic squiggles on TwineScript expressions.
 - SugarCube: Now indexes variables and expressions used in passage parameters (e.g. `<<goto $q>>`).
+- SugarCube: Now properly handles `;`-separated expressions in TwineScript where legal.
+- SugarCube: Now properly indexes image links.
+- SugarCube: Now properly handles comma-separated lists in `<<unset>>`.
 
 ## [1.1.5] - 2026 04 12
 

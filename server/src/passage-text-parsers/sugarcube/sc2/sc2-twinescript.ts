@@ -319,12 +319,12 @@ function resugarShapeSources(
 }
 
 /**
- * Tokenize a TwineScript expression and find referenced variables and properties in it.
+ * Tokenize TwineScript and find referenced variables and properties in it.
  *
  * Returned properties are only those for which the parser could trace their "ownership"
  * back to a root variable.
  *
- * @param expression Expression to parse.
+ * @param twinescript TwineScript to parse.
  * @param offset Offset into the document where the expression occurs.
  * @param state Parsing state.
  * @param storyFormatState Passage state object that will collect tokens.
@@ -334,17 +334,17 @@ function resugarShapeSources(
  * @param options.isProgram True to parse as a full JS program; false to parse as an expression.
  * @returns Tokenized variables and properties, and any parsing error.
  */
-export function tokenizeTwineScriptExpression(
-    expression: string,
+export function tokenizeTwineScript(
+    twinescript: string,
     offset: number,
     textDocument: TextDocument,
     storyFormatState: StoryFormatParsingState,
     {
         isSetterContext = false,
-        isProgram = false,
+        isProgram = true,
     }: { isSetterContext?: boolean; isProgram?: boolean } = {},
 ): TokenizedJS {
-    const { desugared, positionMapping } = desugar(expression);
+    const { desugared, positionMapping } = desugar(twinescript);
 
     // Turning TwineScript into JavaScript changes positions within a string.
     // We have to translate the positions of Javascript variable and property labels,

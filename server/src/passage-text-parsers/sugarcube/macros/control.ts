@@ -11,9 +11,9 @@ import { logDiagnosticFor, logRawDiagnostic } from "../../../parser";
 import { skipSpaces } from "../../../utilities";
 import { createVariableAndPropertyReferences } from "../sugarcube-utils";
 import { forMacroIsRange, forMacroRangeFormat } from "../sc2/sc2-patterns";
-import { tokenizeTwineScriptExpression } from "../sc2/sc2-twinescript";
+import { tokenizeTwineScript } from "../sc2/sc2-twinescript";
 import { MacroLocationInfo } from "../types";
-import { MacroInfo, parseArgsAsTwineScriptExpression } from "./types";
+import { MacroInfo, parseArgsAsTwineScript } from "./types";
 
 export const ifMacro: MacroInfo = {
     name: "if",
@@ -22,7 +22,7 @@ export const ifMacro: MacroInfo = {
     description:
         "Executes its contents if the given conditional expression evaluates to true. If the condition evaluates to false and an `<<elseif>>` or `<<else>>` exists, then other contents can be executed.",
     since: "2.0.0",
-    parseArgs: parseArgsAsTwineScriptExpression,
+    parseArgs: parseArgsAsTwineScript,
     parseChildren(children, state) {
         // An <<elseif>> after an <<else>> is an error
         let elseifMacro: MacroLocationInfo | undefined;
@@ -73,7 +73,7 @@ export const elseifMacro: MacroInfo = {
     description:
         "Executes its contents if the given conditional expression evaluates to true.",
     since: "2.0.0",
-    parseArgs: parseArgsAsTwineScriptExpression,
+    parseArgs: parseArgsAsTwineScript,
 };
 
 export const elseMacro: MacroInfo = {
@@ -123,7 +123,7 @@ export const forMacro: MacroInfo = {
                 // Groups match `[[1], 2] range 3`
                 if (m[1]) {
                     // index
-                    const indexTokens = tokenizeTwineScriptExpression(
+                    const indexTokens = tokenizeTwineScript(
                         m[1],
                         argsIndex + (m.indices?.at(1)?.at(0) ?? 0),
                         state.textDocument,
@@ -136,7 +136,7 @@ export const forMacro: MacroInfo = {
                 }
                 if (m[2]) {
                     // value
-                    const valueTokens = tokenizeTwineScriptExpression(
+                    const valueTokens = tokenizeTwineScript(
                         m[2],
                         argsIndex + (m.indices?.at(2)?.at(0) ?? 0),
                         state.textDocument,
@@ -163,11 +163,15 @@ export const forMacro: MacroInfo = {
                 if (m[3]) {
                     // collection
                     createVariableAndPropertyReferences(
-                        tokenizeTwineScriptExpression(
+                        tokenizeTwineScript(
                             m[3],
                             argsIndex + (m.indices?.at(3)?.at(0) ?? 0),
                             state.textDocument,
                             sugarcubeState,
+                            // SugarCube runs it through a bare `eval` unless it
+                            // starts with `{`, which it wraps in parentheses
+                            // to make it an object literal
+                            { isProgram: !m[3].startsWith("{") },
                         ),
                         state,
                         sugarcubeState,
@@ -197,12 +201,12 @@ export const forMacro: MacroInfo = {
                 argsIndex -= 4;
             }
             createVariableAndPropertyReferences(
-                tokenizeTwineScriptExpression(
+                tokenizeTwineScript(
                     args,
                     argsIndex,
                     state.textDocument,
                     sugarcubeState,
-                    { isSetterContext: true, isProgram: true },
+                    { isSetterContext: true },
                 ),
                 state,
                 sugarcubeState,
@@ -239,7 +243,7 @@ export const switchMacro: MacroInfo = {
     description:
         "Evaluates the given expression and compares it to the value(s) within its `<<case>>` children. The value(s) within each case are compared to the result of the expression given to the parent `<<switch>>`. Upon a successful match, the matching case will have its contents executed. If no cases match and an optional `<<default>>` case exists, which must be the final case, then its contents will be executed. At most one case will execute.",
     since: "2.7.2",
-    parseArgs: parseArgsAsTwineScriptExpression,
+    parseArgs: parseArgsAsTwineScript,
 };
 
 export const caseMacro: MacroInfo = {
