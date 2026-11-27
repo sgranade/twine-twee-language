@@ -35,35 +35,44 @@ function sigilForRootName(name: string | undefined): Sigil | undefined {
     return undefined;
 }
 
-type StateRootTracer = ReturnType<typeof createStateRootTracer>;
+type RootTracer = ReturnType<typeof createRootTracer>;
 
 /**
- * Create scope-aware helpers that recognize SugarCube state roots and the
- * story paths reached through them.
+ * Create scope-aware helpers that recognize SugarCube's roots in script code
+ * and the story paths reached through them: state roots, which reach story
+ * variables, and `setup`, which reaches setup properties.
  *
  * @param text Text the AST was parsed from.
  * @param scopeManager Scope analysis of the AST.
- * @returns State-root helpers.
+ * @returns Root helpers.
  */
-function createStateRootTracer(
+function createRootTracer(
     text: string,
     scopeManager: eslintScope.ScopeManager,
 ) {
-    const { isUnbound, staticKeyName, memberName, aliasRoot } =
-        createScriptAnalysis(text, scopeManager);
-
-    // `State`, `SugarCube.State`, or `window.SugarCube.State`
-    const isStateObject = (node: acorn.Node): boolean => {
+    const {
+        isUnbound,
+        staticKeyName,
+        memberName,
+        aliasRoot,
+        objectAssignCall,
+    } = createScriptAnalysis(text, scopeManager);
+    // A SugarCube global: `name`, `SugarCube.name`, or
+    // `window.SugarCube.name`
+    const isSugarCubeGlobal = (node: acorn.Node, name: string): boolean => {
         if (node.type === "Identifier") {
-            return (
-                (node as acorn.Identifier).name === "State" && isUnbound(node)
-            );
+            return (node as acorn.Identifier).name === name && isUnbound(node);
         }
         if (node.type !== "MemberExpression") return false;
         const member = node as acorn.MemberExpression;
-        if (memberName(member)?.name !== "State") return false;
-        return isSugarCubeObject(member.object);
+        return (
+            memberName(member)?.name === name &&
+            isSugarCubeObject(member.object)
+        );
     };
+
+    const isStateObject = (node: acorn.Node): boolean =>
+        isSugarCubeGlobal(node, "State");
 
     const isSugarCubeObject = (node: acorn.Node): boolean => {
         if (node.type === "Identifier") {
@@ -107,26 +116,46 @@ function createStateRootTracer(
         return undefined;
     };
 
-    // Story path a state-root expression stands for (`$a.b` for
-    // `variables().a.b` or `State.getVar("$a")`), if it has one
-    const statePathOf = (node: acorn.AnyNode): string | undefined => {
-        switch (node.type) {
-            case "ChainExpression":
-                return statePathOf(node.expression);
-            case "MemberExpression": {
-                const name = memberName(node);
-                if (!name) return undefined;
-                const sigil = rootSigil(node.object);
-                if (sigil) return sigil + name.name;
-                const parent = statePathOf(node.object as acorn.AnyNode);
-                return parent && `${parent}.${name.name}`;
-            }
-            case "CallExpression": {
-                const call = stateVarCall(node);
-                return call?.method === "getVar" ? call.key.name : undefined;
-            }
+    // Story variable a state-root expression names directly (`$a` for
+    // `variables().a` or `State.getVar("$a")`), if it names one
+    const stateRootPath = (node: acorn.AnyNode): string | undefined => {
+        if (node.type === "MemberExpression") {
+            const name = memberName(node);
+            const sigil = name && rootSigil(node.object);
+            return sigil ? sigil + name.name : undefined;
         }
-        return undefined;
+        if (node.type === "CallExpression") {
+            const call = stateVarCall(node);
+            return call?.method === "getVar" ? call.key.name : undefined;
+        }
+    };
+
+    // `setup`'s path if the expression is SugarCube's `setup` or a
+    // never-reassigned alias of it.
+    const setupRootPath = (node: acorn.Node): "setup" | undefined => {
+        // This doesn't include `window.setup`, since SugarCube doesn't add it there
+        if (isSugarCubeGlobal(node, "setup")) return "setup";
+        return node.type === "Identifier"
+            ? aliasRoot(node as acorn.Identifier, setupRootPath)
+            : undefined;
+    };
+
+    // Build a getter for the path an expression stands for: the path its
+    // root gives, extended by each static member after it (`$a.b` for
+    // `variables().a.b`)
+    const pathThrough = (
+        rootPath: (node: acorn.AnyNode) => string | undefined,
+    ): StaticPathOf => {
+        const pathOf: StaticPathOf = (node) => {
+            const root = rootPath(node);
+            if (root) return root;
+            if (node.type === "ChainExpression") return pathOf(node.expression);
+            if (node.type !== "MemberExpression") return undefined;
+            const name = memberName(node);
+            const parent = name && pathOf(node.object as acorn.AnyNode);
+            return parent ? `${parent}.${name.name}` : undefined;
+        };
+        return pathOf;
     };
 
     // `State.getVar`/`setVar` call with a literal key, if the node is one
@@ -142,20 +171,139 @@ function createStateRootTracer(
         return literal ? { method, key: literal } : undefined;
     };
 
-    return { rootSigil, statePathOf, stateVarCall, staticKeyName, memberName };
+    return {
+        rootSigil,
+        statePathOf: pathThrough(stateRootPath),
+        setupPathOf: pathThrough(setupRootPath),
+        setupRootPath,
+        stateVarCall,
+        staticKeyName,
+        memberName,
+        objectAssignCall,
+    };
 }
 
 /**
- * Extract SugarCube story variables and properties from JavaScript code.
+ * Extract SugarCube story variables and properties and setup object
+ * properties from JavaScript code.
  */
 export const extractSugarCubeScriptSymbols: ScriptSymbolExtractor = ({
     ast,
     text,
     scopeManager,
 }) => {
-    const tracer = createStateRootTracer(text, scopeManager);
-    return extractStateRootSymbols(ast, tracer, tracer.statePathOf);
+    /**
+     * In script code a story variable is reached only through a state root:
+     * `State.variables`, `State.temporary`, `variables()`, `temporary()`,
+     * `SugarCube.State.*` (w/ or w/o `window.`), or `State.getVar`/`setVar`
+     * w/ a literal key. A setup property is reached through `setup`, or
+     * `SugarCube.setup` (w/ or w/o `window.`). A never-reassigned binding
+     * initialized w/either kind of root is also that kind of root. Bare
+     * identifiers are never story variables.
+     */
+    const tracer = createRootTracer(text, scopeManager);
+    const pathOf: StaticPathOf = (node) =>
+        tracer.statePathOf(node) ?? tracer.setupPathOf(node);
+    const stateRooted = extractStateRootSymbols(ast, tracer, pathOf);
+    return {
+        variables: stateRooted.variables,
+        properties: [
+            ...stateRooted.properties,
+            ...extractSetupProperties(ast, tracer, pathOf),
+        ].sort((a, b) => a.at - b.at),
+    };
 };
+
+/**
+ * Extract setup properties from SugarCube JavaScript code.
+ *
+ * @param ast Parsed code.
+ * @param tracer Root helpers for the code.
+ * @param pathOf Gets an expression's story or setup path, to find shape
+ * sources and recognize a self-reference.
+ * @returns Property occurrences.
+ */
+function extractSetupProperties(
+    ast: acorn.Node,
+    {
+        setupRootPath,
+        setupPathOf,
+        memberName,
+        staticKeyName,
+        objectAssignCall,
+    }: RootTracer,
+    pathOf: StaticPathOf,
+): ScriptPropertyOccurrence[] {
+    const properties: ScriptPropertyOccurrence[] = [];
+
+    // Reads of a destructured setup path's keys (`a` in
+    // `const { a } = setup`)
+    const captureDestructuring = (
+        pattern: acorn.ObjectPattern,
+        source: acorn.AnyNode,
+    ) => {
+        const path = setupPathOf(source);
+        if (!path) return;
+        for (const prop of pattern.properties) {
+            if (prop.type !== "Property") continue;
+            const name = staticKeyName(prop.key, prop.computed);
+            if (name) {
+                properties.push({
+                    text: name.name,
+                    at: name.start,
+                    scope: path,
+                    assigned: false,
+                    isCallee: false,
+                });
+            }
+        }
+    };
+
+    acornWalk.fullAncestor(ast, (rawNode, _, ancestors) => {
+        const node = rawNode as acorn.AnyNode;
+        switch (node.type) {
+            case "MemberExpression": {
+                const root = setupRootPath(node.object);
+                if (!root) break;
+                properties.push(
+                    ...memberChainProperties(
+                        node.object,
+                        root,
+                        [...ancestors, node.object],
+                        memberName,
+                        pathOf,
+                    ),
+                );
+                break;
+            }
+
+            case "CallExpression": {
+                const assign = objectAssignCall(node);
+                const path = assign && setupPathOf(assign.target);
+                if (!assign || !path) break;
+                for (const source of assign.sources) {
+                    properties.push(
+                        ...objectLiteralProperties(source, path, pathOf, {
+                            assigned: true,
+                        }),
+                    );
+                }
+                break;
+            }
+
+            case "VariableDeclarator":
+                if (node.id.type === "ObjectPattern" && node.init)
+                    captureDestructuring(node.id, node.init);
+                break;
+
+            case "AssignmentExpression":
+                if (node.left.type === "ObjectPattern")
+                    captureDestructuring(node.left, node.right);
+                break;
+        }
+    });
+    return properties;
+}
 
 /**
  * Extract story variables and properties from desugared TwineScript.
@@ -172,10 +320,12 @@ export const extractTwineScriptSymbols: ScriptSymbolExtractor = ({
     // kind record their story path as a shape source: a state root's path is
     // sigiled (`$a`), and a sigiled name's is left desugared (`Xa`) for the
     // caller to resugar.
-    const tracer = createStateRootTracer(text, scopeManager);
+    const tracer = createRootTracer(text, scopeManager);
     const defaultPathOf = storyPathOf(isGlobalName);
     const pathOf: StaticPathOf = (node) =>
-        tracer.statePathOf(node) ?? defaultPathOf(node);
+        tracer.statePathOf(node) ??
+        tracer.setupPathOf(node) ??
+        defaultPathOf(node);
     const sigiled = extractSymbols(ast, isGlobalName, {
         isAssignmentContext,
         pathOf,
@@ -195,13 +345,13 @@ export const extractTwineScriptSymbols: ScriptSymbolExtractor = ({
  * Extract story variables and properties reached through state roots.
  *
  * @param ast Parsed code.
- * @param tracer State-root helpers for the code.
+ * @param tracer Root helpers for the code.
  * @param pathOf Gets an expression's story path, to find shape sources.
  * @returns Variable and property occurrences, in ascending order of position.
  */
 function extractStateRootSymbols(
     ast: acorn.Node,
-    { rootSigil, stateVarCall, staticKeyName, memberName }: StateRootTracer,
+    { rootSigil, stateVarCall, staticKeyName, memberName }: RootTracer,
     pathOf: StaticPathOf,
 ): {
     variables: ScriptVariableOccurrence[];

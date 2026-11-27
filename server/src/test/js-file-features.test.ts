@@ -621,4 +621,180 @@ describe(".js File Story Variable References", () => {
             });
         });
     });
+
+    describe("SugarCube setup Object Properties", () => {
+        async function neverSetTexts(
+            js: string,
+            passageText: string,
+            role: ScriptFileRole = "story-script",
+        ) {
+            const { index, tw } = build(js, passageText, { role });
+            return (await generateDiagnostics(tw, index))
+                .filter((d) => d.code === "variable-never-set")
+                .map((d) => tw.getText(d.range));
+        }
+
+        it("should count a .js write to a setup property and still warn on a typo", async () => {
+            expect(
+                await neverSetTexts(
+                    "setup.maxHp = 10;\n",
+                    "<<print setup.maxHp + setup.maxHP>>",
+                ),
+            ).to.eql(["maxHP"]);
+        });
+
+        it("should count a setup property written in an included script", async () => {
+            expect(
+                await neverSetTexts(
+                    "setup.maxHp = 10;\n",
+                    "<<print setup.maxHp>>",
+                    "included-script",
+                ),
+            ).to.eql([]);
+        });
+
+        for (const [desc, passageText] of [
+            [
+                "a script passage",
+                "<<print setup.maxHp>>\n\n:: Init [script]\nsetup.maxHp = 10;",
+            ],
+            [
+                "a <<script>> block",
+                "<<script>>setup.maxHp = 10;<</script>><<print setup.maxHp>>",
+            ],
+        ]) {
+            it(`should count a setup property written in ${desc}`, async () => {
+                expect(await neverSetTexts("", passageText)).to.eql([]);
+            });
+        }
+
+        it("should count a .js object literal's keys as setup property writes", async () => {
+            expect(
+                await neverSetTexts(
+                    "setup.items = { sword: { damage: 1 } };\n",
+                    "<<print setup.items.sword.damage + setup.items.shield>>",
+                ),
+            ).to.eql(["shield"]);
+        });
+
+        it("should count the keys of a literal Object.assign copies into setup", async () => {
+            expect(
+                await neverSetTexts(
+                    "Object.assign(setup, { maxHp: 10, items: { sword: 1 } });\nObject.assign(setup.items, { shield: 2 });\n",
+                    "<<print setup.maxHp + setup.items.sword + setup.items.shield + setup.typo>>",
+                ),
+            ).to.eql(["typo"]);
+        });
+
+        it("should ignore a setup property's self-reference when a .js defaults it", async () => {
+            expect(
+                await neverSetTexts(
+                    "setup.inv = setup.inv || {};\nsetup.inv.sword = 1;\n",
+                    "<<print setup.inv.sword + setup.inv.typo>>",
+                ),
+            ).to.eql(["typo"]);
+        });
+
+        it("should check a .js copy of a setup property against its source", async () => {
+            expect(
+                await neverSetTexts(
+                    "setup.base = { hp: 1 };\nsetup.copy = setup.base;\n",
+                    "<<set _s to setup.base>><<print setup.copy.hp + setup.copy.typo + _s.hp + _s.typo>>",
+                ),
+            ).to.eql(["typo", "typo"]);
+        });
+
+        it("should make a setup property opaque when a .js assigns it a value of unknown shape", async () => {
+            expect(
+                await neverSetTexts(
+                    "setup.items = loadItems();\n",
+                    "<<print setup.items.sword + setup.typo>>",
+                ),
+            ).to.eql(["typo"]);
+        });
+
+        for (const escape of [
+            "setup.items[k] = 1;",
+            "Object.assign(setup, data);",
+            "fill(setup.items);",
+        ]) {
+            it(`should still warn on a setup property after ${escape}`, async () => {
+                expect(
+                    await neverSetTexts(
+                        `setup.items = {};\n${escape}\n`,
+                        "<<print setup.items.sword>>",
+                    ),
+                ).to.eql(["sword"]);
+            });
+        }
+
+        describe("across .tw and .js files", () => {
+            const js = "setup.maxHp = 10;\nconst hp = setup.maxHp;\n";
+            const passageText = "<<set setup.maxHp to 5>><<print setup.maxHp>>";
+            const atMaxHp = (doc: TextDocument) =>
+                doc.positionAt(doc.getText().indexOf("maxHp"));
+
+            it("should find a setup property's references in both files", () => {
+                const { index, tw } = build(js, passageText);
+
+                const refs = getReferencesToSymbolAt(
+                    tw.uri,
+                    atMaxHp(tw),
+                    index,
+                    true,
+                );
+
+                expect(refs?.map((r) => r.uri).sort()).to.eql([
+                    "file:///s.js",
+                    "file:///s.js",
+                    "file:///story.tw",
+                    "file:///story.tw",
+                ]);
+            });
+
+            it("should rename a setup property's reads and writes in a .js", () => {
+                const { index, tw, script } = build(js, passageText);
+
+                const edit = generateRenames(
+                    tw.uri,
+                    atMaxHp(tw),
+                    "maxHealth",
+                    index,
+                ) as WorkspaceEdit;
+
+                expect(
+                    TextDocument.applyEdits(
+                        script,
+                        edit.changes?.[script.uri] ?? [],
+                    ),
+                ).to.equal(
+                    "setup.maxHealth = 10;\nconst hp = setup.maxHealth;\n",
+                );
+            });
+
+            it("should go from a setup property in a .js to its writes in both files", () => {
+                const { index, tw, script } = build(js, passageText);
+
+                const definition = getDefinitionAt(
+                    script,
+                    atMaxHp(script),
+                    index,
+                );
+
+                expect(
+                    [definition]
+                        .flat()
+                        .filter((d) => d !== undefined)
+                        .map((d) => {
+                            const doc = d.uri === script.uri ? script : tw;
+                            return `${d.uri}: ${doc.getText(d.range)}@${d.range.start.line}`;
+                        })
+                        .sort(),
+                ).to.eql([
+                    "file:///s.js: maxHp@0",
+                    "file:///story.tw: maxHp@4",
+                ]);
+            });
+        });
+    });
 });

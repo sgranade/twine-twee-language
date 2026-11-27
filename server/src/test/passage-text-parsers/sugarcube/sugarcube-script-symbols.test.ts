@@ -203,4 +203,73 @@ describe("SugarCube Script Symbols", () => {
 
         expect(result.vars).to.eql([]);
     });
+
+    describe("setup Object Properties", () => {
+        it("should capture setup properties through setup and SugarCube.setup but not window.setup", () => {
+            expect(
+                extract(
+                    "setup.a = 1; SugarCube.setup.b; window.SugarCube.setup.c.d; window.setup.e;",
+                ).props,
+            ).to.eql([
+                ["setup", "a"],
+                ["setup", "b"],
+                ["setup", "c"],
+                ["setup.c", "d"],
+            ]);
+        });
+
+        it("should capture writes through SugarCube.setup and window.SugarCube.setup", () => {
+            const text = "SugarCube.setup.a = 1; window.SugarCube.setup.b = 1;";
+            const state = buildParsingState({
+                uri: "fake-uri",
+                content: text,
+                callbacks: new MockCallbacks(),
+            });
+            const result = tokenizeJavaScript(
+                true,
+                text,
+                0,
+                state.textDocument,
+                { passageTokens: {} },
+                {
+                    isAssignmentContext: true,
+                    extractScriptSymbols: uut.extractSugarCubeScriptSymbols,
+                },
+            );
+
+            expect(
+                result.properties.map((p) => [
+                    `${p.prefix}.${p.contents}`,
+                    !!p.assigned,
+                ]),
+            ).to.eql([
+                ["setup.a", true],
+                ["setup.b", true],
+            ]);
+        });
+
+        it("should capture destructured reads of setup", () => {
+            expect(
+                extract("const { a, b: c } = setup; ({ d } = SugarCube.setup);")
+                    .props,
+            ).to.eql([
+                ["setup", "a"],
+                ["setup", "b"],
+                ["setup", "d"],
+            ]);
+        });
+
+        it("should ignore a local binding named setup", () => {
+            expect(extract("function f(setup) { setup.a = 1; }").props).to.eql(
+                [],
+            );
+        });
+
+        it("should follow a never-reassigned alias of setup but not a reassigned one", () => {
+            expect(extract("const s = setup; s.a = 1;").props).to.eql([
+                ["setup", "a"],
+            ]);
+            expect(extract("let s = setup; s = {}; s.a = 1;").props).to.eql([]);
+        });
+    });
 });

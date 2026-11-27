@@ -42,6 +42,8 @@ export interface NeverSetCheck {
     builtInVariables: Iterable<string>;
     /** Properties the story format sets itself. */
     builtInProperties: Iterable<string>;
+    /** Built-in variables whose properties are indexed (e.g. SugarCube's `setup`). */
+    indexedBuiltInVariables?: Iterable<string>;
     /** Diagnostic message for a variable or property that's never set. */
     message: string;
 }
@@ -70,7 +72,8 @@ class PropertySetResolver {
          * path, or counts as set at the same place beneath one of an ancestor path's
          * shape sources (`_p.a.b` as `$player.a.b` for `_p = $player`). A shape
          * source that leads back to a path already being followed is a cycle, and one
-         * rooted in a story format's built-in variable is of unknown shape.
+         * rooted in a story format's built-in variable is of unknown shape (unless the
+         * caller left that variable out, because its properties are indexed).
          */
 
         if (this.propSetNames.has(property)) return true;
@@ -139,11 +142,12 @@ export function generateNeverAssignedToDiagnostics(
             shapeSources.set(ref.contents, sources);
         }
     }
+    const indexed = new Set(check.indexedBuiltInVariables);
     const resolver = new PropertySetResolver(
         propSetNames,
         opaquePaths,
         shapeSources,
-        new Set(check.builtInVariables),
+        new Set([...check.builtInVariables].filter((v) => !indexed.has(v))),
     );
     for (const varRef of index.getReferences(uri, check.variableKind) ?? []) {
         if (!varSetNames.has(varRef.contents)) {

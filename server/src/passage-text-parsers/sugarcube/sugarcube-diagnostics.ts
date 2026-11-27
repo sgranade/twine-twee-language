@@ -142,6 +142,7 @@ export function generateDiagnostics(
             propertySetKind: OSugarCubeSymbolKind.PropertySet,
             builtInVariables: builtinVars,
             builtInProperties: builtInVarsAndProperties,
+            indexedBuiltInVariables: ["setup"],
             message:
                 "This isn't set in any <<set>> macro, setter link, or JavaScript section; make sure you've spelled it correctly.",
         }),

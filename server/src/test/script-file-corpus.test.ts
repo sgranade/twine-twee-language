@@ -257,6 +257,16 @@ describe("Script File Corpus", () => {
                     "VariableSet $flag10 28:91",
                     "Variable $counter3 29:60",
                     "VariableSet $flag11 29:91",
+                    // Setup properties
+                    "PropertySet setup.items 2:6",
+                    "PropertySet setup.describe 7:6",
+                    "PropertySet setup.visit 14:6",
+                    "Property setup.items 15:36",
+                    "Property setup.items.length 15:42",
+                    ...Array.from(
+                        { length: 12 },
+                        (_, i) => `PropertySet setup.handler${i} ${18 + i}:6`,
+                    ),
                 ],
             ],
             Chapbook: [

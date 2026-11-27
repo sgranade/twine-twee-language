@@ -111,6 +111,16 @@ export interface ScriptAnalysis {
         id: acorn.Identifier,
         rootOf: (node: acorn.Node) => T | undefined,
     ): T | undefined;
+    /**
+     * Split a call to the global `Object.assign` into its target and sources.
+     *
+     * @param node Call to inspect.
+     * @returns The call's target and sources, or undefined if it isn't a call
+     * to the global `Object.assign` with a target.
+     */
+    objectAssignCall(
+        node: acorn.CallExpression,
+    ): { target: acorn.AnyNode; sources: acorn.AnyNode[] } | undefined;
 }
 
 /**
@@ -137,6 +147,11 @@ export function createScriptAnalysis(
 
     const isPlainStringSource = (node: acorn.Node, value: string): boolean =>
         text.slice(node.start + 1, node.end - 1) === value;
+
+    const isUnbound = (id: acorn.Node): boolean => {
+        const ref = references.get(id);
+        return !!ref && !ref.resolved;
+    };
 
     const staticKeyName = (
         key: acorn.Node,
@@ -166,13 +181,27 @@ export function createScriptAnalysis(
         return undefined;
     };
 
+    const memberName = (node: acorn.MemberExpression) =>
+        staticKeyName(node.property, node.computed);
+
     return {
-        isUnbound(id) {
-            const ref = references.get(id);
-            return !!ref && !ref.resolved;
-        },
+        isUnbound,
         staticKeyName,
-        memberName: (node) => staticKeyName(node.property, node.computed),
+        memberName,
+        objectAssignCall(node) {
+            const callee = node.callee;
+            if (
+                callee.type !== "MemberExpression" ||
+                memberName(callee)?.name !== "assign" ||
+                callee.object.type !== "Identifier" ||
+                callee.object.name !== "Object" ||
+                !isUnbound(callee.object) ||
+                node.arguments.length === 0
+            )
+                return undefined;
+            const [target, ...sources] = node.arguments as acorn.AnyNode[];
+            return { target, sources };
+        },
         aliasRoot<T>(
             id: acorn.Identifier,
             rootOf: (node: acorn.Node) => T | undefined,

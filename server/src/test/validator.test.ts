@@ -338,8 +338,13 @@ describe("Validator", () => {
         for (const [desc, setText, readText] of [
             [
                 "member access",
-                "<<set $x to setup.items.sword>>",
+                "<<set $x to someGlobal.items.sword>>",
                 "<<print $x.damage>>",
+            ],
+            [
+                "a copy of a story-format built-in other than setup",
+                "<<set _h to Config.history>>",
+                "<<print _h.maxStates>>",
             ],
             ["element access", "<<set _a to $arr[0]>>", "<<print _a.name>>"],
             ["a new object", "<<set $d to new Date()>>", "<<print $d.year>>"],
@@ -362,6 +367,15 @@ describe("Validator", () => {
                 expect(result).to.be.empty;
             });
         }
+
+        it("should check a copy of a setup property against its source", async () => {
+            const result = await neverSetIn(
+                "<<set setup.items to {sword: {damage: 1}}>><<set $x to setup.items.sword>>",
+                "<<print $x.damage + $x.dmage>>",
+            );
+
+            expect(result).to.eql(["dmage"]);
+        });
 
         it("should warn on a typo'd property of a variable defaulted to itself", async () => {
             // No arrange
