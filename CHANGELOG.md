@@ -52,6 +52,7 @@ Four big changes:
 - Typing a new story format or version in `StoryData` no longer triggers a download prompt and reindex for every intermediate value.
 - Changing only the capitalization of a story format's name (e.g. `Sugarcube` to `SugarCube`) no longer re-downloads or reindexes.
 - Extraneous text after an expression now raises an error.
+- Checks for deprecated and not-yet-available functions/macros/inserts now works properly.
 - SugarCube: Improved syntax highlighting of twee links.
 - SugarCube: Fixed parsing of special variables in `<<script>>` macros.
 - SugarCube: Now includes story variables and properties only assigned to in e.g. `<<set>>` macros in completions.

@@ -4,6 +4,7 @@ import { DiagnosticSeverity, Location, Range } from "vscode-languageserver";
 
 import { TwineSymbolKind } from "../../../project-index";
 import { ETokenModifier, ETokenType } from "../../../semantic-tokens";
+import { tweeConfigFileToMacrosAndEnums } from "../../../passage-text-parsers/sugarcube/macros";
 import {
     MacroLocationInfo,
     OSugarCubeSymbolKind,
@@ -2246,6 +2247,77 @@ describe("SugarCube Parser", () => {
                 tokenType: ETokenType.function,
                 tokenModifiers: [ETokenModifier.deprecated],
             });
+        });
+
+        for (const [version, isDeprecated] of [
+            ["2.0", false],
+            ["2.2", true],
+            ["abc", false],
+        ] as const) {
+            it(`should ${isDeprecated ? "" : "not "}indicate deprecation in the semantic token of a macro deprecated in 2.1 when the story format version is ${version}`, () => {
+                const header = ":: Passage\n";
+                const passage = "A macro: <<testy>>.\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                state.storyFormat = {
+                    format: "SugarCube",
+                    formatVersion: version,
+                };
+                const macro = buildMacroInfo({ name: "testy" });
+                macro.deprecated = "2.1";
+                const parser = uut.getSugarCubeParser(version, {
+                    allMacros: () => {
+                        return { testy: macro };
+                    },
+                    allMacroEnums: () => {
+                        return {};
+                    },
+                });
+
+                parser?.parsePassageText(passage, header.length, state);
+                const [macroToken] = callbacks.tokens;
+
+                expect(macroToken.tokenModifiers).to.eql(
+                    isDeprecated ? [ETokenModifier.deprecated] : [],
+                );
+            });
+        }
+
+        it("should indicate deprecation in the semantic token of a custom macro that a T3LT definition marks as deprecated", () => {
+            const header = ":: Passage\n";
+            const passage = "A macro: <<testy>>.\n";
+            const callbacks = new MockCallbacks();
+            const state = buildParsingState({
+                content: header + passage,
+                callbacks: callbacks,
+            });
+            state.storyFormat = {
+                format: "SugarCube",
+                formatVersion: "2.37.3",
+            };
+            const yaml =
+                "sugarcube-2:\n    macros:\n        testy:\n            deprecated: true\n";
+            const [macro] =
+                tweeConfigFileToMacrosAndEnums(yaml, true).macrosAndEnums
+                    ?.macros ?? [];
+            const parser = uut.getSugarCubeParser("2.37.3", {
+                allMacros: () => {
+                    return { testy: macro };
+                },
+                allMacroEnums: () => {
+                    return {};
+                },
+            });
+
+            parser?.parsePassageText(passage, header.length, state);
+            const [macroToken] = callbacks.tokens;
+
+            expect(macroToken.tokenModifiers).to.eql([
+                ETokenModifier.deprecated,
+            ]);
         });
 
         it("should capture a reference for a known macro", () => {

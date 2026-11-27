@@ -28,7 +28,6 @@ import {
     eraseMatches,
     isVersionAtLeast,
     isVersionBefore,
-    versionCompare,
 } from "../../utilities";
 import { allMacros, MacroInfo, MacroParent } from "./macros";
 import { createSugarCubeScriptExtractor } from "./sugarcube-script-symbols";
@@ -793,18 +792,12 @@ function captureMacroRefAndTokens(
     }
 
     // Capture semantic tokens for the macro itself
-    let deprecated;
-    try {
-        deprecated =
-            state.storyFormat?.formatVersion !== undefined &&
-            macroInfo?.deprecated !== undefined &&
-            versionCompare(
-                state.storyFormat.formatVersion,
-                macroInfo.deprecated,
-            ) <= 0;
-    } catch {
-        deprecated = false;
-    }
+    const deprecated =
+        macroInfo?.deprecated !== undefined &&
+        isVersionAtLeast(
+            state.storyFormat?.formatVersion,
+            macroInfo.deprecated,
+        );
     capturePreSemanticTokenFor(
         macroNameWithEnd,
         macroIndex,
@@ -862,31 +855,30 @@ function checkMacroAvailability(
     macroInfo: MacroInfo,
     state: ParsingState,
 ): void {
+    // A missing or broken story format version reports nothing
     const storyFormatVersion = state.storyFormat?.formatVersion;
-    if (storyFormatVersion !== undefined) {
-        const notYetAvailable =
-            macroInfo.since !== undefined &&
-            isVersionBefore(storyFormatVersion, macroInfo.since);
-        const wasRemoved =
-            macroInfo.removed !== undefined &&
-            isVersionAtLeast(storyFormatVersion, macroInfo.removed);
-        if (notYetAvailable) {
-            logDiagnosticFor(
-                DiagnosticCodes.SugarCubeMacroNotAvailable,
-                macroText,
-                macroIndex,
-                state,
-                `\`${macroInfo.name}\` isn't available until SugarCube version ${macroInfo.since} but your StoryFormat version is ${storyFormatVersion}`,
-            );
-        } else if (wasRemoved) {
-            logDiagnosticFor(
-                DiagnosticCodes.SugarCubeMacroRemoved,
-                macroText,
-                macroIndex,
-                state,
-                `\`${macroInfo.name}\` was removed in SugarCube version ${macroInfo.removed} and your StoryFormat version is ${storyFormatVersion}`,
-            );
-        }
+    if (
+        macroInfo.since !== undefined &&
+        isVersionBefore(storyFormatVersion, macroInfo.since)
+    ) {
+        logDiagnosticFor(
+            DiagnosticCodes.SugarCubeMacroNotAvailable,
+            macroText,
+            macroIndex,
+            state,
+            `\`${macroInfo.name}\` isn't available until SugarCube version ${macroInfo.since} but your StoryFormat version is ${storyFormatVersion}`,
+        );
+    } else if (
+        macroInfo.removed !== undefined &&
+        isVersionAtLeast(storyFormatVersion, macroInfo.removed)
+    ) {
+        logDiagnosticFor(
+            DiagnosticCodes.SugarCubeMacroRemoved,
+            macroText,
+            macroIndex,
+            state,
+            `\`${macroInfo.name}\` was removed in SugarCube version ${macroInfo.removed} and your StoryFormat version is ${storyFormatVersion}`,
+        );
     }
 }
 

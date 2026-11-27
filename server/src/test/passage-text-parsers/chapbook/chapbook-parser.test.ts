@@ -1036,6 +1036,41 @@ describe("Chapbook Parser", () => {
                     });
                 });
 
+                for (const [version, isDeprecated] of [
+                    ["2.0", false],
+                    ["2.2", true],
+                    ["abc", false],
+                ] as const) {
+                    it(`should ${isDeprecated ? "" : "not "}indicate deprecation in the semantic token of a modifier deprecated in 2.1 when the story format version is ${version}`, () => {
+                        const header = ":: Passage\n";
+                        const passage = "[mod1]\nContent\n";
+                        const callbacks = new MockCallbacks();
+                        const state = buildParsingState({
+                            content: header + passage,
+                            callbacks: callbacks,
+                        });
+                        state.storyFormat = {
+                            format: "Chapbook",
+                            formatVersion: version,
+                        };
+                        const modifier = buildModifierInfo({
+                            match: /^mod1/,
+                        });
+                        modifier.deprecated = "2.1";
+                        const parser = uut.getChapbookParser(version, {
+                            allModifiers: () => [modifier],
+                            allInserts: () => [],
+                        });
+
+                        parser?.parsePassageText(passage, header.length, state);
+                        const [mod1Token] = callbacks.tokens;
+
+                        expect(mod1Token.tokenModifiers).to.eql(
+                            isDeprecated ? [ETokenModifier.deprecated] : [],
+                        );
+                    });
+                }
+
                 it("should set semantic tokens for modifiers that take quote marks into account", () => {
                     const header = ":: Passage\n";
                     const passage = '[ mod1 "and\\"; so" ; mod2 ]\nContent\n';
@@ -2184,6 +2219,41 @@ describe("Chapbook Parser", () => {
                         tokenModifiers: [ETokenModifier.deprecated],
                     });
                 });
+
+                for (const [version, isDeprecated] of [
+                    ["2.0", false],
+                    ["2.2", true],
+                    ["abc", false],
+                ] as const) {
+                    it(`should ${isDeprecated ? "" : "not "}indicate deprecation in the semantic token of an insert deprecated in 2.1 when the story format version is ${version}`, () => {
+                        const header = ":: Passage\n";
+                        const passage = "A function insert: {back soon}.\n";
+                        const callbacks = new MockCallbacks();
+                        const state = buildParsingState({
+                            content: header + passage,
+                            callbacks: callbacks,
+                        });
+                        state.storyFormat = {
+                            format: "Chapbook",
+                            formatVersion: version,
+                        };
+                        const insert = buildInsertInfo({
+                            match: /^back soon/,
+                        });
+                        insert.deprecated = "2.1";
+                        const parser = uut.getChapbookParser(version, {
+                            allModifiers: () => [],
+                            allInserts: () => [insert],
+                        });
+
+                        parser?.parsePassageText(passage, header.length, state);
+                        const [insertToken] = callbacks.tokens;
+
+                        expect(insertToken.tokenModifiers).to.eql(
+                            isDeprecated ? [ETokenModifier.deprecated] : [],
+                        );
+                    });
+                }
 
                 it("should produce semantic tokens for an insert with an empty argument", () => {
                     const header = ":: Passage\n";
@@ -4540,6 +4610,35 @@ describe("Chapbook Parser", () => {
                     expect(result.range).to.eql(Range.create(3, 1, 3, 4));
                 });
 
+                for (const version of ["2.1", "2.2", "abc"]) {
+                    it(`should not error on a modifier added to Chapbook in 2.1 when the story format version is ${version}`, () => {
+                        const header = ":: Passage\n";
+                        const passage = "[mod]\nOther text\n";
+                        const callbacks = new MockCallbacks();
+                        const state = buildParsingState({
+                            content: header + passage,
+                            callbacks: callbacks,
+                        });
+                        state.storyFormat = {
+                            format: "Chapbook",
+                            formatVersion: version,
+                        };
+                        const modifier = buildModifierInfo({
+                            name: "modMe",
+                            match: /^mod/,
+                        });
+                        modifier.since = "2.1";
+                        const parser = uut.getChapbookParser(version, {
+                            allModifiers: () => [modifier],
+                            allInserts: () => [],
+                        });
+
+                        parser?.parsePassageText(passage, header.length, state);
+
+                        expect(callbacks.errors).to.be.empty;
+                    });
+                }
+
                 it("should error on a modifier when the story format's version is later than when the modifier was removed from Chapbook", () => {
                     const header = ":: Passage\n";
                     const passage = "var1: 17\n--\n" + "[mod]\nOther text\n";
@@ -4682,6 +4781,35 @@ describe("Chapbook Parser", () => {
                     );
                     expect(result.range).to.eql(Range.create(3, 11, 3, 20));
                 });
+
+                for (const version of ["2.1", "2.2", "abc"]) {
+                    it(`should not error on an insert added to Chapbook in 2.1 when the story format version is ${version}`, () => {
+                        const header = ":: Passage\n";
+                        const passage = "Let's go: {fn insert}\n";
+                        const callbacks = new MockCallbacks();
+                        const state = buildParsingState({
+                            content: header + passage,
+                            callbacks: callbacks,
+                        });
+                        state.storyFormat = {
+                            format: "Chapbook",
+                            formatVersion: version,
+                        };
+                        const insert = buildInsertInfo({
+                            name: "fn insert",
+                            match: /^fn\s+insert/i,
+                        });
+                        insert.since = "2.1";
+                        const parser = uut.getChapbookParser(version, {
+                            allModifiers: () => [],
+                            allInserts: () => [insert],
+                        });
+
+                        parser?.parsePassageText(passage, header.length, state);
+
+                        expect(callbacks.errors).to.be.empty;
+                    });
+                }
 
                 it("should error on an insert when the story format's version is later than when the insert was removed from Chapbook", () => {
                     const header = ":: Passage\n";
@@ -5055,6 +5183,26 @@ describe("Chapbook Parser", () => {
                         "The current story format version is 2.0, so this extension will be ignored",
                     );
                     expect(result.range).to.eql(Range.create(2, 15, 2, 20));
+                });
+
+                it("should not error on engine extensions if the story format's version isn't a number", () => {
+                    const header = ":: Passage\n";
+                    const passage =
+                        "[javascript]\nengine.extend('2.0.0', true);\n";
+                    const callbacks = new MockCallbacks();
+                    const state = buildParsingState({
+                        content: header + passage,
+                        callbacks: callbacks,
+                    });
+                    state.storyFormat = {
+                        format: "Chapbook",
+                        formatVersion: "abc",
+                    };
+                    const parser = uut.getChapbookParser(undefined);
+
+                    parser?.parsePassageText(passage, header.length, state);
+
+                    expect(callbacks.errors.length).to.equal(0);
                 });
 
                 it("should not warn on engine extensions whose version is greater than and shorter than the story format's version", () => {

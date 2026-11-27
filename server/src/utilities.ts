@@ -18,48 +18,48 @@ export function* pairwise<T>(itr: Iterable<T>) {
 }
 
 /**
- * Compare two dotted version numbers such as "1.3.2".
+ * Is a version a dotted number that `versionCompare()` can compare?
  *
- * @param ver1 First version number.
- * @param ver2 Second version number.
- * @returns -1 if ver1 < ver2, 0 if ver1 = ver2, and 1 if ver1 > ver2
- * @throws TypeError if either version number contains non-numeric values.
+ * @param version Version to check, such as "1.3.2".
+ * @returns True if every dotted part of the version is a number.
  */
-export function versionCompare(ver1: string, ver2: string): number {
-    const ver1Parts = ver1.split(".").map((n) => parseInt(n, 10));
-    const ver2Parts = ver2.split(".").map((n) => parseInt(n, 10));
-    const minLength = Math.min(ver1Parts.length, ver2Parts.length);
-    for (let i = 0; i < minLength; ++i) {
-        if (Number.isNaN(ver1Parts[i])) {
-            throw new TypeError(`${ver1} contains non-numeric values`);
-        }
-        if (Number.isNaN(ver2Parts[i])) {
-            throw new TypeError(`${ver2} contains non-numeric values`);
-        }
-        if (ver1Parts[i] < ver2Parts[i]) return -1;
-        if (ver1Parts[i] > ver2Parts[i]) return 1;
-    }
-    // If we reach here then the versions are equal as far as we've been able to compare
-    if (ver1Parts.length < ver2Parts.length) return -1;
-    if (ver1Parts.length > ver2Parts.length) return 1;
-    return 0;
+export function isNumericVersion(version: string): boolean {
+    return version.split(".").every((n) => !Number.isNaN(parseInt(n, 10)));
 }
 
 /**
- * Compare two versions, treating a missing or unparseable one as unknown.
+ * Compare two dotted version numbers such as "1.3.2".
+ *
+ * A missing or unparseable (non-numeric) version returns undefined.
  *
  * @param ver1 Version to compare.
  * @param ver2 Version to compare it to.
- * @returns The comparison, as `versionCompare()` gives it, or undefined if
- * either version is missing or doesn't parse.
+ * @returns -1 if ver1 < ver2, 0 if ver1 = ver2, and 1 if ver1 > ver2;
+ * undefined if either version is missing or doesn't parse as numbers.
  */
-function tryVersionCompare(
+function compareVersions(
     ver1: string | undefined,
     ver2: string,
 ): number | undefined {
     if (ver1 === undefined) return undefined;
     try {
-        return versionCompare(ver1, ver2);
+        const ver1Parts = ver1.split(".").map((n) => parseInt(n, 10));
+        const ver2Parts = ver2.split(".").map((n) => parseInt(n, 10));
+        const minLength = Math.min(ver1Parts.length, ver2Parts.length);
+        for (let i = 0; i < minLength; ++i) {
+            if (Number.isNaN(ver1Parts[i])) {
+                throw new TypeError(`${ver1} contains non-numeric values`);
+            }
+            if (Number.isNaN(ver2Parts[i])) {
+                throw new TypeError(`${ver2} contains non-numeric values`);
+            }
+            if (ver1Parts[i] < ver2Parts[i]) return -1;
+            if (ver1Parts[i] > ver2Parts[i]) return 1;
+        }
+        // If we reach here then the versions are equal as far as we've been able to compare
+        if (ver1Parts.length < ver2Parts.length) return -1;
+        if (ver1Parts.length > ver2Parts.length) return 1;
+        return 0;
     } catch {
         return undefined;
     }
@@ -77,7 +77,7 @@ export function isVersionBefore(
     version: string | undefined,
     target: string,
 ): boolean {
-    const comparison = tryVersionCompare(version, target);
+    const comparison = compareVersions(version, target);
     return comparison !== undefined && comparison < 0;
 }
 
@@ -93,7 +93,7 @@ export function isVersionAtLeast(
     version: string | undefined,
     target: string,
 ): boolean {
-    const comparison = tryVersionCompare(version, target);
+    const comparison = compareVersions(version, target);
     return comparison !== undefined && comparison >= 0;
 }
 

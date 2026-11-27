@@ -39,8 +39,10 @@ import { Token, TwineDiagnostic } from "../../types";
 import {
     extractToMatchingDelimiter,
     hasOwnProperty,
+    isNumericVersion,
+    isVersionAtLeast,
+    isVersionBefore,
     skipSpaces,
-    versionCompare,
 } from "../../utilities";
 import { browserGlobals } from "../host-globals";
 import { ParsingState, capturePreSemanticTokenFor } from "../types";
@@ -836,28 +838,26 @@ function parseEngineExtension(
     if (version === undefined) return;
 
     // Make sure the story format meets the extension's required minimum version
-    if (state.storyFormat?.formatVersion !== undefined) {
-        try {
-            const v = versionCompare(version, state.storyFormat.formatVersion);
-            if (v > 0) {
-                logDiagnosticFor(
-                    DiagnosticCodes.ChapbookStoryFormatVersionMismatch,
-                    version,
-                    contentsIndex + 1,
-                    state,
-                    `The current story format version is ${state.storyFormat.formatVersion}, so this extension will be ignored`,
-                );
-                return;
-            }
-        } catch (e) {
-            if (e instanceof TypeError) {
-                logDiagnosticFor(
-                    DiagnosticCodes.ChapbookNonNumericEngineExtensionVersion,
-                    version,
-                    contentsIndex + 1,
-                    state,
-                );
-            }
+    // A broken story format version reports nothing.
+    const storyFormatVersion = state.storyFormat?.formatVersion;
+    if (storyFormatVersion !== undefined) {
+        if (!isNumericVersion(version)) {
+            logDiagnosticFor(
+                DiagnosticCodes.ChapbookNonNumericEngineExtensionVersion,
+                version,
+                contentsIndex + 1,
+                state,
+            );
+            return;
+        }
+        if (isVersionBefore(storyFormatVersion, version)) {
+            logDiagnosticFor(
+                DiagnosticCodes.ChapbookStoryFormatVersionMismatch,
+                version,
+                contentsIndex + 1,
+                state,
+                `The current story format version is ${storyFormatVersion}, so this extension will be ignored`,
+            );
             return;
         }
     }
@@ -1066,38 +1066,33 @@ function validateFunctionVersion(
 ): TwineDiagnostic[] {
     const diagnostics: TwineDiagnostic[] = [];
 
-    if (storyFormatVersion !== undefined) {
-        try {
-            if (
-                funcInfo.since !== undefined &&
-                versionCompare(storyFormatVersion, funcInfo.since) <= 0
-            ) {
-                diagnostics.push(
-                    createDiagnosticFor(
-                        DiagnosticCodes.ChapbookFunctionNotAvailable,
-                        text,
-                        at,
-                        doc,
-                        `\`${funcInfo.name}\` isn't available until Chapbook version ${funcInfo.since} but your StoryFormat version is ${storyFormatVersion}`,
-                    ),
-                );
-            } else if (
-                funcInfo.removed !== undefined &&
-                versionCompare(storyFormatVersion, funcInfo.removed) >= 0
-            ) {
-                diagnostics.push(
-                    createDiagnosticFor(
-                        DiagnosticCodes.ChapbookFunctionNotAvailable,
-                        text,
-                        at,
-                        doc,
-                        `\`${funcInfo.name}\` was removed in Chapbook version ${funcInfo.removed} and your StoryFormat version is ${storyFormatVersion}`,
-                    ),
-                );
-            }
-        } catch {
-            // Ignore if the version is broken
-        }
+    // A missing or broken story format version reports nothing
+    if (
+        funcInfo.since !== undefined &&
+        isVersionBefore(storyFormatVersion, funcInfo.since)
+    ) {
+        diagnostics.push(
+            createDiagnosticFor(
+                DiagnosticCodes.ChapbookFunctionNotAvailable,
+                text,
+                at,
+                doc,
+                `\`${funcInfo.name}\` isn't available until Chapbook version ${funcInfo.since} but your StoryFormat version is ${storyFormatVersion}`,
+            ),
+        );
+    } else if (
+        funcInfo.removed !== undefined &&
+        isVersionAtLeast(storyFormatVersion, funcInfo.removed)
+    ) {
+        diagnostics.push(
+            createDiagnosticFor(
+                DiagnosticCodes.ChapbookFunctionNotAvailable,
+                text,
+                at,
+                doc,
+                `\`${funcInfo.name}\` was removed in Chapbook version ${funcInfo.removed} and your StoryFormat version is ${storyFormatVersion}`,
+            ),
+        );
     }
 
     return diagnostics;
@@ -1303,18 +1298,9 @@ function parseInsertContents(
 
     // Capture semantic tokens for the insert's info
     // We wait until here b/c the insert may be deprecated, which affects the insert name's semantic token
-    let deprecated = false;
-    try {
-        deprecated =
-            state.storyFormat?.formatVersion !== undefined &&
-            insert?.deprecated !== undefined &&
-            versionCompare(
-                state.storyFormat.formatVersion,
-                insert.deprecated,
-            ) <= 0;
-    } catch {
-        // If the formatVersion is broken, assume it's not deprecated
-    }
+    const deprecated =
+        insert?.deprecated !== undefined &&
+        isVersionAtLeast(state.storyFormat?.formatVersion, insert.deprecated);
     capturePreSemanticTokenFor(
         tokens.name.text,
         tokens.name.at,
@@ -1861,18 +1847,12 @@ function parseModifier(
 
         // Tokenize the first token as a macro, unless the modifier is a note.
         // Also capture whether or not the modifier is deprecated.
-        let deprecated = false;
-        try {
-            deprecated =
-                state.storyFormat?.formatVersion !== undefined &&
-                modifier?.deprecated !== undefined &&
-                versionCompare(
-                    state.storyFormat.formatVersion,
-                    modifier.deprecated,
-                ) <= 0;
-        } catch {
-            // Ignore if formatVersion is broken
-        }
+        const deprecated =
+            modifier?.deprecated !== undefined &&
+            isVersionAtLeast(
+                state.storyFormat?.formatVersion,
+                modifier.deprecated,
+            );
         capturePreSemanticTokenFor(
             modifierTokens.name.text,
             modifierTokens.name.at,
