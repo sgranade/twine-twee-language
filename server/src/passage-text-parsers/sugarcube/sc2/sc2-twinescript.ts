@@ -294,12 +294,13 @@ function resugarShapeSources(
         for (const source of label.shapeSources) {
             const [root, ...rest] = source.split(".");
             // A state root's path is already sigiled, since desugaring
-            // leaves no sigil at the start of a name; the setup object
-            // needs no de-sugaring
+            // leaves no sigil at the start of a name; the setup and
+            // settings objects need no de-sugaring
             if (
                 root.startsWith("$") ||
                 root.startsWith("_") ||
-                root === "setup"
+                root === "setup" ||
+                root === "settings"
             ) {
                 sources.push(source);
                 continue;

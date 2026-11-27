@@ -35,12 +35,32 @@ function sigilForRootName(name: string | undefined): Sigil | undefined {
     return undefined;
 }
 
+// SugarCube globals whose properties are indexed in script code
+const objectRoots = ["setup", "settings"] as const;
+type ObjectRoot = (typeof objectRoots)[number];
+
+// How a `Setting` method uses the setting its first argument names: `define`
+// creates it w/a known value, `set` writes its second argument, and `read`
+// reads it. n.b. SugarCube added `addRange` in 2.26.0 and `addValue`,
+// `getValue` and `setValue` in 2.37.0, but all are recognized whatever
+// version a project targets. `addHeader` names no setting.
+type SettingUse = "define" | "set" | "read";
+const settingMethods: ReadonlyMap<string, SettingUse> = new Map([
+    ["addToggle", "define"],
+    ["addList", "define"],
+    ["addRange", "define"],
+    ["addValue", "define"],
+    ["setValue", "set"],
+    ["getValue", "read"],
+]);
+
 type RootTracer = ReturnType<typeof createRootTracer>;
 
 /**
  * Create scope-aware helpers that recognize SugarCube's roots in script code
  * and the story paths reached through them: state roots, which reach story
- * variables, and `setup`, which reaches setup properties.
+ * variables, `setup`, which reaches setup properties, and `settings`, which
+ * reaches settings.
  *
  * @param text Text the AST was parsed from.
  * @param scopeManager Scope analysis of the AST.
@@ -130,13 +150,15 @@ function createRootTracer(
         }
     };
 
-    // `setup`'s path if the expression is SugarCube's `setup` or a
-    // never-reassigned alias of it.
-    const setupRootPath = (node: acorn.Node): "setup" | undefined => {
-        // This doesn't include `window.setup`, since SugarCube doesn't add it there
-        if (isSugarCubeGlobal(node, "setup")) return "setup";
+    // The object root an expression is, if it's SugarCube's `setup` or
+    // `settings` or a never-reassigned alias of one.
+    const objectRootPath = (node: acorn.Node): ObjectRoot | undefined => {
+        const root = objectRoots.find((name) => isSugarCubeGlobal(node, name));
+        if (root) return root;
+        // This doesn't include `window.setup` or `window.settings`, since
+        // SugarCube doesn't add them there
         return node.type === "Identifier"
-            ? aliasRoot(node as acorn.Identifier, setupRootPath)
+            ? aliasRoot(node as acorn.Identifier, objectRootPath)
             : undefined;
     };
 
@@ -158,24 +180,52 @@ function createRootTracer(
         return pathOf;
     };
 
-    // `State.getVar`/`setVar` call with a literal key, if the node is one
-    const stateVarCall = (
+    // Call of one of a SugarCube global's methods w/a literal first
+    // argument (`State.getVar("$a")`), if the node is one
+    const literalKeyCall = <M extends string>(
         node: acorn.CallExpression,
-    ): { method: "getVar" | "setVar"; key: StaticName } | undefined => {
+        global: string,
+        isMethod: (name: string) => name is M,
+    ): { method: M; key: StaticName } | undefined => {
         if (node.callee.type !== "MemberExpression") return undefined;
         const method = memberName(node.callee)?.name;
-        if (method !== "getVar" && method !== "setVar") return undefined;
-        if (!isStateObject(node.callee.object)) return undefined;
+        if (method === undefined || !isMethod(method)) return undefined;
+        if (!isSugarCubeGlobal(node.callee.object, global)) return undefined;
         const key = node.arguments[0];
         const literal = key && staticKeyName(key, true);
         return literal ? { method, key: literal } : undefined;
     };
 
+    // `State.getVar`/`setVar` call with a literal key, if the node is one
+    const stateVarCall = (
+        node: acorn.CallExpression,
+    ): { method: "getVar" | "setVar"; key: StaticName } | undefined =>
+        literalKeyCall(
+            node,
+            "State",
+            (name): name is "getVar" | "setVar" =>
+                name === "getVar" || name === "setVar",
+        );
+
+    // `Setting` call that names a setting w/a literal key, if the node
+    // is one. A key that isn't an identifier isn't a setting since
+    // then you can't do `settings.<key>`.
+    const settingCall = (
+        node: acorn.CallExpression,
+    ): { use: SettingUse; key: StaticName } | undefined => {
+        const call = literalKeyCall(node, "Setting", (name): name is string =>
+            settingMethods.has(name),
+        );
+        if (!call || !isIdentifierName(call.key.name)) return undefined;
+        return { use: settingMethods.get(call.method)!, key: call.key };
+    };
+
     return {
         rootSigil,
         statePathOf: pathThrough(stateRootPath),
-        setupPathOf: pathThrough(setupRootPath),
-        setupRootPath,
+        objectPathOf: pathThrough(objectRootPath),
+        objectRootPath,
+        settingCall,
         stateVarCall,
         staticKeyName,
         memberName,
@@ -184,8 +234,8 @@ function createRootTracer(
 }
 
 /**
- * Extract SugarCube story variables and properties and setup object
- * properties from JavaScript code.
+ * Extract SugarCube story variables and properties, and setup and
+ * settings object properties, from JavaScript code.
  */
 export const extractSugarCubeScriptSymbols: ScriptSymbolExtractor = ({
     ast,
@@ -197,37 +247,40 @@ export const extractSugarCubeScriptSymbols: ScriptSymbolExtractor = ({
      * `State.variables`, `State.temporary`, `variables()`, `temporary()`,
      * `SugarCube.State.*` (w/ or w/o `window.`), or `State.getVar`/`setVar`
      * w/ a literal key. A setup property is reached through `setup`, or
-     * `SugarCube.setup` (w/ or w/o `window.`). A never-reassigned binding
-     * initialized w/either kind of root is also that kind of root. Bare
+     * `SugarCube.setup` (w/ or w/o `window.`), and a setting the same way
+     * through `settings`. A `Setting` call with a literal name (`addToggle`,
+     * `getValue`, …) also reaches a setting. A never-reassigned binding
+     * initialized with any kind of root is also that kind of root. Bare
      * identifiers are never story variables.
      */
     const tracer = createRootTracer(text, scopeManager);
     const pathOf: StaticPathOf = (node) =>
-        tracer.statePathOf(node) ?? tracer.setupPathOf(node);
+        tracer.statePathOf(node) ?? tracer.objectPathOf(node);
     const stateRooted = extractStateRootSymbols(ast, tracer, pathOf);
     return {
         variables: stateRooted.variables,
         properties: [
             ...stateRooted.properties,
-            ...extractSetupProperties(ast, tracer, pathOf),
+            ...extractObjectRootProperties(ast, tracer, pathOf),
         ].sort((a, b) => a.at - b.at),
     };
 };
 
 /**
- * Extract setup properties from SugarCube JavaScript code.
+ * Extract setup properties and settings from SugarCube JavaScript code.
  *
  * @param ast Parsed code.
  * @param tracer Root helpers for the code.
- * @param pathOf Gets an expression's story or setup path, to find shape
- * sources and recognize a self-reference.
+ * @param pathOf Gets an expression's story, setup, or settings path, to find
+ * shape sources and recognize a self-reference.
  * @returns Property occurrences.
  */
-function extractSetupProperties(
+function extractObjectRootProperties(
     ast: acorn.Node,
     {
-        setupRootPath,
-        setupPathOf,
+        objectRootPath,
+        objectPathOf,
+        settingCall,
         memberName,
         staticKeyName,
         objectAssignCall,
@@ -236,13 +289,13 @@ function extractSetupProperties(
 ): ScriptPropertyOccurrence[] {
     const properties: ScriptPropertyOccurrence[] = [];
 
-    // Reads of a destructured setup path's keys (`a` in
+    // Reads of a destructured setup or setting path's keys (`a` in
     // `const { a } = setup`)
     const captureDestructuring = (
         pattern: acorn.ObjectPattern,
         source: acorn.AnyNode,
     ) => {
-        const path = setupPathOf(source);
+        const path = objectPathOf(source);
         if (!path) return;
         for (const prop of pattern.properties) {
             if (prop.type !== "Property") continue;
@@ -263,7 +316,7 @@ function extractSetupProperties(
         const node = rawNode as acorn.AnyNode;
         switch (node.type) {
             case "MemberExpression": {
-                const root = setupRootPath(node.object);
+                const root = objectRootPath(node.object);
                 if (!root) break;
                 properties.push(
                     ...memberChainProperties(
@@ -278,8 +331,37 @@ function extractSetupProperties(
             }
 
             case "CallExpression": {
+                const setting = settingCall(node);
+                if (setting) {
+                    const { key, use } = setting;
+                    const path = `settings.${key.name}`;
+                    // A defined setting's shape is known; a set one takes
+                    // its value argument's shape
+                    const value = node.arguments[1];
+                    const isSet = use === "set";
+                    properties.push({
+                        text: key.name,
+                        at: key.start,
+                        scope: "settings",
+                        assigned: use !== "read",
+                        isCallee: false,
+                        ...shapeFlags(
+                            isSet
+                                ? storyVarSetArgumentShape(value, path, pathOf)
+                                : {},
+                        ),
+                    });
+                    if (isSet) {
+                        properties.push(
+                            ...objectLiteralProperties(value, path, pathOf, {
+                                assigned: true,
+                            }),
+                        );
+                    }
+                    break;
+                }
                 const assign = objectAssignCall(node);
-                const path = assign && setupPathOf(assign.target);
+                const path = assign && objectPathOf(assign.target);
                 if (!assign || !path) break;
                 for (const source of assign.sources) {
                     properties.push(
@@ -324,7 +406,7 @@ export const extractTwineScriptSymbols: ScriptSymbolExtractor = ({
     const defaultPathOf = storyPathOf(isGlobalName);
     const pathOf: StaticPathOf = (node) =>
         tracer.statePathOf(node) ??
-        tracer.setupPathOf(node) ??
+        tracer.objectPathOf(node) ??
         defaultPathOf(node);
     const sigiled = extractSymbols(ast, isGlobalName, {
         isAssignmentContext,

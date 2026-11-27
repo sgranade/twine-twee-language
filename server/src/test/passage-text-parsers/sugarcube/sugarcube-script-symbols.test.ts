@@ -33,6 +33,16 @@ function extract(text: string) {
             !!v.sigilOutsideRange,
         ]),
         props: result.properties.map((p) => [p.prefix, p.contents]),
+        // Properties as [prefix, contents, assigned, located text]
+        located: result.properties.map((p) => [
+            p.prefix,
+            p.contents,
+            !!p.assigned,
+            text.slice(
+                state.textDocument.offsetAt(p.location.range.start),
+                state.textDocument.offsetAt(p.location.range.end),
+            ),
+        ]),
         opaque: [
             ...result.variables.filter((v) => v.opaque).map((v) => v.contents),
             ...result.properties
@@ -270,6 +280,96 @@ describe("SugarCube Script Symbols", () => {
                 ["setup", "a"],
             ]);
             expect(extract("let s = setup; s = {}; s.a = 1;").props).to.eql([]);
+        });
+    });
+
+    describe("Setting Object", () => {
+        it("should capture a Setting.addToggle literal name as a write of the setting", () => {
+            const text = 'Setting.addToggle("music", { label: "Music" });';
+            const result = extract(text).located;
+
+            expect(result).to.eql([["settings", "music", true, "music"]]);
+        });
+
+        for (const method of ["addList", "addRange", "addValue"]) {
+            it(`should capture a Setting.${method} literal name as a write`, () => {
+                expect(
+                    extract(`Setting.${method}('volume', {});`).located,
+                ).to.eql([["settings", "volume", true, "volume"]]);
+            });
+        }
+
+        it("should not capture a Setting.addHeader name", () => {
+            expect(extract('Setting.addHeader("music");').located).to.eql([]);
+        });
+
+        it("should capture Setting calls through SugarCube and window.SugarCube", () => {
+            expect(
+                extract(
+                    'SugarCube.Setting.addToggle("a", {}); window.SugarCube.Setting.addToggle("b", {});',
+                ).props,
+            ).to.eql([
+                ["settings", "a"],
+                ["settings", "b"],
+            ]);
+        });
+
+        it("should ignore Setting calls on a local binding named Setting", () => {
+            expect(
+                extract('function f(Setting) { Setting.addToggle("a", {}); }')
+                    .props,
+            ).to.eql([]);
+        });
+
+        it("should ignore a Setting.addToggle with a non-literal name", () => {
+            expect(extract("Setting.addToggle(key, {});").props).to.eql([]);
+        });
+
+        it("should capture Setting.getValue as a read and Setting.setValue as a write", () => {
+            expect(
+                extract(
+                    'Setting.getValue("music"); Setting.setValue(`volume`, 3);',
+                ).located,
+            ).to.eql([
+                ["settings", "music", false, "music"],
+                ["settings", "volume", true, "volume"],
+            ]);
+        });
+
+        it("should capture settings reads and writes through settings, SugarCube.settings and window.SugarCube.settings but not window.settings", () => {
+            expect(
+                extract(
+                    "settings.a = true; SugarCube.settings.b; window.SugarCube.settings.c = 1; window.settings.d;",
+                ).located,
+            ).to.eql([
+                ["settings", "a", true, "a"],
+                ["settings", "b", false, "b"],
+                ["settings", "c", true, "c"],
+            ]);
+        });
+
+        it("should follow a never-reassigned alias of settings but not a reassigned one", () => {
+            expect(extract("const s = settings; s.music;").props).to.eql([
+                ["settings", "music"],
+            ]);
+            expect(extract("let s = settings; s = {}; s.music;").props).to.eql(
+                [],
+            );
+        });
+
+        it("should ignore a Setting call whose name isn't an identifier", () => {
+            expect(extract('Setting.addToggle("music-on", {});').props).to.eql(
+                [],
+            );
+        });
+
+        it("should capture the keys of an object literal Setting.setValue writes", () => {
+            expect(
+                extract('Setting.setValue("audio", { volume: 3 });').located,
+            ).to.eql([
+                ["settings", "audio", true, "audio"],
+                ["settings.audio", "volume", true, "volume"],
+            ]);
         });
     });
 });

@@ -797,4 +797,160 @@ describe(".js File Story Variable References", () => {
             });
         });
     });
+
+    describe("SugarCube Setting Object", () => {
+        async function neverSetTexts(
+            js: string,
+            passageText: string,
+            role: ScriptFileRole = "story-script",
+            formatVersion?: string,
+        ) {
+            const { index, tw } = build(js, passageText, {
+                role,
+                formatVersion,
+            });
+            return (await generateDiagnostics(tw, index))
+                .filter((d) => d.code === "variable-never-set")
+                .map((d) => tw.getText(d.range));
+        }
+
+        it("should count a Setting.addValue even when the project targets a version before 2.37.0", async () => {
+            expect(
+                await neverSetTexts(
+                    'Setting.addValue("music", {});\n',
+                    "<<if settings.music>><</if>>",
+                    "story-script",
+                    "2.20.0",
+                ),
+            ).to.eql([]);
+        });
+
+        it("should count a .js Setting.addToggle and still warn on a typo", async () => {
+            expect(
+                await neverSetTexts(
+                    'Setting.addToggle("music", { label: "Music" });\n',
+                    "<<if settings.music>><</if>><<if settings.musc>><</if>>",
+                ),
+            ).to.eql(["musc"]);
+        });
+
+        it("should count a Setting.addToggle in an included script", async () => {
+            expect(
+                await neverSetTexts(
+                    'Setting.addToggle("music", {});\n',
+                    "<<if settings.music>><</if>>",
+                    "included-script",
+                ),
+            ).to.eql([]);
+        });
+
+        for (const [desc, passageText] of [
+            [
+                "a script passage",
+                '<<if settings.music>><</if>>\n\n:: Init [script]\nSetting.addToggle("music", {});',
+            ],
+            [
+                "a <<script>> block",
+                '<<script>>Setting.addToggle("music", {});<</script>><<if settings.music>><</if>>',
+            ],
+        ]) {
+            it(`should count a Setting.addToggle in ${desc}`, async () => {
+                expect(await neverSetTexts("", passageText)).to.eql([]);
+            });
+        }
+
+        for (const js of [
+            'Setting.addHeader("music");\n',
+            "Setting.addToggle(key, {});\n",
+        ]) {
+            it(`should still warn on a setting after only ${js.trim()}`, async () => {
+                expect(
+                    await neverSetTexts(js, "<<if settings.music>><</if>>"),
+                ).to.eql(["music"]);
+            });
+        }
+
+        it("should count a direct .js write and Setting.setValue as setting a setting", async () => {
+            expect(
+                await neverSetTexts(
+                    'settings.music = true;\nSetting.setValue("volume", 3);\n',
+                    "<<print settings.music + settings.volume>>",
+                ),
+            ).to.eql([]);
+        });
+
+        it("should check a copy of settings against the settings' definitions", async () => {
+            expect(
+                await neverSetTexts(
+                    'Setting.addToggle("music", {});\n',
+                    "<<set _s to settings>><<print _s.music + _s.musc>>",
+                ),
+            ).to.eql(["musc"]);
+        });
+
+        describe("across .tw and .js files", () => {
+            const js =
+                'Setting.addToggle("music", {});\nif (settings.music) { Setting.getValue("music"); }\n';
+            const passageText = "<<if settings.music>><</if>>";
+            const atMusic = (doc: TextDocument) =>
+                doc.positionAt(doc.getText().indexOf("music"));
+
+            it("should go from a setting in a passage to its Setting.addToggle name", () => {
+                const { index, tw, script } = build(js, passageText);
+
+                const definition = getDefinitionAt(tw, atMusic(tw), index);
+
+                expect(
+                    [definition]
+                        .flat()
+                        .filter((d) => d !== undefined)
+                        .map(
+                            (d) =>
+                                `${d.uri}: ${script.getText(d.range)}@${d.range.start.line}:${d.range.start.character}`,
+                        ),
+                ).to.eql(["file:///s.js: music@0:19"]);
+            });
+
+            it("should find a setting's references in both files", () => {
+                const { index, tw } = build(js, passageText);
+
+                const refs = getReferencesToSymbolAt(
+                    tw.uri,
+                    atMusic(tw),
+                    index,
+                    true,
+                );
+
+                expect(refs?.map((r) => r.uri).sort()).to.eql([
+                    "file:///s.js",
+                    "file:///s.js",
+                    "file:///s.js",
+                    "file:///story.tw",
+                ]);
+            });
+
+            it("should rename a setting's Setting call strings and reads in a .js", () => {
+                const { index, tw, script } = build(js, passageText);
+
+                const edit = generateRenames(
+                    tw.uri,
+                    atMusic(tw),
+                    "sound",
+                    index,
+                ) as WorkspaceEdit;
+
+                expect(
+                    TextDocument.applyEdits(
+                        script,
+                        edit.changes?.[script.uri] ?? [],
+                    ),
+                ).to.equal(
+                    'Setting.addToggle("sound", {});\nif (settings.sound) { Setting.getValue("sound"); }\n',
+                );
+                expect(
+                    TextDocument.applyEdits(tw, edit.changes?.[tw.uri] ?? []),
+                ).to.contain("<<if settings.sound>>");
+            });
+        });
+    });
 });
