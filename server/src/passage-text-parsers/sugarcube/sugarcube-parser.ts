@@ -557,8 +557,12 @@ function parseMacroArgs(
                         sugarcubeState,
                     );
                 }
-            } else if (t3ltArgFormatType === "passage") {
-                // A bareword, string (the passage name is in the string), NaN, or number (sure)
+            } else if (
+                t3ltArgFormatType === "passage" &&
+                t3ltArg.type !== T3LTArgType.Expression
+            ) {
+                // A bareword, string (the passage name is in the string), NaN, or number (sure),
+                // or a variable, setup property or setting that names the passage at runtime
                 let passageName: string | undefined;
                 let passageAt = sc2Token.at;
                 if (t3ltArg.type === T3LTArgType.Bareword) {
@@ -570,6 +574,22 @@ function parseMacroArgs(
                     passageName = String(NaN);
                 } else if (t3ltArg.type === T3LTArgType.Number) {
                     passageName = String(t3ltArg.value);
+                } else if (
+                    t3ltArg.type === T3LTArgType.Variable ||
+                    t3ltArg.type === T3LTArgType.SettingsSetupAccess
+                ) {
+                    // The passage name is only known at runtime so
+                    // there's no passage reference
+                    createVariableAndPropertyReferences(
+                        tokenizeTwineScriptExpression(
+                            sc2Token.text,
+                            sc2Token.at,
+                            state.textDocument,
+                            sugarcubeState,
+                        ),
+                        state,
+                        sugarcubeState,
+                    );
                 }
                 if (passageName !== undefined) {
                     passageName = passageName.replace(/\\/g, "");

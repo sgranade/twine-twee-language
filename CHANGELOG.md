@@ -56,6 +56,7 @@ Four big changes:
 - SugarCube: Now includes story variables and properties only assigned to in e.g. `<<set>>` macros in completions.
 - SugarCube: No longer incorrectly indexes apparent story variables in non-data HTML attributes.
 - SugarCube: Now correctly places the end of diagnostic squiggles on TwineScript expressions.
+- SugarCube: Now indexes variables and expressions used in passage parameters (e.g. `<<goto $q>>`).
 
 ## [1.1.5] - 2026 04 12
 

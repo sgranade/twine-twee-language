@@ -3667,6 +3667,287 @@ describe("SugarCube Parser", () => {
                 expect(callbacks.errors).to.be.empty;
             });
         });
+
+        describe("passage-typed macro arguments", () => {
+            // References from parsing a passage with the built-in macros,
+            // after a `:: Passage` header line, without the macro's own reference
+            const referencesFor = (passage: string) => {
+                const header = ":: Passage\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    uri: "fake-uri",
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const parser = uut.getSugarCubeParser(undefined);
+                parser?.parsePassageText(passage, header.length, state);
+                return callbacks.references.filter(
+                    (r) =>
+                        r.kind !== OSugarCubeSymbolKind.KnownMacro &&
+                        r.kind !== OSugarCubeSymbolKind.UnknownMacro,
+                );
+            };
+
+            it("should capture a variable reference and no passage reference for a story variable", () => {
+                const references = referencesFor("<<goto $q>>");
+
+                expect(references).to.eql([
+                    {
+                        contents: "$q",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(1, 7, 1, 9),
+                        ),
+                        kind: OSugarCubeSymbolKind.Variable,
+                    },
+                ]);
+            });
+
+            it("should capture a variable reference and no passage reference for a temporary variable", () => {
+                const references = referencesFor("<<goto _q>>");
+
+                expect(references).to.eql([
+                    {
+                        contents: "_q",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(1, 7, 1, 9),
+                        ),
+                        kind: OSugarCubeSymbolKind.Variable,
+                    },
+                ]);
+            });
+
+            it("should capture variable and property references for a variable's property", () => {
+                const references = referencesFor("<<goto $q.next>>");
+
+                expect(references).to.eql([
+                    {
+                        contents: "$q",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(1, 7, 1, 9),
+                        ),
+                        kind: OSugarCubeSymbolKind.Variable,
+                    },
+                    {
+                        contents: "$q.next",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(1, 10, 1, 14),
+                        ),
+                        kind: OSugarCubeSymbolKind.Property,
+                    },
+                ]);
+            });
+
+            it("should capture a setup property reference and no passage reference for a setup access", () => {
+                const references = referencesFor("<<goto setup.next>>");
+
+                expect(references).to.eql([
+                    {
+                        contents: "setup.next",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(1, 13, 1, 17),
+                        ),
+                        kind: OSugarCubeSymbolKind.Property,
+                    },
+                ]);
+            });
+
+            it("should capture a setting reference and no passage reference for a settings access", () => {
+                const references = referencesFor("<<goto settings.next>>");
+
+                expect(references).to.eql([
+                    {
+                        contents: "settings.next",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(1, 16, 1, 20),
+                        ),
+                        kind: OSugarCubeSymbolKind.Property,
+                    },
+                ]);
+            });
+
+            it("should produce variable and property semantic tokens for a variable's property", () => {
+                const header = ":: Passage\n";
+                const passage = "<<goto $q.next>>";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                const parser = uut.getSugarCubeParser(undefined);
+
+                parser?.parsePassageText(passage, header.length, state);
+                const result = callbacks.tokens;
+
+                // Slice to get rid of the token for the macro name
+                expect(result.slice(1)).to.eql([
+                    {
+                        line: 1,
+                        char: 7,
+                        length: 2,
+                        tokenType: ETokenType.variable,
+                        tokenModifiers: [],
+                    },
+                    {
+                        line: 1,
+                        char: 10,
+                        length: 4,
+                        tokenType: ETokenType.property,
+                        tokenModifiers: [],
+                    },
+                ]);
+            });
+
+            for (const passage of [
+                '<<link "x" $q>><</link>>',
+                '<<button "x" $q>><</button>>',
+            ]) {
+                it(`should capture a variable reference and no passage reference for a variable in ${passage}`, () => {
+                    const start = passage.indexOf("$q");
+
+                    const references = referencesFor(passage);
+
+                    expect(references).to.eql([
+                        {
+                            contents: "$q",
+                            location: Location.create(
+                                "fake-uri",
+                                Range.create(1, start, 1, start + 2),
+                            ),
+                            kind: OSugarCubeSymbolKind.Variable,
+                        },
+                    ]);
+                });
+            }
+
+            for (const macro of ["goto", "include"]) {
+                it(`should capture a variable reference inside the back-ticks and no passage reference for a back-ticked expression in <<${macro}>>`, () => {
+                    const references = referencesFor(`<<${macro} \`$q\`>>`);
+                    const start = macro.length + 4; // "<<", macro, " `"
+
+                    expect(references).to.eql([
+                        {
+                            contents: "$q",
+                            location: Location.create(
+                                "fake-uri",
+                                Range.create(1, start, 1, start + 2),
+                            ),
+                            kind: OSugarCubeSymbolKind.Variable,
+                        },
+                    ]);
+                });
+            }
+
+            for (const passage of [
+                '<<link "x" `$q`>><</link>>',
+                '<<button "x" `$q`>><</button>>',
+                "<<actions `$q`>>",
+            ]) {
+                it(`should capture a variable reference for a back-ticked passage expression in ${passage}`, () => {
+                    const start = passage.indexOf("$q");
+
+                    const references = referencesFor(passage);
+
+                    expect(references).to.eql([
+                        {
+                            contents: "$q",
+                            location: Location.create(
+                                "fake-uri",
+                                Range.create(1, start, 1, start + 2),
+                            ),
+                            kind: OSugarCubeSymbolKind.Variable,
+                        },
+                    ]);
+                });
+            }
+
+            it("should capture a setup property reference for a back-ticked setup access", () => {
+                const references = referencesFor("<<goto `setup.next`>>");
+
+                expect(references).to.eql([
+                    {
+                        contents: "setup.next",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(1, 14, 1, 18),
+                        ),
+                        kind: OSugarCubeSymbolKind.Property,
+                    },
+                ]);
+            });
+
+            it("should error on a too-new Setting call in a back-ticked passage expression", () => {
+                const header = ":: Passage\n";
+                const passage = '<<goto `Setting.getValue("p")`>>';
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                state.storyFormat = {
+                    format: "SugarCube",
+                    formatVersion: "2.36.1",
+                };
+                const parser = uut.getSugarCubeParser(undefined);
+
+                parser?.parsePassageText(passage, header.length, state);
+                const errors = callbacks.errors;
+
+                expect(errors.length).to.equal(1);
+                expect(errors[0].code).to.equal("api-not-available");
+                expect(errors[0].range).to.eql(Range.create(1, 16, 1, 24));
+            });
+
+            it("should capture a passage reference for a string passage name", () => {
+                const references = referencesFor('<<goto "Next">>');
+
+                expect(references).to.eql([
+                    {
+                        contents: "Next",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(1, 8, 1, 12),
+                        ),
+                        kind: TwineSymbolKind.Passage,
+                    },
+                ]);
+            });
+
+            it("should capture a passage reference for a bareword passage name", () => {
+                const references = referencesFor("<<goto Next>>");
+
+                expect(references).to.eql([
+                    {
+                        contents: "Next",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(1, 7, 1, 11),
+                        ),
+                        kind: TwineSymbolKind.Passage,
+                    },
+                ]);
+            });
+
+            it("should capture only a variable reference for a variable link target", () => {
+                const references = referencesFor("<<link [[x|$q]]>><</link>>");
+
+                expect(references).to.eql([
+                    {
+                        contents: "$q",
+                        location: Location.create(
+                            "fake-uri",
+                            Range.create(1, 11, 1, 13),
+                        ),
+                        kind: OSugarCubeSymbolKind.Variable,
+                    },
+                ]);
+            });
+        });
     });
 
     describe("block comments", () => {
