@@ -55,15 +55,156 @@ const settingMethods: ReadonlyMap<string, SettingUse> = new Map([
     ["getValue", "read"],
 ]);
 
-// SugarCube version each `Setting` method was added in, for those added after
-// 2.0.0, per SugarCube 2.37.3's documentation
-const settingMethodsSince: ReadonlyMap<string, string> = new Map([
-    ["addHeader", "2.7.1"],
-    ["addRange", "2.26.0"],
-    ["addValue", "2.37.0"],
-    ["getValue", "2.37.0"],
-    ["setValue", "2.37.0"],
-]);
+// Generate each name under a SugarCube API path
+// (`members("Save.onLoad", "add")` gives `Save.onLoad.add`)
+function members(path: string, ...names: string[]): string[] {
+    return names.map((name) => `${path}.${name}`);
+}
+
+// Methods of `SimpleAudio.tracks`, `.groups` and `.lists`, and of
+// `Save.browser.auto` and `.slot`
+const audioCollectionMethods = ["add", "clear", "delete", "get", "has"];
+const browserSaveMethods = [
+    "clear",
+    "delete",
+    "entries",
+    "get",
+    "has",
+    "isEnabled",
+    "load",
+    "save",
+];
+
+// SugarCube version each API-object method and global function was introduced
+// in, for those introduced after 2.0.0, keyed by full path
+// (`Save.browser.slot.save`, `triggerEvent`). Pulled from the `#### History:`
+// "Introduced" lines in SugarCube 2.38.0-alpha.10's documentation (commit
+// ba17b12) minus APIs introduced in 2.38.0 since that's in
+// pre-release (2026/11/27).
+const apiIntroducedIn: ReadonlyMap<string, string> = new Map(
+    (
+        [
+            ["2.7.0", ["hasVisited"]],
+            ["2.7.1", ["Setting.addHeader"]],
+            ["2.9.0", members("Dialog", "append", "wiki")],
+            ["2.11.0", ["Story.lookupWith"]],
+            ["2.15.0", members("LoadScreen", "lock", "unlock")],
+            [
+                "2.16.0",
+                [
+                    ...members("Engine", "isIdle", "isPlaying", "isRendering"),
+                    "importScripts",
+                    "importStyles",
+                ],
+            ],
+            ["2.17.0", members("UIBar", "destroy", "stow", "unstow")],
+            ["2.19.0", ["temporary"]],
+            ["2.21.0", members("Save", "serialize", "deserialize")],
+            ["2.22.0", members("State", "getVar", "setVar")],
+            ["2.26.0", ["Setting.addRange"]],
+            [
+                "2.28.0",
+                [
+                    ...members(
+                        "SimpleAudio",
+                        "load",
+                        "loadWithScreen",
+                        "mute",
+                        "muteOnHidden",
+                        "select",
+                        "stop",
+                        "unload",
+                        "volume",
+                    ),
+                    ...["tracks", "groups", "lists"].flatMap((collection) =>
+                        members(
+                            `SimpleAudio.${collection}`,
+                            ...audioCollectionMethods,
+                        ),
+                    ),
+                ],
+            ],
+            [
+                "2.29.0",
+                [
+                    ...members(
+                        "State.metadata",
+                        "clear",
+                        "delete",
+                        "get",
+                        "has",
+                        "set",
+                    ),
+                    ...members("State.prng", "init", "isEnabled"),
+                    ...members("Template", "add", "delete", "get", "has"),
+                    ...members(
+                        "UIBar",
+                        "hide",
+                        "isHidden",
+                        "isStowed",
+                        "show",
+                        "update",
+                    ),
+                    "forget",
+                    "memorize",
+                    "recall",
+                ],
+            ],
+            [
+                "2.31.0",
+                members(
+                    "Fullscreen",
+                    "exit",
+                    "isEnabled",
+                    "isFullscreen",
+                    "offChange",
+                    "offError",
+                    "onChange",
+                    "onError",
+                    "request",
+                    "toggle",
+                ),
+            ],
+            [
+                "2.36.0",
+                [
+                    ...members("Save.onLoad", "add", "clear", "delete"),
+                    ...members("Save.onSave", "add", "clear", "delete"),
+                    ...members("State.metadata", "entries", "keys"),
+                ],
+            ],
+            [
+                "2.37.0",
+                [
+                    ...members("Dialog", "create", "empty", "wikiPassage"),
+                    ...members(
+                        "Save.browser",
+                        "clear",
+                        "continue",
+                        "isEnabled",
+                    ),
+                    ...members("Save.browser.auto", ...browserSaveMethods),
+                    ...members("Save.browser.slot", ...browserSaveMethods),
+                    ...members("Save.disk", "export", "import", "load", "save"),
+                    ...members(
+                        "Save.base64",
+                        "export",
+                        "import",
+                        "load",
+                        "save",
+                    ),
+                    "Serial.createReviver",
+                    ...members("Setting", "addValue", "getValue", "setValue"),
+                    ...members("Story", "add", "delete", "filter", "find"),
+                    "UI.update",
+                    "triggerEvent",
+                ],
+            ],
+        ] as const
+    ).flatMap(([version, paths]) =>
+        paths.map((path): [string, string] => [path, version]),
+    ),
+);
 
 type RootTracer = ReturnType<typeof createRootTracer>;
 
@@ -88,6 +229,7 @@ function createRootTracer(
         aliasRoot,
         objectAssignCall,
     } = createScriptAnalysis(text, scopeManager);
+
     // A SugarCube global: `name`, `SugarCube.name`, or
     // `window.SugarCube.name`
     const isSugarCubeGlobal = (node: acorn.Node, name: string): boolean => {
@@ -100,6 +242,38 @@ function createRootTracer(
             memberName(member)?.name === name &&
             isSugarCubeObject(member.object)
         );
+    };
+
+    // Name of the SugarCube global an expression is, if it's one
+    const sugarCubeGlobalName = (node: acorn.Node): string | undefined => {
+        const name =
+            node.type === "Identifier"
+                ? (node as acorn.Identifier).name
+                : node.type === "MemberExpression"
+                  ? memberName(node as acorn.MemberExpression)?.name
+                  : undefined;
+        return name !== undefined && isSugarCubeGlobal(node, name)
+            ? name
+            : undefined;
+    };
+
+    // Full API path a member expression names (`Save.browser.slot.save`),
+    // if it's a static member path rooted at a SugarCube global
+    const sugarCubeApiPath = (
+        node: acorn.MemberExpression,
+    ): string | undefined => {
+        const names: string[] = [];
+        let current: acorn.Node = node;
+        while (current.type === "MemberExpression") {
+            const member = current as acorn.MemberExpression;
+            const name = memberName(member);
+            if (!name) return undefined;
+            names.unshift(name.name);
+            const root = sugarCubeGlobalName(member.object);
+            if (root) return [root, ...names].join(".");
+            current = member.object;
+        }
+        return undefined;
     };
 
     const isStateObject = (node: acorn.Node): boolean =>
@@ -207,17 +381,6 @@ function createRootTracer(
         return literal ? { method, key: literal } : undefined;
     };
 
-    // `State.getVar`/`setVar` call with a literal key, if the node is one
-    const stateVarCall = (
-        node: acorn.CallExpression,
-    ): { method: "getVar" | "setVar"; key: StaticName } | undefined =>
-        literalKeyCall(
-            node,
-            "State",
-            (name): name is "getVar" | "setVar" =>
-                name === "getVar" || name === "setVar",
-        );
-
     // `Setting` call that names a setting w/a literal key, if the node
     // is one. A key that isn't an identifier isn't a setting since
     // then you can't do `settings.<key>`.
@@ -231,8 +394,20 @@ function createRootTracer(
         return { use: settingMethods.get(call.method)!, key: call.key };
     };
 
+    // `State.getVar`/`setVar` call with a literal key, if the node is one
+    const stateVarCall = (
+        node: acorn.CallExpression,
+    ): { method: "getVar" | "setVar"; key: StaticName } | undefined =>
+        literalKeyCall(
+            node,
+            "State",
+            (name): name is "getVar" | "setVar" =>
+                name === "getVar" || name === "setVar",
+        );
+
     return {
         isSugarCubeGlobal,
+        sugarCubeApiPath,
         rootSigil,
         statePathOf: pathThrough(stateRootPath),
         objectPathOf: pathThrough(objectRootPath),
@@ -246,8 +421,8 @@ function createRootTracer(
 }
 
 /**
- * Find plain calls to SugarCube APIs that a format version doesn't have yet,
- * such as `Setting.addValue(…)` before 2.37.0.
+ * Find plain calls to SugarCube API object methods that a format version
+ * doesn't have yet, such as `Save.browser.slot.save(…)` before 2.37.0.
  *
  * @param ast Parsed code.
  * @param tracer Root helpers for the code.
@@ -257,7 +432,7 @@ function createRootTracer(
  */
 function findUnavailableApiCalls(
     ast: acorn.Node,
-    { isSugarCubeGlobal, memberName }: RootTracer,
+    { sugarCubeApiPath, memberName }: RootTracer,
     formatVersion: string | undefined,
 ): ScriptDiagnosticOccurrence[] {
     const diagnostics: ScriptDiagnosticOccurrence[] = [];
@@ -265,7 +440,9 @@ function findUnavailableApiCalls(
 
     acornWalk.full(ast, (rawNode) => {
         const node = rawNode as acorn.AnyNode;
-        // Optional calls (`Setting.addValue?.(…)`) and bare member reads aren't reported
+        // The callee must be a static member path rooted at a SugarCube global
+        // (`Save`, `SugarCube.Save` or `window.SugarCube.Save`). Optional calls
+        // (`Setting.addValue?.(…)`) and bare member reads aren't reported
         if (
             node.type !== "CallExpression" ||
             node.optional ||
@@ -273,17 +450,12 @@ function findUnavailableApiCalls(
         )
             return;
         const method = memberName(node.callee);
-        const since = method && settingMethodsSince.get(method.name);
-        if (
-            !method ||
-            !since ||
-            !isVersionBefore(formatVersion, since) ||
-            !isSugarCubeGlobal(node.callee.object, "Setting")
-        )
-            return;
+        const path = method && sugarCubeApiPath(node.callee);
+        const since = path && apiIntroducedIn.get(path);
+        if (!method || !since || !isVersionBefore(formatVersion, since)) return;
         diagnostics.push({
             code: DiagnosticCodes.SugarCubeApiNotAvailable,
-            message: `\`Setting.${method.name}\` isn't available until SugarCube version ${since} but your StoryFormat version is ${formatVersion}`,
+            message: `\`${path}\` isn't available until SugarCube version ${since} but your StoryFormat version is ${formatVersion}`,
             text: method.name,
             at: method.start,
         });
@@ -294,6 +466,7 @@ function findUnavailableApiCalls(
 /**
  * Create an extractor of story variables and properties from SugarCube script
  * code, setup properties, and settings.
+ *
  * @param options Extractor options.
  * @param options.formatVersion The project's SugarCube version, if known.
  * @returns The extractor.

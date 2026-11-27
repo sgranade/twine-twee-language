@@ -488,4 +488,133 @@ describe("SugarCube Script Symbols", () => {
             });
         }
     });
+
+    describe("API-object methods newer than the format version", () => {
+        it("should report Save.browser.slot.save before 2.37.0 on the method name", () => {
+            expect(
+                extract("Save.browser.slot.save(1);", {
+                    formatVersion: "2.36.1",
+                }).diagnostics,
+            ).to.eql([
+                [
+                    "api-not-available",
+                    "save",
+                    "`Save.browser.slot.save` isn't available until SugarCube version 2.37.0 but your StoryFormat version is 2.36.1",
+                ],
+            ]);
+        });
+
+        for (const [call, path, method, before, since] of [
+            ["Story.filter(f)", "Story.filter", "filter", "2.36.1", "2.37.0"],
+            [
+                'State.metadata.get("k")',
+                "State.metadata.get",
+                "get",
+                "2.28.0",
+                "2.29.0",
+            ],
+            [
+                "Save.browser.auto.load()",
+                "Save.browser.auto.load",
+                "load",
+                "2.36.1",
+                "2.37.0",
+            ],
+            [
+                "Fullscreen.request()",
+                "Fullscreen.request",
+                "request",
+                "2.30.0",
+                "2.31.0",
+            ],
+            ['Template.add("t", f)', "Template.add", "add", "2.28.0", "2.29.0"],
+        ]) {
+            it(`should report ${path} at ${before} but not at ${since}`, () => {
+                const text = `${call};`;
+
+                expect(
+                    extract(text, { formatVersion: before }).diagnostics,
+                ).to.eql([
+                    [
+                        "api-not-available",
+                        method,
+                        `\`${path}\` isn't available until SugarCube version ${since} but your StoryFormat version is ${before}`,
+                    ],
+                ]);
+                expect(
+                    extract(text, { formatVersion: since }).diagnostics,
+                ).to.eql([]);
+            });
+        }
+
+        it("should report calls through SugarCube and window.SugarCube with the path from the global", () => {
+            expect(
+                extract(
+                    "SugarCube.Save.browser.slot.save(); window.SugarCube.Story.filter(f);",
+                    { formatVersion: "2.36.1" },
+                ).diagnostics.map((d) => [d[1], d[2]]),
+            ).to.eql([
+                [
+                    "save",
+                    "`Save.browser.slot.save` isn't available until SugarCube version 2.37.0 but your StoryFormat version is 2.36.1",
+                ],
+                [
+                    "filter",
+                    "`Story.filter` isn't available until SugarCube version 2.37.0 but your StoryFormat version is 2.36.1",
+                ],
+            ]);
+        });
+
+        it("should report a method reached through a literal computed key", () => {
+            expect(
+                extract('Save["browser"].slot["save"]();', {
+                    formatVersion: "2.36.1",
+                }).diagnostics.map((d) => d[1]),
+            ).to.eql(["save"]);
+        });
+
+        it("should not report calls on a local binding that shadows the root", () => {
+            expect(
+                extract("const Save = {}; Save.browser.slot.save();", {
+                    formatVersion: "2.36.1",
+                }).diagnostics,
+            ).to.eql([]);
+        });
+
+        it("should not report optional calls or member reads", () => {
+            expect(
+                extract(
+                    "Save.browser.slot.save?.(); if (Fullscreen.request) {} const f = Story.filter;",
+                    { formatVersion: "2.36.1" },
+                ).diagnostics,
+            ).to.eql([]);
+        });
+
+        it("should never report methods from 2.0.0 or names not in the table", () => {
+            expect(
+                extract(
+                    'Story.get("p"); Save.slots.save(); State.random(); Save.browser.slot.foo();',
+                    { formatVersion: "2.0.0" },
+                ).diagnostics,
+            ).to.eql([]);
+        });
+
+        // I'll handle global functions next
+        it("should not report global functions yet", () => {
+            expect(
+                extract('triggerEvent("x"); recall("k");', {
+                    formatVersion: "2.0.0",
+                }).diagnostics,
+            ).to.eql([]);
+        });
+
+        for (const formatVersion of [undefined, "two.thirty"]) {
+            it(`should not report anything with a format version of ${formatVersion}`, () => {
+                expect(
+                    extract("Save.browser.slot.save();", { formatVersion })
+                        .diagnostics,
+                ).to.eql([]);
+            });
+        }
+    });
 });

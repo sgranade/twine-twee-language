@@ -5710,6 +5710,86 @@ describe("SugarCube Parser", () => {
             });
         });
 
+        describe("API-object methods newer than the format version", () => {
+            // Errors from parsing a passage, after a `:: Passage` header line
+            const errorsFor = (
+                passage: string,
+                formatVersion?: string,
+                isScript = false,
+            ) => {
+                const header = isScript
+                    ? ":: Passage [script]\n"
+                    : ":: Passage\n";
+                const callbacks = new MockCallbacks();
+                const state = buildParsingState({
+                    content: header + passage,
+                    callbacks: callbacks,
+                });
+                if (formatVersion !== undefined) {
+                    state.storyFormat = { format: "SugarCube", formatVersion };
+                }
+                if (isScript) {
+                    state.currentPassage = buildPassage({
+                        label: "Passage",
+                        isScript: true,
+                    });
+                }
+                const parser = uut.getSugarCubeParser(undefined);
+                parser?.parsePassageText(passage, header.length, state);
+                return callbacks.errors;
+            };
+
+            it("should error on a too-new method in Story JavaScript", () => {
+                const errors = errorsFor(
+                    "Save.browser.slot.save(1);\n",
+                    "2.36.1",
+                    true,
+                );
+
+                expect(errors.length).to.equal(1);
+                expect(errors[0].code).to.equal("api-not-available");
+                expect(errors[0].severity).to.eql(DiagnosticSeverity.Error);
+                expect(errors[0].message).to.equal(
+                    "`Save.browser.slot.save` isn't available until SugarCube version 2.37.0 but your StoryFormat version is 2.36.1",
+                );
+                // `save` is at 18-22
+                expect(errors[0].range).to.eql(Range.create(1, 18, 1, 22));
+            });
+
+            it("should error on a too-new method in a <<run>> macro", () => {
+                const errors = errorsFor(
+                    "<<run Save.browser.slot.save(0)>>\n",
+                    "2.36.1",
+                );
+
+                expect(errors.length).to.equal(1);
+                expect(errors[0].code).to.equal("api-not-available");
+                expect(errors[0].message).to.equal(
+                    "`Save.browser.slot.save` isn't available until SugarCube version 2.37.0 but your StoryFormat version is 2.36.1",
+                );
+                // `save` is at 24-28
+                expect(errors[0].range).to.eql(Range.create(1, 24, 1, 28));
+            });
+
+            it("should locate a too-new method after desugared text in the passage text", () => {
+                const errors = errorsFor(
+                    "<<set $x to $y and Story.filter(f)>>\n",
+                    "2.36.1",
+                );
+
+                expect(errors.length).to.equal(1);
+                expect(errors[0].code).to.equal("api-not-available");
+                // `filter` is at 25-31
+                expect(errors[0].range).to.eql(Range.create(1, 25, 1, 31));
+            });
+
+            it("should not error on a too-new method without a format version", () => {
+                const errors = errorsFor("<<run Save.browser.slot.save(0)>>\n");
+
+                expect(errors).to.eql([]);
+            });
+        });
+
         describe("macros", () => {
             it("should error on a macro when the story format's version is earlier than when the macro was added to SugarCube", () => {
                 const header = ":: Passage\n";
